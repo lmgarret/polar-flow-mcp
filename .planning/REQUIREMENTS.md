@@ -112,24 +112,56 @@
 
 ## Traceability
 
-Populated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01..10 | Phase 1 | Pending |
-| SERV-01..08 | Phase 1 | Pending |
-| OAUTH-01..05 | Phase 2 | Pending |
+| FOUND-01 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Pending |
+| FOUND-03 | Phase 1 | Pending |
+| FOUND-04 | Phase 1 | Pending |
+| FOUND-05 | Phase 1 | Pending |
+| FOUND-06 | Phase 1 | Pending |
+| FOUND-07 | Phase 1 | Pending |
+| FOUND-08 | Phase 1 | Pending |
+| FOUND-09 | Phase 1 | Pending |
+| FOUND-10 | Phase 1 | Pending |
+| SERV-01 | Phase 1 | Pending |
+| SERV-02 | Phase 1 | Pending |
+| SERV-03 | Phase 1 | Pending |
+| SERV-04 | Phase 1 | Pending |
+| SERV-05 | Phase 1 | Pending |
+| SERV-06 | Phase 1 | Pending |
+| SERV-07 | Phase 1 | Pending |
+| SERV-08 | Phase 1 | Pending |
+| OAUTH-01 | Phase 2 | Pending |
+| OAUTH-02 | Phase 2 | Pending |
+| OAUTH-03 | Phase 2 | Pending |
+| OAUTH-04 | Phase 2 | Pending |
+| OAUTH-05 | Phase 2 | Pending |
 | MCP-01 | Phase 2 | Pending |
-| MCP-02..07 | Phase 3 | Pending |
-| DOC-01..05 | Phase 4 | Pending |
-| SKILL-01..04 | Phase 3/4 | Pending |
-| FOSS-01..03 | Phase 4 | Pending |
+| MCP-02 | Phase 3 | Pending |
+| MCP-03 | Phase 3 | Pending |
+| MCP-04 | Phase 3 | Pending |
+| MCP-05 | Phase 3 | Pending |
+| MCP-06 | Phase 3 | Pending |
+| MCP-07 | Phase 3 | Pending |
+| SKILL-01 | Phase 3 | Pending |
+| SKILL-02 | Phase 3 | Pending |
+| SKILL-03 | Phase 3 | Pending |
+| SKILL-04 | Phase 3 | Pending |
+| DOC-01 | Phase 4 | Pending |
+| DOC-02 | Phase 4 | Pending |
+| DOC-03 | Phase 4 | Pending |
+| DOC-04 | Phase 4 | Pending |
+| DOC-05 | Phase 4 | Pending |
+| FOSS-01 | Phase 4 | Pending |
+| FOSS-02 | Phase 4 | Pending |
+| FOSS-03 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 40 total
-- Mapped to phases: 40
+- v1 requirements: 43 total (40 functional + SKILL-01..04 resolved to Phase 3)
+- Mapped to phases: 43
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-03*
-*Last updated: 2026-05-03 after initial definition*
+*Last updated: 2026-05-03 after roadmap creation*
