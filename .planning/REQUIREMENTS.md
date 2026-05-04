@@ -9,7 +9,7 @@
 
 ### Foundation
 
-- [ ] **FOUND-01**: Developer can build the project with `CGO_ENABLED=0 go build ./...` producing a single static binary
+- [x] **FOUND-01**: Developer can build the project with `CGO_ENABLED=0 go build ./...` producing a single static binary
 - [ ] **FOUND-02**: Server refuses to start if `AUTH_PROXY` env var equals `"unconfigured"` (the default), printing an actionable error message and pointing at the docs
 - [ ] **FOUND-03**: Server refuses to start if `PROXY_SHARED_SECRET` is empty or unset, printing an actionable error message
 - [ ] **FOUND-04**: Server refuses to start if no 32-byte encryption key is loadable (via `KEY_PROVIDER=env` from `ENCRYPTION_KEY` or `KEY_PROVIDER=file` from `ENCRYPTION_KEY_FILE`), printing how to generate one with `openssl rand -base64 32`

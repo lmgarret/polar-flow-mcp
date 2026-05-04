@@ -33,7 +33,7 @@
 **Requirements:** FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05, FOUND-06, FOUND-07, FOUND-08, FOUND-09, FOUND-10, SERV-01, SERV-02, SERV-03, SERV-04, SERV-05, SERV-06, SERV-07, SERV-08
 
 **Plans:**
-1. Go project scaffold — `cmd/polar-flow-mcp/main.go` + `internal/` package layout, `go.mod` with 4 external deps, `Makefile`, `golangci-lint` config mirroring karaclean
+1. [DONE 2026-05-04] Go project scaffold — `cmd/polar-flow-mcp/main.go` + `internal/` package layout, `go.mod` with 4 external deps, `Makefile`, `golangci-lint` config mirroring karaclean
 2. Config validation and startup security — `config` package, `AUTH_PROXY`/`PROXY_SHARED_SECRET`/`KEY_PROVIDER`/`ENCRYPTION_KEY` fail-closed checks, startup security banner (FOUND-02..04, FOUND-10, SERV-05)
 3. SQLite + crypto foundation — WAL dual-pool setup, `golang-migrate` embedded SQL migrations (3-table schema), AES-256-GCM `KeyProvider` interface with `env` and `file` implementations (FOUND-05..09)
 4. HTTP server and middleware — stdlib `ServeMux`, `subtle.ConstantTimeCompare` secret middleware, `/healthz`, `/readyz`, `StreamableHTTP` MCP mount at `/mcp`, identity header injection via `WithHTTPContextFunc` (SERV-01..05)
