@@ -55,8 +55,9 @@ func TestWALModeEnabled(t *testing.T) {
 		}
 	}()
 
+	ctx := context.Background()
 	var mode string
-	row := s.WriteDB().QueryRow("PRAGMA journal_mode")
+	row := s.WriteDB().QueryRowContext(ctx, "PRAGMA journal_mode")
 	if err := row.Scan(&mode); err != nil {
 		t.Fatalf("PRAGMA journal_mode: %v", err)
 	}
@@ -81,8 +82,9 @@ func TestForeignKeysEnabled(t *testing.T) {
 		}
 	}()
 
+	ctx := context.Background()
 	var fk int
-	row := s.WriteDB().QueryRow("PRAGMA foreign_keys")
+	row := s.WriteDB().QueryRowContext(ctx, "PRAGMA foreign_keys")
 	if err := row.Scan(&fk); err != nil {
 		t.Fatalf("PRAGMA foreign_keys: %v", err)
 	}
@@ -138,8 +140,10 @@ func openForTest(t *testing.T) *Store {
 // assertTableExists queries sqlite_master to verify a table was created by migrations.
 func assertTableExists(t *testing.T, s *Store, tableName string) {
 	t.Helper()
+	ctx := context.Background()
 	var name string
-	row := s.WriteDB().QueryRow(
+	row := s.WriteDB().QueryRowContext(
+		ctx,
 		"SELECT name FROM sqlite_master WHERE type='table' AND name=?",
 		tableName,
 	)

@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS pending_auth;
+DROP TABLE IF EXISTS polar_tokens;
+DROP TABLE IF EXISTS users;
