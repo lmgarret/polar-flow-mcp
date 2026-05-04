@@ -149,7 +149,9 @@ func TestFileKeyProviderValidFile(t *testing.T) {
 	if _, err := f.Write(rawKey); err != nil {
 		t.Fatalf("write key: %v", err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatalf("close tempfile: %v", err)
+	}
 
 	p := NewFileKeyProvider(f.Name())
 	got, err := p.Key()
