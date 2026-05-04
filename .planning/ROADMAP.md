@@ -15,7 +15,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Project Foundation and Security Skeleton** — Go scaffold, fail-closed auth, SQLite + crypto, Docker image, CI pipeline
+- [x] **Phase 1: Project Foundation and Security Skeleton** — Go scaffold, fail-closed auth, SQLite + crypto, Docker image, CI pipeline
 - [ ] **Phase 2: OAuth Link Flow + UserInfo** — Polar OAuth2 login/callback, encrypted token storage, get_user_info tool
 - [ ] **Phase 3: Core MCP Tools + Bundled Skill** — create/list/delete training targets, coaching-language mapping, polar-coach skill
 - [ ] **Phase 4: Documentation, FOSS Hygiene, Release** — MkDocs site, GitHub Pages, release workflow, FOSS files
@@ -37,7 +37,7 @@
 2. [DONE 2026-05-04] Config validation and startup security — `config` package, `AUTH_PROXY`/`PROXY_SHARED_SECRET`/`KEY_PROVIDER`/`ENCRYPTION_KEY` fail-closed checks, startup security banner (FOUND-02..04, FOUND-10, SERV-05)
 3. [DONE 2026-05-04] SQLite + crypto foundation — WAL dual-pool setup, `golang-migrate` embedded SQL migrations (3-table schema), AES-256-GCM `KeyProvider` interface with `env` and `file` implementations (FOUND-05..09)
 4. [DONE 2026-05-04] HTTP server and middleware — stdlib `ServeMux`, `subtle.ConstantTimeCompare` secret middleware, `/healthz`, `/readyz`, `StreamableHTTP` MCP mount at `/mcp`, identity header injection via `WithHTTPContextFunc` (SERV-01..05)
-5. Docker image and CI pipeline — multi-stage `Dockerfile` (`golang:1.26-alpine` → `scratch`), `docker-compose.yml` with fail-loud defaults, CI workflow (`test` + `lint` + `docker` jobs) mirroring karaclean, `ghcr.io` push with `latest` + SHA tags (SERV-06..08)
+5. [DONE 2026-05-04] Docker image and CI pipeline — multi-stage `Dockerfile` (`golang:1.26-alpine` → `scratch`), `docker-compose.yml` with fail-loud defaults, CI workflow (`test` + `lint` + `docker` jobs) mirroring karaclean, `ghcr.io` push with `latest` + SHA tags (SERV-06..08)
 
 **Success Criteria:**
 1. `CGO_ENABLED=0 go build ./...` produces a single static binary with no errors and `go test -race -count=1 ./...` passes
@@ -123,7 +123,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Foundation and Security Skeleton | 3/5 | In progress | - |
+| 1. Project Foundation and Security Skeleton | 5/5 | Complete | 2026-05-04 |
 | 2. OAuth Link Flow + UserInfo | 0/3 | Not started | - |
 | 3. Core MCP Tools + Bundled Skill | 0/3 | Not started | - |
 | 4. Documentation, FOSS Hygiene, Release | 0/3 | Not started | - |
