@@ -10,15 +10,15 @@
 ### Foundation
 
 - [x] **FOUND-01**: Developer can build the project with `CGO_ENABLED=0 go build ./...` producing a single static binary
-- [ ] **FOUND-02**: Server refuses to start if `AUTH_PROXY` env var equals `"unconfigured"` (the default), printing an actionable error message and pointing at the docs
-- [ ] **FOUND-03**: Server refuses to start if `PROXY_SHARED_SECRET` is empty or unset, printing an actionable error message
-- [ ] **FOUND-04**: Server refuses to start if no 32-byte encryption key is loadable (via `KEY_PROVIDER=env` from `ENCRYPTION_KEY` or `KEY_PROVIDER=file` from `ENCRYPTION_KEY_FILE`), printing how to generate one with `openssl rand -base64 32`
+- [x] **FOUND-02**: Server refuses to start if `AUTH_PROXY` env var equals `"unconfigured"` (the default), printing an actionable error message and pointing at the docs
+- [x] **FOUND-03**: Server refuses to start if `PROXY_SHARED_SECRET` is empty or unset, printing an actionable error message
+- [x] **FOUND-04**: Server refuses to start if no 32-byte encryption key is loadable (via `KEY_PROVIDER=env` from `ENCRYPTION_KEY` or `KEY_PROVIDER=file` from `ENCRYPTION_KEY_FILE`), printing how to generate one with `openssl rand -base64 32`
 - [ ] **FOUND-05**: SQLite database opens with WAL mode, `busy_timeout=5000`, `foreign_keys=ON`, and dual read/write connection pools
 - [ ] **FOUND-06**: Schema migrations run automatically at startup before the server accepts connections, using embedded SQL files and the pure-Go `golang-migrate` sqlite driver
 - [ ] **FOUND-07**: Users table stores `identity` (proxy header value), `polar_user_id`, and timestamps; polar_tokens table stores `encrypted_token BLOB` (nonce||ciphertext), `key_version`, and `updated_at`; pending_auth table stores OAuth CSRF state with expiry
 - [ ] **FOUND-08**: Polar access tokens are encrypted with AES-256-GCM (unique `crypto/rand` nonce per encryption) before being written to SQLite; decrypted on demand, never cached
 - [ ] **FOUND-09**: `KeyProvider` interface has two implementations: `env` (reads base64 key from `ENCRYPTION_KEY`) and `file` (reads key from path in `ENCRYPTION_KEY_FILE`)
-- [ ] **FOUND-10**: Startup log clearly states trust assumptions: which identity header is trusted, which secret header is required, and the declared auth proxy name
+- [x] **FOUND-10**: Startup log clearly states trust assumptions: which identity header is trusted, which secret header is required, and the declared auth proxy name
 
 ### Server
 
@@ -115,15 +115,15 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FOUND-01 | Phase 1 | Pending |
-| FOUND-02 | Phase 1 | Pending |
-| FOUND-03 | Phase 1 | Pending |
-| FOUND-04 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Done (01-02) |
+| FOUND-03 | Phase 1 | Done (01-02) |
+| FOUND-04 | Phase 1 | Done (01-02) |
 | FOUND-05 | Phase 1 | Pending |
 | FOUND-06 | Phase 1 | Pending |
 | FOUND-07 | Phase 1 | Pending |
 | FOUND-08 | Phase 1 | Pending |
 | FOUND-09 | Phase 1 | Pending |
-| FOUND-10 | Phase 1 | Pending |
+| FOUND-10 | Phase 1 | Done (01-02) |
 | SERV-01 | Phase 1 | Pending |
 | SERV-02 | Phase 1 | Pending |
 | SERV-03 | Phase 1 | Pending |

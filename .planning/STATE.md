@@ -8,8 +8,8 @@ progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 5
-  completed_plans: 1
-  percent: 7
+  completed_plans: 2
+  percent: 14
 ---
 
 # Project State
@@ -20,7 +20,7 @@ progress:
 
 ## Current Phase
 
-**Phase 1: Project Foundation and Security Skeleton** — 5 plans, 1 complete (01-01 scaffold done).
+**Phase 1: Project Foundation and Security Skeleton** — 5 plans, 2 complete (01-01 scaffold, 01-02 config validation done).
 
 ## Phase Progress
 
@@ -47,6 +47,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | 01-01 scaffold | 4 min | 2/2 | 13 created |
+| 01-02 config validation | 8 min | 2/2 | 3 modified |
 
 ## Accumulated Context
 
@@ -60,6 +61,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 - Final image: `FROM scratch` with `ca-certificates.crt` copied from builder
 - Context key: unexported struct type (prevents cross-package collision)
 - Middleware ordering: `subtle.ConstantTimeCompare` secret check BEFORE identity header read
+
+- EncryptionKey stored as `[]byte` in Config struct; crypto package (Plan 03) constructs KeyProvider from it
+- `config.ProxySecretHeader = "X-Proxy-Secret"` — constant lives in config package (auth imports config)
+- Non-loopback BIND_ADDRESS emits `slog.Warn` at startup (threat T-02-04 mitigation)
 
 ### Open Questions
 
@@ -78,4 +83,4 @@ None.
 
 ---
 *Initialized: 2026-05-03*
-*Last session: 2026-05-04 — Completed 01-01-PLAN.md (Go module scaffold + package stubs)*
+*Last session: 2026-05-04 — Completed 01-02-PLAN.md (config.Load() fail-closed validation, main.go wired)*
