@@ -6,13 +6,13 @@
 
 ## Current Phase
 
-**None** — not started. Run `/gsd-discuss-phase 1` to begin.
+**Phase 1: Project Foundation and Security Skeleton** — Context gathered, ready for planning.
 
 ## Phase Progress
 
 | # | Phase | Status |
 |---|-------|--------|
-| 1 | Project Foundation and Security Skeleton | Not started |
+| 1 | Project Foundation and Security Skeleton | Context gathered |
 | 2 | OAuth Link Flow + UserInfo | Not started |
 | 3 | Core MCP Tools + Bundled Skill | Not started |
 | 4 | Documentation, FOSS Hygiene, Release | Not started |
@@ -22,7 +22,7 @@
 See: `.planning/PROJECT.md` (updated 2026-05-03)
 
 **Core value:** A user can say "create a 5×1km threshold session for Thursday" in Claude and have it appear in Polar Flow — zero context-switching, zero manual UI navigation.
-**Current focus:** None — planning phase complete
+**Current focus:** Phase 1 — context captured 2026-05-04, ready to plan
 
 ## Performance Metrics
 
@@ -43,10 +43,16 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 - Context key: unexported struct type (prevents cross-package collision)
 - Middleware ordering: `subtle.ConstantTimeCompare` secret check BEFORE identity header read
 
-### Open Questions (resolve during Phase 1 planning)
+### Open Questions
 
-- `WithHTTPContextFunc` per-request vs per-session when `StreamableHTTPServer` is mounted as `http.Handler` — safe fallback: extract identity in auth middleware via `context.WithValue`
 - Polar API live training target JSON shapes — validate in Phase 2 before Phase 3 builds on them
+
+### Resolved (Phase 1 context)
+
+- `WithHTTPContextFunc` per-request vs per-session → **resolved: auth middleware only** (guaranteed per-request, no mcp-go internals dependency)
+- Default identity header → **`Remote-User`**, configurable via `IDENTITY_HEADER`
+- Missing identity header behavior → **403 + warning log**
+- Phase 1 test scope → **unit (crypto + config) + httptest integration (startup, /healthz, /readyz, middleware)**
 
 ### Blockers
 
