@@ -1,0 +1,40 @@
+# polar-flow-mcp docker-compose example
+#
+# IMPORTANT: This file ships with intentional placeholder values.
+# The server will REFUSE TO START until you configure the required variables.
+# See https://github.com/lm/polar-flow-mcp/docs/deployment for setup instructions.
+
+services:
+  polar-flow-mcp:
+    image: ghcr.io/lm/polar-flow-mcp:latest
+    restart: unless-stopped
+    volumes:
+      - polar-data:/data
+    environment:
+      # REQUIRED: Set to the name of your reverse proxy (authelia, authentik, oauth2-proxy, etc.)
+      # The server refuses to start with the default "unconfigured" value.
+      AUTH_PROXY: "unconfigured"
+
+      # REQUIRED: A secret shared with your reverse proxy to prevent header spoofing.
+      # Generate with: openssl rand -hex 32
+      PROXY_SHARED_SECRET: ""
+
+      # REQUIRED: Your AES-256 encryption key for Polar OAuth tokens.
+      # Generate with: openssl rand -base64 32
+      ENCRYPTION_KEY: ""
+
+      # REQUIRED: Polar OAuth application credentials (register at https://admin.polaraccesslink.com)
+      POLAR_CLIENT_ID: ""
+      POLAR_CLIENT_SECRET: ""
+
+      # OPTIONAL: The header your reverse proxy injects for user identity (default: Remote-User)
+      # IDENTITY_HEADER: "Remote-User"
+
+      # OPTIONAL: Bind address (default: 127.0.0.1 — loopback only)
+      # BIND_ADDRESS: "127.0.0.1"
+
+      # OPTIONAL: SQLite database path inside the container (default: polar.db)
+      DATABASE_PATH: "/data/polar.db"
+
+volumes:
+  polar-data:
