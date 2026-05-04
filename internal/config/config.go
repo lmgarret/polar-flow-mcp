@@ -41,6 +41,9 @@ type Config struct {
 	// EncryptionKey is the validated 32-byte AES-256 key loaded at startup.
 	// Populated by Load() from ENCRYPTION_KEY (base64) or ENCRYPTION_KEY_FILE (raw bytes).
 	EncryptionKey []byte
+
+	// DatabasePath is the path to the SQLite database file. Defaults to "polar.db".
+	DatabasePath string
 }
 
 // Load reads configuration from environment variables, validates all required fields, and
@@ -109,6 +112,12 @@ func loadOptionalFields(cfg *Config) {
 		keyProvider = "env"
 	}
 	cfg.KeyProviderType = keyProvider
+
+	dbPath := os.Getenv("DATABASE_PATH")
+	if dbPath == "" {
+		dbPath = "polar.db"
+	}
+	cfg.DatabasePath = dbPath
 }
 
 // loadEncryptionKey loads and validates the 32-byte AES-256 key from the configured source.

@@ -1,21 +1,37 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
+	"github.com/mark3labs/mcp-go/server"
+
+	"github.com/lm/polar-flow-mcp/internal/auth"
 	"github.com/lm/polar-flow-mcp/internal/config"
+	"github.com/lm/polar-flow-mcp/internal/mcp"
+	"github.com/lm/polar-flow-mcp/internal/oauth"
+	"github.com/lm/polar-flow-mcp/internal/store"
 )
 
 func main() {
+	// 1. Load and validate config (fail-closed, exits 1 on error).
 	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("startup failed", "error", err)
 		os.Exit(1)
 	}
 
+	// 2. Emit startup security banner.
 	config.LogStartupBanner(cfg)
 
+	// 3. Warn on non-loopback bind address (SERV-05).
 	if cfg.BindAddress != "127.0.0.1" && cfg.BindAddress != "::1" {
 		slog.Warn(
 			"BIND_ADDRESS is not localhost — ensure PROXY_SHARED_SECRET is set "+
@@ -24,8 +40,141 @@ func main() {
 		)
 	}
 
-	slog.Info("server ready", "bind_address", cfg.BindAddress)
+	// 4. Open SQLite store (WAL dual-pool + migrations).
+	st, err := store.Open(cfg.DatabasePath)
+	if err != nil {
+		slog.Error("failed to open database", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = st.Close() }()
 
-	// Plan 04 replaces this with the real HTTP server.
-	select {}
+	// 5. Create MCP server with StreamableHTTP transport.
+	// Identity is injected by auth.Middleware into r.Context() before this fires.
+	// WithHTTPContextFunc re-extracts the identity so MCP tool handlers receive it too.
+	// This is defense-in-depth; auth.Middleware is the authoritative injection point (D-01).
+	mcpServer := server.NewMCPServer(
+		"polar-flow-mcp",
+		"0.1.0",
+		server.WithToolCapabilities(true),
+	)
+	mcp.RegisterTools(mcpServer)
+
+	httpMCPServer := server.NewStreamableHTTPServer(mcpServer,
+		server.WithHTTPContextFunc(func(ctx context.Context, r *http.Request) context.Context {
+			// Identity was injected by auth.Middleware into r.Context() before this fires.
+			// Re-extract from request context so MCP tool handlers receive it.
+			if id, ok := auth.UserIDFromContext(r.Context()); ok {
+				return context.WithValue(ctx, auth.UserIDKey, id)
+			}
+			return ctx
+		}),
+	)
+
+	// 6. Build HTTP mux.
+	mux := http.NewServeMux()
+
+	// /healthz — no auth, always 200 (SERV-01).
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprint(w, "ok")
+	})
+
+	// /readyz — no auth, checks config + DB (SERV-02).
+	mux.HandleFunc("GET /readyz", readyzHandler(cfg, st))
+
+	// /mcp — auth middleware wraps StreamableHTTPServer (SERV-03, SERV-04).
+	mux.Handle("/mcp", auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader, httpMCPServer))
+	mux.Handle("/mcp/", auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader, httpMCPServer))
+
+	// /oauth — auth middleware wraps stubs (Phase 2 fills these in).
+	mux.Handle("GET /oauth/login",
+		auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader,
+			http.HandlerFunc(oauth.LoginHandler)))
+	mux.Handle("GET /oauth/callback",
+		auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader,
+			http.HandlerFunc(oauth.CallbackHandler)))
+
+	// 7. Start HTTP server with graceful shutdown.
+	srv := &http.Server{
+		Addr:         cfg.BindAddress + ":8080",
+		Handler:      mux,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+
+	slog.Info("server listening", "addr", srv.Addr)
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-quit
+	slog.Info("shutting down")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	_ = srv.Shutdown(ctx)
+}
+
+// readyzHandler returns an http.HandlerFunc that checks four readiness conditions and
+// responds with a JSON body listing each check's name, status, and optional error.
+// Returns 200 when all checks pass, 503 when any check fails (SERV-02).
+func readyzHandler(cfg *config.Config, st *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		type check struct {
+			Name   string `json:"name"`
+			Status string `json:"status"`
+			Error  string `json:"error,omitempty"`
+		}
+
+		checks := make([]check, 0, 4)
+		allOK := true
+
+		// Check 1: AUTH_PROXY not unconfigured.
+		if cfg.AuthProxy == "unconfigured" || cfg.AuthProxy == "" {
+			checks = append(checks, check{Name: "auth_proxy", Status: "fail", Error: "AUTH_PROXY not configured"})
+			allOK = false
+		} else {
+			checks = append(checks, check{Name: "auth_proxy", Status: "ok"})
+		}
+
+		// Check 2: PROXY_SHARED_SECRET set.
+		if cfg.ProxySharedSecret == "" {
+			checks = append(checks, check{Name: "proxy_secret", Status: "fail", Error: "PROXY_SHARED_SECRET not set"})
+			allOK = false
+		} else {
+			checks = append(checks, check{Name: "proxy_secret", Status: "ok"})
+		}
+
+		// Check 3: DB reachable (both pools — D-07).
+		if err := st.Ping(r.Context()); err != nil {
+			checks = append(checks, check{Name: "database", Status: "fail", Error: err.Error()})
+			allOK = false
+		} else {
+			checks = append(checks, check{Name: "database", Status: "ok"})
+		}
+
+		// Check 4: Encryption key loaded and correct length.
+		if len(cfg.EncryptionKey) != 32 {
+			checks = append(checks, check{Name: "encryption_key", Status: "fail", Error: "encryption key not loaded or wrong length"})
+			allOK = false
+		} else {
+			checks = append(checks, check{Name: "encryption_key", Status: "ok"})
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if allOK {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"checks": checks})
+	}
 }
