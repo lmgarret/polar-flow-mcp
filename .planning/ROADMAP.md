@@ -36,7 +36,7 @@
 1. [DONE 2026-05-04] Go project scaffold — `cmd/polar-flow-mcp/main.go` + `internal/` package layout, `go.mod` with 4 external deps, `Makefile`, `golangci-lint` config mirroring karaclean
 2. [DONE 2026-05-04] Config validation and startup security — `config` package, `AUTH_PROXY`/`PROXY_SHARED_SECRET`/`KEY_PROVIDER`/`ENCRYPTION_KEY` fail-closed checks, startup security banner (FOUND-02..04, FOUND-10, SERV-05)
 3. [DONE 2026-05-04] SQLite + crypto foundation — WAL dual-pool setup, `golang-migrate` embedded SQL migrations (3-table schema), AES-256-GCM `KeyProvider` interface with `env` and `file` implementations (FOUND-05..09)
-4. HTTP server and middleware — stdlib `ServeMux`, `subtle.ConstantTimeCompare` secret middleware, `/healthz`, `/readyz`, `StreamableHTTP` MCP mount at `/mcp`, identity header injection via `WithHTTPContextFunc` (SERV-01..05)
+4. [DONE 2026-05-04] HTTP server and middleware — stdlib `ServeMux`, `subtle.ConstantTimeCompare` secret middleware, `/healthz`, `/readyz`, `StreamableHTTP` MCP mount at `/mcp`, identity header injection via `WithHTTPContextFunc` (SERV-01..05)
 5. Docker image and CI pipeline — multi-stage `Dockerfile` (`golang:1.26-alpine` → `scratch`), `docker-compose.yml` with fail-loud defaults, CI workflow (`test` + `lint` + `docker` jobs) mirroring karaclean, `ghcr.io` push with `latest` + SHA tags (SERV-06..08)
 
 **Success Criteria:**

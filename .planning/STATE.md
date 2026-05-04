@@ -8,8 +8,8 @@ progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
-  percent: 21
+  completed_plans: 4
+  percent: 29
 ---
 
 # Project State
@@ -20,13 +20,13 @@ progress:
 
 ## Current Phase
 
-**Phase 1: Project Foundation and Security Skeleton** — 5 plans, 3 complete (01-01 scaffold, 01-02 config validation, 01-03 crypto+store done).
+**Phase 1: Project Foundation and Security Skeleton** — 5 plans, 4 complete (01-01 scaffold, 01-02 config validation, 01-03 crypto+store, 01-04 auth middleware+HTTP server done).
 
 ## Phase Progress
 
 | # | Phase | Status |
 |---|-------|--------|
-| 1 | Project Foundation and Security Skeleton | Executing (3/5 plans done) |
+| 1 | Project Foundation and Security Skeleton | Executing (4/5 plans done) |
 | 2 | OAuth Link Flow + UserInfo | Not started |
 | 3 | Core MCP Tools + Bundled Skill | Not started |
 | 4 | Documentation, FOSS Hygiene, Release | Not started |
@@ -40,15 +40,16 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 
 ## Performance Metrics
 
-- Plans completed: 3 / 14
+- Plans completed: 4 / 14
 - Phases completed: 0 / 4
-- Requirements delivered: 5 / 40
+- Requirements delivered: 10 / 40
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | 01-01 scaffold | 4 min | 2/2 | 13 created |
 | 01-02 config validation | 8 min | 2/2 | 3 modified |
 | 01-03 crypto+store | 18 min | 2/2 | 8 created |
+| 01-04 auth middleware+HTTP server | 3 min | 2/2 | 4 modified |
 
 ## Accumulated Context
 
@@ -69,6 +70,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 - Migrations placed in `internal/store/migrations/` (not repo root) — simplifies `//go:embed` path
 - WAL pragma check in tests accepts `"memory"` for `:memory:` DSN — SQLite in-memory DB always returns `memory` for journal_mode; file DSNs return `wal`
 - `EnvKeyProvider.Key()` tries StdEncoding then URLEncoding base64 — operator-friendly
+- `DatabasePath` added to Config; loaded from `DATABASE_PATH` env var, defaults to `"polar.db"`
+- Both `/mcp` and `/mcp/` routes registered separately to handle ServeMux prefix matching
+- `WithHTTPContextFunc` used as defense-in-depth only; `auth.Middleware` is authoritative identity injection (D-01)
 
 ### Open Questions
 
@@ -87,4 +91,4 @@ None.
 
 ---
 *Initialized: 2026-05-03*
-*Last session: 2026-05-04 — Completed 01-03-PLAN.md (AES-256-GCM crypto package + SQLite WAL dual-pool store with embedded migrations)*
+*Last session: 2026-05-04 — Completed 01-04-PLAN.md (auth middleware with subtle.ConstantTimeCompare + full HTTP server wiring with /healthz, /readyz, /mcp)*
