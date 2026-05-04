@@ -29,7 +29,7 @@ func downstreamOK(called *bool) http.Handler {
 // newRequest builds an httptest.Request with the given secret and identity headers.
 // Pass empty string to omit a header.
 func newRequest(secret, identity string) *http.Request {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
 	if secret != "" {
 		r.Header.Set(config.ProxySecretHeader, secret)
 	}
@@ -65,7 +65,7 @@ func TestMiddleware_MissingSecret_Returns403(t *testing.T) {
 	called := false
 	handler := auth.Middleware(testSecret, testHeader, downstreamOK(&called))
 
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
 	// No secret header set.
 	r.Header.Set(testHeader, testIdentity)
 	w := httptest.NewRecorder()
@@ -105,7 +105,7 @@ func TestMiddleware_EmptyIdentity_Returns403(t *testing.T) {
 	called := false
 	handler := auth.Middleware(testSecret, testHeader, downstreamOK(&called))
 
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
 	r.Header.Set(config.ProxySecretHeader, testSecret)
 	// Identity header deliberately omitted.
 	w := httptest.NewRecorder()
