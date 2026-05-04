@@ -1,0 +1,19 @@
+version: "2"
+
+linters:
+  enable:
+    - gocyclo
+    - godot
+    - misspell
+    - noctx
+  settings:
+    gocyclo:
+      min-complexity: 15
+    errcheck:
+      check-type-assertions: true
+
+issues:
+  exclude-rules:
+    - path: "_test\\.go"
+      linters:
+        - godot
