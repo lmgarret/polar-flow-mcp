@@ -63,10 +63,13 @@ func main() {
 		server.WithHTTPContextFunc(func(ctx context.Context, r *http.Request) context.Context {
 			// Identity was injected by auth.Middleware into r.Context() before this fires.
 			// Re-extract from request context so MCP tool handlers receive it.
-			if id, ok := auth.UserIDFromContext(r.Context()); ok {
-				return context.WithValue(ctx, auth.UserIDKey, id)
+			// A missing identity here is a wiring bug — panic loudly rather than silently
+			// serving the request without an authenticated identity (CR-02).
+			id, ok := auth.UserIDFromContext(r.Context())
+			if !ok {
+				panic("WithHTTPContextFunc: identity not in request context; auth middleware not applied")
 			}
-			return ctx
+			return context.WithValue(ctx, auth.UserIDKey, id)
 		}),
 	)
 
