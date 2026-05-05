@@ -44,6 +44,10 @@ type Config struct {
 
 	// DatabasePath is the path to the SQLite database file. Defaults to "polar.db".
 	DatabasePath string
+
+	// Port is the TCP port the HTTP server listens on. Defaults to "8080".
+	// Override with the PORT environment variable.
+	Port string
 }
 
 // Load reads configuration from environment variables, validates all required fields, and
@@ -118,6 +122,12 @@ func loadOptionalFields(cfg *Config) {
 		dbPath = "polar.db"
 	}
 	cfg.DatabasePath = dbPath
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	cfg.Port = port
 }
 
 // loadEncryptionKey loads and validates the 32-byte AES-256 key from the configured source.

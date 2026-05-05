@@ -99,7 +99,7 @@ func main() {
 
 	// 7. Start HTTP server with graceful shutdown.
 	srv := &http.Server{
-		Addr:         cfg.BindAddress + ":8080",
+		Addr:         cfg.BindAddress + ":" + cfg.Port,
 		Handler:      mux,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 60 * time.Second,
