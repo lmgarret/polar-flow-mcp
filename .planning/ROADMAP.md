@@ -6,7 +6,7 @@
 
 | # | Phase | Goal | Requirements | Plans |
 |---|-------|------|--------------|-------|
-| 1 | Project Foundation and Security Skeleton | Compilable, deployable server with all irreversible security and infrastructure decisions locked in | FOUND-01..10, SERV-01..08 | 5 |
+| 1 | Project Foundation and Security Skeleton | 5/5 | Complete    | 2026-05-05 |
 | 2 | OAuth Link Flow + UserInfo | Users can link their Polar account and verify the link from Claude | OAUTH-01..05, MCP-01 | 3 |
 | 3 | Core MCP Tools + Bundled Skill | Users can create, list, and delete Polar training targets from Claude conversations | MCP-02..07, SKILL-01..04 | 3 |
 | 4 | Documentation, FOSS Hygiene, Release | Project is publicly releasable with docs, changelog, and FOSS community infrastructure | DOC-01..05, FOSS-01..03 | 3 |
@@ -33,7 +33,7 @@
 **Requirements:** FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05, FOUND-06, FOUND-07, FOUND-08, FOUND-09, FOUND-10, SERV-01, SERV-02, SERV-03, SERV-04, SERV-05, SERV-06, SERV-07, SERV-08
 
 **Plans:**
-1. [DONE 2026-05-04] Go project scaffold — `cmd/polar-flow-mcp/main.go` + `internal/` package layout, `go.mod` with 4 external deps, `Makefile`, `golangci-lint` config mirroring karaclean
+5/5 plans complete
 2. [DONE 2026-05-04] Config validation and startup security — `config` package, `AUTH_PROXY`/`PROXY_SHARED_SECRET`/`KEY_PROVIDER`/`ENCRYPTION_KEY` fail-closed checks, startup security banner (FOUND-02..04, FOUND-10, SERV-05)
 3. [DONE 2026-05-04] SQLite + crypto foundation — WAL dual-pool setup, `golang-migrate` embedded SQL migrations (3-table schema), AES-256-GCM `KeyProvider` interface with `env` and `file` implementations (FOUND-05..09)
 4. [DONE 2026-05-04] HTTP server and middleware — stdlib `ServeMux`, `subtle.ConstantTimeCompare` secret middleware, `/healthz`, `/readyz`, `StreamableHTTP` MCP mount at `/mcp`, identity header injection via `WithHTTPContextFunc` (SERV-01..05)

@@ -13,23 +13,23 @@
 - [x] **FOUND-02**: Server refuses to start if `AUTH_PROXY` env var equals `"unconfigured"` (the default), printing an actionable error message and pointing at the docs
 - [x] **FOUND-03**: Server refuses to start if `PROXY_SHARED_SECRET` is empty or unset, printing an actionable error message
 - [x] **FOUND-04**: Server refuses to start if no 32-byte encryption key is loadable (via `KEY_PROVIDER=env` from `ENCRYPTION_KEY` or `KEY_PROVIDER=file` from `ENCRYPTION_KEY_FILE`), printing how to generate one with `openssl rand -base64 32`
-- [ ] **FOUND-05**: SQLite database opens with WAL mode, `busy_timeout=5000`, `foreign_keys=ON`, and dual read/write connection pools
-- [ ] **FOUND-06**: Schema migrations run automatically at startup before the server accepts connections, using embedded SQL files and the pure-Go `golang-migrate` sqlite driver
-- [ ] **FOUND-07**: Users table stores `identity` (proxy header value), `polar_user_id`, and timestamps; polar_tokens table stores `encrypted_token BLOB` (nonce||ciphertext), `key_version`, and `updated_at`; pending_auth table stores OAuth CSRF state with expiry
-- [ ] **FOUND-08**: Polar access tokens are encrypted with AES-256-GCM (unique `crypto/rand` nonce per encryption) before being written to SQLite; decrypted on demand, never cached
-- [ ] **FOUND-09**: `KeyProvider` interface has two implementations: `env` (reads base64 key from `ENCRYPTION_KEY`) and `file` (reads key from path in `ENCRYPTION_KEY_FILE`)
+- [x] **FOUND-05**: SQLite database opens with WAL mode, `busy_timeout=5000`, `foreign_keys=ON`, and dual read/write connection pools
+- [x] **FOUND-06**: Schema migrations run automatically at startup before the server accepts connections, using embedded SQL files and the pure-Go `golang-migrate` sqlite driver
+- [x] **FOUND-07**: Users table stores `identity` (proxy header value), `polar_user_id`, and timestamps; polar_tokens table stores `encrypted_token BLOB` (nonce||ciphertext), `key_version`, and `updated_at`; pending_auth table stores OAuth CSRF state with expiry
+- [x] **FOUND-08**: Polar access tokens are encrypted with AES-256-GCM (unique `crypto/rand` nonce per encryption) before being written to SQLite; decrypted on demand, never cached
+- [x] **FOUND-09**: `KeyProvider` interface has two implementations: `env` (reads base64 key from `ENCRYPTION_KEY`) and `file` (reads key from path in `ENCRYPTION_KEY_FILE`)
 - [x] **FOUND-10**: Startup log clearly states trust assumptions: which identity header is trusted, which secret header is required, and the declared auth proxy name
 
 ### Server
 
-- [ ] **SERV-01**: `GET /healthz` returns 200 always (no auth, no config check) for liveness probes
-- [ ] **SERV-02**: `GET /readyz` returns 200 only if: `AUTH_PROXY` ≠ `"unconfigured"`, `PROXY_SHARED_SECRET` is set, DB is reachable, encryption key loaded; otherwise 503 with a body naming each failing check
-- [ ] **SERV-03**: All routes except `/healthz` and `/readyz` require the `PROXY_SHARED_SECRET` header to match the configured secret; mismatch returns 403; header present but wrong value is logged as a probable spoofing attempt; comparison uses `subtle.ConstantTimeCompare`
-- [ ] **SERV-04**: MCP server uses StreamableHTTP transport (`github.com/mark3labs/mcp-go`) mounted at `/mcp`; user identity is extracted from the configured identity header (default `Remote-User`) and injected into every tool call's `context.Context`
-- [ ] **SERV-05**: `BIND_ADDRESS` defaults to `127.0.0.1`; a startup WARN log is emitted if `BIND_ADDRESS` is not a loopback address, reminding the operator that `PROXY_SHARED_SECRET` is the security boundary
-- [ ] **SERV-06**: Multi-stage Dockerfile (`golang:1.26-alpine` builder → `FROM scratch` final) with `CGO_ENABLED=0`, `-ldflags="-w -s"`, and `ca-certificates.crt` copied from builder; final image under 25 MB
-- [ ] **SERV-07**: CI pipeline has three jobs mirroring karaclean exactly: `test` (`go test -race -count=1 ./...` with `CGO_ENABLED=0`), `lint` (`golangci-lint-action@v9`, `version: v2.11`), `docker` (needs both; builds and pushes to `ghcr.io/${{ github.repository }}` with `latest` + SHA tags)
-- [ ] **SERV-08**: `docker-compose.yml` example ships with `AUTH_PROXY=unconfigured` so a naive `docker compose up` fails loudly with the startup error message
+- [x] **SERV-01**: `GET /healthz` returns 200 always (no auth, no config check) for liveness probes
+- [x] **SERV-02**: `GET /readyz` returns 200 only if: `AUTH_PROXY` ≠ `"unconfigured"`, `PROXY_SHARED_SECRET` is set, DB is reachable, encryption key loaded; otherwise 503 with a body naming each failing check
+- [x] **SERV-03**: All routes except `/healthz` and `/readyz` require the `PROXY_SHARED_SECRET` header to match the configured secret; mismatch returns 403; header present but wrong value is logged as a probable spoofing attempt; comparison uses `subtle.ConstantTimeCompare`
+- [x] **SERV-04**: MCP server uses StreamableHTTP transport (`github.com/mark3labs/mcp-go`) mounted at `/mcp`; user identity is extracted from the configured identity header (default `Remote-User`) and injected into every tool call's `context.Context`
+- [x] **SERV-05**: `BIND_ADDRESS` defaults to `127.0.0.1`; a startup WARN log is emitted if `BIND_ADDRESS` is not a loopback address, reminding the operator that `PROXY_SHARED_SECRET` is the security boundary
+- [x] **SERV-06**: Multi-stage Dockerfile (`golang:1.26-alpine` builder → `FROM scratch` final) with `CGO_ENABLED=0`, `-ldflags="-w -s"`, and `ca-certificates.crt` copied from builder; final image under 25 MB
+- [x] **SERV-07**: CI pipeline has three jobs mirroring karaclean exactly: `test` (`go test -race -count=1 ./...` with `CGO_ENABLED=0`), `lint` (`golangci-lint-action@v9`, `version: v2.11`), `docker` (needs both; builds and pushes to `ghcr.io/${{ github.repository }}` with `latest` + SHA tags)
+- [x] **SERV-08**: `docker-compose.yml` example ships with `AUTH_PROXY=unconfigured` so a naive `docker compose up` fails loudly with the startup error message
 
 ### OAuth and User Linking
 
@@ -114,24 +114,24 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 | Pending |
+| FOUND-01 | Phase 1 | Complete |
 | FOUND-02 | Phase 1 | Done (01-02) |
 | FOUND-03 | Phase 1 | Done (01-02) |
 | FOUND-04 | Phase 1 | Done (01-02) |
-| FOUND-05 | Phase 1 | Pending |
-| FOUND-06 | Phase 1 | Pending |
-| FOUND-07 | Phase 1 | Pending |
-| FOUND-08 | Phase 1 | Pending |
-| FOUND-09 | Phase 1 | Pending |
+| FOUND-05 | Phase 1 | Complete |
+| FOUND-06 | Phase 1 | Complete |
+| FOUND-07 | Phase 1 | Complete |
+| FOUND-08 | Phase 1 | Complete |
+| FOUND-09 | Phase 1 | Complete |
 | FOUND-10 | Phase 1 | Done (01-02) |
-| SERV-01 | Phase 1 | Pending |
-| SERV-02 | Phase 1 | Pending |
-| SERV-03 | Phase 1 | Pending |
-| SERV-04 | Phase 1 | Pending |
-| SERV-05 | Phase 1 | Pending |
-| SERV-06 | Phase 1 | Pending |
-| SERV-07 | Phase 1 | Pending |
-| SERV-08 | Phase 1 | Pending |
+| SERV-01 | Phase 1 | Complete |
+| SERV-02 | Phase 1 | Complete |
+| SERV-03 | Phase 1 | Complete |
+| SERV-04 | Phase 1 | Complete |
+| SERV-05 | Phase 1 | Complete |
+| SERV-06 | Phase 1 | Complete |
+| SERV-07 | Phase 1 | Complete |
+| SERV-08 | Phase 1 | Complete |
 | OAUTH-01 | Phase 2 | Pending |
 | OAUTH-02 | Phase 2 | Pending |
 | OAUTH-03 | Phase 2 | Pending |
