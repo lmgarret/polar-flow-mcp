@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -121,7 +122,7 @@ func (s *Store) Close() error {
 		errs = append(errs, err)
 	}
 	if len(errs) > 0 {
-		return fmt.Errorf("store: close: %v", errs)
+		return fmt.Errorf("store: close: %w", errors.Join(errs...))
 	}
 	return nil
 }
