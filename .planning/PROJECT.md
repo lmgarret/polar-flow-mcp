@@ -12,7 +12,12 @@ A user can say "create a 5×1km threshold session for Thursday" in Claude and ha
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Multi-user SQLite store with schema migrations — Validated in Phase 1: WAL dual-pool, 3-table schema, golang-migrate embedded migrations
+- [x] Polar access tokens encrypted at rest (AES-256-GCM, KeyProvider interface) — Validated in Phase 1: nonce-prepend BLOB layout, EnvKeyProvider + FileKeyProvider
+- [x] Fail-closed auth design (refuse to start unless AUTH_PROXY ≠ "unconfigured") — Validated in Phase 1: config.Load() exits 1 on missing/unconfigured AUTH_PROXY
+- [x] Proxy shared secret enforcement (PROXY_SHARED_SECRET + configurable header) — Validated in Phase 1: subtle.ConstantTimeCompare before identity header read
+- [x] /healthz and /readyz endpoints — Validated in Phase 1: wired in main.go with httptest integration tests
+- [x] CI pipeline mirroring karaclean exactly (test + lint + docker jobs, ghcr.io) — Validated in Phase 1: three-job workflow, ghcr.io push with latest + sha tags
 
 ### Active
 
@@ -78,13 +83,13 @@ A user can say "create a 5×1km threshold session for Thursday" in Claude and ha
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| MCP transport: StreamableHTTP | `WithHTTPContextFunc` lets us inject proxy identity header into every tool call context naturally | — Pending |
-| Auth model: proxy contract only | No built-in auth means no auth bugs; fail-closed design prevents silent misconfiguration | — Pending |
-| Token encryption: AES-256-GCM per-row nonce | Standard at-rest protection; KeyProvider interface keeps key source swappable | — Pending |
-| SQLite + modernc.org/sqlite | Pure Go, CGO disabled, zero deployment dependencies, appropriate for homelab n=1..small-team scale | — Pending |
-| `FROM scratch` final image | Matches karaclean; minimizes attack surface and image size | — Pending |
-| golang-migrate for schema migrations | TBD — research phase will confirm vs goose | — Pending |
-| MkDocs Material for docs | GitHub Pages deployment, Diátaxis structure, good for FOSS projects | — Pending |
+| MCP transport: StreamableHTTP | `WithHTTPContextFunc` lets us inject proxy identity header into every tool call context naturally | Confirmed Phase 1 — auth middleware injects identity via `context.WithValue`; `WithHTTPContextFunc` copies it to mcp-go context |
+| Auth model: proxy contract only | No built-in auth means no auth bugs; fail-closed design prevents silent misconfiguration | Confirmed Phase 1 — `subtle.ConstantTimeCompare` before identity header; server refuses start without AUTH_PROXY |
+| Token encryption: AES-256-GCM per-row nonce | Standard at-rest protection; KeyProvider interface keeps key source swappable | Confirmed Phase 1 — nonce-prepend BLOB layout, EnvKeyProvider + FileKeyProvider, 1000-nonce uniqueness test |
+| SQLite + modernc.org/sqlite | Pure Go, CGO disabled, zero deployment dependencies, appropriate for homelab n=1..small-team scale | Confirmed Phase 1 — WAL dual-pool (write MaxOpenConns=1, read MaxOpenConns=4), embedded migrations |
+| `FROM scratch` final image | Matches karaclean; minimizes attack surface and image size | Confirmed Phase 1 — 11.46 MB final image, ca-certificates.crt copied for Polar API HTTPS |
+| golang-migrate for schema migrations | Pure-Go sqlite driver suffix `sqlite` (not `sqlite3`) required for CGO-disabled build | Confirmed Phase 1 — `golang-migrate/migrate/v4/database/sqlite` wired and tested |
+| MkDocs Material for docs | GitHub Pages deployment, Diátaxis structure, good for FOSS projects | — Pending Phase 4 |
 
 ## Evolution
 
@@ -104,4 +109,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-03 after initialization*
+*Last updated: 2026-05-05 — Phase 1 complete (foundation + security skeleton)*
