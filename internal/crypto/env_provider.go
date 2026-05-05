@@ -17,11 +17,13 @@ func NewEnvKeyProvider(b64key string) *EnvKeyProvider {
 }
 
 // Key decodes the base64 key and validates it is exactly 32 bytes.
+// Fallback order matches config.loadKeyFromEnv: StdEncoding → RawStdEncoding (WR-02).
 func (p *EnvKeyProvider) Key() ([]byte, error) {
 	key, err := base64.StdEncoding.DecodeString(p.b64key)
 	if err != nil {
-		// Try URL-safe base64 as fallback (openssl rand -base64 uses standard, but be tolerant).
-		key, err = base64.URLEncoding.DecodeString(p.b64key)
+		// Also try RawStdEncoding (no padding) in case the operator omitted trailing '='.
+		// This mirrors the fallback in config.loadKeyFromEnv so both layers accept the same inputs.
+		key, err = base64.RawStdEncoding.DecodeString(p.b64key)
 		if err != nil {
 			return nil, fmt.Errorf("crypto: decode ENCRYPTION_KEY: not valid base64")
 		}
