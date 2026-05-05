@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS polar_tokens (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id         INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     encrypted_token BLOB    NOT NULL,
     key_version     INTEGER NOT NULL DEFAULT 1,
     updated_at      DATETIME NOT NULL DEFAULT (datetime('now'))
