@@ -3,37 +3,22 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 )
 
-// Test1: Open(":memory:") succeeds and returns a non-nil *Store.
+// Test1: Open with shared in-memory URI succeeds and returns a non-nil *Store.
 func TestOpenReturnsStore(t *testing.T) {
-	s, err := Open(":memory:")
-	if err != nil {
-		t.Fatalf("Open: unexpected error: %v", err)
-	}
+	s := openForTest(t)
 	if s == nil {
 		t.Fatal("Open: returned nil store")
 	}
-	defer func() {
-		if err := s.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	}()
 }
 
 // Test2 (D-07): Both writeDB and readDB ping successfully after Open().
 func TestBothPoolsPingAfterOpen(t *testing.T) {
-	s, err := Open(":memory:")
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-	defer func() {
-		if err := s.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	}()
-
+	s := openForTest(t)
 	ctx := context.Background()
 	if err := s.WriteDB().PingContext(ctx); err != nil {
 		t.Fatalf("WriteDB.PingContext: %v", err)
@@ -45,25 +30,16 @@ func TestBothPoolsPingAfterOpen(t *testing.T) {
 
 // Test3: PRAGMA journal_mode returns "wal" on writeDB after Open().
 func TestWALModeEnabled(t *testing.T) {
-	s, err := Open(":memory:")
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-	defer func() {
-		if err := s.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	}()
-
+	s := openForTest(t)
 	ctx := context.Background()
 	var mode string
 	row := s.WriteDB().QueryRowContext(ctx, "PRAGMA journal_mode")
 	if err := row.Scan(&mode); err != nil {
 		t.Fatalf("PRAGMA journal_mode: %v", err)
 	}
-	// In-memory SQLite does not persist WAL but returns "memory" — this is expected behaviour
-	// for :memory: DSNs. For file-based DSNs the mode will be "wal". We accept both here to
-	// keep the unit tests hermetic. The integration concern (file DB uses WAL) is covered by
+	// Shared in-memory SQLite with cache=shared returns "memory" for journal_mode.
+	// For file-based DSNs the mode will be "wal". We accept both here to keep the
+	// unit tests hermetic. The integration concern (file DB uses WAL) is covered by
 	// the DSN construction being the same code path.
 	if mode != "wal" && mode != "memory" {
 		t.Fatalf("PRAGMA journal_mode: got %q, want wal or memory", mode)
@@ -72,16 +48,7 @@ func TestWALModeEnabled(t *testing.T) {
 
 // Test4: PRAGMA foreign_keys returns 1 on writeDB after Open().
 func TestForeignKeysEnabled(t *testing.T) {
-	s, err := Open(":memory:")
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-	defer func() {
-		if err := s.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	}()
-
+	s := openForTest(t)
 	ctx := context.Background()
 	var fk int
 	row := s.WriteDB().QueryRowContext(ctx, "PRAGMA foreign_keys")
@@ -113,7 +80,8 @@ func TestPendingAuthTableExists(t *testing.T) {
 
 // Test8: Store.Close() returns nil.
 func TestCloseReturnsNil(t *testing.T) {
-	s, err := Open(":memory:")
+	dsn := fmt.Sprintf("file:testdb_%d?mode=memory&cache=shared", time.Now().UnixNano())
+	s, err := Open(dsn)
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
@@ -122,10 +90,13 @@ func TestCloseReturnsNil(t *testing.T) {
 	}
 }
 
-// openForTest opens a :memory: store and registers cleanup.
+// openForTest opens a shared in-memory store and registers cleanup.
+// Each call gets a uniquely-named database so tests are isolated from each other.
+// Both write and read pools share the same in-memory database via cache=shared (CR-03).
 func openForTest(t *testing.T) *Store {
 	t.Helper()
-	s, err := Open(":memory:")
+	dsn := fmt.Sprintf("file:testdb_%d?mode=memory&cache=shared", time.Now().UnixNano())
+	s, err := Open(dsn)
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}

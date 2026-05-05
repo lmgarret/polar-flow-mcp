@@ -24,12 +24,27 @@ type Store struct {
 
 // walDSN returns the DSN with WAL mode, busy_timeout, synchronous=NORMAL, and foreign_keys=ON.
 // All pragmas are set at open time via the DSN — not via EXEC after open.
+// For file: URIs (including shared in-memory) the base already contains '?' so we append with '&'.
 func walDSN(base string) string {
-	return base + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)&_pragma=foreign_keys(ON)"
+	sep := "?"
+	for i := 0; i < len(base); i++ {
+		if base[i] == '?' {
+			sep = "&"
+			break
+		}
+	}
+	return base + sep + "_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)&_pragma=foreign_keys(ON)"
 }
 
 // Open opens the SQLite database, configures WAL mode and dual connection pools, then runs the
-// embedded schema migrations. Pass ":memory:" as dsn for tests.
+// embedded schema migrations.
+//
+// For tests, pass a shared in-memory URI so both write and read pools reference the same database:
+//
+//	"file::memory:?cache=shared&mode=memory"
+//
+// Do NOT pass ":memory:" directly — that creates two isolated in-memory databases, so the read
+// pool never sees data written by the write pool (CR-03).
 func Open(dsn string) (*Store, error) {
 	writeDSN := walDSN(dsn)
 	readDSN := walDSN(dsn)
