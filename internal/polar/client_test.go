@@ -101,19 +101,23 @@ func TestExchangeCode_NonOKStatus(t *testing.T) {
 
 func TestRegisterUser_Success(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Assert Authorization header
+		// Assert Authorization header carries the access token (not the member-id).
 		if got := r.Header.Get("Authorization"); got != "Bearer tok" {
 			t.Errorf("Authorization = %q, want 'Bearer tok'", got)
 		}
 
-		// Assert body has member-id
+		// Assert body has member-id equal to the explicit memberID parameter (not the access token).
 		body, _ := io.ReadAll(r.Body)
 		var payload map[string]string
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Errorf("body not valid JSON: %v", err)
 		}
-		if payload["member-id"] != "tok" {
-			t.Errorf("member-id = %q, want tok", payload["member-id"])
+		// CR-02 regression guard: member-id must be "12345", NOT the access token "tok".
+		if payload["member-id"] == "tok" {
+			t.Errorf("member-id must not be the access token (CR-02); got %q", payload["member-id"])
+		}
+		if payload["member-id"] != "12345" {
+			t.Errorf("member-id = %q, want \"12345\" (CR-02 regression)", payload["member-id"])
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -127,7 +131,7 @@ func TestRegisterUser_Success(t *testing.T) {
 	restore := polar.SetRegisterEndpoint(ts.URL)
 	t.Cleanup(restore)
 
-	id, err := polar.RegisterUser(context.Background(), "tok")
+	id, err := polar.RegisterUser(context.Background(), "tok", "12345")
 	if err != nil {
 		t.Fatalf("RegisterUser returned error: %v", err)
 	}
@@ -145,7 +149,7 @@ func TestRegisterUser_Conflict(t *testing.T) {
 	restore := polar.SetRegisterEndpoint(ts.URL)
 	t.Cleanup(restore)
 
-	id, err := polar.RegisterUser(context.Background(), "tok")
+	id, err := polar.RegisterUser(context.Background(), "tok", "12345")
 	if err != nil {
 		t.Fatalf("RegisterUser conflict should return nil error, got: %v", err)
 	}
@@ -164,7 +168,7 @@ func TestRegisterUser_OtherError(t *testing.T) {
 	restore := polar.SetRegisterEndpoint(ts.URL)
 	t.Cleanup(restore)
 
-	id, err := polar.RegisterUser(context.Background(), "tok")
+	id, err := polar.RegisterUser(context.Background(), "tok", "12345")
 	if err == nil {
 		t.Fatal("expected error for 500, got nil")
 	}

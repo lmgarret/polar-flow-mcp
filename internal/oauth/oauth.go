@@ -128,12 +128,12 @@ func (h *Handlers) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Register user with Polar (OAUTH-04). 409 = idempotent; use x_user_id from token exchange in all cases.
-	if _, err := polar.RegisterUser(r.Context(), tr.AccessToken); err != nil {
+	polarUserID := strconv.FormatInt(tr.XUserID, 10) // schema is TEXT (also reused for the member-id field below).
+	if _, err := polar.RegisterUser(r.Context(), tr.AccessToken, polarUserID); err != nil {
 		slog.Error("oauth callback: user registration failed", "error", err, "identity", currentIdentity)
 		htmlError(w, http.StatusBadGateway, "Polar user registration failed")
 		return
 	}
-	polarUserID := strconv.FormatInt(tr.XUserID, 10) // schema is TEXT.
 
 	// Persist user row first (FK requirement).
 	if err := h.st.UpsertUser(r.Context(), currentIdentity, polarUserID); err != nil {

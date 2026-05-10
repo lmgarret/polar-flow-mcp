@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -224,8 +225,14 @@ func TestCallbackHandler_Success(t *testing.T) {
 	restoreToken := polar.SetTokenEndpoint(tokenSrv.URL)
 	t.Cleanup(restoreToken)
 
-	// Mock register endpoint
-	regSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	// Mock register endpoint — asserts member-id is the x_user_id string, not the access token (CR-02).
+	regSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bodyBytes, _ := io.ReadAll(r.Body)
+		var payload map[string]string
+		_ = json.Unmarshal(bodyBytes, &payload)
+		if payload["member-id"] != "777" {
+			t.Errorf("member-id = %q, want \"777\" (CR-02 regression)", payload["member-id"])
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(map[string]any{"polar-user-id": 777})

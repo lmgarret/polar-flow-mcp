@@ -82,11 +82,18 @@ func ExchangeCode(ctx context.Context, clientID, clientSecret, code, redirectURL
 }
 
 // RegisterUser registers the access token's owner with Polar AccessLink (per OAUTH-04).
+// memberID is the partner's user identifier — must be the Polar numeric user ID
+// (TokenResponse.XUserID, formatted as a string) per CR-02. The OAuth2 access token
+// is used ONLY in the Authorization header, never in the body.
+//
 // HTTP 409 indicates the user is already registered; treat as idempotent success and
 // return (0, nil). Callers MUST use the x_user_id from TokenResponse as the authoritative
 // polar_user_id in all cases (200 and 409) — the 409 body does not contain the user object.
-func RegisterUser(ctx context.Context, accessToken string) (int64, error) {
-	body, _ := json.Marshal(map[string]string{"member-id": accessToken})
+func RegisterUser(ctx context.Context, accessToken, memberID string) (int64, error) {
+	body, err := json.Marshal(map[string]string{"member-id": memberID})
+	if err != nil {
+		return 0, fmt.Errorf("polar: marshal register body: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, registerEndpoint, bytes.NewReader(body))
 	if err != nil {
 		return 0, fmt.Errorf("polar: build register request: %w", err)
