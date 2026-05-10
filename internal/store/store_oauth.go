@@ -31,24 +31,47 @@ func (s *Store) CreateOAuthState(ctx context.Context, state, identity string, ex
 	return nil
 }
 
-// ConsumeOAuthState atomically deletes and returns the state row (per D-12).
-// Returns ErrNotFound if state is absent, ErrExpired if state existed but is past expiry.
-// Single-use: a subsequent call with the same state returns ErrNotFound.
+// ConsumeOAuthState atomically deletes and returns a non-expired state row (per D-12).
+// Returns ErrNotFound if state is absent. Returns ErrExpired if the state exists but
+// is past its expiry — the row is NOT deleted in that case (so it remains visible to
+// operators / future TTL sweeps; a single expired state cannot be "consumed" silently).
+// Single-use: a subsequent call with the same (non-expired) state returns ErrNotFound.
 func (s *Store) ConsumeOAuthState(ctx context.Context, state string) (string, error) {
+	// Atomically delete the row only if it is still within its TTL.
+	// SQLite evaluates the WHERE clause inside the DELETE, so this is a single statement
+	// and not subject to a SELECT-then-DELETE race.
 	var identity string
-	var expiresAt time.Time
 	err := s.writeDB.QueryRowContext(ctx,
-		`DELETE FROM pending_auth WHERE state = ? RETURNING identity, expires_at`,
+		`DELETE FROM pending_auth
+		 WHERE state = ? AND expires_at >= datetime('now')
+		 RETURNING identity`,
 		state,
-	).Scan(&identity, &expiresAt)
+	).Scan(&identity)
+	if err == nil {
+		return identity, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("store: consume oauth state: %w", err)
+	}
+
+	// No row deleted. Determine whether the state is missing or merely expired.
+	var expiresAt time.Time
+	err = s.readDB.QueryRowContext(ctx,
+		`SELECT expires_at FROM pending_auth WHERE state = ?`,
+		state,
+	).Scan(&expiresAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", ErrNotFound
 	}
 	if err != nil {
-		return "", fmt.Errorf("store: consume oauth state: %w", err)
+		return "", fmt.Errorf("store: lookup oauth state: %w", err)
 	}
+	// Row exists but the conditional DELETE skipped it → it must be expired.
+	// Defensive sanity check (handles clock-skew edge cases).
 	if time.Now().UTC().After(expiresAt) {
 		return "", ErrExpired
 	}
-	return identity, nil
+	// Extremely unlikely: row exists, not expired, but DELETE returned no rows.
+	// Treat as a transient race (e.g. concurrent expiry tick) — surface as ErrNotFound.
+	return "", ErrNotFound
 }

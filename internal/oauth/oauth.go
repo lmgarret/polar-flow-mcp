@@ -94,7 +94,7 @@ func (h *Handlers) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if errors.Is(err, store.ErrExpired) {
-		htmlError(w, http.StatusBadRequest, "authorization session expired — please try again")
+		htmlError(w, http.StatusBadRequest, "authorization session expired — please restart from /oauth/login")
 		return
 	}
 	if err != nil {

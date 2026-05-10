@@ -60,7 +60,7 @@ func TestConsumeOAuthState_NotFound(t *testing.T) {
 }
 
 // TestConsumeOAuthState_Expired verifies that a state row past its expiry time causes
-// ConsumeOAuthState to return ErrExpired and delete the row.
+// ConsumeOAuthState to return ErrExpired. The row is NOT deleted (CR-01 fix).
 func TestConsumeOAuthState_Expired(t *testing.T) {
 	s := openForTest(t)
 	ctx := context.Background()
@@ -81,9 +81,40 @@ func TestConsumeOAuthState_Expired(t *testing.T) {
 		t.Errorf("expected ErrExpired, got %v", err)
 	}
 
-	// Row must be deleted even when expired — re-consume must return ErrNotFound.
+	// CR-01: expired row must NOT be deleted — second call must still return ErrExpired.
 	_, err = s.ConsumeOAuthState(ctx, state)
-	if !errors.Is(err, ErrNotFound) {
-		t.Errorf("second ConsumeOAuthState after expiry: expected ErrNotFound, got %v", err)
+	if !errors.Is(err, ErrExpired) {
+		t.Errorf("second ConsumeOAuthState after expiry: expected ErrExpired (row retained), got %v", err)
+	}
+}
+
+// TestConsumeOAuthState_Expired_DoesNotDelete verifies that ConsumeOAuthState does not delete
+// expired rows, and the row count remains 1 after the call (CR-01 regression guard).
+func TestConsumeOAuthState_Expired_DoesNotDelete(t *testing.T) {
+	s := openForTest(t)
+	ctx := context.Background()
+	const state = "expired-state-hex"
+	// Insert with an expiry 1 hour in the past.
+	if err := s.CreateOAuthState(ctx, state, "alice", time.Now().UTC().Add(-1*time.Hour)); err != nil {
+		t.Fatalf("CreateOAuthState: %v", err)
+	}
+	_, err := s.ConsumeOAuthState(ctx, state)
+	if !errors.Is(err, ErrExpired) {
+		t.Fatalf("expected ErrExpired, got %v", err)
+	}
+	// Row must still be present (CR-01 fix).
+	var n int
+	if err := s.ReadDB().QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM pending_auth WHERE state = ?`, state,
+	).Scan(&n); err != nil {
+		t.Fatalf("count query: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("expected expired row to remain (CR-01); count=%d", n)
+	}
+	// Second call still returns ErrExpired (idempotent — row was not consumed).
+	_, err2 := s.ConsumeOAuthState(ctx, state)
+	if !errors.Is(err2, ErrExpired) {
+		t.Fatalf("second call: expected ErrExpired, got %v", err2)
 	}
 }
