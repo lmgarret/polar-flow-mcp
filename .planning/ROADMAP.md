@@ -59,7 +59,7 @@
 **Requirements:** OAUTH-01, OAUTH-02, OAUTH-03, OAUTH-04, OAUTH-05, MCP-01
 
 **Plans:** 3 plans
-- [ ] 02-01-PLAN.md — Config Polar fields + store CRUD (CreateOAuthState/ConsumeOAuthState/UpsertUser/GetPolarUserID/UpsertToken) + tests (OAUTH-01, OAUTH-02, OAUTH-05 partial)
+- [x] 02-01-PLAN.md — Config Polar fields + store CRUD (CreateOAuthState/ConsumeOAuthState/UpsertUser/GetPolarUserID/UpsertToken) + tests (OAUTH-01, OAUTH-02, OAUTH-05 partial) [DONE 2026-05-10]
 - [ ] 02-02-PLAN.md — Polar client (ExchangeCode/RegisterUser) + OAuth Login/Callback handlers + main.go wiring + tests (OAUTH-01..05)
 - [ ] 02-03-PLAN.md — get_user_info MCP tool + RegisterTools signature update + phase-gate verification (MCP-01)
 
@@ -124,6 +124,6 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Foundation and Security Skeleton | 5/5 | Complete | 2026-05-04 |
-| 2. OAuth Link Flow + UserInfo | 0/3 | Not started | - |
+| 2. OAuth Link Flow + UserInfo | 1/3 | Executing | - |
 | 3. Core MCP Tools + Bundled Skill | 0/3 | Not started | - |
 | 4. Documentation, FOSS Hygiene, Release | 0/3 | Not started | - |

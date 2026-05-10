@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0.0
 milestone_name: milestone
-status: planning
-last_updated: "2026-05-10T18:33:30.649Z"
+status: executing
+last_updated: "2026-05-10T20:00:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 8
-  completed_plans: 5
-  percent: 63
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -20,7 +20,7 @@ progress:
 
 ## Current Phase
 
-**Phase 2: OAuth Link Flow + UserInfo** — 3/3 plans PLANNED. Ready to execute.
+**Phase 2: OAuth Link Flow + UserInfo** — executing (1/3 plans done).
 
 **Previous:** Phase 1: Project Foundation and Security Skeleton — 5/5 plans COMPLETE.
 
@@ -29,7 +29,7 @@ progress:
 | # | Phase | Status |
 |---|-------|--------|
 | 1 | Project Foundation and Security Skeleton | COMPLETE (5/5 plans done) |
-| 2 | OAuth Link Flow + UserInfo | Not started |
+| 2 | OAuth Link Flow + UserInfo | Executing (1/3 plans done) |
 | 3 | Core MCP Tools + Bundled Skill | Not started |
 | 4 | Documentation, FOSS Hygiene, Release | Not started |
 
@@ -42,9 +42,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 
 ## Performance Metrics
 
-- Plans completed: 5 / 14
+- Plans completed: 6 / 14
 - Phases completed: 1 / 4
-- Requirements delivered: 13 / 40
+- Requirements delivered: 16 / 40
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
@@ -53,6 +53,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 | 01-03 crypto+store | 18 min | 2/2 | 8 created |
 | 01-04 auth middleware+HTTP server | 3 min | 2/2 | 4 modified |
 | 01-05 Docker + CI | 5 min | 2/2 | 3 created |
+| 02-01 config+store oauth foundations | 12 min | 2/2 | 8 created/modified |
 
 ## Accumulated Context
 
@@ -78,6 +79,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 - `DatabasePath` added to Config; loaded from `DATABASE_PATH` env var, defaults to `"polar.db"`
 - Both `/mcp` and `/mcp/` routes registered separately to handle ServeMux prefix matching
 - `WithHTTPContextFunc` used as defense-in-depth only; `auth.Middleware` is authoritative identity injection (D-01)
+- `ErrNotFound` and `ErrExpired` are exported sentinel errors from the store package
+- `ConsumeOAuthState` uses `DELETE...RETURNING` for atomic single-use CSRF state consumption
+- `UpsertToken` resolves `user_id` FK via `(SELECT id FROM users WHERE identity=?)` subquery; rejects missing users
+- `polar_user_id` stored as TEXT per schema ground truth (not int64)
 
 ### Open Questions
 
@@ -96,4 +101,4 @@ None.
 
 ---
 *Initialized: 2026-05-03*
-*Last session: 2026-05-04 — Completed 01-05-PLAN.md (Docker multi-stage Dockerfile → FROM scratch 11.46 MB; docker-compose.yml fail-closed; GitHub Actions CI test+lint→docker)*
+*Last session: 2026-05-10 — Completed 02-01-PLAN.md (Config Polar OAuth fields fail-closed; store OAuth state/user/token methods with TDD)*
