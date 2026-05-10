@@ -20,7 +20,7 @@ progress:
 
 ## Current Phase
 
-**Phase 2: OAuth Link Flow + UserInfo** — executing (1/3 plans done).
+**Phase 2: OAuth Link Flow + UserInfo** — executing (2/3 plans done).
 
 **Previous:** Phase 1: Project Foundation and Security Skeleton — 5/5 plans COMPLETE.
 
@@ -29,7 +29,7 @@ progress:
 | # | Phase | Status |
 |---|-------|--------|
 | 1 | Project Foundation and Security Skeleton | COMPLETE (5/5 plans done) |
-| 2 | OAuth Link Flow + UserInfo | Executing (1/3 plans done) |
+| 2 | OAuth Link Flow + UserInfo | Executing (2/3 plans done) |
 | 3 | Core MCP Tools + Bundled Skill | Not started |
 | 4 | Documentation, FOSS Hygiene, Release | Not started |
 
@@ -42,9 +42,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 
 ## Performance Metrics
 
-- Plans completed: 6 / 14
+- Plans completed: 7 / 14
 - Phases completed: 1 / 4
-- Requirements delivered: 16 / 40
+- Requirements delivered: 21 / 40
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
@@ -54,6 +54,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 | 01-04 auth middleware+HTTP server | 3 min | 2/2 | 4 modified |
 | 01-05 Docker + CI | 5 min | 2/2 | 3 created |
 | 02-01 config+store oauth foundations | 12 min | 2/2 | 8 created/modified |
+| 02-02 polar client + oauth handlers | 18 min | 2/2 | 10 created/modified |
 
 ## Accumulated Context
 
@@ -83,6 +84,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 - `ConsumeOAuthState` uses `DELETE...RETURNING` for atomic single-use CSRF state consumption
 - `UpsertToken` resolves `user_id` FK via `(SELECT id FROM users WHERE identity=?)` subquery; rejects missing users
 - `polar_user_id` stored as TEXT per schema ground truth (not int64)
+- `SetTokenEndpoint`/`SetRegisterEndpoint` in `testexports.go` (non-test file) — only way to expose package vars to external test binaries; `export_test.go` pattern only works within same package test binary
+- `polar_user_id` always from `TokenResponse.XUserID` (not 409 body) — 409 response body omits user object
+- `BytesKeyProvider` validates exactly 32 bytes at `Key()` call time, not at construction
 
 ### Open Questions
 
@@ -101,4 +105,4 @@ None.
 
 ---
 *Initialized: 2026-05-03*
-*Last session: 2026-05-10 — Completed 02-01-PLAN.md (Config Polar OAuth fields fail-closed; store OAuth state/user/token methods with TDD)*
+*Last session: 2026-05-10 — Completed 02-02-PLAN.md (Polar client ExchangeCode/RegisterUser; OAuth Login/Callback handlers; BytesKeyProvider; main.go wired end-to-end)*
