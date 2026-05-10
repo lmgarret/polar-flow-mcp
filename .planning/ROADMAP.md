@@ -58,10 +58,10 @@
 
 **Requirements:** OAUTH-01, OAUTH-02, OAUTH-03, OAUTH-04, OAUTH-05, MCP-01
 
-**Plans:**
-1. OAuth login and CSRF state — `GET /oauth/login` reads proxy identity header, generates 32-byte `crypto/rand` state, stores in `pending_auth` with 10-minute TTL, redirects to Polar authorization URL (OAUTH-01)
-2. OAuth callback and token storage — state validation (present, unexpired, identity match, single-use DELETE), code exchange via `POST https://polarremote.com/v2/oauth2/token`, Polar user registration with 409-as-success, AES-256-GCM encrypt and upsert into `polar_tokens` (OAUTH-02..05)
-3. `get_user_info` MCP tool — extracts identity from context, looks up `polar_user_id` from store, returns linked account info or clear "no account linked" message (MCP-01)
+**Plans:** 3 plans
+- [ ] 02-01-PLAN.md — Config Polar fields + store CRUD (CreateOAuthState/ConsumeOAuthState/UpsertUser/GetPolarUserID/UpsertToken) + tests (OAUTH-01, OAUTH-02, OAUTH-05 partial)
+- [ ] 02-02-PLAN.md — Polar client (ExchangeCode/RegisterUser) + OAuth Login/Callback handlers + main.go wiring + tests (OAUTH-01..05)
+- [ ] 02-03-PLAN.md — get_user_info MCP tool + RegisterTools signature update + phase-gate verification (MCP-01)
 
 **Success Criteria:**
 1. Visiting `/oauth/login` behind a correctly configured proxy redirects to `flow.polar.com` with a `state` parameter; a second visit generates a different state value
