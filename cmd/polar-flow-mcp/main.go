@@ -61,7 +61,7 @@ func main() {
 		"0.1.0",
 		server.WithToolCapabilities(true),
 	)
-	mcp.RegisterTools(mcpServer)
+	mcp.RegisterTools(mcpServer, st)
 
 	httpMCPServer := server.NewStreamableHTTPServer(mcpServer,
 		server.WithHTTPContextFunc(func(ctx context.Context, r *http.Request) context.Context {
