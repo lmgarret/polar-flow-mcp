@@ -19,7 +19,7 @@ This project uses the GSD (Get Shit Done) workflow for planning and execution.
 ## Pre-Commit Checklist
 
 1. **Lint**: Run `~/go/bin/golangci-lint run ./...` before committing. Fix all lint errors.
-2. **Tests**: Run `CGO_ENABLED=0 go test -race -count=1 ./...` before committing. Fix all failures.
+2. **Tests**: Run `CGO_ENABLED=0 go test -tags=polartest -race -count=1 ./...` before committing. Fix all failures.
 3. **Documentation**: Update docs when features are added or modified. Do not defer.
 
 ## Project Conventions (mirror karaclean exactly)

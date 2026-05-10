@@ -1,8 +1,10 @@
+//go:build polartest
+
 package polar
 
 // SetTokenEndpoint overrides tokenEndpoint for tests. Returns a restore function.
-// This function is in a non-test file so it is accessible from test binaries of other
-// packages (e.g., internal/oauth). It is safe to expose because polar is an internal package.
+// Gated behind the `polartest` build tag so it does NOT ship in production binaries (CR-03).
+// All `go test` invocations in this repo pass `-tags=polartest` (see Makefile and CI).
 func SetTokenEndpoint(s string) func() {
 	orig := tokenEndpoint
 	tokenEndpoint = s
@@ -10,6 +12,7 @@ func SetTokenEndpoint(s string) func() {
 }
 
 // SetRegisterEndpoint overrides registerEndpoint for tests. Returns a restore function.
+// Gated behind the `polartest` build tag (see SetTokenEndpoint).
 func SetRegisterEndpoint(s string) func() {
 	orig := registerEndpoint
 	registerEndpoint = s
