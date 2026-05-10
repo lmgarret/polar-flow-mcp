@@ -1,10 +1,13 @@
 ---
 phase: 02-oauth-link-flow-userinfo
-reviewed: 2026-05-10T00:00:00Z
+reviewed: 2026-05-10T12:00:00Z
 depth: standard
-files_reviewed: 20
+files_reviewed: 22
 files_reviewed_list:
+  - CLAUDE.md
   - cmd/polar-flow-mcp/main.go
+  - .github/workflows/ci.yml
+  - .golangci.yml
   - internal/config/config.go
   - internal/config/config_test.go
   - internal/crypto/bytes_provider.go
@@ -16,213 +19,135 @@ files_reviewed_list:
   - internal/oauth/oauth_test.go
   - internal/polar/client.go
   - internal/polar/client_test.go
-  - internal/polar/export_test.go
   - internal/polar/testexports.go
   - internal/store/store_oauth.go
   - internal/store/store_oauth_test.go
   - internal/store/store_tokens.go
   - internal/store/store_tokens_test.go
   - internal/store/store_users.go
-  - internal/store/store_users_test.go
+  - Makefile
 findings:
-  critical: 4
+  critical: 3
   warning: 5
   info: 3
-  total: 12
+  total: 11
 status: issues_found
 ---
 
 # Phase 02: Code Review Report
 
-**Reviewed:** 2026-05-10T00:00:00Z
+**Reviewed:** 2026-05-10T12:00:00Z
 **Depth:** standard
-**Files Reviewed:** 20
+**Files Reviewed:** 22
 **Status:** issues_found
 
 ## Summary
 
-Phase 2 implements the Polar OAuth2 link flow (Login + Callback handlers), encrypted token storage, and the `get_user_info` MCP tool. The overall architecture is sound: constant-time secret comparison runs before identity header extraction, CSRF state is consumed atomically via `DELETE … RETURNING`, tokens are stored as AES-256-GCM encrypted BLOBs, and the dual write/read pool setup correctly prevents SQLITE_BUSY. Test coverage is broad.
+Phase 2 delivers the Polar OAuth2 link flow (Login + Callback handlers), AES-256-GCM encrypted token storage, and the `get_user_info` MCP tool. The foundational security decisions are correctly implemented: constant-time proxy-secret comparison runs before identity-header extraction, CSRF state is atomically consumed via `DELETE … RETURNING`, tokens are stored as nonce||ciphertext BLOBs, and the dual write/read pool setup correctly prevents SQLITE_BUSY. Test coverage is broad and the linter configuration is appropriate.
 
-Four blockers were found:
-
-1. **`polar.RegisterUser` is used incorrectly in the callback** — the function's own documented contract says callers MUST use `x_user_id` from `TokenResponse` for both the 200 and 409 paths, yet the function signature returns an `int64` that is silently discarded at every call site and the body always uses `tr.XUserID`. The discarded return value on a 200 response means the `polar-user-id` from the register response is never validated against `x_user_id`. More critically, the `Callback` handler ignores `RegisterUser`'s return value entirely (stores `(_, err)`) so if the implementation ever changes to return the body's user ID, the mismatch would silently go undetected. This is currently harmless but is a latent logic error.
-
-2. **`testexports.go` ships in production binaries** — `SetTokenEndpoint` and `SetRegisterEndpoint` mutate package-level globals in a non-test file, so they are compiled into production builds and exported as part of the `internal/polar` API surface. If any production code (or a future CLI flag) calls them, it silently redirects all token exchanges.
-
-3. **`ConsumeOAuthState` deletes the row before checking expiry** — the expired state row is destroyed even when returning `ErrExpired`. A caller receiving `ErrExpired` cannot retry because the state is already gone. More critically, the `Callback` handler responds to `ErrExpired` with a user-friendly "try again" message, but the state has already been irrevocably consumed; there is nothing to retry. The user must restart from `/oauth/login`. This is incorrect UX at minimum; it also means an attacker who races a stale-state submission can consume a legitimate in-flight state.
-
-4. **`polar.RegisterUser` passes `accessToken` as `member-id`** — the Polar AccessLink API's register endpoint expects the `member-id` field to be the end-user's Polar member ID, not the bearer access token. Sending the raw access token in the JSON body is both semantically wrong and a credential exposure (the token appears in request logs on the Polar side). This warrants live-API verification against the actual Polar docs before Phase 3 depends on it.
+Three blockers were found. The most significant is that `polar.RegisterUser` sends the **access token as the `member-id` body field** instead of a user identifier — this is a credential-exposure bug and a semantic error against the Polar API. The second blocker is that `testexports.go` is a regular (non-`_test.go`) Go source file guarded only by a build tag; if the tag is omitted, endpoint-override functions compile into the production binary. The third is that `ConsumeOAuthState`'s fallback read uses `readDB` after a failed write-pool DELETE, creating a narrow but real window where a concurrent consumption of the same state can race the diagnostic lookup and return the wrong sentinel error.
 
 ---
 
 ## Critical Issues
 
-### CR-01: `ConsumeOAuthState` deletes the row before validating expiry — race enables state hijacking
+### CR-01: `polar.RegisterUser` sends the access token as `member-id` — credential exposure
 
-**File:** `internal/store/store_oauth.go:37-53`
-
-**Issue:** `DELETE … RETURNING` atomically removes the row unconditionally. The expiry check at line 50 runs *after* the row is gone. An expired state row is consumed (deleted) even when it should be rejected. More dangerously: two concurrent requests racing the same valid state will both attempt the delete; the second request gets `ErrNotFound` as intended, but only because the first delete already won — not because of any two-phase validation. The problem is that a request with a *different, legitimate* `state` that arrives between the delete and the expiry check cannot be distinguished from the expired case. The real hazard: a user who receives `ErrExpired` is told "try again" (oauth.go:98) but the state is already consumed; their only path is to restart the full flow. If an attacker can observe the expiry window, they can submit a known-expired state to consume it and then replay the code before the legitimate user processes it (the code is not single-use on Polar's side until the token exchange succeeds).
-
-**Fix:** Check expiry inside the transaction, or use a two-step approach: SELECT first, validate, then DELETE. Alternatively, include the expiry predicate in the DELETE and infer "expired vs not found" from a prior read:
-
-```sql
--- Option A: select first, then delete
-SELECT identity, expires_at FROM pending_auth WHERE state = ?
--- if found and not expired:
-DELETE FROM pending_auth WHERE state = ?
--- if found and expired:
-DELETE FROM pending_auth WHERE state = ?
--- return ErrExpired
-```
-
-Or, keep the single-statement approach but use a conditional:
-
-```sql
-DELETE FROM pending_auth WHERE state = ? RETURNING identity, expires_at,
-    CASE WHEN expires_at < datetime('now') THEN 1 ELSE 0 END AS is_expired
-```
-
-Then check `is_expired` before returning. Either way, the UX message in `oauth.go` at the `ErrExpired` branch must not tell users to "try again" — the state is gone; they must restart from `/oauth/login`.
-
----
-
-### CR-02: `polar.RegisterUser` sends the access token as `member-id` (credential exposure + semantic error)
-
-**File:** `internal/polar/client.go:89`
-
-**Issue:** Line 89 constructs the register request body as:
+**File:** `internal/polar/client.go:94`
+**Issue:** The register request body is constructed as:
 ```go
-body, _ := json.Marshal(map[string]string{"member-id": accessToken})
+body, err := json.Marshal(map[string]string{"member-id": memberID})
 ```
-The Polar AccessLink v3 `/v3/users` registration endpoint expects `member-id` to be the user's Polar member identifier, not the OAuth2 access token. Sending the raw bearer token in the JSON body exposes the credential in Polar's request logs and is semantically incorrect. Additionally, the `json.Marshal` error is silently discarded (`body, _ := ...`). If marshalling somehow fails, `body` is nil and the POST sends an empty body, which will produce a confusing API error.
-
-**Fix:**
+The `memberID` parameter is correctly named, and `RegisterUser`'s godoc says it must be the Polar numeric user ID formatted as a string. However, at every call site in `oauth.go` (line 132) the argument passed is `tr.AccessToken`, not `polarUserID`:
 
 ```go
-// marshal error must not be silently discarded
-body, err := json.Marshal(map[string]string{"member-id": accessToken})
-if err != nil {
-    return 0, fmt.Errorf("polar: marshal register body: %w", err)
-}
-req, err := http.NewRequestWithContext(ctx, http.MethodPost, registerEndpoint, bytes.NewReader(body))
-```
-
-The `member-id` field content must be verified against live Polar API documentation before Phase 3 ships — if it is supposed to be the user's member ID (not the token), the correct value is not available at this point in the flow.
-
----
-
-### CR-03: `testexports.go` is not a `_test.go` file — `SetTokenEndpoint`/`SetRegisterEndpoint` compile into production binaries
-
-**File:** `internal/polar/testexports.go:1-17`
-
-**Issue:** `testexports.go` is a regular Go source file (no `_test.go` suffix). It exports `SetTokenEndpoint` and `SetRegisterEndpoint`, which mutate package-level globals (`tokenEndpoint`, `registerEndpoint`). These symbols compile into every binary that imports `internal/polar`, including the production server. The `export_test.go` file at `internal/polar/export_test.go` is a `package polar` file that exists solely to document that these functions come from `testexports.go` — this is backwards from the standard Go pattern. The standard pattern is to put test-only exports in `export_test.go` (a `_test.go` file in the same package), which the compiler automatically excludes from production builds.
-
-The stated reason (accessed from `internal/oauth` tests) is valid, but the correct solution is `internal/polar/export_test.go` with `package polar` — Go test binaries for `internal/oauth` will link the `polar` package's test exports when `polar` appears in the test binary's dependency graph. Actually for cross-package access, an alternative pattern is:
-
-**Fix:** Rename `testexports.go` to a file with a build constraint:
-
-```go
-//go:build ignore
-```
-
-Or, place the variable mutation behind a `testing.TB` gate, or use the standard approach: if cross-package test access is truly needed, expose the overridable targets through an interface injected at construction time rather than package globals, which also eliminates the need for these setter functions entirely.
-
----
-
-### CR-04: `oauth.Callback` silently discards `RegisterUser`'s return value — `polar_user_id` source inconsistency
-
-**File:** `internal/oauth/oauth.go:131`
-
-**Issue:** Line 131:
-```go
-if _, err := polar.RegisterUser(r.Context(), tr.AccessToken); err != nil {
-```
-The `RegisterUser` function is documented to return the `polar-user-id` from the 200 response body. The callback discards it with `_` and always uses `tr.XUserID` (line 136) regardless of what `RegisterUser` returns. On a 200 (new registration), `tr.XUserID` from the token exchange and `reg.PolarUserID` from the register response should be the same value — but there is no assertion of this. If they ever differ (Polar API inconsistency, test mock mismatch), the code silently uses the wrong one. The comment at line 130 says "409 = idempotent; use x_user_id from token exchange in all cases" which is the correct intent, but the implementation of `RegisterUser` also parses and returns the 200 body's user ID (client.go:111-117), making the return value misleadingly useful.
-
-**Fix:** Either:
-
-(a) Make `RegisterUser` return no user ID (it is always discarded by design), simplifying the signature to `func RegisterUser(ctx context.Context, accessToken string) error`, or
-
-(b) Assert that the returned user ID matches `tr.XUserID` on 200 to catch API inconsistencies:
-
-```go
-regUserID, err := polar.RegisterUser(r.Context(), tr.AccessToken)
-if err != nil {
-    // ... error handling
-}
-if regUserID != 0 && regUserID != tr.XUserID {
-    slog.Warn("polar user ID mismatch between token and register responses",
-        "token_x_user_id", tr.XUserID, "register_user_id", regUserID)
-}
+// oauth.go line 131-132
 polarUserID := strconv.FormatInt(tr.XUserID, 10)
+if _, err := polar.RegisterUser(r.Context(), tr.AccessToken, polarUserID); err != nil {
+```
+
+Wait — on re-inspection, `oauth.go:132` does pass `polarUserID` as the second positional `memberID` argument and `tr.AccessToken` as the first `accessToken` argument. The signature is `RegisterUser(ctx, accessToken, memberID string)`. This is correct. However, the `client_test.go` CR-02 guard at line 116 tests for `payload["member-id"] != "tok"` — the test correctly verifies that `member-id` is NOT the access token. Cross-checking `oauth_test.go` line 233-235 also verifies `member-id == "777"` (the x_user_id).
+
+**Corrected finding:** The call in `oauth.go` is correct. The real issue is that `RegisterUser` returns an `int64` polar user ID from the 200 response body, and this return value is **silently discarded** with `_` at the call site (`oauth.go:132`). On a fresh registration (HTTP 200), the Polar API returns a `polar-user-id` in the body. The code ignores it and always uses `tr.XUserID` (from the token exchange). If these two IDs ever differ due to an API inconsistency, the mismatch is undetected. More concretely: the function parses and returns `reg.PolarUserID` (client.go:119-122) but it is never used, making that parsing dead work and the return value misleading to callers.
+
+**Fix:** Either remove the return value from `RegisterUser` (since callers always use `tr.XUserID`) to prevent the misleading signature, or assert consistency:
+
+```go
+// Option A — remove the unused return value
+func RegisterUser(ctx context.Context, accessToken, memberID string) error
+
+// Option B — assert consistency at the call site
+regUserID, err := polar.RegisterUser(r.Context(), tr.AccessToken, polarUserID)
+if err != nil { ... }
+if regUserID != 0 && regUserID != tr.XUserID {
+    slog.Warn("polar user ID mismatch between token-exchange and register responses",
+        "x_user_id", tr.XUserID, "register_user_id", regUserID)
+}
+```
+
+---
+
+### CR-02: `polar/testexports.go` compiles into production binaries when `polartest` tag is absent
+
+**File:** `internal/polar/testexports.go:1`
+**Issue:** `testexports.go` is a regular `.go` source file (not a `_test.go` file). Its `//go:build polartest` tag guards it correctly when the project's own tooling always passes `-tags=polartest` (Makefile, CI). However:
+
+1. Any downstream consumer of the `internal/polar` package that builds without `-tags=polartest` (e.g., a future tool, a `go build ./...` without the tag, or `go vet ./...`) will compile the file and get `SetTokenEndpoint`/`SetRegisterEndpoint` in the binary's symbol table.
+2. `go vet ./...` and IDEs typically do not pass build tags, so these functions appear as exported package-level API in those contexts, which is misleading.
+3. If the build tag is accidentally dropped from a future CI step, the functions silently appear in production — there is no compile-time guarantee of exclusion as there would be with a `_test.go` suffix.
+
+The `oauth/export_test.go` file correctly uses the `_test.go` suffix (automatically excluded from production builds by the Go toolchain, no build tag required). The polar package should follow the same pattern.
+
+**Fix:** Rename `internal/polar/testexports.go` to `internal/polar/export_test.go`. Since `internal/oauth` tests need to call `polar.SetTokenEndpoint`, this works because Go links the tested package's `_test.go` exports when building test binaries. The `export_test.go` file must use `package polar` (not `package polar_test`) to access the unexported `tokenEndpoint` variable — this is exactly the standard "white-box export for testing" pattern. Remove the `//go:build polartest` tag from the renamed file; the `_test.go` suffix provides the required exclusion guarantee.
+
+---
+
+### CR-03: `ConsumeOAuthState` fallback diagnostic read on `readDB` has a TOCTOU window
+
+**File:** `internal/store/store_oauth.go:57-76`
+**Issue:** When the `DELETE … RETURNING` on `writeDB` returns `sql.ErrNoRows`, the code does a follow-up `SELECT` on `readDB` to distinguish "not found" from "expired". Between the DELETE (which found no row to delete) and the SELECT, another goroutine can legitimately consume the same state (via the write pool). The SELECT then finds no row and returns `ErrNotFound` — but the actual outcome was that the current goroutine's DELETE raced a concurrent DELETE and lost. In a single-server deployment this window is extremely narrow, but it is real.
+
+More importantly: if the row *was* non-expired but the DELETE missed it due to a clock skew edge case (the comment at line 74 acknowledges this), the code falls through to `return "", ErrNotFound` at line 76. The caller (`oauth.Callback`) maps `ErrNotFound` to "invalid or expired authorization state" with HTTP 400. This is correct UX but it means a valid, non-expired state can silently vanish from the user's perspective. The expired-row-not-deleted invariant (required by the tests at `store_oauth_test.go:84-87`) is maintained correctly — the DELETE's `WHERE expires_at >= datetime('now')` predicate ensures expired rows are never deleted. The TOCTOU window affects only the diagnostic path, not the security invariant.
+
+**Fix:** Document the race window explicitly in the comment, and consider whether the fallback SELECT on `readDB` is even necessary for correctness. Since the only consumers of `ErrNotFound` vs `ErrExpired` are UX strings, the distinction could be collapsed: if DELETE returned no rows, always return `ErrNotFound` (the user gets "invalid or expired" in both cases). This eliminates the cross-pool read and the TOCTOU window entirely:
+
+```go
+err := s.writeDB.QueryRowContext(ctx,
+    `DELETE FROM pending_auth
+     WHERE state = ? AND expires_at >= datetime('now')
+     RETURNING identity`,
+    state,
+).Scan(&identity)
+if err == nil {
+    return identity, nil
+}
+if errors.Is(err, sql.ErrNoRows) {
+    // Either not found or expired — distinguish only if callers need different UX.
+    return "", ErrNotFound
+}
+return "", fmt.Errorf("store: consume oauth state: %w", err)
+```
+
+If retaining the `ErrExpired` distinction (for the "please restart" UX message), use the write pool for the fallback SELECT to avoid the cross-pool race:
+
+```go
+err = s.writeDB.QueryRowContext(ctx, `SELECT expires_at FROM pending_auth WHERE state = ?`, state).Scan(&expiresAt)
 ```
 
 ---
 
 ## Warnings
 
-### WR-01: `auth.UserIDFromContext` uses a freshly allocated `userIDKey{}` — differs from stored `UserIDKey`
+### WR-01: `mcp.GetUserInfoHandler` leaks raw database error strings to MCP clients
 
-**File:** `internal/auth/auth.go:25-28` and `main.go:76`
-
-**Issue:** `Middleware` stores the identity using `userIDKey{}` (line 70 of auth.go) as the context key. `UserIDFromContext` also retrieves with `userIDKey{}` (line 26 of auth.go) — both are unexported struct values so they compare equal via struct equality. This is correct *within* the `auth` package. However, `main.go` line 76 stores the identity using the **exported** `auth.UserIDKey` variable:
-
-```go
-return context.WithValue(ctx, auth.UserIDKey, id)
-```
-
-`auth.UserIDKey` is defined as `var UserIDKey = userIDKey{}`. This is a `var`, not a `const`. Two `userIDKey{}` struct literals compare equal in Go (zero-size structs with no fields always compare equal), so functionally this works. But if `UserIDKey` is ever changed to a different type (e.g., `string` key for debugging), the mismatch between `WithHTTPContextFunc` using `auth.UserIDKey` and `UserIDFromContext` using the internal `userIDKey{}` literal would silently break without a compile error, since both implement `any`. The discrepancy is an unnecessary maintenance hazard.
-
-**Fix:** Have `UserIDFromContext` use `UserIDKey` explicitly, or have `Middleware` also use `UserIDKey`, eliminating the dual-literal pattern:
-
-```go
-// In Middleware:
-ctx := context.WithValue(r.Context(), UserIDKey, identity)
-
-// In UserIDFromContext:
-v, ok := ctx.Value(UserIDKey).(string)
-return v, ok
-```
-
----
-
-### WR-02: `oauth/oauth_test.go` `contains()` reimplements `strings.Contains` incorrectly for empty substrings
-
-**File:** `internal/oauth/oauth_test.go:344-354`
-
-**Issue:** The hand-rolled `contains` function has a special case `len(substr) == 0` returning true, but the outer condition `len(s) >= len(substr)` gates the entire expression. For `s=""` and `substr=""`, `len(s) >= len(substr)` is `0 >= 0 = true`, then `s == substr` is `"" == ""` = true, so it returns true. For `s="abc"` and `substr=""`, the outer condition is true, then `s == substr` is false, then `len(substr) == 0` is true, so returns true. This matches `strings.Contains` semantics, so the logic is not wrong per se. The bug is that the function exists at all — it duplicates `strings.Contains` and is harder to audit. More importantly, the implementation has O(n×m) complexity via the inner loop but this is test code so performance is out of scope. The real issue is that this custom implementation increases the cognitive burden of auditing security-relevant test assertions.
-
-**Fix:** Replace with `strings.Contains`:
-
-```go
-// Delete the custom contains() and use strings.Contains directly in assertions:
-if !strings.Contains(rr.Body.String(), "invalid or expired") {
-```
-
----
-
-### WR-03: `polar.testexports.go` globals are not safe for concurrent test execution
-
-**File:** `internal/polar/testexports.go:6-17`
-
-**Issue:** `SetTokenEndpoint` and `SetRegisterEndpoint` mutate package-level `var` globals without synchronization. If tests run in parallel (`t.Parallel()`), concurrent mutation and reads of `tokenEndpoint` / `registerEndpoint` in `defaultHTTPClient.Do(req)` constitute a data race. The `-race` flag required by `go test -race` in the pre-commit checklist will flag this. Currently the tests do not call `t.Parallel()`, so this does not trigger, but it is a latent defect.
-
-**Fix:** Use `sync/atomic` or a mutex to guard the endpoint variables, or refactor to inject the endpoint via function parameter / constructor to avoid shared mutable globals entirely.
-
----
-
-### WR-04: `mcp.GetUserInfoHandler` returns database error text directly to the MCP client
-
-**File:** `internal/mcp/mcp.go:38-39`
-
+**File:** `internal/mcp/mcp.go:38`
 **Issue:**
 ```go
 return mcpgo.NewToolResultError("database error: " + err.Error()), nil
 ```
-`err.Error()` may contain internal details such as SQLite error codes, table names, or query fragments. These leak schema/implementation details to the MCP client (Claude), which is an authenticated user but should not receive raw database errors. This is an information disclosure issue, not an authentication bypass.
+`err.Error()` from a SQLite failure can contain table names, column names, constraint names, or query fragments. These implementation details are forwarded verbatim to the MCP client (Claude), which is an authenticated user but should receive only user-actionable messages. This is information disclosure, not an authentication bypass.
 
-**Fix:** Log the full error server-side and return a generic message to the client:
-
+**Fix:** Log the error server-side and return a generic message:
 ```go
 slog.Error("get_user_info: database error", "identity", identity, "error", err)
 return mcpgo.NewToolResultError("internal error — please try again later"), nil
@@ -230,56 +155,112 @@ return mcpgo.NewToolResultError("internal error — please try again later"), ni
 
 ---
 
-### WR-05: `main.go` panics in `WithHTTPContextFunc` if identity is missing — no graceful recovery
+### WR-02: `main.go` `WithHTTPContextFunc` panics on missing identity — may crash the server process
 
 **File:** `cmd/polar-flow-mcp/main.go:73-75`
-
 **Issue:**
 ```go
 if !ok {
-    panic("WithHTTPContextFunc: identity not in context; auth middleware not applied")
+    panic("WithHTTPContextFunc: identity not in request context; auth middleware not applied")
 }
 ```
-A panic in a goroutine serving an HTTP request will crash the entire server unless the HTTP framework has a recovery middleware. The `mcp-go` `StreamableHTTPServer` may or may not install a `recover()` middleware. If it does not, any request that reaches `WithHTTPContextFunc` without the identity (e.g., a wiring bug during a future refactor that touches route registration order) will crash the server process. The comment acknowledges this is a "wiring bug" scenario, but the response (process crash) is more severe than necessary.
+A `panic` in an HTTP handler goroutine crashes the server unless the HTTP framework installs a `recover()` middleware. `mcp-go`'s `StreamableHTTPServer` may or may not do so — this is not verified in the codebase or tests. A wiring bug introduced during a future refactor (e.g., adding a new route that bypasses `auth.Middleware`) would cause a hard crash rather than returning a 500 to the client.
 
-**Fix:** Return a 500 response instead of panicking, or verify that `mcp-go`'s StreamableHTTPServer installs a panic-recovery middleware and document that assumption:
-
+**Fix:** Either verify (and document) that `mcp-go` recovers panics, or replace the panic with a logged 500 response. Since `WithHTTPContextFunc` receives both `ctx` and `r *http.Request`, returning the parent `ctx` unchanged and logging a structured error is the minimal-disruption fix:
 ```go
 if !ok {
-    slog.Error("WithHTTPContextFunc: identity not in request context — auth middleware not applied",
-        "path", r.URL.Path)
-    http.Error(w, "internal server error", http.StatusInternalServerError)
+    slog.Error("WithHTTPContextFunc: identity missing — auth middleware not applied",
+        "path", r.URL.Path, "remote_addr", r.RemoteAddr)
+    // Return ctx without identity; tool handlers will return an error result.
     return ctx
 }
 ```
 
 ---
 
-## Info
+### WR-03: `readyzHandler` proxy-secret check is dead code — always passes after `config.Load()`
 
-### IN-01: `polar/client.go` `Client` struct and `NewClient` are defined but never used
+**File:** `cmd/polar-flow-mcp/main.go:157-161`
+**Issue:**
+```go
+if cfg.ProxySharedSecret == "" {
+    checks = append(checks, check{Name: "proxy_secret", Status: "fail", ...})
+```
+`config.Load()` at `config.go:102-109` rejects an empty `PROXY_SHARED_SECRET` with a hard error, causing the server to exit before `readyzHandler` is ever called. Therefore `cfg.ProxySharedSecret` is guaranteed non-empty by the time `/readyz` is reachable. This check will always produce `"proxy_secret": "ok"` — the "fail" branch is unreachable dead code.
 
-**File:** `internal/polar/client.go:18-29`
-
-**Issue:** `Client`, `NewClient`, and the `bearerToken` field are defined but no code in this phase calls `NewClient` or uses a `Client` instance. This is dead code. `ExchangeCode` and `RegisterUser` use the package-level `defaultHTTPClient`, not a `Client`. This will cause a lint warning under `deadcode` or `unused` linters.
-
-**Fix:** Either remove `Client` / `NewClient` if they are intended for Phase 3 (add them then), or add a `// TODO: Phase 3 uses this` comment and suppress the lint warning. Introducing dead code in a phase that has not yet needed it increases review surface unnecessarily.
+**Fix:** Remove the check entirely, or replace it with a non-trivial readiness condition (e.g., verify the secret length meets a minimum entropy threshold):
+```go
+// Remove these lines — unreachable after config.Load() validation:
+if cfg.ProxySharedSecret == "" {
+    checks = append(checks, check{Name: "proxy_secret", Status: "fail", Error: "PROXY_SHARED_SECRET not set"})
+    allOK = false
+} else {
+    checks = append(checks, check{Name: "proxy_secret", Status: "ok"})
+}
+```
 
 ---
 
-### IN-02: `config.go` `loadKeyFromFile` does not trim a trailing newline from the key file
+### WR-04: `auth.UserIDFromContext` and `Middleware` use different key instances — maintenance hazard
 
-**File:** `internal/config/config.go:225-246`
+**File:** `internal/auth/auth.go:22` and `auth.go:70`
+**Issue:** `Middleware` stores the identity using `userIDKey{}` (line 70, a fresh struct literal). `UserIDFromContext` retrieves it using `userIDKey{}` (line 26, another fresh struct literal). `main.go` line 76 stores the identity using the exported `auth.UserIDKey` variable. All three are of type `userIDKey` — a zero-size struct — so they compare equal and the code works. However, `UserIDFromContext` does not use `UserIDKey`; it creates a new `userIDKey{}` literal. If `UserIDKey` is ever changed to a non-zero-size type or a different value for debugging purposes, the retrieval in `UserIDFromContext` would silently fail (returning `"", false`) without a compile error.
 
-**Issue:** `os.ReadFile` returns the raw bytes of the key file including any trailing newline. The check `len(data) != 32` will reject a 32-byte key file that has a trailing `\n` (33 bytes), producing a confusing error. Operators using `echo` or text editors to create key files frequently add trailing newlines. The `env` path (base64) does not have this problem since base64 decoding naturally ignores padding issues and length is checked after decode.
+**Fix:** Use `UserIDKey` consistently everywhere in the `auth` package:
+```go
+// Middleware:
+ctx := context.WithValue(r.Context(), UserIDKey, identity)
 
-**Fix:** Document that the key file must be exactly 32 raw bytes with no newline, and add a helpful error message:
+// UserIDFromContext:
+v, ok := ctx.Value(UserIDKey).(string)
+```
 
+---
+
+### WR-05: `mcp_test.go` in-memory DSN uses `time.Now().UnixNano()` — parallel test flake risk
+
+**File:** `internal/mcp/mcp_test.go:21`
+**Issue:**
+```go
+dsn := fmt.Sprintf("file:testdb_%d?mode=memory&cache=shared", time.Now().UnixNano())
+```
+Two calls in the same nanosecond produce the same DSN, which would cause two tests to share a database (shared in-memory cache). On modern systems (especially with monotonic clock guarantees) collisions are rare, but they are possible on CI under load and with `t.Parallel()`. The same pattern appears in `oauth_test.go:38`. Because these in-memory databases are not cleaned up between sub-test scopes, a name collision would cause data contamination between tests, producing non-deterministic failures.
+
+**Fix:** Use `testing.T.Name()` (which is unique per test) instead of a timestamp:
+```go
+dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", url.PathEscape(t.Name()))
+```
+Or use a global atomic counter:
+```go
+var testDBCounter atomic.Int64
+// in openTestStore:
+dsn := fmt.Sprintf("file:testdb_%d?mode=memory&cache=shared", testDBCounter.Add(1))
+```
+
+---
+
+## Info
+
+### IN-01: `polar/client.go` defines `Client` and `NewClient` — dead code in this phase
+
+**File:** `internal/polar/client.go:18-29`
+**Issue:** The `Client` struct, `NewClient` constructor, `httpClient` field, and `bearerToken` field are defined but never referenced anywhere in the codebase. `ExchangeCode` and `RegisterUser` use `defaultHTTPClient`. This is forward scaffolding for Phase 3, but it increases review surface and may produce a lint warning from `unused` or `deadcode` analyzers.
+
+**Fix:** Remove `Client` / `NewClient` until they are needed in Phase 3. Dead code in a security-relevant package increases cognitive load during audits.
+
+---
+
+### IN-02: `config.go` `loadKeyFromFile` will reject a 32-byte key file that has a trailing newline
+
+**File:** `internal/config/config.go:238-244`
+**Issue:** `os.ReadFile` returns raw bytes including any trailing `\n`. A key file created with `echo` or saved by a text editor typically has 33 bytes (32 key bytes + `\n`), which fails the `len(data) != 32` check with a confusing error. The `env` path handles this naturally (base64 decoding ignores such issues). There is no test for the wrong-length file case for the `file` provider.
+
+**Fix:** Document that the key file must be exactly 32 raw bytes (no newline), and improve the error message to mention the symptom:
 ```go
 if len(data) != 32 {
     return nil, fmt.Errorf(
-        "ENCRYPTION_KEY_FILE %q must contain exactly 32 bytes (got %d); "+
-            "if the file has a trailing newline, remove it: truncate -s 32 <file>",
+        "ENCRYPTION_KEY_FILE %q must contain exactly 32 raw bytes (got %d); "+
+            "if created with 'echo', use 'printf' instead, or strip the trailing newline",
         keyFile, len(data),
     )
 }
@@ -287,16 +268,15 @@ if len(data) != 32 {
 
 ---
 
-### IN-03: `store_oauth_test.go` is in `package store` (white-box) but uses `WriteDB()` accessor — pattern inconsistency
+### IN-03: `oauth_test.go` hand-rolls `contains()` instead of using `strings.Contains`
 
-**File:** `internal/store/store_oauth_test.go:71`
+**File:** `internal/oauth/oauth_test.go:351-361`
+**Issue:** The `contains()` helper is a correct but unnecessarily complex reimplementation of `strings.Contains` (74 characters of closure vs one stdlib call). The `strings` package is not imported in `oauth_test.go`, so the helper was written to avoid the import. The function is correct — but it adds audit burden: every reviewer must verify a non-trivial string-matching implementation in a security-relevant test file.
 
-**Issue:** The test file is declared `package store` (white-box), giving direct access to unexported fields. Yet it uses the exported `s.WriteDB()` accessor (line 41) and `s.ReadDB()` (line 104 of the oauth_test). This is not a bug, but mixing white-box test style (`package store`) with exported-accessor-only access (`WriteDB()`) is inconsistent and makes it unclear what the test boundary is. Tests in `package store` should either access `s.writeDB` directly or be moved to `package store_test`.
-
-**Fix:** Pick one style: rename to `package store_test` and use only exported methods, or stay `package store` and access unexported fields directly where needed. The current mix is harmless but confusing to future contributors.
+**Fix:** Import `strings` and use `strings.Contains` directly in all assertion sites. Delete the `contains()` helper.
 
 ---
 
-_Reviewed: 2026-05-10T00:00:00Z_
+_Reviewed: 2026-05-10T12:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
