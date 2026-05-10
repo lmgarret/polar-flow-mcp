@@ -18,24 +18,18 @@ A user can say "create a 5×1km threshold session for Thursday" in Claude and ha
 - [x] Proxy shared secret enforcement (PROXY_SHARED_SECRET + configurable header) — Validated in Phase 1: subtle.ConstantTimeCompare before identity header read
 - [x] /healthz and /readyz endpoints — Validated in Phase 1: wired in main.go with httptest integration tests
 - [x] CI pipeline mirroring karaclean exactly (test + lint + docker jobs, ghcr.io) — Validated in Phase 1: three-job workflow, ghcr.io push with latest + sha tags
+- [x] Per-user Polar OAuth2 flow (login + callback endpoints) — Validated in Phase 2: CSRF state in SQLite, expiry-before-delete, state-hijacking mitigated
+- [x] MCP tool: `get_user_info` (which Polar account is linked) — Validated in Phase 2: identity from proxy header, store lookup, encrypted token decryption
+- [x] Bind to 127.0.0.1 by default; BIND_ADDRESS for anything else — Validated in Phase 2: net.Listen with configurable bind address
 
 ### Active
 
-- [ ] Multi-user SQLite store with schema migrations
-- [ ] Per-user Polar OAuth2 flow (login + callback endpoints)
-- [ ] Polar access tokens encrypted at rest (AES-256-GCM, KeyProvider interface)
 - [ ] MCP tool: `create_training_target` (warmup/repeats/cooldown, HR zone/pace/power intensity)
 - [ ] MCP tool: `list_training_targets` (upcoming scheduled targets)
 - [ ] MCP tool: `delete_training_target`
-- [ ] MCP tool: `get_user_info` (which Polar account is linked)
-- [ ] Fail-closed auth design (refuse to start unless AUTH_PROXY ≠ "unconfigured")
-- [ ] Proxy shared secret enforcement (PROXY_SHARED_SECRET + configurable header)
-- [ ] Bind to 127.0.0.1 by default; BIND_ADDRESS for anything else
-- [ ] /healthz and /readyz endpoints
 - [ ] MkDocs Material documentation site (Diátaxis structure, GitHub Pages)
 - [ ] Bundled Claude skill at skill/polar-coach/SKILL.md
 - [ ] Full FOSS hygiene (LICENSE, README, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, .github/)
-- [ ] CI pipeline mirroring karaclean exactly (test + lint + docker jobs, ghcr.io)
 
 ### Out of Scope
 
@@ -109,4 +103,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-05 — Phase 1 complete (foundation + security skeleton)*
+*Last updated: 2026-05-10 — Phase 2 complete (OAuth link flow + get_user_info)*
