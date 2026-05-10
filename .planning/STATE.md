@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-10T19:38:40.438Z"
+last_updated: "2026-05-10T21:00:00.000Z"
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 9
-  completed_plans: 8
-  percent: 89
+  completed_phases: 2
+  total_plans: 10
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -20,7 +20,7 @@ progress:
 
 ## Current Phase
 
-**Phase 2: OAuth Link Flow + UserInfo** — COMPLETE (3/3 plans done).
+**Phase 2: OAuth Link Flow + UserInfo** — COMPLETE (4/4 plans done, including gap-closure 02-04).
 
 **Previous:** Phase 1: Project Foundation and Security Skeleton — 5/5 plans COMPLETE.
 
@@ -31,7 +31,7 @@ progress:
 | # | Phase | Status |
 |---|-------|--------|
 | 1 | Project Foundation and Security Skeleton | COMPLETE (5/5 plans done) |
-| 2 | OAuth Link Flow + UserInfo | COMPLETE (3/3 plans done) |
+| 2 | OAuth Link Flow + UserInfo | COMPLETE (4/4 plans done) |
 | 3 | Core MCP Tools + Bundled Skill | Not started |
 | 4 | Documentation, FOSS Hygiene, Release | Not started |
 
@@ -44,9 +44,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 
 ## Performance Metrics
 
-- Plans completed: 8 / 14
+- Plans completed: 10 / 14
 - Phases completed: 2 / 4
-- Requirements delivered: 22 / 40
+- Requirements delivered: 25 / 40
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
@@ -58,6 +58,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 | 02-01 config+store oauth foundations | 12 min | 2/2 | 8 created/modified |
 | 02-02 polar client + oauth handlers | 18 min | 2/2 | 10 created/modified |
 | 02-03 get_user_info MCP tool | 5 min | 1/1 | 1 created, 2 modified |
+| 02-04 gap closure CR-01/02/03 | 20 min | 3/3 | 11 modified, 1 deleted |
 
 ## Accumulated Context
 
@@ -84,10 +85,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 - Both `/mcp` and `/mcp/` routes registered separately to handle ServeMux prefix matching
 - `WithHTTPContextFunc` used as defense-in-depth only; `auth.Middleware` is authoritative identity injection (D-01)
 - `ErrNotFound` and `ErrExpired` are exported sentinel errors from the store package
-- `ConsumeOAuthState` uses `DELETE...RETURNING` for atomic single-use CSRF state consumption
+- `ConsumeOAuthState` uses conditional `DELETE WHERE expires_at >= datetime('now') RETURNING` + diagnostic SELECT; expired rows are NOT deleted (CR-01 fix)
 - `UpsertToken` resolves `user_id` FK via `(SELECT id FROM users WHERE identity=?)` subquery; rejects missing users
 - `polar_user_id` stored as TEXT per schema ground truth (not int64)
-- `SetTokenEndpoint`/`SetRegisterEndpoint` in `testexports.go` (non-test file) — only way to expose package vars to external test binaries; `export_test.go` pattern only works within same package test binary
+- `SetTokenEndpoint`/`SetRegisterEndpoint` in `testexports.go` gated behind `//go:build polartest`; all `go test` invocations pass `-tags=polartest`; golangci-lint `run.build-tags: [polartest]` — excludes symbols from production binaries (CR-03)
 - `polar_user_id` always from `TokenResponse.XUserID` (not 409 body) — 409 response body omits user object
 - `BytesKeyProvider` validates exactly 32 bytes at `Key()` call time, not at construction
 - `GetUserInfoHandler` exported (not unexported) — allows cross-package test invocation without live server
@@ -111,4 +112,4 @@ None.
 
 ---
 *Initialized: 2026-05-03*
-*Last session: 2026-05-10 — Completed 02-03-PLAN.md (get_user_info MCP tool; Phase 2 gate green: build + race tests + lint all pass)*
+*Last session: 2026-05-10 — Completed 02-04-PLAN.md (gap closure CR-01/CR-02/CR-03; all three blockers resolved; lint + tests + production build verified)*

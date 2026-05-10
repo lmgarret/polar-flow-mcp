@@ -62,7 +62,7 @@
 - [x] 02-01-PLAN.md — Config Polar fields + store CRUD (CreateOAuthState/ConsumeOAuthState/UpsertUser/GetPolarUserID/UpsertToken) + tests (OAUTH-01, OAUTH-02, OAUTH-05 partial) [DONE 2026-05-10]
 - [x] 02-02-PLAN.md — Polar client (ExchangeCode/RegisterUser) + OAuth Login/Callback handlers + main.go wiring + tests (OAUTH-01..05) [DONE 2026-05-10]
 - [x] 02-03-PLAN.md — get_user_info MCP tool + RegisterTools signature update + phase-gate verification (MCP-01) [DONE 2026-05-10]
-- [ ] 02-04-PLAN.md — Gap closure: CR-01 expired-state delete-before-check, CR-02 RegisterUser member-id, CR-03 testexports.go production leak (OAUTH-02, OAUTH-04, OAUTH-05)
+- [x] 02-04-PLAN.md — Gap closure: CR-01 expired-state delete-before-check, CR-02 RegisterUser member-id, CR-03 testexports.go production leak (OAUTH-02, OAUTH-04, OAUTH-05) [DONE 2026-05-10]
 
 **Success Criteria:**
 1. Visiting `/oauth/login` behind a correctly configured proxy redirects to `flow.polar.com` with a `state` parameter; a second visit generates a different state value
@@ -125,6 +125,6 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Foundation and Security Skeleton | 5/5 | Complete | 2026-05-04 |
-| 2. OAuth Link Flow + UserInfo | 3/3 | Complete | 2026-05-10 |
+| 2. OAuth Link Flow + UserInfo | 4/4 | Complete | 2026-05-10 |
 | 3. Core MCP Tools + Bundled Skill | 0/3 | Not started | - |
 | 4. Documentation, FOSS Hygiene, Release | 0/3 | Not started | - |
