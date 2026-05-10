@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-10T20:00:00.000Z"
+last_updated: "2026-05-10T20:30:00.000Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 6
-  percent: 75
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -20,16 +20,18 @@ progress:
 
 ## Current Phase
 
-**Phase 2: OAuth Link Flow + UserInfo** — executing (2/3 plans done).
+**Phase 2: OAuth Link Flow + UserInfo** — COMPLETE (3/3 plans done).
 
 **Previous:** Phase 1: Project Foundation and Security Skeleton — 5/5 plans COMPLETE.
+
+**Next:** Phase 3: Core MCP Tools + Bundled Skill
 
 ## Phase Progress
 
 | # | Phase | Status |
 |---|-------|--------|
 | 1 | Project Foundation and Security Skeleton | COMPLETE (5/5 plans done) |
-| 2 | OAuth Link Flow + UserInfo | Executing (2/3 plans done) |
+| 2 | OAuth Link Flow + UserInfo | COMPLETE (3/3 plans done) |
 | 3 | Core MCP Tools + Bundled Skill | Not started |
 | 4 | Documentation, FOSS Hygiene, Release | Not started |
 
@@ -38,13 +40,13 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-03)
 
 **Core value:** A user can say "create a 5×1km threshold session for Thursday" in Claude and have it appear in Polar Flow — zero context-switching, zero manual UI navigation.
-**Current focus:** Phase 1 — Project Foundation and Security Skeleton
+**Current focus:** Phase 3 — Core MCP Tools + Bundled Skill
 
 ## Performance Metrics
 
-- Plans completed: 7 / 14
-- Phases completed: 1 / 4
-- Requirements delivered: 21 / 40
+- Plans completed: 8 / 14
+- Phases completed: 2 / 4
+- Requirements delivered: 22 / 40
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
@@ -55,6 +57,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 | 01-05 Docker + CI | 5 min | 2/2 | 3 created |
 | 02-01 config+store oauth foundations | 12 min | 2/2 | 8 created/modified |
 | 02-02 polar client + oauth handlers | 18 min | 2/2 | 10 created/modified |
+| 02-03 get_user_info MCP tool | 5 min | 1/1 | 1 created, 2 modified |
 
 ## Accumulated Context
 
@@ -87,6 +90,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 - `SetTokenEndpoint`/`SetRegisterEndpoint` in `testexports.go` (non-test file) — only way to expose package vars to external test binaries; `export_test.go` pattern only works within same package test binary
 - `polar_user_id` always from `TokenResponse.XUserID` (not 409 body) — 409 response body omits user object
 - `BytesKeyProvider` validates exactly 32 bytes at `Key()` call time, not at construction
+- `GetUserInfoHandler` exported (not unexported) — allows cross-package test invocation without live server
+- Tool handlers read identity exclusively from context via `auth.UserIDFromContext`; `CallToolRequest` params ignored (T-02-03-01)
+- `return` required after `t.Fatal(nil-guard)` in tests to satisfy SA5011 staticcheck flow analysis
 
 ### Open Questions
 
@@ -105,4 +111,4 @@ None.
 
 ---
 *Initialized: 2026-05-03*
-*Last session: 2026-05-10 — Completed 02-02-PLAN.md (Polar client ExchangeCode/RegisterUser; OAuth Login/Callback handlers; BytesKeyProvider; main.go wired end-to-end)*
+*Last session: 2026-05-10 — Completed 02-03-PLAN.md (get_user_info MCP tool; Phase 2 gate green: build + race tests + lint all pass)*

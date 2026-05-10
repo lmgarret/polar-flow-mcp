@@ -16,7 +16,7 @@
 ## Phases
 
 - [x] **Phase 1: Project Foundation and Security Skeleton** — Go scaffold, fail-closed auth, SQLite + crypto, Docker image, CI pipeline
-- [ ] **Phase 2: OAuth Link Flow + UserInfo** — Polar OAuth2 login/callback, encrypted token storage, get_user_info tool
+- [x] **Phase 2: OAuth Link Flow + UserInfo** — Polar OAuth2 login/callback, encrypted token storage, get_user_info tool
 - [ ] **Phase 3: Core MCP Tools + Bundled Skill** — create/list/delete training targets, coaching-language mapping, polar-coach skill
 - [ ] **Phase 4: Documentation, FOSS Hygiene, Release** — MkDocs site, GitHub Pages, release workflow, FOSS files
 
@@ -60,8 +60,8 @@
 
 **Plans:** 3 plans
 - [x] 02-01-PLAN.md — Config Polar fields + store CRUD (CreateOAuthState/ConsumeOAuthState/UpsertUser/GetPolarUserID/UpsertToken) + tests (OAUTH-01, OAUTH-02, OAUTH-05 partial) [DONE 2026-05-10]
-- [ ] 02-02-PLAN.md — Polar client (ExchangeCode/RegisterUser) + OAuth Login/Callback handlers + main.go wiring + tests (OAUTH-01..05)
-- [ ] 02-03-PLAN.md — get_user_info MCP tool + RegisterTools signature update + phase-gate verification (MCP-01)
+- [x] 02-02-PLAN.md — Polar client (ExchangeCode/RegisterUser) + OAuth Login/Callback handlers + main.go wiring + tests (OAUTH-01..05) [DONE 2026-05-10]
+- [x] 02-03-PLAN.md — get_user_info MCP tool + RegisterTools signature update + phase-gate verification (MCP-01) [DONE 2026-05-10]
 
 **Success Criteria:**
 1. Visiting `/oauth/login` behind a correctly configured proxy redirects to `flow.polar.com` with a `state` parameter; a second visit generates a different state value
@@ -124,6 +124,6 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Foundation and Security Skeleton | 5/5 | Complete | 2026-05-04 |
-| 2. OAuth Link Flow + UserInfo | 1/3 | Executing | - |
+| 2. OAuth Link Flow + UserInfo | 3/3 | Complete | 2026-05-10 |
 | 3. Core MCP Tools + Bundled Skill | 0/3 | Not started | - |
 | 4. Documentation, FOSS Hygiene, Release | 0/3 | Not started | - |
