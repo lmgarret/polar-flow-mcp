@@ -48,6 +48,16 @@ type Config struct {
 	// Port is the TCP port the HTTP server listens on. Defaults to "8080".
 	// Override with the PORT environment variable.
 	Port string
+
+	// PolarClientID is the OAuth2 client ID from the Polar developer portal (per D-01).
+	PolarClientID string
+
+	// PolarClientSecret is the OAuth2 client secret from the Polar developer portal (per D-01).
+	PolarClientSecret string
+
+	// PolarRedirectURL is the callback URL registered in the Polar developer portal (per D-02).
+	// Operator-controlled; not derived from the request.
+	PolarRedirectURL string
 }
 
 // Load reads configuration from environment variables, validates all required fields, and
@@ -58,6 +68,10 @@ func Load() (*Config, error) {
 	cfg := &Config{}
 
 	if err := loadAuthFields(cfg); err != nil {
+		return nil, err
+	}
+
+	if err := loadPolarFields(cfg); err != nil {
 		return nil, err
 	}
 
@@ -93,6 +107,38 @@ func loadAuthFields(cfg *Config) error {
 		)
 	}
 	cfg.ProxySharedSecret = secret
+
+	return nil
+}
+
+// loadPolarFields validates and sets POLAR_CLIENT_ID, POLAR_CLIENT_SECRET, POLAR_REDIRECT_URL.
+func loadPolarFields(cfg *Config) error {
+	clientID := os.Getenv("POLAR_CLIENT_ID")
+	if clientID == "" {
+		return errors.New(
+			"POLAR_CLIENT_ID must be set to your Polar developer client ID; " +
+				"see https://github.com/lm/polar-flow-mcp/docs/deployment/polar-oauth-setup",
+		)
+	}
+	cfg.PolarClientID = clientID
+
+	clientSecret := os.Getenv("POLAR_CLIENT_SECRET")
+	if clientSecret == "" {
+		return errors.New(
+			"POLAR_CLIENT_SECRET must be set to your Polar developer client secret; " +
+				"see deployment docs",
+		)
+	}
+	cfg.PolarClientSecret = clientSecret
+
+	redirectURL := os.Getenv("POLAR_REDIRECT_URL")
+	if redirectURL == "" {
+		return errors.New(
+			"POLAR_REDIRECT_URL must be set to the callback URL registered in the Polar developer portal " +
+				"(e.g., https://polar.example.com/oauth/callback)",
+		)
+	}
+	cfg.PolarRedirectURL = redirectURL
 
 	return nil
 }

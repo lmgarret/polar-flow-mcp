@@ -20,9 +20,21 @@ func clearConfigEnv(t *testing.T) {
 		"KEY_PROVIDER",
 		"ENCRYPTION_KEY",
 		"ENCRYPTION_KEY_FILE",
+		"POLAR_CLIENT_ID",
+		"POLAR_CLIENT_SECRET",
+		"POLAR_REDIRECT_URL",
 	} {
 		t.Setenv(key, "")
 	}
+}
+
+// setValidPolarEnv sets all three required Polar env vars to valid non-empty values.
+// Call this in tests that verify non-Polar validation so they reach the desired failure point.
+func setValidPolarEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("POLAR_CLIENT_ID", "test-client-id")
+	t.Setenv("POLAR_CLIENT_SECRET", "test-client-secret")
+	t.Setenv("POLAR_REDIRECT_URL", "https://example.com/oauth/callback")
 }
 
 // TestLoadAuthProxyUnconfigured verifies that AUTH_PROXY=unconfigured returns an error
@@ -81,6 +93,7 @@ func TestLoadEncryptionKeyMissing(t *testing.T) {
 	clearConfigEnv(t)
 	t.Setenv("AUTH_PROXY", "authelia")
 	t.Setenv("PROXY_SHARED_SECRET", "supersecret")
+	setValidPolarEnv(t)
 	// No ENCRYPTION_KEY, no ENCRYPTION_KEY_FILE.
 
 	_, err := config.Load()
@@ -102,6 +115,7 @@ func TestLoadEncryptionKeyValidBase64Succeeds(t *testing.T) {
 	clearConfigEnv(t)
 	t.Setenv("AUTH_PROXY", "authelia")
 	t.Setenv("PROXY_SHARED_SECRET", "supersecret")
+	setValidPolarEnv(t)
 	// 32 zero bytes base64-encoded = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 	t.Setenv("ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
 
@@ -123,6 +137,7 @@ func TestLoadEncryptionKeyWrongLength(t *testing.T) {
 	clearConfigEnv(t)
 	t.Setenv("AUTH_PROXY", "authelia")
 	t.Setenv("PROXY_SHARED_SECRET", "supersecret")
+	setValidPolarEnv(t)
 	// 16 zero bytes base64 — only 16 bytes, not 32.
 	t.Setenv("ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAA==")
 
@@ -142,6 +157,7 @@ func TestLoadEncryptionKeyFile(t *testing.T) {
 	clearConfigEnv(t)
 	t.Setenv("AUTH_PROXY", "authelia")
 	t.Setenv("PROXY_SHARED_SECRET", "supersecret")
+	setValidPolarEnv(t)
 	t.Setenv("KEY_PROVIDER", "file")
 
 	// Write 32 zero bytes to a temp file.
@@ -172,6 +188,7 @@ func TestLoadBindAddressDefault(t *testing.T) {
 	clearConfigEnv(t)
 	t.Setenv("AUTH_PROXY", "authelia")
 	t.Setenv("PROXY_SHARED_SECRET", "supersecret")
+	setValidPolarEnv(t)
 	t.Setenv("ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
 
 	cfg, err := config.Load()
@@ -188,6 +205,7 @@ func TestLoadIdentityHeaderDefault(t *testing.T) {
 	clearConfigEnv(t)
 	t.Setenv("AUTH_PROXY", "authelia")
 	t.Setenv("PROXY_SHARED_SECRET", "supersecret")
+	setValidPolarEnv(t)
 	t.Setenv("ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
 
 	cfg, err := config.Load()
@@ -196,5 +214,91 @@ func TestLoadIdentityHeaderDefault(t *testing.T) {
 	}
 	if cfg.IdentityHeader != "Remote-User" {
 		t.Errorf("expected IdentityHeader Remote-User; got %q", cfg.IdentityHeader)
+	}
+}
+
+// TestLoadFailsIfPolarClientIDMissing verifies that Load() returns an error mentioning
+// "POLAR_CLIENT_ID" when that env var is unset while all others are valid.
+func TestLoadFailsIfPolarClientIDMissing(t *testing.T) {
+	clearConfigEnv(t)
+	t.Setenv("AUTH_PROXY", "authelia")
+	t.Setenv("PROXY_SHARED_SECRET", "supersecret")
+	t.Setenv("ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+	// POLAR_CLIENT_ID left unset; set the other two Polar vars.
+	t.Setenv("POLAR_CLIENT_SECRET", "test-client-secret")
+	t.Setenv("POLAR_REDIRECT_URL", "https://example.com/oauth/callback")
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("expected error for missing POLAR_CLIENT_ID, got nil")
+	}
+	if !strings.Contains(err.Error(), "POLAR_CLIENT_ID") {
+		t.Errorf("error must mention POLAR_CLIENT_ID; got: %q", err.Error())
+	}
+}
+
+// TestLoadFailsIfPolarClientSecretMissing verifies that Load() returns an error mentioning
+// "POLAR_CLIENT_SECRET" when only POLAR_CLIENT_SECRET is unset.
+func TestLoadFailsIfPolarClientSecretMissing(t *testing.T) {
+	clearConfigEnv(t)
+	t.Setenv("AUTH_PROXY", "authelia")
+	t.Setenv("PROXY_SHARED_SECRET", "supersecret")
+	t.Setenv("ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+	t.Setenv("POLAR_CLIENT_ID", "cid")
+	// POLAR_CLIENT_SECRET left unset.
+	t.Setenv("POLAR_REDIRECT_URL", "https://example.com/oauth/callback")
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("expected error for missing POLAR_CLIENT_SECRET, got nil")
+	}
+	if !strings.Contains(err.Error(), "POLAR_CLIENT_SECRET") {
+		t.Errorf("error must mention POLAR_CLIENT_SECRET; got: %q", err.Error())
+	}
+}
+
+// TestLoadFailsIfPolarRedirectURLMissing verifies that Load() returns an error mentioning
+// "POLAR_REDIRECT_URL" when only POLAR_REDIRECT_URL is unset.
+func TestLoadFailsIfPolarRedirectURLMissing(t *testing.T) {
+	clearConfigEnv(t)
+	t.Setenv("AUTH_PROXY", "authelia")
+	t.Setenv("PROXY_SHARED_SECRET", "supersecret")
+	t.Setenv("ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+	t.Setenv("POLAR_CLIENT_ID", "cid")
+	t.Setenv("POLAR_CLIENT_SECRET", "csec")
+	// POLAR_REDIRECT_URL left unset.
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("expected error for missing POLAR_REDIRECT_URL, got nil")
+	}
+	if !strings.Contains(err.Error(), "POLAR_REDIRECT_URL") {
+		t.Errorf("error must mention POLAR_REDIRECT_URL; got: %q", err.Error())
+	}
+}
+
+// TestLoadSucceedsWithAllPolarFields verifies that Load() returns a *Config with all three
+// Polar fields populated when all required env vars are set.
+func TestLoadSucceedsWithAllPolarFields(t *testing.T) {
+	clearConfigEnv(t)
+	t.Setenv("AUTH_PROXY", "authelia")
+	t.Setenv("PROXY_SHARED_SECRET", "supersecret")
+	t.Setenv("ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+	t.Setenv("POLAR_CLIENT_ID", "cid")
+	t.Setenv("POLAR_CLIENT_SECRET", "csec")
+	t.Setenv("POLAR_REDIRECT_URL", "https://example.com/oauth/callback")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("expected no error with all Polar fields set; got: %v", err)
+	}
+	if cfg.PolarClientID != "cid" {
+		t.Errorf("PolarClientID: got %q, want %q", cfg.PolarClientID, "cid")
+	}
+	if cfg.PolarClientSecret != "csec" {
+		t.Errorf("PolarClientSecret: got %q, want %q", cfg.PolarClientSecret, "csec")
+	}
+	if cfg.PolarRedirectURL != "https://example.com/oauth/callback" {
+		t.Errorf("PolarRedirectURL: got %q, want %q", cfg.PolarRedirectURL, "https://example.com/oauth/callback")
 	}
 }
