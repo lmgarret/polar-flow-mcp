@@ -1,15 +1,5 @@
+// Package polar: export_test.go documents that SetTokenEndpoint and SetRegisterEndpoint
+// are exported for test injection in both polar and external test packages.
+// The actual functions live in testexports.go (non-test file) so they are accessible
+// from test binaries of other packages (e.g., internal/oauth).
 package polar
-
-// SetTokenEndpoint overrides tokenEndpoint for tests. Returns a restore function.
-func SetTokenEndpoint(s string) func() {
-	orig := tokenEndpoint
-	tokenEndpoint = s
-	return func() { tokenEndpoint = orig }
-}
-
-// SetRegisterEndpoint overrides registerEndpoint for tests. Returns a restore function.
-func SetRegisterEndpoint(s string) func() {
-	orig := registerEndpoint
-	registerEndpoint = s
-	return func() { registerEndpoint = orig }
-}

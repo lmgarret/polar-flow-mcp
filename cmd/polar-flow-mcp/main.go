@@ -15,6 +15,7 @@ import (
 
 	"github.com/lm/polar-flow-mcp/internal/auth"
 	"github.com/lm/polar-flow-mcp/internal/config"
+	"github.com/lm/polar-flow-mcp/internal/crypto"
 	"github.com/lm/polar-flow-mcp/internal/mcp"
 	"github.com/lm/polar-flow-mcp/internal/oauth"
 	"github.com/lm/polar-flow-mcp/internal/store"
@@ -47,6 +48,9 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() { _ = st.Close() }()
+
+	// Build the encryption cipher from the validated 32-byte key (cfg.EncryptionKey is raw bytes).
+	cipher := crypto.NewCipher(crypto.NewBytesKeyProvider(cfg.EncryptionKey))
 
 	// 5. Create MCP server with StreamableHTTP transport.
 	// Identity is injected by auth.Middleware into r.Context() before this fires.
@@ -89,13 +93,14 @@ func main() {
 	mux.Handle("/mcp", auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader, httpMCPServer))
 	mux.Handle("/mcp/", auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader, httpMCPServer))
 
-	// /oauth — auth middleware wraps stubs (Phase 2 fills these in).
+	// /oauth — auth middleware wraps OAuth handlers.
+	oauthHandlers := oauth.NewHandlers(cfg, st, cipher)
 	mux.Handle("GET /oauth/login",
 		auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader,
-			http.HandlerFunc(oauth.LoginHandler)))
+			http.HandlerFunc(oauthHandlers.Login)))
 	mux.Handle("GET /oauth/callback",
 		auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader,
-			http.HandlerFunc(oauth.CallbackHandler)))
+			http.HandlerFunc(oauthHandlers.Callback)))
 
 	// 7. Start HTTP server with graceful shutdown.
 	srv := &http.Server{
