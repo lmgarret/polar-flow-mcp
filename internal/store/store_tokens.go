@@ -3,6 +3,8 @@ package store
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 )
 
@@ -25,4 +27,26 @@ func (s *Store) UpsertToken(ctx context.Context, identity string, encryptedBlob 
 		return fmt.Errorf("store: upsert token: %w", err)
 	}
 	return nil
+}
+
+// GetEncryptedToken returns the encrypted token blob for identity (per MCP-06).
+// Returns (nil, false, nil) if no token row exists for the identity.
+// Returns a non-nil error only on database failure.
+// Uses the read pool (s.readDB) — same pattern as GetPolarUserID.
+func (s *Store) GetEncryptedToken(ctx context.Context, identity string) ([]byte, bool, error) {
+	var blob []byte
+	err := s.readDB.QueryRowContext(ctx,
+		`SELECT pt.encrypted_token
+		 FROM polar_tokens pt
+		 JOIN users u ON u.id = pt.user_id
+		 WHERE u.identity = ?`,
+		identity,
+	).Scan(&blob)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("store: get encrypted token: %w", err)
+	}
+	return blob, true, nil
 }

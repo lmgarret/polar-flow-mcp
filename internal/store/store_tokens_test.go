@@ -7,6 +7,73 @@ import (
 	"testing"
 )
 
+// TestGetEncryptedToken_Found verifies that GetEncryptedToken returns the stored blob
+// after UpsertUser + UpsertToken for the same identity.
+func TestGetEncryptedToken_Found(t *testing.T) {
+	s := openForTest(t)
+	ctx := context.Background()
+
+	if err := s.UpsertUser(ctx, "alice", "12345"); err != nil {
+		t.Fatalf("UpsertUser: %v", err)
+	}
+
+	blob := []byte("nonce123456abcdefciphertext")
+	if err := s.UpsertToken(ctx, "alice", blob, 1); err != nil {
+		t.Fatalf("UpsertToken: %v", err)
+	}
+
+	got, found, err := s.GetEncryptedToken(ctx, "alice")
+	if err != nil {
+		t.Fatalf("GetEncryptedToken returned unexpected error: %v", err)
+	}
+	if !found {
+		t.Fatal("GetEncryptedToken: expected found=true, got false")
+	}
+	if !bytes.Equal(got, blob) {
+		t.Errorf("GetEncryptedToken: got %v, want %v", got, blob)
+	}
+}
+
+// TestGetEncryptedToken_NotFound verifies that GetEncryptedToken returns (nil, false, nil)
+// when no row exists for the given identity.
+func TestGetEncryptedToken_NotFound(t *testing.T) {
+	s := openForTest(t)
+	ctx := context.Background()
+
+	got, found, err := s.GetEncryptedToken(ctx, "ghost")
+	if err != nil {
+		t.Fatalf("GetEncryptedToken returned unexpected error: %v", err)
+	}
+	if found {
+		t.Fatal("GetEncryptedToken: expected found=false for unknown identity, got true")
+	}
+	if got != nil {
+		t.Errorf("GetEncryptedToken: expected nil blob, got %v", got)
+	}
+}
+
+// TestGetEncryptedToken_UserWithoutToken verifies that GetEncryptedToken returns (nil, false, nil)
+// when the user row exists but no polar_tokens row has been inserted.
+func TestGetEncryptedToken_UserWithoutToken(t *testing.T) {
+	s := openForTest(t)
+	ctx := context.Background()
+
+	if err := s.UpsertUser(ctx, "alice", "12345"); err != nil {
+		t.Fatalf("UpsertUser: %v", err)
+	}
+
+	got, found, err := s.GetEncryptedToken(ctx, "alice")
+	if err != nil {
+		t.Fatalf("GetEncryptedToken returned unexpected error: %v", err)
+	}
+	if found {
+		t.Fatal("GetEncryptedToken: expected found=false when no token row, got true")
+	}
+	if got != nil {
+		t.Errorf("GetEncryptedToken: expected nil blob, got %v", got)
+	}
+}
+
 // TestUpsertToken_RequiresUser verifies that UpsertToken returns a non-nil error when no
 // users row exists for the given identity (FK NOT NULL violation).
 func TestUpsertToken_RequiresUser(t *testing.T) {
