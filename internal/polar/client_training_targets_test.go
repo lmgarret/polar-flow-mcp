@@ -4,9 +4,11 @@ package polar_test
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/lm/polar-flow-mcp/internal/polar"
@@ -63,10 +65,10 @@ func TestCreateTrainingTarget_Success(t *testing.T) {
 						Intensity:  &polar.PhaseIntensity{Type: "NONE"},
 					},
 					{
-						Name:          "intervals",
-						ChangeType:    "AUTOMATIC",
-						Goal:          polar.PhaseGoal{Type: "MANUAL"},
-						RepeatCount:   &reps,
+						Name:        "intervals",
+						ChangeType:  "AUTOMATIC",
+						Goal:        polar.PhaseGoal{Type: "MANUAL"},
+						RepeatCount: &reps,
 						PhaseOrRepeat: []polar.PhaseOrRepeat{
 							{
 								Name:       "work",
@@ -188,6 +190,262 @@ func TestCreateTrainingTarget_NoIdInBody(t *testing.T) {
 	}
 	if id != "(id not returned)" {
 		t.Errorf("id = %q, want %q", id, "(id not returned)")
+	}
+}
+
+// --- ListTrainingTargets tests ---
+
+func TestListTrainingTargets_ArrayShape(t *testing.T) {
+	var capturedMethod string
+	var capturedPath string
+	var capturedQuery string
+	var capturedAuth string
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		capturedQuery = r.URL.RawQuery
+		capturedAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[{"id":"t1","name":"Easy run","date":"2026-05-15","time":"18:00"}]`))
+	}))
+	defer ts.Close()
+
+	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	t.Cleanup(restore)
+
+	client := polar.NewClient("tok")
+	targets, err := client.ListTrainingTargets(t.Context(), "12345", "2026-05-15", "2026-06-15")
+	if err != nil {
+		t.Fatalf("ListTrainingTargets returned error: %v", err)
+	}
+	if capturedMethod != http.MethodGet {
+		t.Errorf("method = %q, want GET", capturedMethod)
+	}
+	if !strings.Contains(capturedPath, "/12345/training-targets") {
+		t.Errorf("path %q does not contain /12345/training-targets", capturedPath)
+	}
+	if !strings.Contains(capturedQuery, "from_date=2026-05-15") {
+		t.Errorf("query %q does not contain from_date=2026-05-15", capturedQuery)
+	}
+	if !strings.Contains(capturedQuery, "to_date=2026-06-15") {
+		t.Errorf("query %q does not contain to_date=2026-06-15", capturedQuery)
+	}
+	if capturedAuth != "Bearer tok" {
+		t.Errorf("Authorization = %q, want 'Bearer tok'", capturedAuth)
+	}
+	if len(targets) != 1 {
+		t.Fatalf("expected 1 target, got %d", len(targets))
+	}
+	if targets[0].ID != "t1" {
+		t.Errorf("targets[0].ID = %q, want %q", targets[0].ID, "t1")
+	}
+	if targets[0].Name != "Easy run" {
+		t.Errorf("targets[0].Name = %q, want %q", targets[0].Name, "Easy run")
+	}
+	if targets[0].Date != "2026-05-15" {
+		t.Errorf("targets[0].Date = %q, want %q", targets[0].Date, "2026-05-15")
+	}
+	if targets[0].Time != "18:00" {
+		t.Errorf("targets[0].Time = %q, want %q", targets[0].Time, "18:00")
+	}
+}
+
+func TestListTrainingTargets_WrappedShape(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"training-targets":[{"id":"t1","name":"X"}]}`))
+	}))
+	defer ts.Close()
+
+	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	t.Cleanup(restore)
+
+	client := polar.NewClient("tok")
+	targets, err := client.ListTrainingTargets(t.Context(), "12345", "2026-05-15", "2026-06-15")
+	if err != nil {
+		t.Fatalf("ListTrainingTargets returned error: %v", err)
+	}
+	if len(targets) != 1 {
+		t.Fatalf("expected 1 target, got %d", len(targets))
+	}
+	if targets[0].ID != "t1" {
+		t.Errorf("targets[0].ID = %q, want %q", targets[0].ID, "t1")
+	}
+	if targets[0].Name != "X" {
+		t.Errorf("targets[0].Name = %q, want %q", targets[0].Name, "X")
+	}
+}
+
+func TestListTrainingTargets_Empty(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer ts.Close()
+
+	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	t.Cleanup(restore)
+
+	client := polar.NewClient("tok")
+	targets, err := client.ListTrainingTargets(t.Context(), "12345", "2026-05-15", "2026-06-15")
+	if err != nil {
+		t.Fatalf("ListTrainingTargets returned error: %v", err)
+	}
+	if len(targets) != 0 {
+		t.Errorf("expected empty slice, got %d targets", len(targets))
+	}
+}
+
+func TestListTrainingTargets_ErrorStatus(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("server error"))
+	}))
+	defer ts.Close()
+
+	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	t.Cleanup(restore)
+
+	client := polar.NewClient("tok")
+	_, err := client.ListTrainingTargets(t.Context(), "12345", "2026-05-15", "2026-06-15")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !containsSubstring(err.Error(), "status 500") {
+		t.Errorf("error %q should contain 'status 500'", err.Error())
+	}
+}
+
+func TestListTrainingTargets_NoDateParams(t *testing.T) {
+	var capturedQuery string
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedQuery = r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer ts.Close()
+
+	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	t.Cleanup(restore)
+
+	client := polar.NewClient("tok")
+	_, err := client.ListTrainingTargets(t.Context(), "12345", "", "")
+	if err != nil {
+		t.Fatalf("ListTrainingTargets returned error: %v", err)
+	}
+	if containsSubstring(capturedQuery, "from_date") {
+		t.Errorf("query %q should not contain from_date when empty", capturedQuery)
+	}
+	if containsSubstring(capturedQuery, "to_date") {
+		t.Errorf("query %q should not contain to_date when empty", capturedQuery)
+	}
+}
+
+// --- DeleteTrainingTarget tests ---
+
+func TestDeleteTrainingTarget_Success200(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	t.Cleanup(restore)
+
+	client := polar.NewClient("tok")
+	err := client.DeleteTrainingTarget(t.Context(), "12345", "target-1")
+	if err != nil {
+		t.Errorf("expected nil error on 200, got: %v", err)
+	}
+}
+
+func TestDeleteTrainingTarget_Success204(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer ts.Close()
+
+	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	t.Cleanup(restore)
+
+	client := polar.NewClient("tok")
+	err := client.DeleteTrainingTarget(t.Context(), "12345", "target-1")
+	if err != nil {
+		t.Errorf("expected nil error on 204, got: %v", err)
+	}
+}
+
+func TestDeleteTrainingTarget_NotFound(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer ts.Close()
+
+	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	t.Cleanup(restore)
+
+	client := polar.NewClient("tok")
+	err := client.DeleteTrainingTarget(t.Context(), "12345", "target-1")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, polar.ErrTargetNotFound) {
+		t.Errorf("expected ErrTargetNotFound, got: %v", err)
+	}
+}
+
+func TestDeleteTrainingTarget_OtherError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("boom"))
+	}))
+	defer ts.Close()
+
+	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	t.Cleanup(restore)
+
+	client := polar.NewClient("tok")
+	err := client.DeleteTrainingTarget(t.Context(), "12345", "target-1")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !containsSubstring(err.Error(), "status 500") {
+		t.Errorf("error %q should contain 'status 500'", err.Error())
+	}
+	if !containsSubstring(err.Error(), "boom") {
+		t.Errorf("error %q should contain 'boom'", err.Error())
+	}
+}
+
+func TestDeleteTrainingTarget_URLPathEscaped(t *testing.T) {
+	var capturedPath string
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedPath = r.URL.RawPath
+		if capturedPath == "" {
+			capturedPath = r.URL.Path
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer ts.Close()
+
+	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	t.Cleanup(restore)
+
+	client := polar.NewClient("tok")
+	err := client.DeleteTrainingTarget(t.Context(), "12345", "abc/def")
+	if err != nil {
+		t.Fatalf("expected nil error, got: %v", err)
+	}
+	// The path should contain the encoded slash.
+	if !containsSubstring(capturedPath, "abc%2Fdef") {
+		t.Errorf("path %q should contain 'abc%%2Fdef' (URL-encoded slash)", capturedPath)
 	}
 }
 

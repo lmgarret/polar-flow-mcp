@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -186,6 +187,24 @@ type PhaseIntensity struct {
 	UpperZone *int   `json:"upperZone,omitempty"`
 }
 
+// ErrTargetNotFound is returned by DeleteTrainingTarget (and may be returned by
+// future read methods) when the Polar API responds 404. Allows handlers to
+// distinguish a missing-target case from genuine API/transport failures via
+// errors.Is(err, polar.ErrTargetNotFound).
+//
+//nolint:gochecknoglobals
+var ErrTargetNotFound = errors.New("polar: training target not found")
+
+// TrainingTargetSummary is a minimal projection of a Polar training target
+// suitable for human-readable listing. Only fields we can extract reliably
+// across the assumed v3/v4 shapes are included.
+type TrainingTargetSummary struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Date string `json:"date"`
+	Time string `json:"time"`
+}
+
 // CreateTrainingTarget POSTs a training target to Polar (per MCP-03).
 // Returns the created target's id from the response body. ASSUMED endpoint and
 // body shape — validate during live testing.
@@ -227,4 +246,91 @@ func (c *Client) CreateTrainingTarget(ctx context.Context, polarUserID string, b
 		}
 	}
 	return "(id not returned)", nil
+}
+
+// ListTrainingTargets fetches training targets in [fromDate, toDate] (ISO 8601
+// YYYY-MM-DD). Returns a (possibly empty) slice. ASSUMED endpoint — validate live.
+func (c *Client) ListTrainingTargets(ctx context.Context, polarUserID, fromDate, toDate string) ([]TrainingTargetSummary, error) {
+	u, err := url.Parse(trainingTargetsBaseURL + "/" + polarUserID + "/training-targets")
+	if err != nil {
+		return nil, fmt.Errorf("polar: build list training targets URL: %w", err)
+	}
+	q := u.Query()
+	if fromDate != "" {
+		q.Set("from_date", fromDate)
+	}
+	if toDate != "" {
+		q.Set("to_date", toDate)
+	}
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("polar: build list training targets request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.bearerToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("polar: list training targets: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return nil, fmt.Errorf("polar: list training targets: status %d: %s", resp.StatusCode, errBody)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, fmt.Errorf("polar: read list response: %w", err)
+	}
+	// Try array shape first.
+	var direct []TrainingTargetSummary
+	if json.Unmarshal(body, &direct) == nil {
+		return direct, nil
+	}
+	// Fall back to object-with-"training-targets" shape (v4 swagger wraps the array).
+	var wrapped struct {
+		TrainingTargets []TrainingTargetSummary `json:"training-targets"`
+	}
+	if err := json.Unmarshal(body, &wrapped); err != nil {
+		return nil, fmt.Errorf("polar: decode list response: %w", err)
+	}
+	if wrapped.TrainingTargets == nil {
+		return []TrainingTargetSummary{}, nil
+	}
+	return wrapped.TrainingTargets, nil
+}
+
+// DeleteTrainingTarget DELETEs a training target by id. Returns nil on 200/204,
+// ErrTargetNotFound on 404, and a wrapped error otherwise.
+func (c *Client) DeleteTrainingTarget(ctx context.Context, polarUserID, targetID string) error {
+	if targetID == "" {
+		return fmt.Errorf("polar: delete training target: target_id is empty")
+	}
+	u := trainingTargetsBaseURL + "/" + polarUserID + "/training-targets/" + url.PathEscape(targetID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, u, nil)
+	if err != nil {
+		return fmt.Errorf("polar: build delete training target request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.bearerToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("polar: delete training target: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	switch resp.StatusCode {
+	case http.StatusOK, http.StatusNoContent:
+		return nil
+	case http.StatusNotFound:
+		return ErrTargetNotFound
+	default:
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return fmt.Errorf("polar: delete training target: status %d: %s", resp.StatusCode, errBody)
+	}
 }
