@@ -59,6 +59,24 @@ func RegisterTools(s *server.MCPServer, st *store.Store, cipher *crypto.Cipher) 
 		),
 	)
 	s.AddTool(createTool, CreateTrainingTargetHandler(st, cipher))
+
+	listTool := mcpgo.NewTool("list_training_targets",
+		mcpgo.WithDescription(
+			"List Polar Flow training targets in a date range. Defaults: today through +30 days (UTC).",
+		),
+		mcpgo.WithString("from_date", mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today)")),
+		mcpgo.WithString("to_date", mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today + 30 days)")),
+	)
+	s.AddTool(listTool, ListTrainingTargetsHandler(st, cipher))
+
+	deleteTool := mcpgo.NewTool("delete_training_target",
+		mcpgo.WithDescription(
+			"Delete a Polar Flow training target by its ID. Returns a clear message if the target does not exist.",
+		),
+		mcpgo.WithString("target_id", mcpgo.Required(),
+			mcpgo.Description("Target ID returned by create_training_target or list_training_targets")),
+	)
+	s.AddTool(deleteTool, DeleteTrainingTargetHandler(st, cipher))
 }
 
 // GetUserInfoHandler returns the handler closure for the get_user_info tool.
