@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-11T11:52:11Z"
+last_updated: "2026-05-11T12:00:35Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 93
 ---
 
 # Project State
@@ -20,11 +20,11 @@ progress:
 
 ## Current Phase
 
-**Phase 3: Core MCP Tools + Bundled Skill** — In progress (1/4 plans done).
+**Phase 3: Core MCP Tools + Bundled Skill** — In progress (2/3 plans done).
 
 **Previous completed:** Phase 2: OAuth Link Flow + UserInfo — COMPLETE (4/4 plans done).
 
-**Current plan:** 03-02 (list_training_targets)
+**Current plan:** 03-03 (polar-coach skill)
 
 ## Phase Progress
 
@@ -32,7 +32,7 @@ progress:
 |---|-------|--------|
 | 1 | Project Foundation and Security Skeleton | COMPLETE (5/5 plans done) |
 | 2 | OAuth Link Flow + UserInfo | COMPLETE (4/4 plans done) |
-| 3 | Core MCP Tools + Bundled Skill | In progress (1/4 plans done) |
+| 3 | Core MCP Tools + Bundled Skill | In progress (2/3 plans done) |
 | 4 | Documentation, FOSS Hygiene, Release | Not started |
 
 ## Project Reference
@@ -60,6 +60,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 | 02-03 get_user_info MCP tool | 5 min | 1/1 | 1 created, 2 modified |
 | 02-04 gap closure CR-01/02/03 | 20 min | 3/3 | 11 modified, 1 deleted |
 | 03-01 create_training_target | 6 min | 3/3 | 3 created, 7 modified |
+| 03-02 list+delete training targets | 5 min | 2/2 | 4 created, 3 modified |
 
 ## Accumulated Context
 
@@ -100,6 +101,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 - phaseInput.HRZone as float64 — JSON numbers from map[string]any are float64; cast to int for resolveZone
 - `store.GetEncryptedToken` uses read pool (s.readDB) via JOIN polar_tokens/users — same pattern as GetPolarUserID
 - `SetTrainingTargetsBaseURL` gated behind `//go:build polartest` — production binary excludes test setter
+- `polar.ErrTargetNotFound` sentinel exported; handlers use `errors.Is` for 404 discrimination (informational, not error)
+- `url.PathEscape(targetID)` in DeleteTrainingTarget prevents path injection (T-03-02-07)
+- ListTrainingTargets uses two-pass JSON unmarshal (array first, then wrapped-object) to tolerate both assumed Polar response shapes
 
 ### Open Questions
 
@@ -118,4 +122,4 @@ None.
 
 ---
 *Initialized: 2026-05-03*
-*Last session: 2026-05-11 — Completed 03-01-PLAN.md (create_training_target MCP tool; GetEncryptedToken; RegisterTools cipher param; polar.Client.CreateTrainingTarget; flat-to-tree transform; 20 new tests; lint + build green)*
+*Last session: 2026-05-11 — Completed 03-02-PLAN.md (list_training_targets + delete_training_target MCP tools; polar.Client.ListTrainingTargets + DeleteTrainingTarget; ErrTargetNotFound sentinel; dual-shape JSON parser; 25 new tests; lint + race clean)*

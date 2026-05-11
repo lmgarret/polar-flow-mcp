@@ -44,8 +44,8 @@
 - [x] **MCP-01**: `get_user_info` tool returns which Polar account is linked for the calling user (identity from proxy header, polar_user_id from store); returns a clear message if no account is linked
 - [x] **MCP-02**: `create_training_target` tool accepts: session name, sport (default `RUNNING`), scheduled date (ISO 8601), scheduled time (default `18:00`), and a phases array; each phase specifies type (warmup/repeat/cooldown), repeat count, duration or distance goal, and intensity by HR zone number (1–5) or intensity label (`easy`/`aerobic`/`tempo`/`threshold`/`vo2max`); repeat phases may include a recovery sub-phase
 - [x] **MCP-03**: `create_training_target` maps `intensity_label` values to Polar HR zones: easy→Z1-2, aerobic→Z2, tempo→Z3, threshold→Z4, vo2max→Z5; constructs the Polar API JSON and calls `POST /v3/users/{polar-user-id}/training-targets`
-- [ ] **MCP-04**: `list_training_targets` tool accepts optional `from_date` and `to_date` parameters (defaults: today to +30 days); calls `GET /v3/users/{polar-user-id}/training-targets` and returns a human-readable list
-- [ ] **MCP-05**: `delete_training_target` tool accepts `target_id`; calls `DELETE /v3/users/{polar-user-id}/training-targets/{id}`; returns confirmation or a clear error if not found
+- [x] **MCP-04**: `list_training_targets` tool accepts optional `from_date` and `to_date` parameters (defaults: today to +30 days); calls `GET /v3/users/{polar-user-id}/training-targets` and returns a human-readable list
+- [x] **MCP-05**: `delete_training_target` tool accepts `target_id`; calls `DELETE /v3/users/{polar-user-id}/training-targets/{id}`; returns confirmation or a clear error if not found
 - [x] **MCP-06**: All MCP tool handlers extract user identity from context, look up the Polar token from store (decrypt on demand), and return a clear error message (not a server panic) if the user has no linked account
 - [x] **MCP-07**: All MCP tool handler code uses an unexported struct type as the context key for user identity (prevents collision with any other package's context keys)
 
@@ -140,8 +140,8 @@
 | MCP-01 | Phase 2 | Complete |
 | MCP-02 | Phase 3 | Complete |
 | MCP-03 | Phase 3 | Complete |
-| MCP-04 | Phase 3 | Pending |
-| MCP-05 | Phase 3 | Pending |
+| MCP-04 | Phase 3 | Complete |
+| MCP-05 | Phase 3 | Complete |
 | MCP-06 | Phase 3 | Complete |
 | MCP-07 | Phase 3 | Complete |
 | SKILL-01 | Phase 3 | Pending |
