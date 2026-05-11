@@ -83,7 +83,7 @@
 **Requirements:** MCP-02, MCP-03, MCP-04, MCP-05, MCP-06, MCP-07, SKILL-01, SKILL-02, SKILL-03, SKILL-04
 
 **Plans:** 3 plans
-- [ ] 03-01-PLAN.md — `create_training_target` tool: store.GetEncryptedToken, RegisterTools(cipher), polar.Client.CreateTrainingTarget with struct types, handler with flat-to-tree phase transform + label→zone mapping (MCP-02, MCP-03, MCP-06, MCP-07)
+- [x] 03-01-PLAN.md — `create_training_target` tool: store.GetEncryptedToken, RegisterTools(cipher), polar.Client.CreateTrainingTarget with struct types, handler with flat-to-tree phase transform + label→zone mapping (MCP-02, MCP-03, MCP-06, MCP-07) [DONE 2026-05-11]
 - [ ] 03-02-PLAN.md — `list_training_targets` and `delete_training_target` tools: polar.Client.ListTrainingTargets + DeleteTrainingTarget (with ErrTargetNotFound sentinel), both handlers with identity/decrypt/unlinked-error pattern (MCP-04, MCP-05, MCP-06, MCP-07)
 - [ ] 03-03-PLAN.md — Bundled `skill/polar-coach/SKILL.md`: trigger, 4 tool names, HR zone table, worked examples (5×1km threshold + iterative marathon plan), when-NOT-to-call, safe degradation, both installation paths (SKILL-01..04)
 
@@ -126,5 +126,5 @@
 |-------|----------------|--------|-----------|
 | 1. Project Foundation and Security Skeleton | 5/5 | Complete | 2026-05-04 |
 | 2. OAuth Link Flow + UserInfo | 4/4 | Complete | 2026-05-10 |
-| 3. Core MCP Tools + Bundled Skill | 0/3 | Not started | - |
+| 3. Core MCP Tools + Bundled Skill | 1/3 | In progress | - |
 | 4. Documentation, FOSS Hygiene, Release | 0/3 | Not started | - |
