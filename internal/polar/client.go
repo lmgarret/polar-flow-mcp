@@ -36,6 +36,11 @@ var (
 	// registerEndpoint is the Polar AccessLink user registration URL. Overridable in tests.
 	registerEndpoint = "https://www.polaraccesslink.com/v3/users"
 
+	// trainingTargetsBaseURL is the Polar AccessLink v3 training targets base URL.
+	// Used as: trainingTargetsBaseURL + "/" + polarUserID + "/training-targets" (per CONTEXT.md D-01).
+	// ASSUMED endpoint — not in public Polar v3 swagger; validate during live integration testing.
+	trainingTargetsBaseURL = "https://www.polaraccesslink.com/v3/users"
+
 	// defaultHTTPClient is shared by package-level functions (ExchangeCode, RegisterUser).
 	defaultHTTPClient = &http.Client{Timeout: 30 * time.Second}
 )
@@ -122,4 +127,104 @@ func RegisterUser(ctx context.Context, accessToken, memberID string) (int64, err
 		return 0, fmt.Errorf("polar: decode register response: %w", err)
 	}
 	return reg.PolarUserID, nil
+}
+
+// CreateTrainingTargetRequest is the POST body for /v3/users/{id}/training-targets.
+// Field names are ASSUMED from Polar v4 swagger schema (see RESEARCH.md A1-A8).
+type CreateTrainingTargetRequest struct {
+	Session  TrainingSessionTarget `json:"session"`
+	Exercise []ExerciseTarget      `json:"exercise"`
+}
+
+// TrainingSessionTarget is the session container (name + scheduled start time).
+type TrainingSessionTarget struct {
+	Name      string   `json:"name"`
+	StartTime DateTime `json:"startTime"`
+}
+
+// DateTime is the Polar nested date-time object (NOT ISO 8601 string).
+type DateTime struct {
+	Year  int `json:"year"`
+	Month int `json:"month"`
+	Day   int `json:"day"`
+	Hour  int `json:"hour"`
+	Min   int `json:"min"`
+	Sec   int `json:"sec"`
+}
+
+// ExerciseTarget is one workout block. type="PHASED" for interval workouts.
+type ExerciseTarget struct {
+	Idx           int64           `json:"idx"`
+	Type          string          `json:"type"`
+	PhaseOrRepeat []PhaseOrRepeat `json:"phaseOrRepeat,omitempty"`
+}
+
+// PhaseOrRepeat represents either a single phase (no repeatCount) or a repeat
+// node (repeatCount set + nested PhaseOrRepeat children). The flat-to-tree
+// transform in mcp_create_training_target.go builds this structure.
+type PhaseOrRepeat struct {
+	Name          string          `json:"name"`
+	ChangeType    string          `json:"changeType"`
+	Goal          PhaseGoal       `json:"goal"`
+	Intensity     *PhaseIntensity `json:"intensity,omitempty"`
+	RepeatCount   *int            `json:"repeatCount,omitempty"`
+	PhaseOrRepeat []PhaseOrRepeat `json:"phaseOrRepeat,omitempty"`
+}
+
+// PhaseGoal: Type is "DURATION" (with Duration in milliseconds) | "DISTANCE"
+// (with Distance in meters) | "MANUAL" (no duration/distance — for repeat nodes).
+type PhaseGoal struct {
+	Type     string   `json:"type"`
+	Duration *int64   `json:"duration,omitempty"`
+	Distance *float64 `json:"distance,omitempty"`
+}
+
+// PhaseIntensity: Type is "HEART_RATE_ZONES" with lower/upper zones 1-5, or "NONE".
+type PhaseIntensity struct {
+	Type      string `json:"type"`
+	LowerZone *int   `json:"lowerZone,omitempty"`
+	UpperZone *int   `json:"upperZone,omitempty"`
+}
+
+// CreateTrainingTarget POSTs a training target to Polar (per MCP-03).
+// Returns the created target's id from the response body. ASSUMED endpoint and
+// body shape — validate during live testing.
+func (c *Client) CreateTrainingTarget(ctx context.Context, polarUserID string, body CreateTrainingTargetRequest) (string, error) {
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return "", fmt.Errorf("polar: marshal training target: %w", err)
+	}
+	reqURL := trainingTargetsBaseURL + "/" + polarUserID + "/training-targets"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(payload))
+	if err != nil {
+		return "", fmt.Errorf("polar: build create training target request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.bearerToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("polar: create training target: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return "", fmt.Errorf("polar: create training target: status %d: %s", resp.StatusCode, errBody)
+	}
+	// Try to parse {"id": ...} from response; tolerate string OR uint64 OR missing.
+	var parsed struct {
+		ID json.Number `json:"id"`
+	}
+	bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 65536))
+	if len(bodyBytes) > 0 {
+		dec := json.NewDecoder(bytes.NewReader(bodyBytes))
+		dec.UseNumber()
+		_ = dec.Decode(&parsed)
+		if parsed.ID.String() != "" {
+			return parsed.ID.String(), nil
+		}
+	}
+	return "(id not returned)", nil
 }
