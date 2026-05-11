@@ -106,9 +106,11 @@
 **Requirements:** DOC-01, DOC-02, DOC-03, DOC-04, DOC-05, FOSS-01, FOSS-02, FOSS-03
 
 **Plans:** 3 plans
-1. MkDocs Material documentation site — Diátaxis structure (`index.md`, `getting-started.md`, `deployment/` subtree, `usage.md`, `reference/` subtree, `security.md`, `contributing.md`); `security.md` covers threat model, encryption-at-rest scope, fail-closed rationale, header contract, key rotation plan; `deployment/auth-proxies.md` covers Authelia, Authentik, oauth2-proxy, Pomerium, Cloudflare Access; placeholder images at logical screenshot points (DOC-01..04)
-2. GitHub Pages deploy workflow and release automation — `workflows/docs.yml` (pushes to `main` deploy to Pages), `workflows/release.yml` (triggered on `v*` tags: multi-arch Docker build, GitHub Release creation, `git-cliff` CHANGELOG generation) (DOC-05, FOSS-02, FOSS-03)
-3. FOSS hygiene files — `LICENSE` (MIT), `README.md` (CI/license/release/image-size/Go-report-card badges, screenshot placeholder, 5-line quickstart, docs link), `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant), `SECURITY.md`, `.github/ISSUE_TEMPLATE/` (bug + feature), `.github/PULL_REQUEST_TEMPLATE.md` (FOSS-01, FOSS-02)
+
+Plans:
+- [ ] 04-01-PLAN.md — MkDocs Material site: 13 Diátaxis pages + `mkdocs.yml` covering security model, 5 auth proxies, all env vars/endpoints/schema (DOC-01..04)
+- [ ] 04-02-PLAN.md — CI workflows: `docs.yml` (Pages deploy), `release.yml` (multi-arch Docker + git-cliff + GitHub Release), `cliff.toml`, `CHANGELOG.md` stub (DOC-05, FOSS-03)
+- [ ] 04-03-PLAN.md — FOSS files: LICENSE (MIT), README (5 badges + quickstart), CONTRIBUTING, CODE_OF_CONDUCT (Covenant v2.1), SECURITY, issue+PR templates, CODEOWNERS (FOSS-01, FOSS-02)
 
 **Success Criteria:**
 1. `mkdocs serve` renders the full site locally with no broken links; the `docs.yml` workflow deploys it to GitHub Pages on a push to `main`
