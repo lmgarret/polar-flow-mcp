@@ -22,13 +22,14 @@ A user can say "create a 5×1km threshold session for Thursday" in Claude and ha
 - [x] MCP tool: `get_user_info` (which Polar account is linked) — Validated in Phase 2: identity from proxy header, store lookup, encrypted token decryption
 - [x] Bind to 127.0.0.1 by default; BIND_ADDRESS for anything else — Validated in Phase 2: net.Listen with configurable bind address
 
+- [x] MCP tool: `create_training_target` (warmup/repeats/cooldown, HR zone/pace/power intensity) — Validated in Phase 3: flat→Polar PhaseOrRepeat tree transform, 5 HR zone labels, gocyclo-compliant helpers
+- [x] MCP tool: `list_training_targets` (upcoming scheduled targets) — Validated in Phase 3: today+30 default range, dual-shape JSON parser, human-readable summary
+- [x] MCP tool: `delete_training_target` — Validated in Phase 3: ErrTargetNotFound→ToolResultText on 404, confirmation on success
+- [x] Bundled Claude skill at skill/polar-coach/SKILL.md — Validated in Phase 3: 227 lines, 4 tool names verbatim, Z1-Z5 table, 5 worked examples, safe degradation, both install paths
+
 ### Active
 
-- [ ] MCP tool: `create_training_target` (warmup/repeats/cooldown, HR zone/pace/power intensity)
-- [ ] MCP tool: `list_training_targets` (upcoming scheduled targets)
-- [ ] MCP tool: `delete_training_target`
 - [ ] MkDocs Material documentation site (Diátaxis structure, GitHub Pages)
-- [ ] Bundled Claude skill at skill/polar-coach/SKILL.md
 - [ ] Full FOSS hygiene (LICENSE, README, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, .github/)
 
 ### Out of Scope
@@ -103,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-10 — Phase 2 complete (OAuth link flow + get_user_info)*
+*Last updated: 2026-05-11 — Phase 3 complete (create/list/delete training targets + polar-coach skill)*
