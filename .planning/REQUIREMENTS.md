@@ -59,10 +59,10 @@
 
 ### Bundled Skill
 
-- [ ] **SKILL-01**: `skill/polar-coach/SKILL.md` includes: trigger description for Polar/training/workout/interval/running intents, all 4 MCP tool names with purpose descriptions, Polar HR zone table (Z1–Z5) with training language mapping, warmup/cooldown defaults, Polar's 18:00 default scheduled time
-- [ ] **SKILL-02**: Skill includes worked examples: "5×1km threshold with 2min recovery" → tool call shape; "12-week marathon plan" → questions to ask first, then iterative session creation
-- [ ] **SKILL-03**: Skill includes guidance on when NOT to call tools (analyzing past sessions vs creating new ones) and safe degradation: check MCP tool availability before use; if server not connected, tell user and point at deployment docs
-- [ ] **SKILL-04**: Skill documents both installation paths: Claude Desktop/Code skills directory and Claude.ai project upload
+- [x] **SKILL-01**: `skill/polar-coach/SKILL.md` includes: trigger description for Polar/training/workout/interval/running intents, all 4 MCP tool names with purpose descriptions, Polar HR zone table (Z1–Z5) with training language mapping, warmup/cooldown defaults, Polar's 18:00 default scheduled time
+- [x] **SKILL-02**: Skill includes worked examples: "5×1km threshold with 2min recovery" → tool call shape; "12-week marathon plan" → questions to ask first, then iterative session creation
+- [x] **SKILL-03**: Skill includes guidance on when NOT to call tools (analyzing past sessions vs creating new ones) and safe degradation: check MCP tool availability before use; if server not connected, tell user and point at deployment docs
+- [x] **SKILL-04**: Skill documents both installation paths: Claude Desktop/Code skills directory and Claude.ai project upload
 
 ### FOSS Hygiene
 
@@ -144,10 +144,10 @@
 | MCP-05 | Phase 3 | Complete |
 | MCP-06 | Phase 3 | Complete |
 | MCP-07 | Phase 3 | Complete |
-| SKILL-01 | Phase 3 | Pending |
-| SKILL-02 | Phase 3 | Pending |
-| SKILL-03 | Phase 3 | Pending |
-| SKILL-04 | Phase 3 | Pending |
+| SKILL-01 | Phase 3 | Complete |
+| SKILL-02 | Phase 3 | Complete |
+| SKILL-03 | Phase 3 | Complete |
+| SKILL-04 | Phase 3 | Complete |
 | DOC-01 | Phase 4 | Pending |
 | DOC-02 | Phase 4 | Pending |
 | DOC-03 | Phase 4 | Pending |

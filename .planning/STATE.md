@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0.0
 milestone_name: milestone
+current_plan: 03-03 (polar-coach skill)
 status: executing
-last_updated: "2026-05-11T12:00:35Z"
+last_updated: "2026-05-11T15:23:02.894Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
   completed_plans: 12
-  percent: 93
+  percent: 100
 ---
 
 # Project State
@@ -20,11 +21,11 @@ progress:
 
 ## Current Phase
 
-**Phase 3: Core MCP Tools + Bundled Skill** — In progress (2/3 plans done).
+**Phase 3: Core MCP Tools + Bundled Skill** — COMPLETE (3/3 plans done).
 
 **Previous completed:** Phase 2: OAuth Link Flow + UserInfo — COMPLETE (4/4 plans done).
 
-**Current plan:** 03-03 (polar-coach skill)
+**Current plan:** 04-01 (Phase 4: Documentation, FOSS Hygiene, Release)
 
 ## Phase Progress
 
@@ -32,7 +33,7 @@ progress:
 |---|-------|--------|
 | 1 | Project Foundation and Security Skeleton | COMPLETE (5/5 plans done) |
 | 2 | OAuth Link Flow + UserInfo | COMPLETE (4/4 plans done) |
-| 3 | Core MCP Tools + Bundled Skill | In progress (2/3 plans done) |
+| 3 | Core MCP Tools + Bundled Skill | COMPLETE (3/3 plans done) |
 | 4 | Documentation, FOSS Hygiene, Release | Not started |
 
 ## Project Reference
@@ -40,13 +41,13 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-03)
 
 **Core value:** A user can say "create a 5×1km threshold session for Thursday" in Claude and have it appear in Polar Flow — zero context-switching, zero manual UI navigation.
-**Current focus:** Phase 3 — Core MCP Tools + Bundled Skill
+**Current focus:** Phase 4 — Documentation, FOSS Hygiene, Release
 
 ## Performance Metrics
 
-- Plans completed: 11 / 14
-- Phases completed: 2 / 4
-- Requirements delivered: 29 / 40
+- Plans completed: 12 / 14
+- Phases completed: 3 / 4
+- Requirements delivered: 33 / 40
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
@@ -61,6 +62,7 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 | 02-04 gap closure CR-01/02/03 | 20 min | 3/3 | 11 modified, 1 deleted |
 | 03-01 create_training_target | 6 min | 3/3 | 3 created, 7 modified |
 | 03-02 list+delete training targets | 5 min | 2/2 | 4 created, 3 modified |
+| 03-03 polar-coach skill | 8 min | 1/1 | 1 created |
 
 ## Accumulated Context
 
@@ -104,6 +106,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-03)
 - `polar.ErrTargetNotFound` sentinel exported; handlers use `errors.Is` for 404 discrimination (informational, not error)
 - `url.PathEscape(targetID)` in DeleteTrainingTarget prevents path injection (T-03-02-07)
 - ListTrainingTargets uses two-pass JSON unmarshal (array first, then wrapped-object) to tolerate both assumed Polar response shapes
+- SKILL.md authored in Wave 3 after mcp.go registrations are stable — tool names verified verbatim via grep before writing
+- Iterative ask-then-create pattern for marathon plans: user stays in control of batch target creation (T-03-03-04 mitigation)
+- Intensity labels preferred over hr_zone integers in polar-coach skill per D-06
 
 ### Open Questions
 
@@ -122,4 +127,4 @@ None.
 
 ---
 *Initialized: 2026-05-03*
-*Last session: 2026-05-11 — Completed 03-02-PLAN.md (list_training_targets + delete_training_target MCP tools; polar.Client.ListTrainingTargets + DeleteTrainingTarget; ErrTargetNotFound sentinel; dual-shape JSON parser; 25 new tests; lint + race clean)*
+*Last session: 2026-05-11 — Completed 03-03-PLAN.md (polar-coach skill — SKILL.md 227 lines; HR zone table; 5 worked examples; safe degradation; both install paths; all 4 tool names verified verbatim; Phase 3 COMPLETE)*

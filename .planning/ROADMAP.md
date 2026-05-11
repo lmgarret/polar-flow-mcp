@@ -8,7 +8,7 @@
 |---|-------|------|--------------|-------|
 | 1 | Project Foundation and Security Skeleton | 5/5 | Complete    | 2026-05-05 |
 | 2 | OAuth Link Flow + UserInfo | Users can link their Polar account and verify the link from Claude | OAUTH-01..05, MCP-01 | 3 |
-| 3 | Core MCP Tools + Bundled Skill | Users can create, list, and delete Polar training targets from Claude conversations | MCP-02..07, SKILL-01..04 | 3 |
+| 3 | Core MCP Tools + Bundled Skill | 3/3 | Complete   | 2026-05-11 |
 | 4 | Documentation, FOSS Hygiene, Release | Project is publicly releasable with docs, changelog, and FOSS community infrastructure | DOC-01..05, FOSS-01..03 | 3 |
 
 ---
@@ -17,7 +17,7 @@
 
 - [x] **Phase 1: Project Foundation and Security Skeleton** — Go scaffold, fail-closed auth, SQLite + crypto, Docker image, CI pipeline
 - [x] **Phase 2: OAuth Link Flow + UserInfo** — Polar OAuth2 login/callback, encrypted token storage, get_user_info tool
-- [ ] **Phase 3: Core MCP Tools + Bundled Skill** — create/list/delete training targets, coaching-language mapping, polar-coach skill
+- [x] **Phase 3: Core MCP Tools + Bundled Skill** — create/list/delete training targets, coaching-language mapping, polar-coach skill (completed 2026-05-11)
 - [ ] **Phase 4: Documentation, FOSS Hygiene, Release** — MkDocs site, GitHub Pages, release workflow, FOSS files
 
 ---
@@ -82,10 +82,10 @@
 
 **Requirements:** MCP-02, MCP-03, MCP-04, MCP-05, MCP-06, MCP-07, SKILL-01, SKILL-02, SKILL-03, SKILL-04
 
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 - [x] 03-01-PLAN.md — `create_training_target` tool: store.GetEncryptedToken, RegisterTools(cipher), polar.Client.CreateTrainingTarget with struct types, handler with flat-to-tree phase transform + label→zone mapping (MCP-02, MCP-03, MCP-06, MCP-07) [DONE 2026-05-11]
 - [x] 03-02-PLAN.md — `list_training_targets` and `delete_training_target` tools: polar.Client.ListTrainingTargets + DeleteTrainingTarget (with ErrTargetNotFound sentinel), both handlers with identity/decrypt/unlinked-error pattern (MCP-04, MCP-05, MCP-06, MCP-07) [DONE 2026-05-11]
-- [ ] 03-03-PLAN.md — Bundled `skill/polar-coach/SKILL.md`: trigger, 4 tool names, HR zone table, worked examples (5×1km threshold + iterative marathon plan), when-NOT-to-call, safe degradation, both installation paths (SKILL-01..04)
+- [x] 03-03-PLAN.md — Bundled `skill/polar-coach/SKILL.md`: trigger, 4 tool names, HR zone table, worked examples (5×1km threshold + iterative marathon plan), when-NOT-to-call, safe degradation, both installation paths (SKILL-01..04)
 
 **Success Criteria:**
 1. Saying "create a 5×1km threshold session for next Thursday at 18:00" in Claude produces a Polar training target visible in the Polar Flow app with 5 repeat phases at Z4 intensity
