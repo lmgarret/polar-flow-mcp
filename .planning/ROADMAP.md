@@ -32,7 +32,7 @@
 
 **Requirements:** FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05, FOUND-06, FOUND-07, FOUND-08, FOUND-09, FOUND-10, SERV-01, SERV-02, SERV-03, SERV-04, SERV-05, SERV-06, SERV-07, SERV-08
 
-**Plans:**
+**Plans:** 3 plans
 5/5 plans complete
 2. [DONE 2026-05-04] Config validation and startup security — `config` package, `AUTH_PROXY`/`PROXY_SHARED_SECRET`/`KEY_PROVIDER`/`ENCRYPTION_KEY` fail-closed checks, startup security banner (FOUND-02..04, FOUND-10, SERV-05)
 3. [DONE 2026-05-04] SQLite + crypto foundation — WAL dual-pool setup, `golang-migrate` embedded SQL migrations (3-table schema), AES-256-GCM `KeyProvider` interface with `env` and `file` implementations (FOUND-05..09)
@@ -82,10 +82,10 @@
 
 **Requirements:** MCP-02, MCP-03, MCP-04, MCP-05, MCP-06, MCP-07, SKILL-01, SKILL-02, SKILL-03, SKILL-04
 
-**Plans:**
-1. `create_training_target` tool — accepts session name, sport, scheduled date/time, phases array (warmup/repeat/cooldown with HR zone or `intensity_label`); maps `easy`/`aerobic`/`tempo`/`threshold`/`vo2max` to Polar HR zones Z1–Z5; constructs Polar API JSON and calls `POST /v3/users/{id}/training-targets` (MCP-02, MCP-03, MCP-06, MCP-07)
-2. `list_training_targets` and `delete_training_target` tools — list with `from_date`/`to_date` defaults (today to +30 days), human-readable output; delete by `target_id` with confirmation or clear not-found error; both enforce user identity from context, all SQL scoped by `user_id` (MCP-04, MCP-05, MCP-06, MCP-07)
-3. Bundled `skill/polar-coach/SKILL.md` — trigger description, all 4 tool names with purpose, HR zone table (Z1–Z5) with coaching language, warmup/cooldown defaults, worked examples (5×1km threshold session, marathon plan iterative approach), when NOT to call tools, safe degradation if server unavailable, both installation paths (SKILL-01..04)
+**Plans:** 3 plans
+- [ ] 03-01-PLAN.md — `create_training_target` tool: store.GetEncryptedToken, RegisterTools(cipher), polar.Client.CreateTrainingTarget with struct types, handler with flat-to-tree phase transform + label→zone mapping (MCP-02, MCP-03, MCP-06, MCP-07)
+- [ ] 03-02-PLAN.md — `list_training_targets` and `delete_training_target` tools: polar.Client.ListTrainingTargets + DeleteTrainingTarget (with ErrTargetNotFound sentinel), both handlers with identity/decrypt/unlinked-error pattern (MCP-04, MCP-05, MCP-06, MCP-07)
+- [ ] 03-03-PLAN.md — Bundled `skill/polar-coach/SKILL.md`: trigger, 4 tool names, HR zone table, worked examples (5×1km threshold + iterative marathon plan), when-NOT-to-call, safe degradation, both installation paths (SKILL-01..04)
 
 **Success Criteria:**
 1. Saying "create a 5×1km threshold session for next Thursday at 18:00" in Claude produces a Polar training target visible in the Polar Flow app with 5 repeat phases at Z4 intensity
@@ -105,7 +105,7 @@
 
 **Requirements:** DOC-01, DOC-02, DOC-03, DOC-04, DOC-05, FOSS-01, FOSS-02, FOSS-03
 
-**Plans:**
+**Plans:** 3 plans
 1. MkDocs Material documentation site — Diátaxis structure (`index.md`, `getting-started.md`, `deployment/` subtree, `usage.md`, `reference/` subtree, `security.md`, `contributing.md`); `security.md` covers threat model, encryption-at-rest scope, fail-closed rationale, header contract, key rotation plan; `deployment/auth-proxies.md` covers Authelia, Authentik, oauth2-proxy, Pomerium, Cloudflare Access; placeholder images at logical screenshot points (DOC-01..04)
 2. GitHub Pages deploy workflow and release automation — `workflows/docs.yml` (pushes to `main` deploy to Pages), `workflows/release.yml` (triggered on `v*` tags: multi-arch Docker build, GitHub Release creation, `git-cliff` CHANGELOG generation) (DOC-05, FOSS-02, FOSS-03)
 3. FOSS hygiene files — `LICENSE` (MIT), `README.md` (CI/license/release/image-size/Go-report-card badges, screenshot placeholder, 5-line quickstart, docs link), `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` (Contributor Covenant), `SECURITY.md`, `.github/ISSUE_TEMPLATE/` (bug + feature), `.github/PULL_REQUEST_TEMPLATE.md` (FOSS-01, FOSS-02)
