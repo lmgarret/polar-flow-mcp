@@ -8,7 +8,7 @@
 |---|-------|------|--------------|-------|
 | 1 | Project Foundation and Security Skeleton | 5/5 | Complete    | 2026-05-05 |
 | 2 | OAuth Link Flow + UserInfo | Users can link their Polar account and verify the link from Claude | OAUTH-01..05, MCP-01 | 3 |
-| 3 | Core MCP Tools + Bundled Skill | 3/3 | Complete   | 2026-05-11 |
+| 3 | Core MCP Tools + Bundled Skill | 3/3 | Complete    | 2026-05-11 |
 | 4 | Documentation, FOSS Hygiene, Release | Project is publicly releasable with docs, changelog, and FOSS community infrastructure | DOC-01..05, FOSS-01..03 | 3 |
 
 ---
