@@ -1,0 +1,46 @@
+# cliff.toml
+# Source: git-cliff.org/docs/configuration
+
+[remote.github]
+owner = "lmgarret"
+repo = "polar-flow-mcp"
+
+[changelog]
+header = """
+# Changelog
+
+All notable changes to this project will be documented in this file.
+"""
+
+body = """
+{% if version -%}
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else -%}
+## [Unreleased]
+{% endif -%}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+{% for commit in commits %}
+- {{ commit.message | split(pat="\\n") | first | upper_first | trim }}\
+{% endfor %}
+{% endfor %}
+"""
+
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+commit_parsers = [
+    { message = "^feat", group = "Features" },
+    { message = "^fix", group = "Bug Fixes" },
+    { message = "^docs", group = "Documentation" },
+    { message = "^chore\\(release\\)", skip = true },
+    { message = "^chore", group = "Maintenance" },
+    { message = "^refactor", group = "Refactor" },
+    { message = "^test", skip = true },
+    { message = "^ci", skip = true },
+    { message = "^style", skip = true },
+]
+tag_pattern = "v[0-9].*"
