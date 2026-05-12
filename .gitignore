@@ -1,2 +1,4 @@
 bin/
 /polar-flow-mcp
+.env
+*.db
