@@ -108,9 +108,9 @@
 **Plans:** 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — MkDocs Material site: 13 Diátaxis pages + `mkdocs.yml` covering security model, 5 auth proxies, all env vars/endpoints/schema (DOC-01..04)
-- [ ] 04-02-PLAN.md — CI workflows: `docs.yml` (Pages deploy), `release.yml` (multi-arch Docker + git-cliff + GitHub Release), `cliff.toml`, `CHANGELOG.md` stub (DOC-05, FOSS-03)
-- [ ] 04-03-PLAN.md — FOSS files: LICENSE (MIT), README (5 badges + quickstart), CONTRIBUTING, CODE_OF_CONDUCT (Covenant v2.1), SECURITY, issue+PR templates, CODEOWNERS (FOSS-01, FOSS-02)
+- [x] 04-01-PLAN.md — MkDocs Material site: 13 Diátaxis pages + `mkdocs.yml` covering security model, 5 auth proxies, all env vars/endpoints/schema (DOC-01..04)
+- [x] 04-02-PLAN.md — CI workflows: `docs.yml` (Pages deploy), `release.yml` (multi-arch Docker + git-cliff + GitHub Release), `cliff.toml`, `CHANGELOG.md` stub (DOC-05, FOSS-03)
+- [x] 04-03-PLAN.md — FOSS files: LICENSE (MIT), README (5 badges + quickstart), CONTRIBUTING, CODE_OF_CONDUCT (Covenant v2.1), SECURITY, issue+PR templates, CODEOWNERS (FOSS-01, FOSS-02)
 
 **Success Criteria:**
 1. `mkdocs serve` renders the full site locally with no broken links; the `docs.yml` workflow deploys it to GitHub Pages on a push to `main`
