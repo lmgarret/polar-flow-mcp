@@ -1,0 +1,42 @@
+name: Bug Report
+description: File a bug report
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug. Please fill in as much detail as possible.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Which Docker image tag or git SHA are you running?
+      placeholder: "ghcr.io/lmgarret/polar-flow-mcp:1.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: auth-proxy
+    attributes:
+      label: Auth proxy
+      description: Which reverse-proxy auth layer are you using?
+      options:
+        - Authelia
+        - Authentik
+        - oauth2-proxy
+        - Pomerium
+        - Cloudflare Access
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      render: shell
