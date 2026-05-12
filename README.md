@@ -16,8 +16,8 @@ polar-flow-mcp is a multi-user MCP server that lets you create, list, and delete
 
 ```bash
 git clone https://github.com/lmgarret/polar-flow-mcp.git
-cp docker-compose.yml .env.yml  # copy and edit env vars
-# Set ENCRYPTION_KEY, PROXY_SHARED_SECRET, POLAR_CLIENT_ID, POLAR_CLIENT_SECRET
+cd polar-flow-mcp
+# Edit docker-compose.yml — set ENCRYPTION_KEY, PROXY_SHARED_SECRET, POLAR_CLIENT_ID, POLAR_CLIENT_SECRET
 docker compose up -d
 # Visit https://lmgarret.github.io/polar-flow-mcp for full setup docs
 ```

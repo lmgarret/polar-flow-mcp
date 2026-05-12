@@ -60,7 +60,15 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Generate CHANGELOG
+      - name: Update CHANGELOG.md
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --verbose --latest --output CHANGELOG.md
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Generate release notes
         id: git-cliff
         uses: orhun/git-cliff-action@v4
         with:
@@ -68,6 +76,7 @@ jobs:
           args: --verbose --latest --strip header
         env:
           GITHUB_REPO: ${{ github.repository }}
+          OUTPUT: /tmp/release-notes.md
 
       - name: Commit CHANGELOG.md
         run: |

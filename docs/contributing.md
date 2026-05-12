@@ -13,10 +13,11 @@ in the repository root.
 - **Go 1.26+** — install from [https://go.dev/dl/](https://go.dev/dl/)
 - **golangci-lint v2.11** — the linter version pinned for this project
 
-Install golangci-lint to `~/go/bin/`:
+Install golangci-lint to `~/go/bin/` (the `go install` path does not work for v2.x — use the install script):
 
 ```bash
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.11
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+  | sh -s -- -b ~/go/bin v2.11.0
 ```
 
 Verify:

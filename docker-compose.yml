@@ -2,11 +2,11 @@
 #
 # IMPORTANT: This file ships with intentional placeholder values.
 # The server will REFUSE TO START until you configure the required variables.
-# See https://github.com/lm/polar-flow-mcp/docs/deployment for setup instructions.
+# See https://lmgarret.github.io/polar-flow-mcp for setup instructions.
 
 services:
   polar-flow-mcp:
-    image: ghcr.io/lm/polar-flow-mcp:latest
+    image: ghcr.io/lmgarret/polar-flow-mcp:latest
     restart: unless-stopped
     volumes:
       - polar-data:/data
