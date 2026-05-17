@@ -23,22 +23,7 @@ import (
 )
 
 func main() {
-	if err := setupLogging(); err != nil {
-		slog.Error("failed to set up logging", "error", err)
-		os.Exit(1)
-	}
-
-	// Load .env if present; ignore missing file, fail on parse errors.
-	if err := godotenv.Load(); err != nil {
-		if os.IsNotExist(err) {
-			slog.Info("no .env file found, using environment only")
-		} else {
-			slog.Error("failed to parse .env", "error", err)
-			os.Exit(1)
-		}
-	} else {
-		slog.Info("loaded .env file")
-	}
+	initLogging()
 
 	// 1. Load and validate config (fail-closed, exits 1 on error).
 	cfg, err := config.Load()
@@ -175,6 +160,21 @@ func main() {
 		shutCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(shutCtx)
+	}
+}
+
+// initLogging loads .env then configures slog. Must run before config.Load().
+func initLogging() {
+	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
+		slog.Error("failed to parse .env", "error", err)
+		os.Exit(1)
+	}
+	if err := setupLogging(); err != nil {
+		slog.Error("failed to set up logging", "error", err)
+		os.Exit(1)
+	}
+	if logFile := os.Getenv("LOG_FILE"); logFile != "" {
+		slog.Info("logging to file", "path", logFile)
 	}
 }
 
