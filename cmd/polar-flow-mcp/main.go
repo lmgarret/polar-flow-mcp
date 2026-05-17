@@ -122,18 +122,25 @@ func main() {
 		// /readyz — no auth, checks config + DB (SERV-02).
 		mux.HandleFunc("GET /readyz", readyzHandler(cfg, st))
 
+		// Select auth wrapper: full proxy middleware in production, fixed-identity in dev.
+		authWrap := func(h http.Handler) http.Handler {
+			if cfg.DevMode {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					ctx := context.WithValue(r.Context(), auth.UserIDKey, cfg.StdioUserID)
+					h.ServeHTTP(w, r.WithContext(ctx))
+				})
+			}
+			return auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader, h)
+		}
+
 		// /mcp — auth middleware wraps StreamableHTTPServer (SERV-03, SERV-04).
-		mux.Handle("/mcp", auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader, httpMCPServer))
-		mux.Handle("/mcp/", auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader, httpMCPServer))
+		mux.Handle("/mcp", authWrap(httpMCPServer))
+		mux.Handle("/mcp/", authWrap(httpMCPServer))
 
 		// /oauth — auth middleware wraps OAuth handlers.
 		oauthHandlers := oauth.NewHandlers(cfg, st, cipher)
-		mux.Handle("GET /oauth/login",
-			auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader,
-				http.HandlerFunc(oauthHandlers.Login)))
-		mux.Handle("GET /oauth/callback",
-			auth.Middleware(cfg.ProxySharedSecret, cfg.IdentityHeader,
-				http.HandlerFunc(oauthHandlers.Callback)))
+		mux.Handle("GET /oauth/login", authWrap(http.HandlerFunc(oauthHandlers.Login)))
+		mux.Handle("GET /oauth/callback", authWrap(http.HandlerFunc(oauthHandlers.Callback)))
 
 		// Start HTTP server with graceful shutdown.
 		srv := &http.Server{
@@ -180,16 +187,20 @@ func readyzHandler(cfg *config.Config, st *store.Store) http.HandlerFunc {
 		checks := make([]check, 0, 4)
 		allOK := true
 
-		// Check 1: AUTH_PROXY not unconfigured.
-		if cfg.AuthProxy == "unconfigured" || cfg.AuthProxy == "" {
+		// Check 1: AUTH_PROXY not unconfigured (skipped in dev mode).
+		if cfg.DevMode {
+			checks = append(checks, check{Name: "auth_proxy", Status: "ok"})
+		} else if cfg.AuthProxy == "unconfigured" || cfg.AuthProxy == "" {
 			checks = append(checks, check{Name: "auth_proxy", Status: "fail", Error: "AUTH_PROXY not configured"})
 			allOK = false
 		} else {
 			checks = append(checks, check{Name: "auth_proxy", Status: "ok"})
 		}
 
-		// Check 2: PROXY_SHARED_SECRET set.
-		if cfg.ProxySharedSecret == "" {
+		// Check 2: PROXY_SHARED_SECRET set (skipped in dev mode).
+		if cfg.DevMode {
+			checks = append(checks, check{Name: "proxy_secret", Status: "ok"})
+		} else if cfg.ProxySharedSecret == "" {
 			checks = append(checks, check{Name: "proxy_secret", Status: "fail", Error: "PROXY_SHARED_SECRET not set"})
 			allOK = false
 		} else {

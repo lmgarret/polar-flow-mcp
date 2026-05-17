@@ -66,6 +66,10 @@ type Config struct {
 	// PolarRedirectURL is the callback URL registered in the Polar developer portal (per D-02).
 	// Operator-controlled; not derived from the request.
 	PolarRedirectURL string
+
+	// DevMode indicates that proxy authentication is bypassed for local development.
+	// Identity is taken from DEV_USER_ID. MUST NOT be true in production.
+	DevMode bool
 }
 
 // Load reads configuration from environment variables, validates all required fields, and
@@ -87,8 +91,15 @@ func Load() (*Config, error) {
 			return nil, err
 		}
 	case "http":
-		if err := loadAuthFields(cfg); err != nil {
-			return nil, err
+		if os.Getenv("DEV_MODE") == "true" {
+			cfg.DevMode = true
+			if err := loadStdioFields(cfg); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := loadAuthFields(cfg); err != nil {
+				return nil, err
+			}
 		}
 	default:
 		return nil, fmt.Errorf("TRANSPORT must be %q or %q; got %q", "http", "stdio", transport)
@@ -285,9 +296,14 @@ func loadKeyFromFile() ([]byte, error) {
 // LogStartupBanner emits a structured slog.Info banner that names the transport, auth proxy,
 // identity header, secret header, and bind address. Call after a successful Load().
 func LogStartupBanner(cfg *Config) {
+	if cfg.DevMode {
+		slog.Warn("DEV MODE ACTIVE — proxy auth bypassed; do not run in production",
+			"dev_user_id", cfg.StdioUserID,
+		)
+	}
 	authProxyLabel := cfg.AuthProxy
 	if authProxyLabel == "" {
-		authProxyLabel = "none (stdio)"
+		authProxyLabel = "none (stdio or dev)"
 	}
 	slog.Info("polar-flow-mcp starting",
 		"transport", cfg.Transport,
