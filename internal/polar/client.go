@@ -117,7 +117,7 @@ func RegisterUser(ctx context.Context, accessToken, memberID string) (int64, err
 	if resp.StatusCode == http.StatusConflict {
 		return 0, nil
 	}
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return 0, fmt.Errorf("polar: register user: status %d: %s", resp.StatusCode, errBody)
 	}
