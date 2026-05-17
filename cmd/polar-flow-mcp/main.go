@@ -24,9 +24,15 @@ import (
 
 func main() {
 	// Load .env if present; ignore missing file, fail on parse errors.
-	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
-		slog.Error("failed to parse .env", "error", err)
-		os.Exit(1)
+	if err := godotenv.Load(); err != nil {
+		if os.IsNotExist(err) {
+			slog.Info("no .env file found, using environment only")
+		} else {
+			slog.Error("failed to parse .env", "error", err)
+			os.Exit(1)
+		}
+	} else {
+		slog.Info("loaded .env file")
 	}
 
 	// 1. Load and validate config (fail-closed, exits 1 on error).
