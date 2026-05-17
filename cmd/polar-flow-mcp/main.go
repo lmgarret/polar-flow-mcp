@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/lm/polar-flow-mcp/internal/auth"
@@ -22,6 +23,12 @@ import (
 )
 
 func main() {
+	// Load .env if present; ignore missing file, fail on parse errors.
+	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
+		slog.Error("failed to parse .env", "error", err)
+		os.Exit(1)
+	}
+
 	// 1. Load and validate config (fail-closed, exits 1 on error).
 	cfg, err := config.Load()
 	if err != nil {
