@@ -19,6 +19,14 @@ const ProxySecretHeader = "X-Proxy-Secret"
 // Config holds all validated server configuration loaded from environment variables.
 // Every field is populated (never zero-valued) after a successful Load().
 type Config struct {
+	// Transport selects the server transport: "http" (default) or "stdio".
+	// In stdio mode the HTTP listener and proxy auth are skipped entirely.
+	Transport string
+
+	// StdioUserID is the static Polar user ID injected into every request context when
+	// Transport == "stdio". Populated from DEV_USER_ID.
+	StdioUserID string
+
 	// AuthProxy is the name of the reverse proxy in front of this server (e.g. "authelia",
 	// "authentik", "oauth2-proxy"). Must not be "unconfigured" or empty.
 	AuthProxy string
@@ -67,8 +75,23 @@ type Config struct {
 func Load() (*Config, error) {
 	cfg := &Config{}
 
-	if err := loadAuthFields(cfg); err != nil {
-		return nil, err
+	transport := os.Getenv("TRANSPORT")
+	if transport == "" {
+		transport = "http"
+	}
+	cfg.Transport = transport
+
+	switch transport {
+	case "stdio":
+		if err := loadStdioFields(cfg); err != nil {
+			return nil, err
+		}
+	case "http":
+		if err := loadAuthFields(cfg); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("TRANSPORT must be %q or %q; got %q", "http", "stdio", transport)
 	}
 
 	if err := loadPolarFields(cfg); err != nil {
@@ -85,6 +108,19 @@ func Load() (*Config, error) {
 	cfg.EncryptionKey = keyBytes
 
 	return cfg, nil
+}
+
+// loadStdioFields validates and sets DEV_USER_ID for stdio transport.
+func loadStdioFields(cfg *Config) error {
+	userID := os.Getenv("DEV_USER_ID")
+	if userID == "" {
+		return errors.New(
+			"DEV_USER_ID must be set to your Polar user ID when TRANSPORT=stdio; " +
+				"find it via the Polar AccessLink API or your account dashboard",
+		)
+	}
+	cfg.StdioUserID = userID
+	return nil
 }
 
 // loadAuthFields validates and sets AUTH_PROXY and PROXY_SHARED_SECRET.
@@ -246,11 +282,16 @@ func loadKeyFromFile() ([]byte, error) {
 	return data, nil
 }
 
-// LogStartupBanner emits a structured slog.Info banner that names the trusted identity header,
-// the required secret header, and the declared auth proxy. Call after a successful Load().
+// LogStartupBanner emits a structured slog.Info banner that names the transport, auth proxy,
+// identity header, secret header, and bind address. Call after a successful Load().
 func LogStartupBanner(cfg *Config) {
+	authProxyLabel := cfg.AuthProxy
+	if authProxyLabel == "" {
+		authProxyLabel = "none (stdio)"
+	}
 	slog.Info("polar-flow-mcp starting",
-		"auth_proxy", cfg.AuthProxy,
+		"transport", cfg.Transport,
+		"auth_proxy", authProxyLabel,
 		"identity_header", cfg.IdentityHeader,
 		"secret_header", ProxySecretHeader,
 		"bind_address", cfg.BindAddress,

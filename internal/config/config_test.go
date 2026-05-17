@@ -13,6 +13,8 @@ import (
 func clearConfigEnv(t *testing.T) {
 	t.Helper()
 	for _, key := range []string{
+		"TRANSPORT",
+		"DEV_USER_ID",
 		"AUTH_PROXY",
 		"PROXY_SHARED_SECRET",
 		"IDENTITY_HEADER",
@@ -300,5 +302,96 @@ func TestLoadSucceedsWithAllPolarFields(t *testing.T) {
 	}
 	if cfg.PolarRedirectURL != "https://example.com/oauth/callback" {
 		t.Errorf("PolarRedirectURL: got %q, want %q", cfg.PolarRedirectURL, "https://example.com/oauth/callback")
+	}
+}
+
+// validKey is a base64-encoded 32-byte zero key used across stdio tests.
+const validKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+
+// setValidStdioEnv sets all env vars needed for a complete TRANSPORT=stdio Load() call
+// except TRANSPORT and DEV_USER_ID, which tests set explicitly.
+func setValidStdioEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("ENCRYPTION_KEY", validKey)
+	setValidPolarEnv(t)
+}
+
+// TestLoadStdioTransportSuccess verifies that TRANSPORT=stdio with DEV_USER_ID set
+// succeeds and populates Transport and StdioUserID correctly, leaving auth fields empty.
+func TestLoadStdioTransportSuccess(t *testing.T) {
+	clearConfigEnv(t)
+	t.Setenv("TRANSPORT", "stdio")
+	t.Setenv("DEV_USER_ID", "polar-user-123")
+	setValidStdioEnv(t)
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("expected no error for TRANSPORT=stdio with DEV_USER_ID set; got: %v", err)
+	}
+	if cfg.Transport != "stdio" {
+		t.Errorf("Transport: got %q, want %q", cfg.Transport, "stdio")
+	}
+	if cfg.StdioUserID != "polar-user-123" {
+		t.Errorf("StdioUserID: got %q, want %q", cfg.StdioUserID, "polar-user-123")
+	}
+	if cfg.AuthProxy != "" {
+		t.Errorf("AuthProxy must be empty in stdio mode; got %q", cfg.AuthProxy)
+	}
+	if cfg.ProxySharedSecret != "" {
+		t.Errorf("ProxySharedSecret must be empty in stdio mode; got %q", cfg.ProxySharedSecret)
+	}
+}
+
+// TestLoadStdioTransportMissingDevUserID verifies that TRANSPORT=stdio without DEV_USER_ID
+// returns an error mentioning "DEV_USER_ID".
+func TestLoadStdioTransportMissingDevUserID(t *testing.T) {
+	clearConfigEnv(t)
+	t.Setenv("TRANSPORT", "stdio")
+	// DEV_USER_ID intentionally not set.
+	setValidStdioEnv(t)
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("expected error for TRANSPORT=stdio with DEV_USER_ID unset, got nil")
+	}
+	if !strings.Contains(err.Error(), "DEV_USER_ID") {
+		t.Errorf("error must mention DEV_USER_ID; got: %q", err.Error())
+	}
+}
+
+// TestLoadHTTPTransportUnchanged verifies that TRANSPORT=http (explicit) behaves identically
+// to the default (omitted TRANSPORT) and requires AUTH_PROXY and PROXY_SHARED_SECRET.
+func TestLoadHTTPTransportUnchanged(t *testing.T) {
+	clearConfigEnv(t)
+	t.Setenv("TRANSPORT", "http")
+	t.Setenv("AUTH_PROXY", "authelia")
+	t.Setenv("PROXY_SHARED_SECRET", "supersecret")
+	t.Setenv("ENCRYPTION_KEY", validKey)
+	setValidPolarEnv(t)
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("expected no error for TRANSPORT=http with all fields set; got: %v", err)
+	}
+	if cfg.Transport != "http" {
+		t.Errorf("Transport: got %q, want %q", cfg.Transport, "http")
+	}
+	if cfg.AuthProxy != "authelia" {
+		t.Errorf("AuthProxy: got %q, want %q", cfg.AuthProxy, "authelia")
+	}
+}
+
+// TestLoadBadTransportValue verifies that an unrecognised TRANSPORT value returns an error
+// mentioning "TRANSPORT".
+func TestLoadBadTransportValue(t *testing.T) {
+	clearConfigEnv(t)
+	t.Setenv("TRANSPORT", "grpc")
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("expected error for TRANSPORT=grpc, got nil")
+	}
+	if !strings.Contains(err.Error(), "TRANSPORT") {
+		t.Errorf("error must mention TRANSPORT; got: %q", err.Error())
 	}
 }
