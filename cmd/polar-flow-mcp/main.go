@@ -23,6 +23,11 @@ import (
 )
 
 func main() {
+	if err := setupLogging(); err != nil {
+		slog.Error("failed to set up logging", "error", err)
+		os.Exit(1)
+	}
+
 	// Load .env if present; ignore missing file, fail on parse errors.
 	if err := godotenv.Load(); err != nil {
 		if os.IsNotExist(err) {
@@ -171,6 +176,28 @@ func main() {
 		defer cancel()
 		_ = srv.Shutdown(shutCtx)
 	}
+}
+
+// setupLogging configures the default slog handler based on LOG_LEVEL and LOG_FILE env vars.
+// LOG_LEVEL=debug enables debug output. LOG_FILE=<path> writes logs to a file (appended)
+// instead of stderr — useful when stderr is unavailable (e.g. stdio MCP transport).
+func setupLogging() error {
+	level := slog.LevelInfo
+	if os.Getenv("LOG_LEVEL") == "debug" {
+		level = slog.LevelDebug
+	}
+
+	out := os.Stderr
+	if logFile := os.Getenv("LOG_FILE"); logFile != "" {
+		f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+		if err != nil {
+			return fmt.Errorf("open log file %q: %w", logFile, err)
+		}
+		out = f
+	}
+
+	slog.SetDefault(slog.New(slog.NewTextHandler(out, &slog.HandlerOptions{Level: level})))
+	return nil
 }
 
 // readyzHandler returns an http.HandlerFunc that checks four readiness conditions and

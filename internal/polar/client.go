@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -286,6 +287,7 @@ func (c *Client) ListTrainingTargets(ctx context.Context, polarUserID, fromDate,
 	if err != nil {
 		return nil, fmt.Errorf("polar: read list response: %w", err)
 	}
+	slog.Debug("polar: list training targets raw response", "status", resp.StatusCode, "body", string(body))
 	// Try array shape first.
 	var direct []TrainingTargetSummary
 	if json.Unmarshal(body, &direct) == nil {
