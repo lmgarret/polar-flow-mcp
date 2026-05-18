@@ -138,7 +138,7 @@ func TestDeleteTrainingTarget_Success(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)
@@ -185,7 +185,7 @@ func TestDeleteTrainingTarget_NotFound(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)
@@ -234,7 +234,7 @@ func TestDeleteTrainingTarget_PolarError(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)
@@ -280,7 +280,7 @@ func TestDeleteTrainingTarget_VerifiesHTTPMethod(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)

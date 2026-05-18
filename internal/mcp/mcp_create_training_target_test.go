@@ -131,7 +131,7 @@ func TestCreateTrainingTarget_Success_5x1kmThreshold(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)
@@ -226,7 +226,7 @@ func TestCreateTrainingTarget_HRZoneEscapeHatch(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)
@@ -286,7 +286,7 @@ func TestCreateTrainingTarget_MultipleRepeatBlocks(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)
@@ -361,7 +361,7 @@ func TestCreateTrainingTarget_PolarErrorStatus(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)

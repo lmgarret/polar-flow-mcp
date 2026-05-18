@@ -199,15 +199,83 @@ restarts.
 
 ---
 
+### `TRANSPORT`
+
+| Field | Value |
+|-------|-------|
+| Required | No |
+| Default | `http` |
+| Options | `http`, `stdio` |
+
+Transport mode. `http` runs a full HTTP server (requires a reverse proxy). `stdio` runs
+single-user mode over stdin/stdout for use with Claude Desktop or Claude Code — no proxy
+required.
+
+---
+
+### `DEV_USER_ID`
+
+| Field | Value |
+|-------|-------|
+| Required | When `TRANSPORT=stdio` or `DEV_MODE=true` |
+| Example | `user@example.com` |
+
+The identity injected for every request. In stdio mode this is the sole user. In
+`DEV_MODE` HTTP mode it bypasses proxy auth and uses this value directly.
+
+---
+
+### `DEV_MODE`
+
+| Field | Value |
+|-------|-------|
+| Required | No |
+| Default | `false` |
+
+When `true`, disables proxy authentication on the HTTP server and uses `DEV_USER_ID`
+as the identity. For local development only — never enable in production.
+
+---
+
+### `LOG_LEVEL`
+
+| Field | Value |
+|-------|-------|
+| Required | No |
+| Default | `info` |
+| Options | `debug`, `info`, `warn`, `error` |
+
+Log verbosity. Set to `debug` to see raw Polar API request URLs and response bodies.
+
+---
+
+### `LOG_FILE`
+
+| Field | Value |
+|-------|-------|
+| Required | No |
+| Default | (stderr) |
+| Example | `/var/log/polar-flow-mcp.log` |
+
+Path to a log file. Required when running in stdio mode (where stderr is not available
+and log output would corrupt the MCP protocol).
+
+---
+
 ## Summary table
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `AUTH_PROXY` | Yes | `unconfigured` (fails) | Reverse proxy name |
-| `PROXY_SHARED_SECRET` | Yes | — | Shared secret for header verification |
+| `AUTH_PROXY` | Yes (http mode) | `unconfigured` (fails) | Reverse proxy name |
+| `PROXY_SHARED_SECRET` | Yes (http mode) | — | Shared secret for header verification |
 | `ENCRYPTION_KEY` | Yes | — | AES-256-GCM key (base64, 32 bytes) |
 | `POLAR_CLIENT_ID` | Yes | — | Polar OAuth client ID |
 | `POLAR_CLIENT_SECRET` | Yes | — | Polar OAuth client secret |
+| `TRANSPORT` | No | `http` | Transport mode: `http` or `stdio` |
+| `DEV_USER_ID` | stdio / DEV_MODE | — | Identity for stdio or dev mode |
+| `DEV_MODE` | No | `false` | Bypass proxy auth for local dev |
+| `LOG_LEVEL` | No | `info` | Log verbosity |
+| `LOG_FILE` | No | stderr | Log output file (required for stdio) |
 | `KEY_PROVIDER` | No | `env` | Key source: `env` or `file` |
 | `ENCRYPTION_KEY_FILE` | If `KEY_PROVIDER=file` | — | Path to key file |
 | `IDENTITY_HEADER` | No | `Remote-User` | User identity header name |

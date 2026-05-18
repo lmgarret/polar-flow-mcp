@@ -1,4 +1,4 @@
-// Package polar provides a typed HTTP client for the Polar AccessLink v3 API.
+// Package polar provides a typed HTTP client for the Polar AccessLink API (v3 + v4).
 package polar
 
 import (
@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// Client is a typed HTTP client for the Polar AccessLink v3 API.
+// Client is a typed HTTP client for the Polar AccessLink API.
 // Created fresh per tool invocation; never cached at server or session level.
 type Client struct {
 	httpClient  *http.Client
@@ -32,26 +32,26 @@ func NewClient(bearerToken string) *Client {
 
 //nolint:gochecknoglobals
 var (
-	// tokenEndpoint is the Polar OAuth2 token exchange URL. Overridable in tests.
-	tokenEndpoint = "https://polarremote.com/v2/oauth2/token"
+	// tokenEndpoint is the Polar v4 OAuth2 token exchange URL. Overridable in tests.
+	tokenEndpoint = "https://auth.polar.com/oauth/token"
 
-	// registerEndpoint is the Polar AccessLink user registration URL. Overridable in tests.
-	registerEndpoint = "https://www.polaraccesslink.com/v3/users"
+	// trainingTargetsV4URL is the Polar v4 calendar targets list endpoint.
+	// Does not require a user ID in the path; uses fromDate/toDate query params.
+	trainingTargetsV4URL = "https://www.polaraccesslink.com/v4/data/training-target/calendar-targets"
 
-	// trainingTargetsBaseURL is the Polar AccessLink v3 training targets base URL.
-	// Used as: trainingTargetsBaseURL + "/" + polarUserID + "/training-targets" (per CONTEXT.md D-01).
-	// ASSUMED endpoint — not in public Polar v3 swagger; validate during live integration testing.
-	trainingTargetsBaseURL = "https://www.polaraccesslink.com/v3/users"
+	// trainingTargetsV4BaseURL is the base for v4 training target mutation endpoints.
+	trainingTargetsV4BaseURL = "https://www.polaraccesslink.com/v4/data/training-target"
 
-	// defaultHTTPClient is shared by package-level functions (ExchangeCode, RegisterUser).
+	// defaultHTTPClient is shared by package-level functions (ExchangeCode).
 	defaultHTTPClient = &http.Client{Timeout: 30 * time.Second}
 )
 
-// TokenResponse holds the fields returned by the Polar token endpoint.
+// TokenResponse holds the fields returned by the Polar v4 token endpoint.
 type TokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	XUserID     int64  `json:"x_user_id"`
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int64  `json:"expires_in"`
 }
 
 // ExchangeCode exchanges a Polar authorization code for an access token (per OAUTH-03).
@@ -88,48 +88,6 @@ func ExchangeCode(ctx context.Context, clientID, clientSecret, code, redirectURL
 	return &tr, nil
 }
 
-// RegisterUser registers the access token's owner with Polar AccessLink (per OAUTH-04).
-// memberID is the partner's user identifier — must be the Polar numeric user ID
-// (TokenResponse.XUserID, formatted as a string) per CR-02. The OAuth2 access token
-// is used ONLY in the Authorization header, never in the body.
-//
-// HTTP 409 indicates the user is already registered; treat as idempotent success and
-// return (0, nil). Callers MUST use the x_user_id from TokenResponse as the authoritative
-// polar_user_id in all cases (200 and 409) — the 409 body does not contain the user object.
-func RegisterUser(ctx context.Context, accessToken, memberID string) (int64, error) {
-	body, err := json.Marshal(map[string]string{"member-id": memberID})
-	if err != nil {
-		return 0, fmt.Errorf("polar: marshal register body: %w", err)
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, registerEndpoint, bytes.NewReader(body))
-	if err != nil {
-		return 0, fmt.Errorf("polar: build register request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-
-	resp, err := defaultHTTPClient.Do(req)
-	if err != nil {
-		return 0, fmt.Errorf("polar: register user: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode == http.StatusConflict {
-		return 0, nil
-	}
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return 0, fmt.Errorf("polar: register user: status %d: %s", resp.StatusCode, errBody)
-	}
-	var reg struct {
-		PolarUserID int64 `json:"polar-user-id"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&reg); err != nil {
-		return 0, fmt.Errorf("polar: decode register response: %w", err)
-	}
-	return reg.PolarUserID, nil
-}
 
 // CreateTrainingTargetRequest is the POST body for /v3/users/{id}/training-targets.
 // Field names are ASSUMED from Polar v4 swagger schema (see RESEARCH.md A1-A8).
@@ -196,14 +154,25 @@ type PhaseIntensity struct {
 //nolint:gochecknoglobals
 var ErrTargetNotFound = errors.New("polar: training target not found")
 
-// TrainingTargetSummary is a minimal projection of a Polar training target
-// suitable for human-readable listing. Only fields we can extract reliably
-// across the assumed v3/v4 shapes are included.
+// TrainingTargetSummary is a Polar v4 training target as returned by the calendar-targets endpoint.
 type TrainingTargetSummary struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Date string `json:"date"`
-	Time string `json:"time"`
+	Session  TrainingTargetSession    `json:"session"`
+	Exercise []TrainingExerciseTarget `json:"exercise"`
+}
+
+// TrainingTargetSession holds the session-level fields of a v4 training target.
+type TrainingTargetSession struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	StartTime   DateTime `json:"startTime"`
+	Description string   `json:"description"`
+}
+
+// TrainingExerciseTarget holds per-exercise goal fields within a training target.
+type TrainingExerciseTarget struct {
+	Idx      int     `json:"idx"`
+	Duration int     `json:"duration"`
+	Distance float64 `json:"distance"`
 }
 
 // CreateTrainingTarget POSTs a training target to Polar (per MCP-03).
@@ -214,7 +183,7 @@ func (c *Client) CreateTrainingTarget(ctx context.Context, polarUserID string, b
 	if err != nil {
 		return "", fmt.Errorf("polar: marshal training target: %w", err)
 	}
-	reqURL := trainingTargetsBaseURL + "/" + polarUserID + "/training-targets"
+	reqURL := trainingTargetsV4BaseURL + "/" + polarUserID + "/training-targets"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(payload))
 	if err != nil {
 		return "", fmt.Errorf("polar: build create training target request: %w", err)
@@ -249,21 +218,22 @@ func (c *Client) CreateTrainingTarget(ctx context.Context, polarUserID string, b
 	return "(id not returned)", nil
 }
 
-// ListTrainingTargets fetches training targets in [fromDate, toDate] (ISO 8601
-// YYYY-MM-DD). Returns a (possibly empty) slice. ASSUMED endpoint — validate live.
-func (c *Client) ListTrainingTargets(ctx context.Context, polarUserID, fromDate, toDate string) ([]TrainingTargetSummary, error) {
-	u, err := url.Parse(trainingTargetsBaseURL + "/" + polarUserID + "/training-targets")
+// ListTrainingTargets fetches calendar training targets from the Polar v4 API
+// for the given date range (ISO 8601 YYYY-MM-DD, fromDate inclusive, toDate exclusive).
+func (c *Client) ListTrainingTargets(ctx context.Context, fromDate, toDate string) ([]TrainingTargetSummary, error) {
+	u, err := url.Parse(trainingTargetsV4URL)
 	if err != nil {
 		return nil, fmt.Errorf("polar: build list training targets URL: %w", err)
 	}
 	q := u.Query()
 	if fromDate != "" {
-		q.Set("from_date", fromDate)
+		q.Set("from", fromDate)
 	}
 	if toDate != "" {
-		q.Set("to_date", toDate)
+		q.Set("to", toDate)
 	}
 	u.RawQuery = q.Encode()
+	slog.Debug("polar: list training targets request", "url", u.String())
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
@@ -278,32 +248,24 @@ func (c *Client) ListTrainingTargets(ctx context.Context, polarUserID, fromDate,
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK {
-		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return nil, fmt.Errorf("polar: list training targets: status %d: %s", resp.StatusCode, errBody)
-	}
-
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return nil, fmt.Errorf("polar: read list response: %w", err)
 	}
 	slog.Debug("polar: list training targets raw response", "status", resp.StatusCode, "body", string(body))
-	// Try array shape first.
-	var direct []TrainingTargetSummary
-	if json.Unmarshal(body, &direct) == nil {
-		return direct, nil
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("polar: list training targets: status %d: %s", resp.StatusCode, body)
 	}
-	// Fall back to object-with-"training-targets" shape (v4 swagger wraps the array).
-	var wrapped struct {
-		TrainingTargets []TrainingTargetSummary `json:"training-targets"`
-	}
-	if err := json.Unmarshal(body, &wrapped); err != nil {
+
+	var targets []TrainingTargetSummary
+	if err := json.Unmarshal(body, &targets); err != nil {
 		return nil, fmt.Errorf("polar: decode list response: %w", err)
 	}
-	if wrapped.TrainingTargets == nil {
+	if targets == nil {
 		return []TrainingTargetSummary{}, nil
 	}
-	return wrapped.TrainingTargets, nil
+	return targets, nil
 }
 
 // DeleteTrainingTarget DELETEs a training target by id. Returns nil on 200/204,
@@ -312,7 +274,7 @@ func (c *Client) DeleteTrainingTarget(ctx context.Context, polarUserID, targetID
 	if targetID == "" {
 		return fmt.Errorf("polar: delete training target: target_id is empty")
 	}
-	u := trainingTargetsBaseURL + "/" + polarUserID + "/training-targets/" + url.PathEscape(targetID)
+	u := trainingTargetsV4BaseURL + "/" + polarUserID + "/training-targets/" + url.PathEscape(targetID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, u, nil)
 	if err != nil {
 		return fmt.Errorf("polar: build delete training target request: %w", err)

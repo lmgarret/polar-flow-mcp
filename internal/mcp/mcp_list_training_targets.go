@@ -25,17 +25,6 @@ func ListTrainingTargetsHandler(st *store.Store, cipher *crypto.Cipher) func(ctx
 			return mcpgo.NewToolResultError("no identity in context — auth middleware not applied"), nil
 		}
 
-		polarUserID, found, err := st.GetPolarUserID(ctx, identity)
-		if err != nil {
-			return mcpgo.NewToolResultError("database error: " + err.Error()), nil
-		}
-		if !found {
-			return mcpgo.NewToolResultText(fmt.Sprintf(
-				"No Polar account linked to your identity (%s). Visit /oauth/login to link your Polar account.",
-				identity,
-			)), nil
-		}
-
 		blob, found, err := st.GetEncryptedToken(ctx, identity)
 		if err != nil {
 			return mcpgo.NewToolResultError("database error: " + err.Error()), nil
@@ -67,9 +56,9 @@ func ListTrainingTargetsHandler(st *store.Store, cipher *crypto.Cipher) func(ctx
 		}
 
 		client := polar.NewClient(string(tokenBytes))
-		targets, err := client.ListTrainingTargets(ctx, polarUserID, fromDate, toDate)
+		targets, err := client.ListTrainingTargets(ctx, fromDate, toDate)
 		if err != nil {
-			slog.Error("polar list training targets failed", "identity", identity, "polar_user_id", polarUserID, "error", err)
+			slog.Error("polar list training targets failed", "identity", identity, "error", err)
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 
@@ -80,16 +69,19 @@ func ListTrainingTargetsHandler(st *store.Store, cipher *crypto.Cipher) func(ctx
 		var b strings.Builder
 		fmt.Fprintf(&b, "Training targets between %s and %s (%d):\n", fromDate, toDate, len(targets))
 		for _, t := range targets {
-			id := t.ID
+			id := t.Session.ID
 			if id == "" {
 				id = "(no id)"
 			}
-			name := t.Name
+			name := t.Session.Name
 			if name == "" {
 				name = "(unnamed)"
 			}
-			dt := strings.TrimSpace(t.Date + " " + t.Time)
-			if dt == "" {
+			st := t.Session.StartTime
+			var dt string
+			if st.Year > 0 {
+				dt = fmt.Sprintf("%04d-%02d-%02d %02d:%02d", st.Year, st.Month, st.Day, st.Hour, st.Min)
+			} else {
 				dt = "(no scheduled time)"
 			}
 			fmt.Fprintf(&b, "- %s: %s (%s)\n", id, name, dt)

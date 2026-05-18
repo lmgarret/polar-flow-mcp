@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/lm/polar-flow-mcp/internal/auth"
@@ -24,7 +23,7 @@ import (
 // authorizeURL is the Polar authorization page URL. Overridable in tests via export_test.go.
 //
 //nolint:gochecknoglobals
-var authorizeURL = "https://flow.polar.com/oauth2/authorization"
+var authorizeURL = "https://auth.polar.com/oauth/authorize"
 
 // stateTTL is the lifetime of an OAuth CSRF state row in pending_auth.
 const stateTTL = 10 * time.Minute
@@ -72,7 +71,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		"response_type": {"code"},
 		"client_id":     {h.cfg.PolarClientID},
 		"redirect_uri":  {h.cfg.PolarRedirectURL},
-		"scope":         {"accesslink.read_all"},
+		"scope":         {"training_targets:read"},
 		"state":         {state},
 	}
 	http.Redirect(w, r, authorizeURL+"?"+params.Encode(), http.StatusFound)
@@ -80,6 +79,14 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 
 // Callback handles the Polar OAuth2 callback (per OAUTH-02..OAUTH-05, D-04, D-05, D-06).
 func (h *Handlers) Callback(w http.ResponseWriter, r *http.Request) {
+	// Handle OAuth error redirect from Polar (e.g. unrecognized scope, user denied).
+	if errParam := r.URL.Query().Get("error"); errParam != "" {
+		desc := r.URL.Query().Get("error_description")
+		slog.Warn("oauth callback: Polar returned error", "error", errParam, "description", desc)
+		htmlError(w, http.StatusBadRequest, "Polar authorization failed: "+errParam+": "+desc)
+		return
+	}
+
 	state := r.URL.Query().Get("state")
 	code := r.URL.Query().Get("code")
 	if state == "" || code == "" {
@@ -127,16 +134,8 @@ func (h *Handlers) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Register user with Polar (OAUTH-04). 409 = idempotent; use x_user_id from token exchange in all cases.
-	polarUserID := strconv.FormatInt(tr.XUserID, 10) // schema is TEXT (also reused for the member-id field below).
-	if _, err := polar.RegisterUser(r.Context(), tr.AccessToken, polarUserID); err != nil {
-		slog.Error("oauth callback: user registration failed", "error", err, "identity", currentIdentity)
-		htmlError(w, http.StatusBadGateway, "Polar user registration failed")
-		return
-	}
-
-	// Persist user row first (FK requirement).
-	if err := h.st.UpsertUser(r.Context(), currentIdentity, polarUserID); err != nil {
+	// Persist user row first (FK requirement). polar_user_id is not returned by the v4 token endpoint.
+	if err := h.st.UpsertUser(r.Context(), currentIdentity, ""); err != nil {
 		slog.Error("oauth callback: upsert user failed", "error", err, "identity", currentIdentity)
 		htmlError(w, http.StatusInternalServerError, "failed to save user")
 		return

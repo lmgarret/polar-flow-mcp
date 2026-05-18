@@ -59,8 +59,8 @@ func TestListTrainingTargets_NoLinkedAccount(t *testing.T) {
 	if !strings.Contains(text, "/oauth/login") {
 		t.Errorf("text %q should contain /oauth/login", text)
 	}
-	if !strings.Contains(strings.ToLower(text), "no polar account") {
-		t.Errorf("text %q should contain 'no polar account'", text)
+	if !strings.Contains(strings.ToLower(text), "no polar token") {
+		t.Errorf("text %q should contain 'no polar token'", text)
 	}
 }
 
@@ -106,7 +106,7 @@ func TestListTrainingTargets_DefaultDates(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4URL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)
@@ -142,10 +142,10 @@ func TestListTrainingTargets_DefaultDates(t *testing.T) {
 	today := time.Now().UTC().Format("2006-01-02")
 	todayPlus30 := time.Now().UTC().AddDate(0, 0, 30).Format("2006-01-02")
 
-	if !strings.Contains(capturedQuery, "from_date="+today) {
+	if !strings.Contains(capturedQuery, "from="+today) {
 		t.Errorf("query %q should contain from_date=%s", capturedQuery, today)
 	}
-	if !strings.Contains(capturedQuery, "to_date="+todayPlus30) {
+	if !strings.Contains(capturedQuery, "to="+todayPlus30) {
 		t.Errorf("query %q should contain to_date=%s", capturedQuery, todayPlus30)
 	}
 
@@ -165,11 +165,11 @@ func TestListTrainingTargets_PopulatedList(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`[{"id":"t1","name":"Easy run","date":"2026-05-15","time":"18:00"},{"id":"t2","name":"Intervals","date":"2026-05-17","time":"07:00"}]`))
+		_, _ = w.Write([]byte(`[{"session":{"id":"t1","name":"Easy run","startTime":{"year":2026,"month":5,"day":15,"hour":18,"min":0,"sec":0}},"exercise":[]},{"session":{"id":"t2","name":"Intervals","startTime":{"year":2026,"month":5,"day":17,"hour":7,"min":0,"sec":0}},"exercise":[]}]`))
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4URL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)
@@ -257,7 +257,7 @@ func TestListTrainingTargets_PolarError(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4URL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)
@@ -309,7 +309,7 @@ func TestConcurrentListAndDeleteHandlers(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4URL(ts.URL)
 	t.Cleanup(restore)
 
 	st := openTestStore(t)

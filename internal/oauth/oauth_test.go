@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"regexp"
-	"strconv"
 	"testing"
 	"time"
 
@@ -74,11 +72,11 @@ func TestLoginHandler_RedirectsAndStoresState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse Location %q: %v", loc, err)
 	}
-	if u.Host != "flow.polar.com" {
-		t.Errorf("host = %q, want flow.polar.com", u.Host)
+	if u.Host != "auth.polar.com" {
+		t.Errorf("host = %q, want auth.polar.com", u.Host)
 	}
-	if u.Path != "/oauth2/authorization" {
-		t.Errorf("path = %q, want /oauth2/authorization", u.Path)
+	if u.Path != "/oauth/authorize" {
+		t.Errorf("path = %q, want /oauth/authorize", u.Path)
 	}
 	q := u.Query()
 	if q.Get("response_type") != "code" {
@@ -90,8 +88,8 @@ func TestLoginHandler_RedirectsAndStoresState(t *testing.T) {
 	if q.Get("redirect_uri") != "https://example.com/cb" {
 		t.Errorf("redirect_uri = %q, want https://example.com/cb", q.Get("redirect_uri"))
 	}
-	if q.Get("scope") != "accesslink.read_all" {
-		t.Errorf("scope = %q, want accesslink.read_all", q.Get("scope"))
+	if q.Get("scope") != "training_targets:read" {
+		t.Errorf("scope = %q, want training_targets:read", q.Get("scope"))
 	}
 	state := q.Get("state")
 	matched, _ := regexp.MatchString(`^[0-9a-f]{64}$`, state)
@@ -211,35 +209,18 @@ func TestCallbackHandler_IdentityMismatch_Returns400(t *testing.T) {
 func TestCallbackHandler_Success(t *testing.T) {
 	s := testStore(t)
 
-	// Mock token endpoint
+	// Mock v4 token endpoint — returns access_token only (no x_user_id in v4).
 	tokenSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "tok",
 			"token_type":   "bearer",
-			"x_user_id":    777,
 		})
 	}))
 	defer tokenSrv.Close()
 	restoreToken := polar.SetTokenEndpoint(tokenSrv.URL)
 	t.Cleanup(restoreToken)
-
-	// Mock register endpoint — asserts member-id is the x_user_id string, not the access token (CR-02).
-	regSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bodyBytes, _ := io.ReadAll(r.Body)
-		var payload map[string]string
-		_ = json.Unmarshal(bodyBytes, &payload)
-		if payload["member-id"] != "777" {
-			t.Errorf("member-id = %q, want \"777\" (CR-02 regression)", payload["member-id"])
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]any{"polar-user-id": 777})
-	}))
-	defer regSrv.Close()
-	restoreReg := polar.SetRegisterEndpoint(regSrv.URL)
-	t.Cleanup(restoreReg)
 
 	h := oauth.NewHandlers(testConfig(), s, testCipher())
 
@@ -261,20 +242,19 @@ func TestCallbackHandler_Success(t *testing.T) {
 		t.Errorf("body %q should contain 'Polar account linked'", rr.Body.String())
 	}
 
-	// Assert users row
-	var polarUserID string
-	err := s.ReadDB().QueryRowContext(context.Background(),
-		`SELECT polar_user_id FROM users WHERE identity = ?`, "alice").Scan(&polarUserID)
-	if err != nil {
+	// Assert users row exists (polar_user_id is empty for v4 flow).
+	var count int
+	if err := s.ReadDB().QueryRowContext(context.Background(),
+		`SELECT COUNT(*) FROM users WHERE identity = ?`, "alice").Scan(&count); err != nil {
 		t.Fatalf("users query: %v", err)
 	}
-	if polarUserID != strconv.FormatInt(777, 10) {
-		t.Errorf("polar_user_id = %q, want 777", polarUserID)
+	if count != 1 {
+		t.Errorf("users row count = %d, want 1", count)
 	}
 
-	// Assert polar_tokens row
+	// Assert polar_tokens row exists with a real encrypted blob.
 	var blobLen int
-	err = s.ReadDB().QueryRowContext(context.Background(),
+	err := s.ReadDB().QueryRowContext(context.Background(),
 		`SELECT length(encrypted_token) FROM polar_tokens pt JOIN users u ON pt.user_id = u.id WHERE u.identity = ?`,
 		"alice").Scan(&blobLen)
 	if err != nil {
@@ -284,67 +264,13 @@ func TestCallbackHandler_Success(t *testing.T) {
 		t.Errorf("encrypted_token length = %d, want >= 12", blobLen)
 	}
 
-	// State row should be deleted (replay returns 400)
+	// State row should be deleted (replay returns 400).
 	req2 := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/oauth/callback?state=successstate&code=authcode", nil)
 	req2 = injectIdentity(req2, "alice")
 	rr2 := httptest.NewRecorder()
 	h.Callback(rr2, req2)
 	if rr2.Code != http.StatusBadRequest {
 		t.Errorf("replay status = %d, want 400", rr2.Code)
-	}
-}
-
-func TestCallbackHandler_RegistrationConflict_UsesXUserID(t *testing.T) {
-	s := testStore(t)
-
-	// Mock token endpoint — returns x_user_id=777
-	tokenSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"access_token": "tok",
-			"token_type":   "bearer",
-			"x_user_id":    777,
-		})
-	}))
-	defer tokenSrv.Close()
-	restoreToken := polar.SetTokenEndpoint(tokenSrv.URL)
-	t.Cleanup(restoreToken)
-
-	// Mock register endpoint — returns 409 (already registered)
-	regSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusConflict)
-	}))
-	defer regSrv.Close()
-	restoreReg := polar.SetRegisterEndpoint(regSrv.URL)
-	t.Cleanup(restoreReg)
-
-	h := oauth.NewHandlers(testConfig(), s, testCipher())
-
-	// Pre-insert state for alice
-	if err := s.CreateOAuthState(context.Background(), "conflictstate", "alice", time.Now().UTC().Add(10*time.Minute)); err != nil {
-		t.Fatalf("CreateOAuthState: %v", err)
-	}
-
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/oauth/callback?state=conflictstate&code=authcode", nil)
-	req = injectIdentity(req, "alice")
-	rr := httptest.NewRecorder()
-
-	h.Callback(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Errorf("status = %d, want 200; body: %s", rr.Code, rr.Body.String())
-	}
-
-	// polar_user_id must be 777 (from x_user_id)
-	var polarUserID string
-	err := s.ReadDB().QueryRowContext(context.Background(),
-		`SELECT polar_user_id FROM users WHERE identity = ?`, "alice").Scan(&polarUserID)
-	if err != nil {
-		t.Fatalf("users query: %v", err)
-	}
-	if polarUserID != strconv.FormatInt(777, 10) {
-		t.Errorf("polar_user_id = %q, want 777", polarUserID)
 	}
 }
 

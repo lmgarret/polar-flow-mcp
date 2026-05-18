@@ -31,7 +31,7 @@ func TestCreateTrainingTarget_Success(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")
@@ -132,7 +132,7 @@ func TestCreateTrainingTarget_ErrorStatus(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")
@@ -158,7 +158,7 @@ func TestCreateTrainingTarget_AcceptsBoth200And201(t *testing.T) {
 			}))
 			defer ts.Close()
 
-			restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+			restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 			t.Cleanup(restore)
 
 			client := polar.NewClient("tok")
@@ -180,7 +180,7 @@ func TestCreateTrainingTarget_NoIdInBody(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")
@@ -195,42 +195,39 @@ func TestCreateTrainingTarget_NoIdInBody(t *testing.T) {
 
 // --- ListTrainingTargets tests ---
 
-func TestListTrainingTargets_ArrayShape(t *testing.T) {
+const v4ListResponse = `[{"session":{"id":"t1","name":"Easy run","startTime":{"year":2026,"month":5,"day":15,"hour":18,"min":0,"sec":0},"description":"Easy pace"},"exercise":[]}]`
+
+func TestListTrainingTargets_Success(t *testing.T) {
 	var capturedMethod string
-	var capturedPath string
 	var capturedQuery string
 	var capturedAuth string
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedMethod = r.Method
-		capturedPath = r.URL.Path
 		capturedQuery = r.URL.RawQuery
 		capturedAuth = r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`[{"id":"t1","name":"Easy run","date":"2026-05-15","time":"18:00"}]`))
+		_, _ = w.Write([]byte(v4ListResponse))
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4URL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")
-	targets, err := client.ListTrainingTargets(t.Context(), "12345", "2026-05-15", "2026-06-15")
+	targets, err := client.ListTrainingTargets(t.Context(), "2026-05-15", "2026-06-15")
 	if err != nil {
 		t.Fatalf("ListTrainingTargets returned error: %v", err)
 	}
 	if capturedMethod != http.MethodGet {
 		t.Errorf("method = %q, want GET", capturedMethod)
 	}
-	if !strings.Contains(capturedPath, "/12345/training-targets") {
-		t.Errorf("path %q does not contain /12345/training-targets", capturedPath)
+	if !strings.Contains(capturedQuery, "from=2026-05-15") {
+		t.Errorf("query %q does not contain from=2026-05-15", capturedQuery)
 	}
-	if !strings.Contains(capturedQuery, "from_date=2026-05-15") {
-		t.Errorf("query %q does not contain from_date=2026-05-15", capturedQuery)
-	}
-	if !strings.Contains(capturedQuery, "to_date=2026-06-15") {
-		t.Errorf("query %q does not contain to_date=2026-06-15", capturedQuery)
+	if !strings.Contains(capturedQuery, "to=2026-06-15") {
+		t.Errorf("query %q does not contain to=2026-06-15", capturedQuery)
 	}
 	if capturedAuth != "Bearer tok" {
 		t.Errorf("Authorization = %q, want 'Bearer tok'", capturedAuth)
@@ -238,44 +235,23 @@ func TestListTrainingTargets_ArrayShape(t *testing.T) {
 	if len(targets) != 1 {
 		t.Fatalf("expected 1 target, got %d", len(targets))
 	}
-	if targets[0].ID != "t1" {
-		t.Errorf("targets[0].ID = %q, want %q", targets[0].ID, "t1")
+	if targets[0].Session.ID != "t1" {
+		t.Errorf("Session.ID = %q, want %q", targets[0].Session.ID, "t1")
 	}
-	if targets[0].Name != "Easy run" {
-		t.Errorf("targets[0].Name = %q, want %q", targets[0].Name, "Easy run")
+	if targets[0].Session.Name != "Easy run" {
+		t.Errorf("Session.Name = %q, want %q", targets[0].Session.Name, "Easy run")
 	}
-	if targets[0].Date != "2026-05-15" {
-		t.Errorf("targets[0].Date = %q, want %q", targets[0].Date, "2026-05-15")
+	if targets[0].Session.StartTime.Year != 2026 {
+		t.Errorf("StartTime.Year = %d, want 2026", targets[0].Session.StartTime.Year)
 	}
-	if targets[0].Time != "18:00" {
-		t.Errorf("targets[0].Time = %q, want %q", targets[0].Time, "18:00")
+	if targets[0].Session.StartTime.Month != 5 {
+		t.Errorf("StartTime.Month = %d, want 5", targets[0].Session.StartTime.Month)
 	}
-}
-
-func TestListTrainingTargets_WrappedShape(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"training-targets":[{"id":"t1","name":"X"}]}`))
-	}))
-	defer ts.Close()
-
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
-	t.Cleanup(restore)
-
-	client := polar.NewClient("tok")
-	targets, err := client.ListTrainingTargets(t.Context(), "12345", "2026-05-15", "2026-06-15")
-	if err != nil {
-		t.Fatalf("ListTrainingTargets returned error: %v", err)
+	if targets[0].Session.StartTime.Day != 15 {
+		t.Errorf("StartTime.Day = %d, want 15", targets[0].Session.StartTime.Day)
 	}
-	if len(targets) != 1 {
-		t.Fatalf("expected 1 target, got %d", len(targets))
-	}
-	if targets[0].ID != "t1" {
-		t.Errorf("targets[0].ID = %q, want %q", targets[0].ID, "t1")
-	}
-	if targets[0].Name != "X" {
-		t.Errorf("targets[0].Name = %q, want %q", targets[0].Name, "X")
+	if targets[0].Session.StartTime.Hour != 18 {
+		t.Errorf("StartTime.Hour = %d, want 18", targets[0].Session.StartTime.Hour)
 	}
 }
 
@@ -287,11 +263,11 @@ func TestListTrainingTargets_Empty(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4URL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")
-	targets, err := client.ListTrainingTargets(t.Context(), "12345", "2026-05-15", "2026-06-15")
+	targets, err := client.ListTrainingTargets(t.Context(), "2026-05-15", "2026-06-15")
 	if err != nil {
 		t.Fatalf("ListTrainingTargets returned error: %v", err)
 	}
@@ -307,11 +283,11 @@ func TestListTrainingTargets_ErrorStatus(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4URL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")
-	_, err := client.ListTrainingTargets(t.Context(), "12345", "2026-05-15", "2026-06-15")
+	_, err := client.ListTrainingTargets(t.Context(), "2026-05-15", "2026-06-15")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -327,23 +303,23 @@ func TestListTrainingTargets_NoDateParams(t *testing.T) {
 		capturedQuery = r.URL.RawQuery
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`[]`))
+		_, _ = w.Write([]byte(`null`))
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4URL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")
-	_, err := client.ListTrainingTargets(t.Context(), "12345", "", "")
+	_, err := client.ListTrainingTargets(t.Context(), "", "")
 	if err != nil {
 		t.Fatalf("ListTrainingTargets returned error: %v", err)
 	}
-	if containsSubstring(capturedQuery, "from_date") {
-		t.Errorf("query %q should not contain from_date when empty", capturedQuery)
+	if containsSubstring(capturedQuery, "from") {
+		t.Errorf("query %q should not contain fromDate when empty", capturedQuery)
 	}
-	if containsSubstring(capturedQuery, "to_date") {
-		t.Errorf("query %q should not contain to_date when empty", capturedQuery)
+	if containsSubstring(capturedQuery, "to") {
+		t.Errorf("query %q should not contain toDate when empty", capturedQuery)
 	}
 }
 
@@ -355,7 +331,7 @@ func TestDeleteTrainingTarget_Success200(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")
@@ -371,7 +347,7 @@ func TestDeleteTrainingTarget_Success204(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")
@@ -387,7 +363,7 @@ func TestDeleteTrainingTarget_NotFound(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")
@@ -407,7 +383,7 @@ func TestDeleteTrainingTarget_OtherError(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")
@@ -435,7 +411,7 @@ func TestDeleteTrainingTarget_URLPathEscaped(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := polar.SetTrainingTargetsBaseURL(ts.URL)
+	restore := polar.SetTrainingTargetsV4BaseURL(ts.URL)
 	t.Cleanup(restore)
 
 	client := polar.NewClient("tok")

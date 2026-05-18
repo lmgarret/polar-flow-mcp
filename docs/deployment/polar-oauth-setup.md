@@ -45,18 +45,22 @@ error from Polar.
 
 ---
 
-## Step 3: Request the required scope
+## Step 3: Enable data subscriptions and request the required scope
 
-Polar AccessLink requires you to specify which scopes your application needs.
+In the developer console, enable the following **Data Subscriptions** for your app:
 
-Request the following scope:
+- Exercise data
+- Daily activity data
+- Physical information data
+- Training targets
+
+Then request the following OAuth scope:
 
 ```
-accesslink.read_all
+training_targets:read
 ```
 
-This scope grants read access to all Polar AccessLink data, including the training
-targets API used by polar-flow-mcp.
+This scope grants read access to training targets via the Polar v4 Dynamic API.
 
 ---
 
@@ -92,7 +96,7 @@ the developer console.
 
 After starting polar-flow-mcp, visit `https://<your-host>/oauth/login` in your
 browser. You should be redirected to the Polar authorization page at
-`https://flow.polar.com/oauth2/authorization?...`.
+`https://auth.polar.com/oauth/authorize?...`.
 
 If the redirect does not happen:
 
@@ -110,12 +114,9 @@ confirmation message. You are now linked and can use the MCP tools.
 
 ## Token lifetime
 
-Polar OAuth tokens **do not expire** unless you explicitly revoke them in the Polar app
-(under Settings → Applications). There is no automatic expiry or refresh — once linked,
-you remain linked until you revoke access.
-
-If a token is revoked or becomes invalid, the MCP tools will return an error. The fix
-is to visit `/oauth/login` again to re-authorize.
+Polar v4 OAuth access tokens are valid for **12 hours**. If a token expires or is
+revoked, the MCP tools will return an authorization error. The fix is to visit
+`/oauth/login` again to re-authorize and obtain a fresh token.
 
 ---
 

@@ -11,18 +11,18 @@ func SetTokenEndpoint(s string) func() {
 	return func() { tokenEndpoint = orig }
 }
 
-// SetRegisterEndpoint overrides registerEndpoint for tests. Returns a restore function.
+// SetTrainingTargetsV4URL overrides trainingTargetsV4URL for tests. Returns a restore function.
 // Gated behind the `polartest` build tag (see SetTokenEndpoint).
-func SetRegisterEndpoint(s string) func() {
-	orig := registerEndpoint
-	registerEndpoint = s
-	return func() { registerEndpoint = orig }
+func SetTrainingTargetsV4URL(s string) func() {
+	orig := trainingTargetsV4URL
+	trainingTargetsV4URL = s
+	return func() { trainingTargetsV4URL = orig }
 }
 
-// SetTrainingTargetsBaseURL overrides trainingTargetsBaseURL for tests. Returns a restore function.
+// SetTrainingTargetsV4BaseURL overrides trainingTargetsV4BaseURL for tests. Returns a restore function.
 // Gated behind the `polartest` build tag (see SetTokenEndpoint).
-func SetTrainingTargetsBaseURL(s string) func() {
-	orig := trainingTargetsBaseURL
-	trainingTargetsBaseURL = s
-	return func() { trainingTargetsBaseURL = orig }
+func SetTrainingTargetsV4BaseURL(s string) func() {
+	orig := trainingTargetsV4BaseURL
+	trainingTargetsV4BaseURL = s
+	return func() { trainingTargetsV4BaseURL = orig }
 }
