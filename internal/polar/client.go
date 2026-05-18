@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -233,8 +232,6 @@ func (c *Client) ListTrainingTargets(ctx context.Context, fromDate, toDate strin
 		q.Set("to", toDate)
 	}
 	u.RawQuery = q.Encode()
-	slog.Debug("polar: list training targets request", "url", u.String())
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("polar: build list training targets request: %w", err)
@@ -252,8 +249,6 @@ func (c *Client) ListTrainingTargets(ctx context.Context, fromDate, toDate strin
 	if err != nil {
 		return nil, fmt.Errorf("polar: read list response: %w", err)
 	}
-	slog.Debug("polar: list training targets raw response", "status", resp.StatusCode, "body", string(body))
-
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("polar: list training targets: status %d: %s", resp.StatusCode, body)
 	}
