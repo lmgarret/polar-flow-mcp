@@ -27,17 +27,15 @@ No parameters required.
 
 **Success:**
 
-```json
-{
-  "identity": "alice",
-  "polar_user_id": "12345678"
-}
+```
+Polar account linked.
+Identity: alice
 ```
 
 **Not linked:**
 
 ```
-"No Polar account linked. Visit /oauth/login to authorize."
+No Polar account linked to your identity (alice). Visit /oauth/login to link your Polar account.
 ```
 
 ### Error conditions
@@ -50,6 +48,10 @@ No parameters required.
 ---
 
 ## `create_training_target`
+
+> **Not supported.** The Polar v4 Dynamic API is read-only for training targets.
+> This tool returns an informational error directing you to create targets in the
+> Polar Flow app. The tool definition is retained for forward compatibility.
 
 Create a single scheduled workout in Polar Flow.
 
@@ -313,6 +315,10 @@ No training targets found between 2026-05-12 and 2026-05-19.
 ---
 
 ## `delete_training_target`
+
+> **Not supported.** The Polar v4 Dynamic API is read-only for training targets.
+> This tool returns an informational error directing you to delete targets in the
+> Polar Flow app. The tool definition is retained for forward compatibility.
 
 Delete a training target from Polar Flow by its ID.
 

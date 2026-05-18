@@ -59,12 +59,17 @@ ID if linked, or a message directing you to `/oauth/login` if not yet linked.
 **Example response:**
 
 ```
-Your Polar account is linked. Polar user ID: 12345678.
+Polar account linked.
+Identity: alice
 ```
 
 ---
 
 ### `create_training_target`
+
+> **Note:** The Polar v4 API does not support creating training targets programmatically.
+> Calling this tool returns an informational error. Create sessions directly in the
+> Polar Flow app or watch.
 
 Creates a single scheduled workout in Polar Flow. The workout is structured as a flat
 phases array: an optional warmup, one or more repeat blocks, and an optional cooldown.
@@ -137,6 +142,9 @@ Claude formats this as a readable summary.
 ---
 
 ### `delete_training_target`
+
+> **Note:** The Polar v4 API does not support deleting training targets programmatically.
+> Calling this tool returns an informational error. Delete sessions in the Polar Flow app.
 
 Deletes a training target by its `target_id`.
 
@@ -213,9 +221,12 @@ pollution.
 
 ## What the tools do NOT support
 
+- **Creating training targets** — the Polar v4 API is read-only for training targets.
+  Use the Polar Flow app or watch to create sessions.
+- **Deleting training targets** — same reason; delete sessions in the Polar Flow app.
 - **Pace targets** — v1 supports HR zones only. Ask for the closest zone equivalent.
 - **Power targets** — v1 does not support watt-based intensity.
-- **Past session analytics** — this server writes targets only; it does not read
+- **Past session analytics** — this server reads targets only; it does not read
   historical activity data.
 - **Polar account creation or device sync** — outside this server's scope.
 
@@ -256,11 +267,44 @@ Both methods give Claude identical guidance and tool-calling behavior.
 The skill tells Claude *what* tools are available and *how* to use them. Separately, you
 must configure your Claude client to connect to your polar-flow-mcp MCP server:
 
+### HTTP mode (production)
+
 - **Claude Code / Claude Desktop MCP settings:** Add your server URL
   (`https://<your-host>/mcp`) as an MCP server endpoint. The server uses StreamableHTTP
   transport — no WebSocket or SSE needed.
 - The MCP connection goes through your reverse proxy, which injects the identity header
   and proxy secret automatically.
 
+```bash
+# Claude Code (project-scoped)
+claude mcp add --transport http polar-flow-mcp --scope project https://<your-host>/mcp
+```
+
 See [Reference: HTTP Endpoints](reference/http-endpoints.md) for details on the `/mcp`
 endpoint.
+
+### Stdio mode (local development)
+
+For local development without a reverse proxy, run the server in `stdio` mode. Claude
+Code launches the binary directly and communicates over stdin/stdout.
+
+```bash
+# Register with Claude Code
+claude mcp add --transport stdio polar-flow-mcp -- /absolute/path/to/polar-flow-mcp
+```
+
+The binary reads its configuration from the environment. Set at minimum:
+
+```bash
+TRANSPORT=stdio
+DEV_USER_ID=your@email.com
+ENCRYPTION_KEY=<base64-encoded 32-byte key>
+POLAR_CLIENT_ID=<your-client-id>
+POLAR_CLIENT_SECRET=<your-client-secret>
+LOG_FILE=/tmp/polar-flow-mcp.log   # required — logs cannot go to stderr in stdio mode
+```
+
+Place these in a `.env` file in the working directory — the server loads it at startup.
+
+See the [Getting Started — Local development](getting-started.md#local-development-stdio-mode)
+section for the full setup walkthrough including the OAuth linking step.

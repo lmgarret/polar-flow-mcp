@@ -65,9 +65,6 @@ func TestGetUserInfo_Linked(t *testing.T) {
 	if !strings.Contains(text, "alice") {
 		t.Errorf("result text %q does not contain identity %q", text, "alice")
 	}
-	if !strings.Contains(text, "12345") {
-		t.Errorf("result text %q does not contain polar user ID %q", text, "12345")
-	}
 	if !strings.Contains(strings.ToLower(text), "linked") {
 		t.Errorf("result text %q does not contain word 'linked'", text)
 	}

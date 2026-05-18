@@ -29,7 +29,7 @@ walkthrough. The key steps are:
    in with your Polar account.
 2. Create a new application.
 3. Set the redirect URI to `https://<your-host>/oauth/callback`.
-4. Request the `accesslink.read_all` scope.
+4. Request the `training_targets:read` scope.
 5. Copy the **Client ID** and **Client Secret** — you will need them in Step 3.
 
 ---
@@ -54,6 +54,53 @@ openssl rand -hex 32
 
 Save both values. The encryption key **cannot be changed** after tokens are stored —
 if you lose it, users will need to re-authorize via the OAuth flow.
+
+---
+
+## Local development (stdio mode)
+
+If you want to run polar-flow-mcp locally for development or personal use without a
+reverse proxy, use `stdio` transport mode. In this mode the server communicates over
+stdin/stdout and is launched directly by Claude Code.
+
+**1. Build the binary:**
+
+```bash
+CGO_ENABLED=0 go build -o polar-flow-mcp ./cmd/polar-flow-mcp
+```
+
+**2. Create a `.env` file** in the project directory:
+
+```bash
+TRANSPORT=stdio
+DEV_USER_ID=your@email.com
+ENCRYPTION_KEY=<output of: openssl rand -base64 32>
+POLAR_CLIENT_ID=<from-step-1>
+POLAR_CLIENT_SECRET=<from-step-1>
+LOG_FILE=/tmp/polar-flow-mcp.log   # required — stdio mode cannot write logs to stderr
+```
+
+**3. Register with Claude Code:**
+
+```bash
+claude mcp add --transport stdio polar-flow-mcp -- /absolute/path/to/polar-flow-mcp
+```
+
+**4. Link your Polar account:**
+
+Stdio mode does not run an HTTP server by default, so the OAuth callback needs a
+workaround. Run the server temporarily in `DEV_MODE` HTTP mode:
+
+```bash
+TRANSPORT=http DEV_MODE=true DEV_USER_ID=your@email.com \
+  POLAR_CLIENT_ID=... POLAR_CLIENT_SECRET=... \
+  ENCRYPTION_KEY=... DATABASE_PATH=polar.db \
+  AUTH_PROXY=dev ./polar-flow-mcp
+```
+
+Then visit `http://127.0.0.1:8080/oauth/login` to complete the OAuth flow. Once the
+token is stored in `polar.db`, switch back to `TRANSPORT=stdio` — the stored token is
+shared between both modes.
 
 ---
 
@@ -169,7 +216,8 @@ In a Claude conversation with the polar-coach skill active, ask:
 Claude will call `get_user_info`. A successful response looks like:
 
 ```
-Your Polar account is linked. Polar user ID: 12345678.
+Polar account linked.
+Identity: alice
 ```
 
 If Claude reports the server is not connected, verify your MCP server URL and that the

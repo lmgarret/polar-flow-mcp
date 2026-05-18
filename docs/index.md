@@ -4,10 +4,10 @@ A multi-user MCP (Model Context Protocol) server that wraps the Polar AccessLink
 letting you create and manage Polar Flow training targets directly from Claude
 conversations — zero UI navigation required.
 
-> **"Create a 5×1km threshold session for Thursday"** → structured workout appears in
-> your Polar Flow calendar, ready to sync to your watch.
+> **"What do I have planned this week?"** → Claude lists your upcoming Polar Flow
+> training targets, ready to view from any conversation.
 
-![Claude using create_training_target](images/claude-tool-call.png)
+![Claude using list_training_targets](images/claude-tool-call.png)
 
 ---
 
@@ -16,14 +16,16 @@ conversations — zero UI navigation required.
 polar-flow-mcp bridges Claude and the Polar Flow training platform. Once deployed and
 linked to your Polar account, you can:
 
-- **Create structured workouts** — warmup, interval repeats with target HR zones,
-  cooldown — using plain-language instructions to Claude.
 - **List upcoming training targets** — see what you have planned in Polar Flow for the
   next 30 days.
-- **Delete training targets** — remove sessions created in error or no longer needed.
 - **Confirm account linking** — check which Polar account is currently connected.
 
-All four operations are exposed as MCP tools via the bundled `polar-coach` skill.
+> **Polar v4 API limitation:** The Polar v4 Dynamic API is currently read-only for
+> training targets. Creating and deleting targets must be done in the Polar Flow app.
+> The `create_training_target` and `delete_training_target` tools are registered and
+> return a clear explanation when called.
+
+All operations are exposed as MCP tools via the bundled `polar-coach` skill.
 
 ---
 

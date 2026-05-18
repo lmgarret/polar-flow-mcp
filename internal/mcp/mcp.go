@@ -88,7 +88,7 @@ func GetUserInfoHandler(st *store.Store) func(ctx context.Context, req mcpgo.Cal
 			return mcpgo.NewToolResultError("no identity in context — auth middleware not applied"), nil
 		}
 
-		polarUserID, found, err := st.GetPolarUserID(ctx, identity)
+		_, found, err := st.GetEncryptedToken(ctx, identity)
 		if err != nil {
 			return mcpgo.NewToolResultError("database error: " + err.Error()), nil
 		}
@@ -102,8 +102,8 @@ func GetUserInfoHandler(st *store.Store) func(ctx context.Context, req mcpgo.Cal
 		}
 
 		return mcpgo.NewToolResultText(fmt.Sprintf(
-			"Polar account linked.\nIdentity: %s\nPolar user ID: %s",
-			identity, polarUserID,
+			"Polar account linked.\nIdentity: %s",
+			identity,
 		)), nil
 	}
 }
