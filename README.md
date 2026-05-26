@@ -1,46 +1,78 @@
 # polar-flow-mcp
 
-Multi-user MCP server wrapping the Polar AccessLink API for Claude.
+Single-user MCP server that drives the **reverse-engineered Polar Flow web API**
+(`flow.polar.com`) from Claude — including creating and deleting training targets,
+which the official AccessLink API does not allow.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/lmgarret/polar-flow-mcp/ci.yml?branch=main&label=CI)](https://github.com/lmgarret/polar-flow-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/lmgarret/polar-flow-mcp)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/lmgarret/polar-flow-mcp)](https://github.com/lmgarret/polar-flow-mcp/releases/latest)
-[![Image Size](https://ghcr-badge.egpl.dev/lmgarret/polar-flow-mcp/size)](https://github.com/lmgarret/polar-flow-mcp/pkgs/container/polar-flow-mcp)
-[![Go Report Card](https://goreportcard.com/badge/github.com/lmgarret/polar-flow-mcp)](https://goreportcard.com/report/github.com/lmgarret/polar-flow-mcp)
 
-![Claude using create_training_target](docs/images/claude-tool-call.png)
-
-polar-flow-mcp is a multi-user MCP server that lets you create, list, and delete Polar training targets directly from Claude conversations. It connects to the Polar AccessLink API via OAuth and supports multiple users through a reverse-proxy authentication layer. A bundled `polar-coach` skill gives Claude structured guidance for setting training intensity and heart-rate zones.
+> **Not the official Polar AccessLink API.** The web API is reverse-engineered
+> from browser traffic. Use a test account where possible. See `internal/flow/README.md`.
 
 ## Quickstart
 
 ```bash
 git clone https://github.com/lmgarret/polar-flow-mcp.git
 cd polar-flow-mcp
-# Edit docker-compose.yml — set ENCRYPTION_KEY, PROXY_SHARED_SECRET, POLAR_CLIENT_ID, POLAR_CLIENT_SECRET
-docker compose up -d
-# Visit https://lmgarret.github.io/polar-flow-mcp for full setup docs
+cp .env.example .env
+# Edit .env — set POLAR_EMAIL and POLAR_PASSWORD
+go run ./cmd/polar-flow-mcp
 ```
 
-## Documentation
+The server logs into Polar Flow once on cold start, persists the session
+cookies to `./polar-cookies.json` (chmod 600), and re-uses them on subsequent
+runs. The password is held in memory only.
 
-Full documentation — Getting Started, Deployment, Usage, Reference, and Security — is available at:
+## Tools
 
-**<https://lmgarret.github.io/polar-flow-mcp>**
+| Tool | Description |
+|------|-------------|
+| `get_user_info` | Linked Polar account identity + profile basics |
+| `create_training_target` | Schedule a target (warmup / repeat / cooldown phases) |
+| `list_training_targets` | Targets in a date range |
+| `delete_training_target` | Delete a target by ID |
+| `get_calendar_events` | Raw calendar events in a date range |
+| `list_training_sessions` | Completed sessions in a date range |
+| `get_training_session_summary` | Summary view of one session |
+| `get_training_session_details` | Lap and sample detail of one session |
 
-## Features
+## Configuration
 
-- Create, list, and delete Polar training targets from Claude conversations
-- Multi-user support via reverse-proxy auth (Authelia, Authentik, oauth2-proxy, Pomerium, Cloudflare Access)
-- Encrypted OAuth token storage (AES-256-GCM, per-user)
-- Fail-closed security: all requests require a verified proxy identity header
-- Bundled `polar-coach` MCP skill for heart-rate zone and intensity guidance
-- Single `FROM scratch` Docker image (~10 MB) with no runtime dependencies
+See [`.env.example`](.env.example). Required:
+
+- `POLAR_EMAIL`, `POLAR_PASSWORD` — credentials for the Polar Flow account
+
+Optional:
+
+- `COOKIE_JAR_PATH` — where to persist session cookies (default `./polar-cookies.json`)
+- `TRANSPORT` — `stdio` or `http` (default `http`)
+- `BIND_ADDRESS`, `PORT` — HTTP listen address
+- `LOG_LEVEL`, `LOG_FILE`
+
+## Multi-user
+
+This server is single-user by design: it acts as exactly one Polar account.
+To serve more than one account, run multiple instances (e.g. one container per
+user). The previous OAuth / proxy-auth machinery was removed because the Polar
+Flow web API requires email/password and per-user credential storage is a
+materially heavier risk profile than per-user OAuth tokens.
+
+## How it works
+
+`internal/flow/` wraps an [ogen](https://github.com/ogen-go/ogen)-generated
+Go client against a vendored copy of the OpenAPI spec from the sibling
+[polar-openapi-maker](https://github.com/lmgarret/polar-openapi-maker) repo.
+The wrapper:
+
+- Performs Polar's internal OAuth login chain headlessly (see `internal/flow/login.go`).
+- Persists `FLOW_SESSION` + `remember-me` to a chmod-600 cookie jar.
+- Injects `X-Requested-With: XMLHttpRequest` on every `/api/*` mutation
+  (Play's CSRF filter requires it).
+- Detects `401 {"error":"NotAuthenticated"}` and runs a 3-hop silent refresh
+  before retrying the request once.
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
