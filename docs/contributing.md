@@ -129,16 +129,14 @@ used manually.
 
 ## Running locally
 
-To run the server locally for development, you need a `.env` file (or export variables)
-with at minimum:
+To run the server locally for development, you need a `.env` file (or exported
+variables) with at minimum:
 
 ```bash
-export AUTH_PROXY=dev
-export PROXY_SHARED_SECRET=dev-secret
-export ENCRYPTION_KEY=$(openssl rand -base64 32)
-export POLAR_CLIENT_ID=<your-dev-app-id>
-export POLAR_CLIENT_SECRET=<your-dev-app-secret>
-export DATABASE_PATH=polar-dev.db
+export POLAR_EMAIL=you+polartest@example.com
+export POLAR_PASSWORD=correct-horse-battery-staple
+export COOKIE_JAR_PATH=./polar-cookies-dev.json
+export LOG_LEVEL=debug
 ```
 
 Then:
@@ -148,14 +146,31 @@ make build
 ./bin/polar-flow-mcp
 ```
 
-The server binds to `127.0.0.1:8080` by default. Test with:
+The server binds to `127.0.0.1:8080` by default. Liveness check:
 
 ```bash
 curl http://127.0.0.1:8080/healthz
 ```
 
-For OAuth testing, use a tunnel (e.g., `ngrok`) so Polar can redirect back to your
-`/oauth/callback` endpoint.
+On the first run the server performs the headless login chain against
+`auth.polar.com` and writes `polar-cookies-dev.json` (mode 0600). Subsequent
+runs re-use the jar and skip the password step.
+
+### Regenerating the OpenAPI client
+
+If you bump the upstream spec or the ogen version, regenerate
+`internal/flow/gen/`:
+
+```bash
+python3 internal/flow/preprocess-spec.py \
+    ../polar-openapi-maker/dist/openapi.yaml \
+    internal/flow/openapi.yaml
+go install github.com/ogen-go/ogen/cmd/ogen@latest
+ogen --target internal/flow/gen --package gen --clean internal/flow/openapi.yaml
+```
+
+The preprocessor converts OpenAPI 3.1 nullable union syntax to the 3.0.3 form
+ogen accepts. No other semantic changes.
 
 ---
 

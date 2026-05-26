@@ -1,40 +1,40 @@
 # polar-flow-mcp docker-compose example
 #
-# IMPORTANT: This file ships with intentional placeholder values.
-# The server will REFUSE TO START until you configure the required variables.
+# This server is single-user — one container per Polar Flow account.
+# The server refuses to start unless POLAR_EMAIL and POLAR_PASSWORD are set.
 # See https://lmgarret.github.io/polar-flow-mcp for setup instructions.
 
 services:
   polar-flow-mcp:
     image: ghcr.io/lmgarret/polar-flow-mcp:latest
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
     volumes:
       - polar-data:/data
     environment:
-      # REQUIRED: Set to the name of your reverse proxy (authelia, authentik, oauth2-proxy, etc.)
-      # The server refuses to start with the default "unconfigured" value.
-      AUTH_PROXY: "unconfigured"
+      # REQUIRED: Polar Flow account credentials.
+      # Use a TEST account where possible. The password is held in memory
+      # only — never written to disk by this server.
+      POLAR_EMAIL: ""
+      POLAR_PASSWORD: ""
 
-      # REQUIRED: A secret shared with your reverse proxy to prevent header spoofing.
-      # Generate with: openssl rand -hex 32
-      PROXY_SHARED_SECRET: ""
+      # Cookie jar path (chmod 600). Keep on the named volume so the cookies
+      # survive container restarts.
+      COOKIE_JAR_PATH: "/data/polar-cookies.json"
 
-      # REQUIRED: Your AES-256 encryption key for Polar OAuth tokens.
-      # Generate with: openssl rand -base64 32
-      ENCRYPTION_KEY: ""
+      # OPTIONAL: bind address inside the container. Keep loopback unless
+      # you understand the security implications — this server has no
+      # built-in authentication.
+      # BIND_ADDRESS: "0.0.0.0"
 
-      # REQUIRED: Polar OAuth application credentials (register at https://admin.polaraccesslink.com)
-      POLAR_CLIENT_ID: ""
-      POLAR_CLIENT_SECRET: ""
+      # OPTIONAL: transport. Use "stdio" only if you launch the container
+      # via `docker compose run` from an MCP client.
+      # TRANSPORT: "http"
 
-      # OPTIONAL: The header your reverse proxy injects for user identity (default: Remote-User)
-      # IDENTITY_HEADER: "Remote-User"
-
-      # OPTIONAL: Bind address (default: 127.0.0.1 — loopback only)
-      # BIND_ADDRESS: "127.0.0.1"
-
-      # OPTIONAL: SQLite database path inside the container (default: polar.db)
-      DATABASE_PATH: "/data/polar.db"
+      # OPTIONAL: logging.
+      # LOG_LEVEL: "info"
+      # LOG_FILE: ""
 
 volumes:
   polar-data:

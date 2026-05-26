@@ -1,233 +1,130 @@
 # Getting Started
 
-This guide walks you through deploying polar-flow-mcp from scratch — from registering a
-Polar developer app to your first Claude tool call.
+This walkthrough takes you from a fresh checkout to a running polar-flow-mcp
+that Claude can talk to. Allow ~5 minutes.
 
----
+> **Use a Polar test account if you can.** This server drives the unofficial
+> reverse-engineered Polar Flow web API — your credentials are sent to
+> `auth.polar.com` on every cold start and persisted as session cookies on
+> disk.
 
 ## Prerequisites
 
-Before you start, you need:
+- A Polar Flow account (email + password) — ideally a dedicated test account.
+- One of the following:
+    - **Go 1.26+** if you want to run from source.
+    - **Docker** if you prefer the container path (recommended for anything
+      long-running).
+- A Claude client (Claude Code CLI, Claude Desktop, or another MCP-capable
+  client).
 
-- **A Polar account** — the account whose training targets you want to manage.
-- **A running reverse proxy** — one of: Authelia, Authentik, oauth2-proxy, Pomerium, or
-  Cloudflare Access. The proxy must be able to inject HTTP headers into requests.
-- **Docker and Docker Compose** — to run the polar-flow-mcp container.
-- **A domain or host** reachable by your reverse proxy (e.g., `polar.example.com`).
-
----
-
-## Step 1: Register a Polar developer app
-
-You need a Polar OAuth application to obtain a `POLAR_CLIENT_ID` and
-`POLAR_CLIENT_SECRET`.
-
-See the [Polar OAuth Setup guide](deployment/polar-oauth-setup.md) for a step-by-step
-walkthrough. The key steps are:
-
-1. Visit [https://admin.polaraccesslink.com](https://admin.polaraccesslink.com) and sign
-   in with your Polar account.
-2. Create a new application.
-3. Set the redirect URI to `https://<your-host>/oauth/callback`.
-4. Request the `training_targets:read` scope.
-5. Copy the **Client ID** and **Client Secret** — you will need them in Step 3.
-
----
-
-## Step 2: Generate secrets
-
-You need two secrets for your deployment:
-
-**Encryption key** (32 bytes, base64-encoded) — used to encrypt Polar OAuth tokens
-stored in SQLite:
+## 1. Clone
 
 ```bash
-openssl rand -base64 32
+git clone https://github.com/lmgarret/polar-flow-mcp.git
+cd polar-flow-mcp
 ```
 
-**Proxy shared secret** (hex string) — used to verify that requests arrive from your
-trusted reverse proxy and not from a direct HTTP client:
+## 2. Configure
+
+Copy the example env file and fill it in:
 
 ```bash
-openssl rand -hex 32
+cp .env.example .env
+$EDITOR .env
 ```
 
-Save both values. The encryption key **cannot be changed** after tokens are stored —
-if you lose it, users will need to re-authorize via the OAuth flow.
+Only two values are required:
 
----
+```dotenv
+POLAR_EMAIL=you+polartest@example.com
+POLAR_PASSWORD=correct-horse-battery-staple
+```
 
-## Local development (stdio mode)
+Optional defaults you might want to override:
 
-If you want to run polar-flow-mcp locally for development or personal use without a
-reverse proxy, use `stdio` transport mode. In this mode the server communicates over
-stdin/stdout and is launched directly by Claude Code.
+```dotenv
+TRANSPORT=stdio                   # or http (default)
+COOKIE_JAR_PATH=./polar-cookies.json
+BIND_ADDRESS=127.0.0.1            # http transport only
+PORT=8080
+LOG_LEVEL=info                    # info | debug
+```
 
-**1. Build the binary:**
+See [Environment Variables](reference/env-vars.md) for the full reference.
+
+## 3. Run
+
+### From source
 
 ```bash
-CGO_ENABLED=0 go build -o polar-flow-mcp ./cmd/polar-flow-mcp
+go run ./cmd/polar-flow-mcp
 ```
 
-**2. Create a `.env` file** in the project directory:
+On the **first** run, the server performs the headless OAuth login chain
+against `auth.polar.com`, persists `FLOW_SESSION` + `remember-me` to
+`polar-cookies.json` (mode 0600), and starts the MCP server.
 
-```bash
-TRANSPORT=stdio
-DEV_USER_ID=your@email.com
-ENCRYPTION_KEY=<output of: openssl rand -base64 32>
-POLAR_CLIENT_ID=<from-step-1>
-POLAR_CLIENT_SECRET=<from-step-1>
-LOG_FILE=/tmp/polar-flow-mcp.log   # required — stdio mode cannot write logs to stderr
-```
+On **subsequent** runs, the server re-uses the cookie jar and skips the
+password step entirely. Polar's `remember-me` cookie rolls forward on each
+use, so an actively-used server never re-prompts.
 
-**3. Register with Claude Code:**
-
-```bash
-claude mcp add --transport stdio polar-flow-mcp -- /absolute/path/to/polar-flow-mcp
-```
-
-**4. Link your Polar account:**
-
-Stdio mode does not run an HTTP server by default, so the OAuth callback needs a
-workaround. Run the server temporarily in `DEV_MODE` HTTP mode:
-
-```bash
-TRANSPORT=http DEV_MODE=true DEV_USER_ID=your@email.com \
-  POLAR_CLIENT_ID=... POLAR_CLIENT_SECRET=... \
-  ENCRYPTION_KEY=... DATABASE_PATH=polar.db \
-  AUTH_PROXY=dev ./polar-flow-mcp
-```
-
-Then visit `http://127.0.0.1:8080/oauth/login` to complete the OAuth flow. Once the
-token is stored in `polar.db`, switch back to `TRANSPORT=stdio` — the stored token is
-shared between both modes.
-
----
-
-## Step 3: Configure Docker Compose
-
-Download the `docker-compose.yml` from the repository and fill in your values:
-
-```yaml
-services:
-  polar-flow-mcp:
-    image: ghcr.io/lmgarret/polar-flow-mcp:latest
-    restart: unless-stopped
-    volumes:
-      - polar-data:/data
-    environment:
-      AUTH_PROXY: "authelia"                    # or: authentik, oauth2-proxy, etc.
-      PROXY_SHARED_SECRET: "<your-hex-secret>"
-      ENCRYPTION_KEY: "<your-base64-key>"
-      POLAR_CLIENT_ID: "<from-step-1>"
-      POLAR_CLIENT_SECRET: "<from-step-1>"
-      DATABASE_PATH: "/data/polar.db"
-
-volumes:
-  polar-data:
-```
-
-The `AUTH_PROXY` value is informational — it tells the server which proxy is in front
-of it and appears in the startup log. The server will **refuse to start** if you leave
-it as `unconfigured`.
-
-See [Environment Variables reference](reference/env-vars.md) for the full list of
-available options including `IDENTITY_HEADER` and `BIND_ADDRESS`.
-
----
-
-## Step 4: Configure your reverse proxy
-
-Your reverse proxy must inject two headers on every request to polar-flow-mcp:
-
-| Header | Value |
-|--------|-------|
-| `Remote-User` | Authenticated user identity (e.g., `alice`) |
-| `X-Proxy-Secret` | The value of `PROXY_SHARED_SECRET` |
-
-See the [Auth Proxies guide](deployment/auth-proxies.md) for configuration examples for
-Authelia, Authentik, oauth2-proxy, Pomerium, and Cloudflare Access.
-
-The `IDENTITY_HEADER` env var lets you change `Remote-User` to whatever header your
-proxy injects (some proxies use `X-Forwarded-User` or `X-Auth-Request-User`).
-
----
-
-## Step 5: Start the server
+### With Docker
 
 ```bash
 docker compose up -d
 ```
 
-Verify the server is running:
+See the [Docker Compose page](deployment/docker-compose.md) for the
+compose file structure and volume layout.
 
-```bash
-curl https://<your-host>/healthz
-# → ok
+## 4. Wire it into Claude
 
-curl https://<your-host>/readyz
-# → {"checks":[{"name":"auth_proxy","status":"ok"},{"name":"proxy_secret","status":"ok"},{"name":"database","status":"ok"},{"name":"encryption_key","status":"ok"}]}
+### Claude Code (stdio)
+
+Add to `~/.claude/mcp_servers.json` (or per-project `.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "polar-flow": {
+      "command": "/absolute/path/to/polar-flow-mcp",
+      "env": {
+        "TRANSPORT": "stdio",
+        "POLAR_EMAIL": "you+polartest@example.com",
+        "POLAR_PASSWORD": "correct-horse-battery-staple",
+        "COOKIE_JAR_PATH": "/absolute/path/to/polar-cookies.json"
+      }
+    }
+  }
+}
 ```
 
-If any check shows `"status":"fail"`, the error message tells you what is wrong. Common
-issues:
+### Claude Desktop / HTTP MCP
 
-- `AUTH_PROXY not configured` — you left `AUTH_PROXY: "unconfigured"` in the compose
-  file.
-- `PROXY_SHARED_SECRET not set` — `PROXY_SHARED_SECRET` is empty.
-- `encryption key not loaded or wrong length` — `ENCRYPTION_KEY` is missing or not a
-  valid 32-byte base64 string.
+Run with `TRANSPORT=http` (the default) and point Claude at
+`http://127.0.0.1:8080/mcp`.
 
----
+## 5. Try it out
 
-## Step 6: Link your Polar account
-
-![Polar OAuth login page](images/polar-oauth-flow.png)
-
-Visit `https://<your-host>/oauth/login` in your browser. You will be redirected to
-Polar Flow to authorize access.
-
-After authorizing, Polar redirects you back to `/oauth/callback`. The server exchanges
-the authorization code for a token, encrypts it, and stores it in SQLite. You only need
-to do this once per user — tokens do not expire unless revoked.
-
-If you see an error at this step, check:
-
-- The redirect URI registered in your Polar developer app matches
-  `https://<your-host>/oauth/callback` exactly (including the scheme and path).
-- Your reverse proxy is injecting the `Remote-User` header before the request reaches
-  polar-flow-mcp.
-
----
-
-## Step 7: Install the polar-coach skill in Claude
-
-See [Usage — Installing the skill](usage.md#installing-the-skill) for both installation
-paths (Claude Desktop/Code and Claude.ai).
-
----
-
-## Step 8: Verify with a tool call
-
-In a Claude conversation with the polar-coach skill active, ask:
-
-> "What Polar account is linked?"
-
-Claude will call `get_user_info`. A successful response looks like:
+In a Claude conversation:
 
 ```
-Polar account linked.
-Identity: alice
+You: who's linked to polar-flow?
+Claude: [calls get_user_info]
+Claude: Linked Polar account: you+polartest@example.com (FR).
+
+You: what's on the calendar this week?
+Claude: [calls list_training_targets with today..+7d]
+
+You: schedule a 5x1km threshold session for Thursday at 18:00.
+Claude: [calls create_training_target with the appropriate phase tree]
 ```
 
-If Claude reports the server is not connected, verify your MCP server URL and that the
-polar-flow-mcp container is reachable from your Claude client.
+If something failed, check `LOG_LEVEL=debug` for the request / refresh trace.
 
----
+## What's next
 
-## Next steps
-
-- [Usage guide](usage.md) — all four MCP tools with worked examples
-- [Security](security.md) — understand the trust model and encryption design
-- [Reference: Environment Variables](reference/env-vars.md) — full configuration
-  reference
+- [Usage guide](usage.md) — phase vocabulary and worked examples
+- [MCP Tools reference](reference/mcp-tools.md) — full argument schemas
+- [Security model](security.md) — what's protected and what isn't

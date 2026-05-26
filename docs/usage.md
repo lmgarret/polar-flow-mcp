@@ -1,6 +1,6 @@
 # Usage
 
-This guide covers the four MCP tools exposed by polar-flow-mcp, with worked examples,
+This guide covers the eight MCP tools exposed by polar-flow-mcp, with worked examples,
 HR zone vocabulary, and instructions for installing the `polar-coach` skill in Claude.
 
 ---
@@ -11,7 +11,7 @@ Once polar-flow-mcp is deployed and your Polar account is linked, you interact w
 through Claude conversations. The `polar-coach` skill guides Claude on when and how to
 call each tool, so you can use plain language rather than remembering API parameters.
 
-The four available tools are:
+The eight available tools are:
 
 | Tool | Purpose |
 |------|---------|
@@ -19,6 +19,10 @@ The four available tools are:
 | `create_training_target` | Create a structured workout in Polar Flow |
 | `list_training_targets` | List upcoming scheduled workouts |
 | `delete_training_target` | Delete a workout by its ID |
+| `get_calendar_events` | Raw calendar events (targets, exercises, etc.) |
+| `list_training_sessions` | Completed training sessions in a date range |
+| `get_training_session_summary` | Summary view of a completed session |
+| `get_training_session_details` | Lap/sample-level detail of a completed session |
 
 ![Claude tool call](images/claude-tool-call.png)
 
@@ -42,7 +46,7 @@ Use numeric zone numbers (`hr_zone: 4`) only when a user explicitly says "zone 4
 
 ---
 
-## The four tools
+## The tools
 
 ### `get_user_info`
 
@@ -53,26 +57,30 @@ unsure whether your Polar account is connected.
 
 > "What Polar account is linked?"
 
-**What Claude does:** Calls `get_user_info` with no parameters. Returns your Polar user
-ID if linked, or a message directing you to `/oauth/login` if not yet linked.
+**What Claude does:** Calls `get_user_info` with no parameters. Returns the email,
+numeric user ID, name, and country of the linked Polar Flow account. If credentials
+aren't configured, the server fails to start — not at tool-call time — so a successful
+call here always returns a populated user record.
 
 **Example response:**
 
-```
-Polar account linked.
-Identity: alice
+```json
+{
+  "id": 12345678,
+  "email": "you+polartest@example.com",
+  "first_name": "Alice",
+  "last_name": "Example",
+  "country": "FR"
+}
 ```
 
 ---
 
 ### `create_training_target`
 
-> **Note:** The Polar v4 API does not support creating training targets programmatically.
-> Calling this tool returns an informational error. Create sessions directly in the
-> Polar Flow app or watch.
-
 Creates a single scheduled workout in Polar Flow. The workout is structured as a flat
 phases array: an optional warmup, one or more repeat blocks, and an optional cooldown.
+The new target shows up in the Polar Flow diary immediately.
 
 **Ask Claude:**
 
@@ -143,10 +151,8 @@ Claude formats this as a readable summary.
 
 ### `delete_training_target`
 
-> **Note:** The Polar v4 API does not support deleting training targets programmatically.
-> Calling this tool returns an informational error. Delete sessions in the Polar Flow app.
-
-Deletes a training target by its `target_id`.
+Deletes a training target by its `target_id`. The target disappears from the Polar
+Flow diary immediately.
 
 **Ask Claude:**
 
@@ -219,15 +225,18 @@ pollution.
 
 ---
 
-## What the tools do NOT support
+## What the tools do NOT support (yet)
 
-- **Creating training targets** — the Polar v4 API is read-only for training targets.
-  Use the Polar Flow app or watch to create sessions.
-- **Deleting training targets** — same reason; delete sessions in the Polar Flow app.
-- **Pace targets** — v1 supports HR zones only. Ask for the closest zone equivalent.
-- **Power targets** — v1 does not support watt-based intensity.
-- **Past session analytics** — this server reads targets only; it does not read
-  historical activity data.
+- **Pace targets** — `create_training_target` supports HR zones (Z1–Z5) and unstructured
+  phases. Pace-based phases exist in the underlying API but aren't wired through to the
+  MCP layer yet.
+- **Power targets** — same. The OpenAPI spec covers `POWER_ZONES` for cycling but the
+  current MCP tool only emits `HEART_RATE_ZONES` / `NONE`.
+- **Manual phase transitions** — every phase defaults to `AUTOMATIC` change type. The
+  underlying API also supports `MANUAL` (wait for user input) but the MCP tool doesn't
+  expose this yet.
+- **Activity uploads** — this server can read completed sessions (summary + details),
+  but it does not create them. Polar's app/watch is the source of truth for that.
 - **Polar account creation or device sync** — outside this server's scope.
 
 ---
@@ -235,7 +244,7 @@ pollution.
 ## Installing the skill
 
 The `polar-coach` skill is a plain Markdown file (`SKILL.md`) that tells Claude how to
-use the four MCP tools. It is included in the repository at `skill/polar-coach/SKILL.md`.
+use the polar-flow-mcp tools. It is included in the repository at `skill/polar-coach/SKILL.md`.
 
 ### Option 1: Claude Desktop or Claude Code
 
@@ -285,8 +294,8 @@ endpoint.
 
 ### Stdio mode (local development)
 
-For local development without a reverse proxy, run the server in `stdio` mode. Claude
-Code launches the binary directly and communicates over stdin/stdout.
+For local development, run the server in `stdio` mode. Claude Code launches the
+binary directly and communicates over stdin/stdout.
 
 ```bash
 # Register with Claude Code
@@ -297,14 +306,13 @@ The binary reads its configuration from the environment. Set at minimum:
 
 ```bash
 TRANSPORT=stdio
-DEV_USER_ID=your@email.com
-ENCRYPTION_KEY=<base64-encoded 32-byte key>
-POLAR_CLIENT_ID=<your-client-id>
-POLAR_CLIENT_SECRET=<your-client-secret>
+POLAR_EMAIL=you+polartest@example.com
+POLAR_PASSWORD=correct-horse-battery-staple
+COOKIE_JAR_PATH=/absolute/path/to/polar-cookies.json
 LOG_FILE=/tmp/polar-flow-mcp.log   # required — logs cannot go to stderr in stdio mode
 ```
 
-Place these in a `.env` file in the working directory — the server loads it at startup.
+Place these in a `.env` file in the working directory, or pass them via the
+`env` block in your MCP server configuration.
 
-See the [Getting Started — Local development](getting-started.md#local-development-stdio-mode)
-section for the full setup walkthrough including the OAuth linking step.
+See [Getting Started](getting-started.md) for the full walkthrough.

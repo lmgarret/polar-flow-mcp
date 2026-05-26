@@ -19,14 +19,18 @@ this skill does NOT apply — see the "When NOT to call tools" section below.
 
 ## Tools
 
-Four tools are exposed by the polar-flow-mcp server. Use the **exact** names below.
+Eight tools are exposed by the polar-flow-mcp server. Use the **exact** names below.
 
 | Tool | Purpose |
 |------|---------|
-| `get_user_info` | Confirm the user's Polar account is linked. Call this FIRST if you're unsure whether the user has linked their account. Returns the Polar user ID or a hint to visit `/oauth/login`. |
+| `get_user_info` | Confirm which Polar account the server is acting as. Returns identity (email, name, country). Call this FIRST if you're unsure whether the server is configured. |
 | `create_training_target` | Create a single scheduled workout in Polar Flow. Accepts a flat phases array (warmup, one or more repeat blocks, cooldown). |
 | `list_training_targets` | List upcoming training targets in a date range. Defaults to today through +30 days. |
-| `delete_training_target` | Delete a training target by its `target_id` (obtained from `list_training_targets` or the response of `create_training_target`). |
+| `delete_training_target` | Delete a training target by its numeric `target_id`. |
+| `get_calendar_events` | Raw calendar events (targets, exercises, etc.) in a date range. Use only if `list_training_targets` doesn't give what you need. |
+| `list_training_sessions` | Completed training sessions in a date range. Use for "how did my last run go?" / "what have I done this week?" |
+| `get_training_session_summary` | Summary of one completed session by id (duration, distance, calories, HR averages). |
+| `get_training_session_details` | Lap- and sample-level detail of one completed session. Use for "split times" / "what were my paces". |
 
 ### Tool availability check
 
@@ -178,13 +182,13 @@ Do NOT call polar-flow-mcp tools when the user is asking about:
 
 The polar-flow-mcp server is self-hosted and may not always be reachable.
 
-- If the four tools above are not in your available MCP tool list, the server is not
+- If the tools above are not in your available MCP tool list, the server is not
   connected. Tell the user this clearly and link them to the deployment docs in the
-  project repository (start with `README.md`; `docs/deployment/` once Phase 4 ships).
-- If a tool call returns an error mentioning "No Polar account linked" or
-  "Visit /oauth/login", the user has not completed the Polar OAuth link. Tell them
-  to visit `/oauth/login` on their polar-flow-mcp deployment (behind their reverse-proxy
-  auth) and authorize Polar access before retrying.
+  project repository (start with `README.md`).
+- If a tool call returns an error mentioning "Polar credentials rejected" or
+  "no Polar credentials configured", the server's `POLAR_EMAIL` / `POLAR_PASSWORD`
+  environment is wrong or missing. Tell the user to check the polar-flow-mcp
+  server's `.env` (or its container environment) and restart it.
 - If a tool call returns an error containing "status 4xx" or "status 5xx", surface the
   message to the user verbatim and ask them to check their server logs. Do not retry
   silently — the Polar API may be rejecting a malformed request that needs a fix on the

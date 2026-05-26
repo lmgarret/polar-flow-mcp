@@ -1,86 +1,89 @@
 # polar-flow-mcp
 
-A multi-user MCP (Model Context Protocol) server that wraps the Polar AccessLink API,
-letting you create and manage Polar Flow training targets directly from Claude
-conversations — zero UI navigation required.
+A single-user MCP (Model Context Protocol) server that drives the
+reverse-engineered **Polar Flow web API** (`flow.polar.com`) from Claude —
+including creating, listing, and deleting training targets.
 
-> **"What do I have planned this week?"** → Claude lists your upcoming Polar Flow
-> training targets, ready to view from any conversation.
+> **"Schedule a 5×1km threshold session for Thursday."**
+> Claude calls `create_training_target` and the workout appears in your Polar
+> Flow diary — no app, no UI navigation.
 
-![Claude using list_training_targets](images/claude-tool-call.png)
+![Claude using create_training_target](images/claude-tool-call.png)
+
+---
+
+## Why the Flow web API and not AccessLink?
+
+The official Polar AccessLink API is read-only: it can list training history
+but cannot create or delete training targets. The web API at `flow.polar.com`
+— the one the Polar Flow browser app uses — supports the full set of mutating
+operations.
+
+The OpenAPI spec is maintained as a sibling repo,
+[polar-openapi-maker](https://github.com/lmgarret/polar-openapi-maker),
+reverse-engineered from browser traffic. polar-flow-mcp vendors the spec,
+generates a Go client with [ogen](https://github.com/ogen-go/ogen), and wraps
+it with the headless login chain and cookie-jar refresh logic that the API
+requires.
+
+> **This is not an official Polar API.** Use a test account where possible.
 
 ---
 
 ## What it does
 
-polar-flow-mcp bridges Claude and the Polar Flow training platform. Once deployed and
-linked to your Polar account, you can:
+| Tool | Purpose |
+|------|---------|
+| `get_user_info` | Confirm the linked Polar account |
+| `create_training_target` | Schedule a structured workout (warmup / repeat / cooldown) |
+| `list_training_targets` | List upcoming scheduled targets |
+| `delete_training_target` | Delete a target by ID |
+| `get_calendar_events` | Raw calendar events in a date range |
+| `list_training_sessions` | Completed training sessions in a date range |
+| `get_training_session_summary` | Summary view of one completed session |
+| `get_training_session_details` | Lap/sample-level detail of one session |
 
-- **List upcoming training targets** — see what you have planned in Polar Flow for the
-  next 30 days.
-- **Confirm account linking** — check which Polar account is currently connected.
-
-> **Polar v4 API limitation:** The Polar v4 Dynamic API is currently read-only for
-> training targets. Creating and deleting targets must be done in the Polar Flow app.
-> The `create_training_target` and `delete_training_target` tools are registered and
-> return a clear explanation when called.
-
-All operations are exposed as MCP tools via the bundled `polar-coach` skill.
+See the [MCP Tools reference](reference/mcp-tools.md) for argument details.
 
 ---
 
-## Key features
+## Key design choices
 
-- **Multi-user** — each user authenticated by your reverse proxy gets their own isolated
-  Polar token. A single server instance can serve your entire homelab team.
-- **Fail-closed by design** — the server refuses to start unless a valid reverse-proxy
-  name, shared secret, encryption key, and database are all configured. Silent
-  misconfiguration is not possible.
-- **Tokens encrypted at rest** — Polar OAuth tokens are stored as AES-256-GCM
-  ciphertext (12-byte nonce prepended) in SQLite. A stolen database file without the
-  encryption key is useless.
-- **No built-in authentication** — auth is fully delegated to your existing reverse proxy
-  (Authelia, Authentik, oauth2-proxy, Pomerium, Cloudflare Access). This avoids
-  duplicating auth logic and lets you reuse your existing SSO infrastructure.
-- **Self-hostable** — designed for homelabs and small teams. A single Docker container
-  with a named volume is all you need.
+- **Single-user** — the server logs into exactly one Polar account
+  (`POLAR_EMAIL` / `POLAR_PASSWORD`). To serve more than one account, run more
+  than one instance (e.g. one container per user). The Flow web API requires
+  email + password; per-user credential storage is materially heavier on risk
+  than per-user OAuth tokens.
+- **Cookies-only persistence** — the password is held in memory only. The
+  server logs in once, persists `FLOW_SESSION` + `remember-me` to a chmod-600
+  JSON jar, and re-uses them on later runs. Polar's rolling 14-day
+  `remember-me` cookie means an active server never has to re-prompt.
+- **Automatic session refresh** — when Polar issues `401 NotAuthenticated`,
+  the wrapper runs Polar's 3-hop silent refresh and retries the request once,
+  transparently to the MCP caller.
+- **No database** — no SQLite, no migrations, no encrypted token store. Just
+  the cookie jar file.
+- **Generated client** — every wire call is type-checked Go from the OpenAPI
+  spec, not hand-rolled HTTP.
 
 ---
 
 ## Tech stack
 
-| Component | Choice | Rationale |
-|-----------|--------|-----------|
-| Language | Go 1.26 | Fast, statically linked, CGO disabled |
-| MCP transport | StreamableHTTP (`mcp-go`) | Per-request context, proxy-friendly |
-| Database | SQLite (`modernc.org/sqlite`) | Pure Go, zero deployment dependencies |
-| Encryption | AES-256-GCM (stdlib) | Standard at-rest protection |
-| Auth | Reverse-proxy contract | Reuse existing SSO, no auth bugs in this server |
-| Image | `FROM scratch` (~12 MB) | Minimal attack surface |
-
----
-
-## How the auth model works
-
-polar-flow-mcp does not authenticate users itself. It relies on a **trusted reverse
-proxy** (Authelia, Authentik, etc.) to:
-
-1. Authenticate the user.
-2. Inject their identity into an HTTP header (default: `Remote-User`).
-3. Sign each request with a shared secret (`X-Proxy-Secret` header).
-
-The server verifies the shared secret using `subtle.ConstantTimeCompare` on **every
-request**, before reading the identity header. This ordering is non-negotiable — it
-prevents a timing oracle attack on the secret. See [Security](security.md) for full
-details.
+| Component | Choice |
+|-----------|--------|
+| Language | Go 1.26 (CGO disabled) |
+| MCP server | [`mark3labs/mcp-go`](https://github.com/mark3labs/mcp-go) (stdio + streamable HTTP) |
+| OpenAPI client | [`ogen-go/ogen`](https://github.com/ogen-go/ogen) |
+| Spec source | [polar-openapi-maker](https://github.com/lmgarret/polar-openapi-maker) (vendored) |
+| Persistence | Plain JSON cookie jar (chmod 600) |
+| Image | `FROM scratch` (~14 MB) |
 
 ---
 
 ## Getting started
 
-If you are deploying for the first time:
-
-1. [Register a Polar developer app](deployment/polar-oauth-setup.md)
-2. Follow the [Getting Started guide](getting-started.md) for the full setup walkthrough
-3. Configure your [reverse proxy](deployment/auth-proxies.md)
-4. Install the [polar-coach skill](usage.md#installing-the-skill) in Claude
+1. [Get up and running](getting-started.md) (5-minute walkthrough)
+2. [Configure environment variables](reference/env-vars.md)
+3. [Deploy with Docker Compose](deployment/docker-compose.md)
+4. [Use the tools from Claude](usage.md)

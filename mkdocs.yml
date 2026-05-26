@@ -1,6 +1,6 @@
 site_name: polar-flow-mcp
 site_url: https://lmgarret.github.io/polar-flow-mcp
-site_description: Multi-user MCP server wrapping the Polar AccessLink API
+site_description: Single-user MCP server driving the reverse-engineered Polar Flow web API
 repo_url: https://github.com/lmgarret/polar-flow-mcp
 repo_name: lmgarret/polar-flow-mcp
 
@@ -24,13 +24,10 @@ nav:
   - Getting Started: getting-started.md
   - Deployment:
     - Docker Compose: deployment/docker-compose.md
-    - Auth Proxies: deployment/auth-proxies.md
-    - Polar OAuth Setup: deployment/polar-oauth-setup.md
   - Usage: usage.md
   - Reference:
     - Environment Variables: reference/env-vars.md
     - MCP Tools: reference/mcp-tools.md
     - HTTP Endpoints: reference/http-endpoints.md
-    - Database Schema: reference/db-schema.md
   - Security: security.md
   - Contributing: contributing.md
