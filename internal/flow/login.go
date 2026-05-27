@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 )
 
@@ -35,19 +34,23 @@ func fullLogin(ctx context.Context, client *http.Client, email, password string)
 	}
 
 	// 3-6. GET /flowSso/login bounces through auth.polar.com/oauth/authorize and
-	//      lands on auth.polar.com/login (HTML). http.Client follows the
-	//      redirect chain for us; the final body has the _csrf form field.
+	//      lands on auth.polar.com/login. http.Client follows the redirect
+	//      chain for us. The login page is now a JS SPA (no server-rendered
+	//      _csrf hidden input), but auth.polar.com still sets an XSRF-TOKEN
+	//      cookie on every GET, and the SPA submits its value as the _csrf
+	//      form field — textbook double-submit-cookie CSRF. So we just read
+	//      the cookie from the jar instead of scraping the (no-longer-present)
+	//      hidden input.
 	loginURL := "https://flow.polar.com/flowSso/login?" + url.Values{
 		"csrfToken": {csrfToken},
 		"returnUrl": {"/"},
 	}.Encode()
-	body, err := doGET(ctx, client, loginURL, http.Header{"Accept": {"text/html"}})
-	if err != nil {
+	if _, err := doGET(ctx, client, loginURL, http.Header{"Accept": {"text/html"}}); err != nil {
 		return fmt.Errorf("flow: step 3-6 (bounce to auth login): %w", err)
 	}
-	formCsrf, err := parseHiddenInput(body, "_csrf")
+	formCsrf, err := readCookie(client, "https://auth.polar.com", "XSRF-TOKEN")
 	if err != nil {
-		return fmt.Errorf("flow: step 6 (parse _csrf): %w", err)
+		return fmt.Errorf("flow: step 6 (read XSRF-TOKEN cookie): %w", err)
 	}
 
 	// 7. POST /login with credentials. http.Client will follow the post-auth
@@ -149,27 +152,17 @@ func readPlayCsrfToken(client *http.Client) (string, error) {
 	return "", fmt.Errorf("flow: PLAY_SESSION_FLOW not in cookie jar")
 }
 
-// hiddenInputRE matches <input type="hidden" name="<name>" value="<value>">,
-// allowing any attribute order and arbitrary whitespace.
-var hiddenInputRE = regexp.MustCompile(
-	`<input[^>]*?\bname="([^"]+)"[^>]*?\bvalue="([^"]*)"[^>]*?>`,
-)
-
-// parseHiddenInput finds a hidden form input by name and returns its value.
-// Tolerates either attribute order (name-before-value or value-before-name).
-func parseHiddenInput(body []byte, name string) (string, error) {
-	matches := hiddenInputRE.FindAllSubmatch(body, -1)
-	for _, m := range matches {
-		if string(m[1]) == name {
-			return string(m[2]), nil
+// readCookie returns the value of the named cookie on the given URL's domain,
+// or an error if absent.
+func readCookie(client *http.Client, rawURL, name string) (string, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+	for _, c := range client.Jar.Cookies(u) {
+		if c.Name == name && c.Value != "" {
+			return c.Value, nil
 		}
 	}
-	// Try the reversed-attribute pattern (value before name).
-	rev := regexp.MustCompile(
-		`<input[^>]*?\bvalue="([^"]*)"[^>]*?\bname="` + regexp.QuoteMeta(name) + `"[^>]*?>`,
-	)
-	if m := rev.FindSubmatch(body); m != nil {
-		return string(m[1]), nil
-	}
-	return "", fmt.Errorf("flow: hidden input %q not found in HTML", name)
+	return "", fmt.Errorf("flow: cookie %q not present for %s", name, u.Host)
 }
