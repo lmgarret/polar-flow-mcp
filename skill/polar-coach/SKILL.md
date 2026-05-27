@@ -158,12 +158,28 @@ the user explicitly says "zone 4" or "Z3".
 
 ## Defaults
 
-When the user doesn't specify:
+When the user doesn't specify, pick warmup and cooldown based on the
+intensity of the work that follows. A warmup phase inside a Polar target is
+Z1 *running* — it primes the aerobic system, raises muscle temp, and gets
+the legs ready for fast work. It is NOT a pre-run walk; assume the user
+does a short walk to the start independently.
 
-- **Warmup**: 10 min (`duration_s: 600`). Always include unless the user
-  says "no warmup" or asks for a very short session.
-- **Cooldown**: 5 min (`duration_s: 300`). Always include unless the user
-  says "no cooldown".
+| Session type | Warmup default | Cooldown default |
+|---|---|---|
+| Easy / aerobic (no `repeat` phase, Z1–Z2 only) | none — first km is the warmup | none |
+| Tempo (Z3 `repeat`) | 10 min (`duration_s: 600`) | 5 min (`duration_s: 300`) |
+| Threshold (Z4 `repeat`) | 15 min (`duration_s: 900`) | 5 min (`duration_s: 300`) |
+| VO2max (Z5 `repeat`) | 15 min (`duration_s: 900`) | 10 min (`duration_s: 600`) |
+| Long run | none | none |
+
+If a session mixes intensities (e.g. Z4 + Z5 ladder), warm up for the
+higher zone.
+
+The user can always override — "no warmup", "extend the warmup to 20 min",
+"add a 5-min cooldown to my easy run". Defaults are the floor, not a rule.
+
+Other defaults:
+
 - **Scheduled time**: 18:00. Omit `time` or pass `"18:00"`.
 - **Sport**: running (`sport_id: 1`). Omit unless the user names another.
 
