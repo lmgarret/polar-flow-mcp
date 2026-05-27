@@ -5,6 +5,7 @@ package gen
 import (
 	"io"
 	"net/url"
+	"time"
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
@@ -677,6 +678,44 @@ func (s *ActivityTimelineDayMiniGraphDataData) SetNightLowHr(val OptActivityMini
 	s.NightLowHr = val
 }
 
+type AddRouteToFavoritesInternalServerError struct {
+	Error OptString `json:"error"`
+}
+
+// GetError returns the value of Error.
+func (s *AddRouteToFavoritesInternalServerError) GetError() OptString {
+	return s.Error
+}
+
+// SetError sets the value of Error.
+func (s *AddRouteToFavoritesInternalServerError) SetError(val OptString) {
+	s.Error = val
+}
+
+func (*AddRouteToFavoritesInternalServerError) addRouteToFavoritesRes() {}
+
+// AddRouteToFavoritesOK is response for AddRouteToFavorites operation.
+type AddRouteToFavoritesOK struct{}
+
+func (*AddRouteToFavoritesOK) addRouteToFavoritesRes() {}
+
+type AddRouteToFavoritesReq struct {
+	// Source exercise (or session) id whose GPS track will be
+	// copied into a new ROUTE favorite. # TODO: verify which one
+	// — name suggests exercise; URL suggests "exercise route".
+	ID int64 `json:"id"`
+}
+
+// GetID returns the value of ID.
+func (s *AddRouteToFavoritesReq) GetID() int64 {
+	return s.ID
+}
+
+// SetID sets the value of ID.
+func (s *AddRouteToFavoritesReq) SetID(val int64) {
+	s.ID = val
+}
+
 // A diary entry returned by /training/getCalendarEvents.
 // Ref: #/components/schemas/CalendarEvent
 type CalendarEvent struct {
@@ -846,6 +885,73 @@ func (s *CalendarEventAllDay) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// ChangeFavoriteSportBadRequest is response for ChangeFavoriteSport operation.
+type ChangeFavoriteSportBadRequest struct{}
+
+func (*ChangeFavoriteSportBadRequest) changeFavoriteSportRes() {}
+
+type ChangeFavoriteSportOK struct {
+	Success string `json:"success"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ChangeFavoriteSportOK) GetSuccess() string {
+	return s.Success
+}
+
+// SetSuccess sets the value of Success.
+func (s *ChangeFavoriteSportOK) SetSuccess(val string) {
+	s.Success = val
+}
+
+func (*ChangeFavoriteSportOK) changeFavoriteSportRes() {}
+
+type ChangeFavoriteSportReq struct {
+	// Numeric favorite id.
+	FavoriteId int64 `json:"favoriteId"`
+	// New sport id. **Not validated against the sport catalog**
+	// — any integer is accepted (verified by sending 9999 and
+	// receiving 200). Use a valid id from
+	// `GET /api/sports/sports`.
+	FavoriteSportId int `json:"favoriteSportId"`
+	// Id of the inner exerciseTarget to retarget (one favorite can
+	// hold multiple). Get it from
+	// `GET /api/favoritetarget/{favoriteId}` →
+	// `exerciseTargets[].id`. **Not validated** either — unknown
+	// ids return 200 with no effect.
+	ExerciseTargetId int64 `json:"exerciseTargetId"`
+}
+
+// GetFavoriteId returns the value of FavoriteId.
+func (s *ChangeFavoriteSportReq) GetFavoriteId() int64 {
+	return s.FavoriteId
+}
+
+// GetFavoriteSportId returns the value of FavoriteSportId.
+func (s *ChangeFavoriteSportReq) GetFavoriteSportId() int {
+	return s.FavoriteSportId
+}
+
+// GetExerciseTargetId returns the value of ExerciseTargetId.
+func (s *ChangeFavoriteSportReq) GetExerciseTargetId() int64 {
+	return s.ExerciseTargetId
+}
+
+// SetFavoriteId sets the value of FavoriteId.
+func (s *ChangeFavoriteSportReq) SetFavoriteId(val int64) {
+	s.FavoriteId = val
+}
+
+// SetFavoriteSportId sets the value of FavoriteSportId.
+func (s *ChangeFavoriteSportReq) SetFavoriteSportId(val int) {
+	s.FavoriteSportId = val
+}
+
+// SetExerciseTargetId sets the value of ExerciseTargetId.
+func (s *ChangeFavoriteSportReq) SetExerciseTargetId(val int64) {
+	s.ExerciseTargetId = val
 }
 
 // Group-class gamification metadata. All-false / nulls for solo sessions.
@@ -2422,6 +2528,55 @@ type GetCalendarEventsOKApplicationJSON []CalendarEvent
 
 func (*GetCalendarEventsOKApplicationJSON) getCalendarEventsRes() {}
 
+type GetCalendarWeekSummaryBadRequest struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetCalendarWeekSummaryBadRequest) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*GetCalendarWeekSummaryBadRequest) getCalendarWeekSummaryRes() {}
+
+type GetCalendarWeekSummaryOKApplicationJSON []GetCalendarWeekSummaryOKItem
+
+func (*GetCalendarWeekSummaryOKApplicationJSON) getCalendarWeekSummaryRes() {}
+
+type GetCalendarWeekSummaryOKItem struct{}
+
+type GetCalendarWeekSummaryReq struct {
+	// Inclusive start date, `D.M.YYYY`.
+	From string `json:"from"`
+	// Inclusive end date, `D.M.YYYY`. Must satisfy `to - from ≤ 45 days`.
+	To string `json:"to"`
+}
+
+// GetFrom returns the value of From.
+func (s *GetCalendarWeekSummaryReq) GetFrom() string {
+	return s.From
+}
+
+// GetTo returns the value of To.
+func (s *GetCalendarWeekSummaryReq) GetTo() string {
+	return s.To
+}
+
+// SetFrom sets the value of From.
+func (s *GetCalendarWeekSummaryReq) SetFrom(val string) {
+	s.From = val
+}
+
+// SetTo sets the value of To.
+func (s *GetCalendarWeekSummaryReq) SetTo(val string) {
+	s.To = val
+}
+
 // GetFavoriteExerciseTargetForbidden is response for GetFavoriteExerciseTarget operation.
 type GetFavoriteExerciseTargetForbidden struct{}
 
@@ -2466,6 +2621,148 @@ func (s *GetFeaturesAvailableOKItem) SetAvailable(val bool) {
 	s.Available = val
 }
 
+type GetProgressViewSummaryReq struct {
+	// Inclusive start date, `D.M.YYYY` (no leading zeros required).
+	From string `json:"from"`
+	// Inclusive end date, `D.M.YYYY`.
+	To string `json:"to"`
+	// Optional sport-group filter. JS passes `"all"` for the
+	// "Tous les sports" tab; a numeric sportId filters to that
+	// sport. # TODO: verify scoping with real data.
+	Group OptGetProgressViewSummaryReqGroup `json:"group"`
+	// Bucket size for the per-time-slice breakdowns. JS values
+	// observed: `"6w"`, `"3m"`, `"1y"`. The server accepted
+	// arbitrary strings (including empty / omitted) on the test
+	// account, so it likely only influences how the breakdown is
+	// grouped, not whether the request succeeds.
+	TimeFrame OptString `json:"timeFrame"`
+}
+
+// GetFrom returns the value of From.
+func (s *GetProgressViewSummaryReq) GetFrom() string {
+	return s.From
+}
+
+// GetTo returns the value of To.
+func (s *GetProgressViewSummaryReq) GetTo() string {
+	return s.To
+}
+
+// GetGroup returns the value of Group.
+func (s *GetProgressViewSummaryReq) GetGroup() OptGetProgressViewSummaryReqGroup {
+	return s.Group
+}
+
+// GetTimeFrame returns the value of TimeFrame.
+func (s *GetProgressViewSummaryReq) GetTimeFrame() OptString {
+	return s.TimeFrame
+}
+
+// SetFrom sets the value of From.
+func (s *GetProgressViewSummaryReq) SetFrom(val string) {
+	s.From = val
+}
+
+// SetTo sets the value of To.
+func (s *GetProgressViewSummaryReq) SetTo(val string) {
+	s.To = val
+}
+
+// SetGroup sets the value of Group.
+func (s *GetProgressViewSummaryReq) SetGroup(val OptGetProgressViewSummaryReqGroup) {
+	s.Group = val
+}
+
+// SetTimeFrame sets the value of TimeFrame.
+func (s *GetProgressViewSummaryReq) SetTimeFrame(val OptString) {
+	s.TimeFrame = val
+}
+
+// Optional sport-group filter. JS passes `"all"` for the
+// "Tous les sports" tab; a numeric sportId filters to that
+// sport. # TODO: verify scoping with real data.
+// GetProgressViewSummaryReqGroup represents sum type.
+type GetProgressViewSummaryReqGroup struct {
+	Type   GetProgressViewSummaryReqGroupType // switch on this field
+	String string
+	Int    int
+}
+
+// GetProgressViewSummaryReqGroupType is oneOf type of GetProgressViewSummaryReqGroup.
+type GetProgressViewSummaryReqGroupType string
+
+// Possible values for GetProgressViewSummaryReqGroupType.
+const (
+	StringGetProgressViewSummaryReqGroup GetProgressViewSummaryReqGroupType = "string"
+	IntGetProgressViewSummaryReqGroup    GetProgressViewSummaryReqGroupType = "int"
+)
+
+// IsString reports whether GetProgressViewSummaryReqGroup is string.
+func (s GetProgressViewSummaryReqGroup) IsString() bool {
+	return s.Type == StringGetProgressViewSummaryReqGroup
+}
+
+// IsInt reports whether GetProgressViewSummaryReqGroup is int.
+func (s GetProgressViewSummaryReqGroup) IsInt() bool {
+	return s.Type == IntGetProgressViewSummaryReqGroup
+}
+
+// SetString sets GetProgressViewSummaryReqGroup to string.
+func (s *GetProgressViewSummaryReqGroup) SetString(v string) {
+	s.Type = StringGetProgressViewSummaryReqGroup
+	s.String = v
+}
+
+// GetString returns string and true boolean if GetProgressViewSummaryReqGroup is string.
+func (s GetProgressViewSummaryReqGroup) GetString() (v string, ok bool) {
+	if !s.IsString() {
+		return v, false
+	}
+	return s.String, true
+}
+
+// NewStringGetProgressViewSummaryReqGroup returns new GetProgressViewSummaryReqGroup from string.
+func NewStringGetProgressViewSummaryReqGroup(v string) GetProgressViewSummaryReqGroup {
+	var s GetProgressViewSummaryReqGroup
+	s.SetString(v)
+	return s
+}
+
+// SetInt sets GetProgressViewSummaryReqGroup to int.
+func (s *GetProgressViewSummaryReqGroup) SetInt(v int) {
+	s.Type = IntGetProgressViewSummaryReqGroup
+	s.Int = v
+}
+
+// GetInt returns int and true boolean if GetProgressViewSummaryReqGroup is int.
+func (s GetProgressViewSummaryReqGroup) GetInt() (v int, ok bool) {
+	if !s.IsInt() {
+		return v, false
+	}
+	return s.Int, true
+}
+
+// NewIntGetProgressViewSummaryReqGroup returns new GetProgressViewSummaryReqGroup from int.
+func NewIntGetProgressViewSummaryReqGroup(v int) GetProgressViewSummaryReqGroup {
+	var s GetProgressViewSummaryReqGroup
+	s.SetInt(v)
+	return s
+}
+
+// GetSleepReportBadRequest is response for GetSleepReport operation.
+type GetSleepReportBadRequest struct{}
+
+func (*GetSleepReportBadRequest) getSleepReportRes() {}
+
+type GetSleepReportOKApplicationJSON []SleepNight
+
+func (*GetSleepReportOKApplicationJSON) getSleepReportRes() {}
+
+// GetSleepReportUnauthorized is response for GetSleepReport operation.
+type GetSleepReportUnauthorized struct{}
+
+func (*GetSleepReportUnauthorized) getSleepReportRes() {}
+
 // GetSportsInternalServerError is response for GetSports operation.
 type GetSportsInternalServerError struct{}
 
@@ -2476,6 +2773,117 @@ type GetSportsNotFound struct{}
 
 func (*GetSportsNotFound) getSportsRes() {}
 
+type GetSummaryDataReq struct {
+	From      string                    `json:"from"`
+	To        string                    `json:"to"`
+	Group     OptGetSummaryDataReqGroup `json:"group"`
+	TimeFrame OptString                 `json:"timeFrame"`
+}
+
+// GetFrom returns the value of From.
+func (s *GetSummaryDataReq) GetFrom() string {
+	return s.From
+}
+
+// GetTo returns the value of To.
+func (s *GetSummaryDataReq) GetTo() string {
+	return s.To
+}
+
+// GetGroup returns the value of Group.
+func (s *GetSummaryDataReq) GetGroup() OptGetSummaryDataReqGroup {
+	return s.Group
+}
+
+// GetTimeFrame returns the value of TimeFrame.
+func (s *GetSummaryDataReq) GetTimeFrame() OptString {
+	return s.TimeFrame
+}
+
+// SetFrom sets the value of From.
+func (s *GetSummaryDataReq) SetFrom(val string) {
+	s.From = val
+}
+
+// SetTo sets the value of To.
+func (s *GetSummaryDataReq) SetTo(val string) {
+	s.To = val
+}
+
+// SetGroup sets the value of Group.
+func (s *GetSummaryDataReq) SetGroup(val OptGetSummaryDataReqGroup) {
+	s.Group = val
+}
+
+// SetTimeFrame sets the value of TimeFrame.
+func (s *GetSummaryDataReq) SetTimeFrame(val OptString) {
+	s.TimeFrame = val
+}
+
+// GetSummaryDataReqGroup represents sum type.
+type GetSummaryDataReqGroup struct {
+	Type   GetSummaryDataReqGroupType // switch on this field
+	String string
+	Int    int
+}
+
+// GetSummaryDataReqGroupType is oneOf type of GetSummaryDataReqGroup.
+type GetSummaryDataReqGroupType string
+
+// Possible values for GetSummaryDataReqGroupType.
+const (
+	StringGetSummaryDataReqGroup GetSummaryDataReqGroupType = "string"
+	IntGetSummaryDataReqGroup    GetSummaryDataReqGroupType = "int"
+)
+
+// IsString reports whether GetSummaryDataReqGroup is string.
+func (s GetSummaryDataReqGroup) IsString() bool { return s.Type == StringGetSummaryDataReqGroup }
+
+// IsInt reports whether GetSummaryDataReqGroup is int.
+func (s GetSummaryDataReqGroup) IsInt() bool { return s.Type == IntGetSummaryDataReqGroup }
+
+// SetString sets GetSummaryDataReqGroup to string.
+func (s *GetSummaryDataReqGroup) SetString(v string) {
+	s.Type = StringGetSummaryDataReqGroup
+	s.String = v
+}
+
+// GetString returns string and true boolean if GetSummaryDataReqGroup is string.
+func (s GetSummaryDataReqGroup) GetString() (v string, ok bool) {
+	if !s.IsString() {
+		return v, false
+	}
+	return s.String, true
+}
+
+// NewStringGetSummaryDataReqGroup returns new GetSummaryDataReqGroup from string.
+func NewStringGetSummaryDataReqGroup(v string) GetSummaryDataReqGroup {
+	var s GetSummaryDataReqGroup
+	s.SetString(v)
+	return s
+}
+
+// SetInt sets GetSummaryDataReqGroup to int.
+func (s *GetSummaryDataReqGroup) SetInt(v int) {
+	s.Type = IntGetSummaryDataReqGroup
+	s.Int = v
+}
+
+// GetInt returns int and true boolean if GetSummaryDataReqGroup is int.
+func (s GetSummaryDataReqGroup) GetInt() (v int, ok bool) {
+	if !s.IsInt() {
+		return v, false
+	}
+	return s.Int, true
+}
+
+// NewIntGetSummaryDataReqGroup returns new GetSummaryDataReqGroup from int.
+func NewIntGetSummaryDataReqGroup(v int) GetSummaryDataReqGroup {
+	var s GetSummaryDataReqGroup
+	s.SetInt(v)
+	return s
+}
+
 // GetTrainingSessionDetailsNotFound is response for GetTrainingSessionDetails operation.
 type GetTrainingSessionDetailsNotFound struct{}
 
@@ -2485,6 +2893,11 @@ func (*GetTrainingSessionDetailsNotFound) getTrainingSessionDetailsRes() {}
 type GetTrainingSessionSummaryNotFound struct{}
 
 func (*GetTrainingSessionSummaryNotFound) getTrainingSessionSummaryRes() {}
+
+// GetTrainingTargetNotFound is response for GetTrainingTarget operation.
+type GetTrainingTargetNotFound struct{}
+
+func (*GetTrainingTargetNotFound) getTrainingTargetRes() {}
 
 // Full route geometry. Returned by
 // `GET /api/favorites/exerciseTarget/{exerciseTargetId}` for ROUTE
@@ -3911,6 +4324,98 @@ func (o OptFloat64) Or(d float64) float64 {
 	return d
 }
 
+// NewOptGetProgressViewSummaryReqGroup returns new OptGetProgressViewSummaryReqGroup with value set to v.
+func NewOptGetProgressViewSummaryReqGroup(v GetProgressViewSummaryReqGroup) OptGetProgressViewSummaryReqGroup {
+	return OptGetProgressViewSummaryReqGroup{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptGetProgressViewSummaryReqGroup is optional GetProgressViewSummaryReqGroup.
+type OptGetProgressViewSummaryReqGroup struct {
+	Value GetProgressViewSummaryReqGroup
+	Set   bool
+}
+
+// IsSet returns true if OptGetProgressViewSummaryReqGroup was set.
+func (o OptGetProgressViewSummaryReqGroup) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptGetProgressViewSummaryReqGroup) Reset() {
+	var v GetProgressViewSummaryReqGroup
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptGetProgressViewSummaryReqGroup) SetTo(v GetProgressViewSummaryReqGroup) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptGetProgressViewSummaryReqGroup) Get() (v GetProgressViewSummaryReqGroup, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptGetProgressViewSummaryReqGroup) Or(d GetProgressViewSummaryReqGroup) GetProgressViewSummaryReqGroup {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptGetSummaryDataReqGroup returns new OptGetSummaryDataReqGroup with value set to v.
+func NewOptGetSummaryDataReqGroup(v GetSummaryDataReqGroup) OptGetSummaryDataReqGroup {
+	return OptGetSummaryDataReqGroup{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptGetSummaryDataReqGroup is optional GetSummaryDataReqGroup.
+type OptGetSummaryDataReqGroup struct {
+	Value GetSummaryDataReqGroup
+	Set   bool
+}
+
+// IsSet returns true if OptGetSummaryDataReqGroup was set.
+func (o OptGetSummaryDataReqGroup) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptGetSummaryDataReqGroup) Reset() {
+	var v GetSummaryDataReqGroup
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptGetSummaryDataReqGroup) SetTo(v GetSummaryDataReqGroup) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptGetSummaryDataReqGroup) Get() (v GetSummaryDataReqGroup, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptGetSummaryDataReqGroup) Or(d GetSummaryDataReqGroup) GetSummaryDataReqGroup {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptGpsRouteUser returns new OptGpsRouteUser with value set to v.
 func NewOptGpsRouteUser(v GpsRouteUser) OptGpsRouteUser {
 	return OptGpsRouteUser{
@@ -4904,6 +5409,52 @@ func (o OptPhysicalInfoTrainingBackground) Or(d PhysicalInfoTrainingBackground) 
 	return d
 }
 
+// NewOptProgressViewSummarySportDistributions returns new OptProgressViewSummarySportDistributions with value set to v.
+func NewOptProgressViewSummarySportDistributions(v ProgressViewSummarySportDistributions) OptProgressViewSummarySportDistributions {
+	return OptProgressViewSummarySportDistributions{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptProgressViewSummarySportDistributions is optional ProgressViewSummarySportDistributions.
+type OptProgressViewSummarySportDistributions struct {
+	Value ProgressViewSummarySportDistributions
+	Set   bool
+}
+
+// IsSet returns true if OptProgressViewSummarySportDistributions was set.
+func (o OptProgressViewSummarySportDistributions) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptProgressViewSummarySportDistributions) Reset() {
+	var v ProgressViewSummarySportDistributions
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptProgressViewSummarySportDistributions) SetTo(v ProgressViewSummarySportDistributions) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptProgressViewSummarySportDistributions) Get() (v ProgressViewSummarySportDistributions, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptProgressViewSummarySportDistributions) Or(d ProgressViewSummarySportDistributions) ProgressViewSummarySportDistributions {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSessionDetailsDefaultHrZones returns new OptSessionDetailsDefaultHrZones with value set to v.
 func NewOptSessionDetailsDefaultHrZones(v SessionDetailsDefaultHrZones) OptSessionDetailsDefaultHrZones {
 	return OptSessionDetailsDefaultHrZones{
@@ -5588,6 +6139,98 @@ func (o OptSessionSummaryTrainingUserInfo) Get() (v SessionSummaryTrainingUserIn
 
 // Or returns value if set, or given parameter if does not.
 func (o OptSessionSummaryTrainingUserInfo) Or(d SessionSummaryTrainingUserInfo) SessionSummaryTrainingUserInfo {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSleepNightStages returns new OptSleepNightStages with value set to v.
+func NewOptSleepNightStages(v SleepNightStages) OptSleepNightStages {
+	return OptSleepNightStages{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSleepNightStages is optional SleepNightStages.
+type OptSleepNightStages struct {
+	Value SleepNightStages
+	Set   bool
+}
+
+// IsSet returns true if OptSleepNightStages was set.
+func (o OptSleepNightStages) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSleepNightStages) Reset() {
+	var v SleepNightStages
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSleepNightStages) SetTo(v SleepNightStages) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSleepNightStages) Get() (v SleepNightStages, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSleepNightStages) Or(d SleepNightStages) SleepNightStages {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptStandardDuration returns new OptStandardDuration with value set to v.
+func NewOptStandardDuration(v StandardDuration) OptStandardDuration {
+	return OptStandardDuration{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptStandardDuration is optional StandardDuration.
+type OptStandardDuration struct {
+	Value StandardDuration
+	Set   bool
+}
+
+// IsSet returns true if OptStandardDuration was set.
+func (o OptStandardDuration) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptStandardDuration) Reset() {
+	var v StandardDuration
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptStandardDuration) SetTo(v StandardDuration) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptStandardDuration) Get() (v StandardDuration, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptStandardDuration) Or(d StandardDuration) StandardDuration {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -6553,6 +7196,402 @@ func (s *PhysicalInfoTrainingBackground) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Aggregated training totals over a date range. Returned by both
+// `/progress/getProgressViewSummaryAsJson` (regular users) and
+// `/progress/getSummaryDataAsJson` (Coach view — but both work on free
+// accounts; the Coach gate is purely client-side in the JS bundle).
+// Schema captured 2026-05-26 on an account with zero sessions —
+// `captures/responses/16-progress-summary-empty.json`. Numeric fields are
+// zero; distribution lists contain a single placeholder entry with
+// `sportName: "Aucune donnée relative au sport"` (localised) and
+// `distributionPercent: 100.0`. # TODO: verify shape on an account with
+// recorded sessions — element shapes for the zone lists are likely
+// `[{zoneIndex, durationMillis, percent}]` but the empty arrays don't
+// expose them.
+// Ref: #/components/schemas/ProgressViewSummary
+type ProgressViewSummary struct {
+	// Per-metric sport-distribution breakdowns. Each entry is a list of
+	// `SportDistributionEntry` summing to 100% for that metric.
+	SportDistributions OptProgressViewSummarySportDistributions `json:"sportDistributions"`
+	// Distribution of Polar's "Training Benefit" categories
+	// (RECOVERY/STEADY_STATE/TEMPO/THRESHOLD/MAX/INTERVAL/…). On a
+	// zero-session account the list contains a single `{trainingBenefit: "NONE"}`
+	// placeholder. # TODO: enumerate values once a populated account is captured.
+	TrainingBenefitDistributionList []ProgressViewSummaryTrainingBenefitDistributionListItem `json:"trainingBenefitDistributionList"`
+	// Time spent in each HR zone across all sessions. Element shape TBD.
+	TotalHeartRateZoneList []ProgressViewSummaryTotalHeartRateZoneListItem `json:"totalHeartRateZoneList"`
+	// Time in fit/fat-burning zones. Element shape TBD.
+	TotalFitFatZonesList []ProgressViewSummaryTotalFitFatZonesListItem `json:"totalFitFatZonesList"`
+	// Time in cycling power zones. Element shape TBD.
+	TotalPowerZoneList []ProgressViewSummaryTotalPowerZoneListItem `json:"totalPowerZoneList"`
+	// Time in speed/pace zones. Element shape TBD.
+	TotalSpeedZoneList []ProgressViewSummaryTotalSpeedZoneListItem `json:"totalSpeedZoneList"`
+	// Total number of training sessions in the date range.
+	TotalTrainingSessionCount OptInt `json:"totalTrainingSessionCount"`
+	// Total distance covered in **metres** (matches the rest of the API's metres convention).
+	TotalDistance OptFloat32          `json:"totalDistance"`
+	TotalDuration OptStandardDuration `json:"totalDuration"`
+	// Total kcal burned across all sessions.
+	TotalCalories OptFloat32 `json:"totalCalories"`
+	// Cumulative ascent in metres.
+	TotalAscent OptFloat32 `json:"totalAscent"`
+	// Cumulative descent in metres.
+	TotalDescent OptFloat32 `json:"totalDescent"`
+}
+
+// GetSportDistributions returns the value of SportDistributions.
+func (s *ProgressViewSummary) GetSportDistributions() OptProgressViewSummarySportDistributions {
+	return s.SportDistributions
+}
+
+// GetTrainingBenefitDistributionList returns the value of TrainingBenefitDistributionList.
+func (s *ProgressViewSummary) GetTrainingBenefitDistributionList() []ProgressViewSummaryTrainingBenefitDistributionListItem {
+	return s.TrainingBenefitDistributionList
+}
+
+// GetTotalHeartRateZoneList returns the value of TotalHeartRateZoneList.
+func (s *ProgressViewSummary) GetTotalHeartRateZoneList() []ProgressViewSummaryTotalHeartRateZoneListItem {
+	return s.TotalHeartRateZoneList
+}
+
+// GetTotalFitFatZonesList returns the value of TotalFitFatZonesList.
+func (s *ProgressViewSummary) GetTotalFitFatZonesList() []ProgressViewSummaryTotalFitFatZonesListItem {
+	return s.TotalFitFatZonesList
+}
+
+// GetTotalPowerZoneList returns the value of TotalPowerZoneList.
+func (s *ProgressViewSummary) GetTotalPowerZoneList() []ProgressViewSummaryTotalPowerZoneListItem {
+	return s.TotalPowerZoneList
+}
+
+// GetTotalSpeedZoneList returns the value of TotalSpeedZoneList.
+func (s *ProgressViewSummary) GetTotalSpeedZoneList() []ProgressViewSummaryTotalSpeedZoneListItem {
+	return s.TotalSpeedZoneList
+}
+
+// GetTotalTrainingSessionCount returns the value of TotalTrainingSessionCount.
+func (s *ProgressViewSummary) GetTotalTrainingSessionCount() OptInt {
+	return s.TotalTrainingSessionCount
+}
+
+// GetTotalDistance returns the value of TotalDistance.
+func (s *ProgressViewSummary) GetTotalDistance() OptFloat32 {
+	return s.TotalDistance
+}
+
+// GetTotalDuration returns the value of TotalDuration.
+func (s *ProgressViewSummary) GetTotalDuration() OptStandardDuration {
+	return s.TotalDuration
+}
+
+// GetTotalCalories returns the value of TotalCalories.
+func (s *ProgressViewSummary) GetTotalCalories() OptFloat32 {
+	return s.TotalCalories
+}
+
+// GetTotalAscent returns the value of TotalAscent.
+func (s *ProgressViewSummary) GetTotalAscent() OptFloat32 {
+	return s.TotalAscent
+}
+
+// GetTotalDescent returns the value of TotalDescent.
+func (s *ProgressViewSummary) GetTotalDescent() OptFloat32 {
+	return s.TotalDescent
+}
+
+// SetSportDistributions sets the value of SportDistributions.
+func (s *ProgressViewSummary) SetSportDistributions(val OptProgressViewSummarySportDistributions) {
+	s.SportDistributions = val
+}
+
+// SetTrainingBenefitDistributionList sets the value of TrainingBenefitDistributionList.
+func (s *ProgressViewSummary) SetTrainingBenefitDistributionList(val []ProgressViewSummaryTrainingBenefitDistributionListItem) {
+	s.TrainingBenefitDistributionList = val
+}
+
+// SetTotalHeartRateZoneList sets the value of TotalHeartRateZoneList.
+func (s *ProgressViewSummary) SetTotalHeartRateZoneList(val []ProgressViewSummaryTotalHeartRateZoneListItem) {
+	s.TotalHeartRateZoneList = val
+}
+
+// SetTotalFitFatZonesList sets the value of TotalFitFatZonesList.
+func (s *ProgressViewSummary) SetTotalFitFatZonesList(val []ProgressViewSummaryTotalFitFatZonesListItem) {
+	s.TotalFitFatZonesList = val
+}
+
+// SetTotalPowerZoneList sets the value of TotalPowerZoneList.
+func (s *ProgressViewSummary) SetTotalPowerZoneList(val []ProgressViewSummaryTotalPowerZoneListItem) {
+	s.TotalPowerZoneList = val
+}
+
+// SetTotalSpeedZoneList sets the value of TotalSpeedZoneList.
+func (s *ProgressViewSummary) SetTotalSpeedZoneList(val []ProgressViewSummaryTotalSpeedZoneListItem) {
+	s.TotalSpeedZoneList = val
+}
+
+// SetTotalTrainingSessionCount sets the value of TotalTrainingSessionCount.
+func (s *ProgressViewSummary) SetTotalTrainingSessionCount(val OptInt) {
+	s.TotalTrainingSessionCount = val
+}
+
+// SetTotalDistance sets the value of TotalDistance.
+func (s *ProgressViewSummary) SetTotalDistance(val OptFloat32) {
+	s.TotalDistance = val
+}
+
+// SetTotalDuration sets the value of TotalDuration.
+func (s *ProgressViewSummary) SetTotalDuration(val OptStandardDuration) {
+	s.TotalDuration = val
+}
+
+// SetTotalCalories sets the value of TotalCalories.
+func (s *ProgressViewSummary) SetTotalCalories(val OptFloat32) {
+	s.TotalCalories = val
+}
+
+// SetTotalAscent sets the value of TotalAscent.
+func (s *ProgressViewSummary) SetTotalAscent(val OptFloat32) {
+	s.TotalAscent = val
+}
+
+// SetTotalDescent sets the value of TotalDescent.
+func (s *ProgressViewSummary) SetTotalDescent(val OptFloat32) {
+	s.TotalDescent = val
+}
+
+func (*ProgressViewSummary) getProgressViewSummaryRes() {}
+func (*ProgressViewSummary) getSummaryDataRes()         {}
+
+// Per-metric sport-distribution breakdowns. Each entry is a list of
+// `SportDistributionEntry` summing to 100% for that metric.
+type ProgressViewSummarySportDistributions struct {
+	Duration []SportDistributionEntry `json:"duration"`
+	Sessions []SportDistributionEntry `json:"sessions"`
+	Distance []SportDistributionEntry `json:"distance"`
+}
+
+// GetDuration returns the value of Duration.
+func (s *ProgressViewSummarySportDistributions) GetDuration() []SportDistributionEntry {
+	return s.Duration
+}
+
+// GetSessions returns the value of Sessions.
+func (s *ProgressViewSummarySportDistributions) GetSessions() []SportDistributionEntry {
+	return s.Sessions
+}
+
+// GetDistance returns the value of Distance.
+func (s *ProgressViewSummarySportDistributions) GetDistance() []SportDistributionEntry {
+	return s.Distance
+}
+
+// SetDuration sets the value of Duration.
+func (s *ProgressViewSummarySportDistributions) SetDuration(val []SportDistributionEntry) {
+	s.Duration = val
+}
+
+// SetSessions sets the value of Sessions.
+func (s *ProgressViewSummarySportDistributions) SetSessions(val []SportDistributionEntry) {
+	s.Sessions = val
+}
+
+// SetDistance sets the value of Distance.
+func (s *ProgressViewSummarySportDistributions) SetDistance(val []SportDistributionEntry) {
+	s.Distance = val
+}
+
+type ProgressViewSummaryTotalFitFatZonesListItem struct{}
+
+type ProgressViewSummaryTotalHeartRateZoneListItem struct{}
+
+type ProgressViewSummaryTotalPowerZoneListItem struct{}
+
+type ProgressViewSummaryTotalSpeedZoneListItem struct{}
+
+type ProgressViewSummaryTrainingBenefitDistributionListItem struct {
+	// Benefit category code, e.g. `"NONE"` (placeholder). Other values TBD.
+	TrainingBenefit     OptString  `json:"trainingBenefit"`
+	DistributionPercent OptFloat32 `json:"distributionPercent"`
+	// Raw value the percent was computed from (units depend on metric — likely seconds).
+	TrainingBenefitTotal OptFloat32 `json:"trainingBenefitTotal"`
+	NameForChart         OptString  `json:"nameForChart"`
+	PercentForChart      OptFloat32 `json:"percentForChart"`
+}
+
+// GetTrainingBenefit returns the value of TrainingBenefit.
+func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) GetTrainingBenefit() OptString {
+	return s.TrainingBenefit
+}
+
+// GetDistributionPercent returns the value of DistributionPercent.
+func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) GetDistributionPercent() OptFloat32 {
+	return s.DistributionPercent
+}
+
+// GetTrainingBenefitTotal returns the value of TrainingBenefitTotal.
+func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) GetTrainingBenefitTotal() OptFloat32 {
+	return s.TrainingBenefitTotal
+}
+
+// GetNameForChart returns the value of NameForChart.
+func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) GetNameForChart() OptString {
+	return s.NameForChart
+}
+
+// GetPercentForChart returns the value of PercentForChart.
+func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) GetPercentForChart() OptFloat32 {
+	return s.PercentForChart
+}
+
+// SetTrainingBenefit sets the value of TrainingBenefit.
+func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) SetTrainingBenefit(val OptString) {
+	s.TrainingBenefit = val
+}
+
+// SetDistributionPercent sets the value of DistributionPercent.
+func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) SetDistributionPercent(val OptFloat32) {
+	s.DistributionPercent = val
+}
+
+// SetTrainingBenefitTotal sets the value of TrainingBenefitTotal.
+func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) SetTrainingBenefitTotal(val OptFloat32) {
+	s.TrainingBenefitTotal = val
+}
+
+// SetNameForChart sets the value of NameForChart.
+func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) SetNameForChart(val OptString) {
+	s.NameForChart = val
+}
+
+// SetPercentForChart sets the value of PercentForChart.
+func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) SetPercentForChart(val OptFloat32) {
+	s.PercentForChart = val
+}
+
+// RenameFavoriteBadRequest is response for RenameFavorite operation.
+type RenameFavoriteBadRequest struct{}
+
+func (*RenameFavoriteBadRequest) renameFavoriteRes() {}
+
+// RenameFavoriteInternalServerError is response for RenameFavorite operation.
+type RenameFavoriteInternalServerError struct{}
+
+func (*RenameFavoriteInternalServerError) renameFavoriteRes() {}
+
+type RenameFavoriteOK struct {
+	// Localised confirmation message (e.g. `"Modifications enregistrées"` in French, `"Changes saved"`
+	// in English).
+	Success string `json:"success"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *RenameFavoriteOK) GetSuccess() string {
+	return s.Success
+}
+
+// SetSuccess sets the value of Success.
+func (s *RenameFavoriteOK) SetSuccess(val string) {
+	s.Success = val
+}
+
+func (*RenameFavoriteOK) renameFavoriteRes() {}
+
+type RenameFavoriteReq struct {
+	// Numeric favorite id. Accepts string form too.
+	FavoriteId RenameFavoriteReqFavoriteId `json:"favoriteId"`
+	// New name. Empty string is rejected (400).
+	FavoriteName string `json:"favoriteName"`
+}
+
+// GetFavoriteId returns the value of FavoriteId.
+func (s *RenameFavoriteReq) GetFavoriteId() RenameFavoriteReqFavoriteId {
+	return s.FavoriteId
+}
+
+// GetFavoriteName returns the value of FavoriteName.
+func (s *RenameFavoriteReq) GetFavoriteName() string {
+	return s.FavoriteName
+}
+
+// SetFavoriteId sets the value of FavoriteId.
+func (s *RenameFavoriteReq) SetFavoriteId(val RenameFavoriteReqFavoriteId) {
+	s.FavoriteId = val
+}
+
+// SetFavoriteName sets the value of FavoriteName.
+func (s *RenameFavoriteReq) SetFavoriteName(val string) {
+	s.FavoriteName = val
+}
+
+// Numeric favorite id. Accepts string form too.
+// RenameFavoriteReqFavoriteId represents sum type.
+type RenameFavoriteReqFavoriteId struct {
+	Type   RenameFavoriteReqFavoriteIdType // switch on this field
+	Int64  int64
+	String string
+}
+
+// RenameFavoriteReqFavoriteIdType is oneOf type of RenameFavoriteReqFavoriteId.
+type RenameFavoriteReqFavoriteIdType string
+
+// Possible values for RenameFavoriteReqFavoriteIdType.
+const (
+	Int64RenameFavoriteReqFavoriteId  RenameFavoriteReqFavoriteIdType = "int64"
+	StringRenameFavoriteReqFavoriteId RenameFavoriteReqFavoriteIdType = "string"
+)
+
+// IsInt64 reports whether RenameFavoriteReqFavoriteId is int64.
+func (s RenameFavoriteReqFavoriteId) IsInt64() bool {
+	return s.Type == Int64RenameFavoriteReqFavoriteId
+}
+
+// IsString reports whether RenameFavoriteReqFavoriteId is string.
+func (s RenameFavoriteReqFavoriteId) IsString() bool {
+	return s.Type == StringRenameFavoriteReqFavoriteId
+}
+
+// SetInt64 sets RenameFavoriteReqFavoriteId to int64.
+func (s *RenameFavoriteReqFavoriteId) SetInt64(v int64) {
+	s.Type = Int64RenameFavoriteReqFavoriteId
+	s.Int64 = v
+}
+
+// GetInt64 returns int64 and true boolean if RenameFavoriteReqFavoriteId is int64.
+func (s RenameFavoriteReqFavoriteId) GetInt64() (v int64, ok bool) {
+	if !s.IsInt64() {
+		return v, false
+	}
+	return s.Int64, true
+}
+
+// NewInt64RenameFavoriteReqFavoriteId returns new RenameFavoriteReqFavoriteId from int64.
+func NewInt64RenameFavoriteReqFavoriteId(v int64) RenameFavoriteReqFavoriteId {
+	var s RenameFavoriteReqFavoriteId
+	s.SetInt64(v)
+	return s
+}
+
+// SetString sets RenameFavoriteReqFavoriteId to string.
+func (s *RenameFavoriteReqFavoriteId) SetString(v string) {
+	s.Type = StringRenameFavoriteReqFavoriteId
+	s.String = v
+}
+
+// GetString returns string and true boolean if RenameFavoriteReqFavoriteId is string.
+func (s RenameFavoriteReqFavoriteId) GetString() (v string, ok bool) {
+	if !s.IsString() {
+		return v, false
+	}
+	return s.String, true
+}
+
+// NewStringRenameFavoriteReqFavoriteId returns new RenameFavoriteReqFavoriteId from string.
+func NewStringRenameFavoriteReqFavoriteId(v string) RenameFavoriteReqFavoriteId {
+	var s RenameFavoriteReqFavoriteId
+	s.SetString(v)
+	return s
 }
 
 // Request body for POST /api/favorites/trainingTargets/importRoute.
@@ -8043,6 +9082,362 @@ func (s *SessionSummaryTrainingUserInfo) SetCountryCode(val OptNilString) {
 	s.CountryCode = val
 }
 
+// A single recorded night of sleep on a Polar device with `Sleep Plus Stages`
+// support. Field semantics reconstructed from the Polar Flow JS bundle
+// (`/flow-ui-mono/static/js/async/1608.16456f2f.js`) — no live capture with
+// data was possible on the test account, so element shapes for nested arrays
+// carry `# TODO: verify on a device-synced account`. The endpoint may also
+// return entries with most fields null/zero for nights where the device was
+// not worn.
+// Ref: #/components/schemas/SleepNight
+type SleepNight struct {
+	// Calendar date the sleep is associated with — the morning the user
+	// woke up (Polar convention: a night that crosses midnight is bucketed
+	// under the wake-up date). Used by the JS as `moment.utc(date)` and
+	// then `.subtract(1, "days")` to anchor the previous evening.
+	Date time.Time `json:"date"`
+	// ISO datetime when the device detected sleep onset. The Polar bundle
+	// parses this with `jsonDatetimeAsMoment` — the exact format (zoneless
+	// vs UTC vs local) is TBD without a populated capture, but it is
+	// additive with `sleepStartOffset`.
+	SleepStartTime string `json:"sleepStartTime"`
+	// ISO datetime of wake-up. Paired with `sleepEndOffset`.
+	SleepEndTime string `json:"sleepEndTime"`
+	// Offset in **seconds** added to `sleepStartTime` to get the "fell
+	// asleep" moment. Polar splits the bedtime / asleep-time distinction
+	// across these two fields.
+	SleepStartOffset int `json:"sleepStartOffset"`
+	// Offset in seconds added to `sleepEndTime` (wake-up offset).
+	SleepEndOffset int `json:"sleepEndOffset"`
+	// Overall sleep score 0–100. The JS bundle treats `0` as "no score"
+	// (excluded from averages). Polar's marketing calls this "Sleep Score".
+	SleepScore OptInt `json:"sleepScore"`
+	// Count of detected sleep cycles. Used in the summary table.
+	SleepCycles OptNilInt `json:"sleepCycles"`
+	// Sleep continuity rating, 1–5. The UI renders it as `"<n>/5"`. Polar
+	// calls this "Sleep continuity". # TODO: verify exact bounds / precision.
+	ContinuityIndex OptNilFloat64 `json:"continuityIndex"`
+	// User-provided sleep rating (a "how well did I sleep?" star/number).
+	// Indexes into a localised label table in the UI. # TODO: enum once
+	// observed.
+	SleepRating OptNilInt `json:"sleepRating"`
+	// Time-series of sleep-state transitions detected by the device.
+	// Element shape inferred from JS:
+	// `{sleepWakeState: 1|2|3|4|…, offsetFromStart: <seconds>, longInterruption?: boolean}`.
+	// The JS sorts/groups these into LIGHT (code 2 → `nonrem12`),
+	// DEEP (code 3 → `nonrem3`), REM (code 1 → `rem`), UNKNOWN (code 4),
+	// and INTERRUPTIONS (special path that toggles `longInterruption`).
+	// # TODO: verify codes against device documentation.
+	SleepWakeStates []SleepNightSleepWakeStatesItem `json:"sleepWakeStates"`
+	// Pre-grouped stage intervals — present only on accounts/devices with
+	// Sleep Plus Stages enabled. The JS bundle constructs this client-side
+	// from `sleepWakeStates`, but the same keys appear server-side in the
+	// response shape. # TODO: confirm server emits `stages` directly vs
+	// only `sleepWakeStates`.
+	Stages OptSleepNightStages `json:"stages"`
+}
+
+// GetDate returns the value of Date.
+func (s *SleepNight) GetDate() time.Time {
+	return s.Date
+}
+
+// GetSleepStartTime returns the value of SleepStartTime.
+func (s *SleepNight) GetSleepStartTime() string {
+	return s.SleepStartTime
+}
+
+// GetSleepEndTime returns the value of SleepEndTime.
+func (s *SleepNight) GetSleepEndTime() string {
+	return s.SleepEndTime
+}
+
+// GetSleepStartOffset returns the value of SleepStartOffset.
+func (s *SleepNight) GetSleepStartOffset() int {
+	return s.SleepStartOffset
+}
+
+// GetSleepEndOffset returns the value of SleepEndOffset.
+func (s *SleepNight) GetSleepEndOffset() int {
+	return s.SleepEndOffset
+}
+
+// GetSleepScore returns the value of SleepScore.
+func (s *SleepNight) GetSleepScore() OptInt {
+	return s.SleepScore
+}
+
+// GetSleepCycles returns the value of SleepCycles.
+func (s *SleepNight) GetSleepCycles() OptNilInt {
+	return s.SleepCycles
+}
+
+// GetContinuityIndex returns the value of ContinuityIndex.
+func (s *SleepNight) GetContinuityIndex() OptNilFloat64 {
+	return s.ContinuityIndex
+}
+
+// GetSleepRating returns the value of SleepRating.
+func (s *SleepNight) GetSleepRating() OptNilInt {
+	return s.SleepRating
+}
+
+// GetSleepWakeStates returns the value of SleepWakeStates.
+func (s *SleepNight) GetSleepWakeStates() []SleepNightSleepWakeStatesItem {
+	return s.SleepWakeStates
+}
+
+// GetStages returns the value of Stages.
+func (s *SleepNight) GetStages() OptSleepNightStages {
+	return s.Stages
+}
+
+// SetDate sets the value of Date.
+func (s *SleepNight) SetDate(val time.Time) {
+	s.Date = val
+}
+
+// SetSleepStartTime sets the value of SleepStartTime.
+func (s *SleepNight) SetSleepStartTime(val string) {
+	s.SleepStartTime = val
+}
+
+// SetSleepEndTime sets the value of SleepEndTime.
+func (s *SleepNight) SetSleepEndTime(val string) {
+	s.SleepEndTime = val
+}
+
+// SetSleepStartOffset sets the value of SleepStartOffset.
+func (s *SleepNight) SetSleepStartOffset(val int) {
+	s.SleepStartOffset = val
+}
+
+// SetSleepEndOffset sets the value of SleepEndOffset.
+func (s *SleepNight) SetSleepEndOffset(val int) {
+	s.SleepEndOffset = val
+}
+
+// SetSleepScore sets the value of SleepScore.
+func (s *SleepNight) SetSleepScore(val OptInt) {
+	s.SleepScore = val
+}
+
+// SetSleepCycles sets the value of SleepCycles.
+func (s *SleepNight) SetSleepCycles(val OptNilInt) {
+	s.SleepCycles = val
+}
+
+// SetContinuityIndex sets the value of ContinuityIndex.
+func (s *SleepNight) SetContinuityIndex(val OptNilFloat64) {
+	s.ContinuityIndex = val
+}
+
+// SetSleepRating sets the value of SleepRating.
+func (s *SleepNight) SetSleepRating(val OptNilInt) {
+	s.SleepRating = val
+}
+
+// SetSleepWakeStates sets the value of SleepWakeStates.
+func (s *SleepNight) SetSleepWakeStates(val []SleepNightSleepWakeStatesItem) {
+	s.SleepWakeStates = val
+}
+
+// SetStages sets the value of Stages.
+func (s *SleepNight) SetStages(val OptSleepNightStages) {
+	s.Stages = val
+}
+
+type SleepNightSleepWakeStatesItem struct {
+	// Stage code (1=REM, 2=light, 3=deep, 4=unknown — verified mapping).
+	SleepWakeState OptInt `json:"sleepWakeState"`
+	// Seconds from the start of the night.
+	OffsetFromStart OptInt `json:"offsetFromStart"`
+	// Set true on `INTERRUPTIONS`-state entries that exceeded the "long" threshold (Polar treats these
+	// separately in the summary).
+	LongInterruption OptBool `json:"longInterruption"`
+}
+
+// GetSleepWakeState returns the value of SleepWakeState.
+func (s *SleepNightSleepWakeStatesItem) GetSleepWakeState() OptInt {
+	return s.SleepWakeState
+}
+
+// GetOffsetFromStart returns the value of OffsetFromStart.
+func (s *SleepNightSleepWakeStatesItem) GetOffsetFromStart() OptInt {
+	return s.OffsetFromStart
+}
+
+// GetLongInterruption returns the value of LongInterruption.
+func (s *SleepNightSleepWakeStatesItem) GetLongInterruption() OptBool {
+	return s.LongInterruption
+}
+
+// SetSleepWakeState sets the value of SleepWakeState.
+func (s *SleepNightSleepWakeStatesItem) SetSleepWakeState(val OptInt) {
+	s.SleepWakeState = val
+}
+
+// SetOffsetFromStart sets the value of OffsetFromStart.
+func (s *SleepNightSleepWakeStatesItem) SetOffsetFromStart(val OptInt) {
+	s.OffsetFromStart = val
+}
+
+// SetLongInterruption sets the value of LongInterruption.
+func (s *SleepNightSleepWakeStatesItem) SetLongInterruption(val OptBool) {
+	s.LongInterruption = val
+}
+
+// Pre-grouped stage intervals — present only on accounts/devices with
+// Sleep Plus Stages enabled. The JS bundle constructs this client-side
+// from `sleepWakeStates`, but the same keys appear server-side in the
+// response shape. # TODO: confirm server emits `stages` directly vs
+// only `sleepWakeStates`.
+type SleepNightStages struct {
+	// Light sleep intervals.
+	Nonrem12 []SleepNightStagesNonrem12Item `json:"nonrem12"`
+	// Deep sleep intervals.
+	Nonrem3 []SleepNightStagesNonrem3Item `json:"nonrem3"`
+	// REM intervals.
+	Rem []SleepNightStagesRemItem `json:"rem"`
+	// Wake/interruption intervals. Each carries an optional
+	// `longInterrupt: true` boolean.
+	Interrupt []SleepNightStagesInterruptItem `json:"interrupt"`
+	// Periods the device couldn't classify (sensor lost contact, etc.).
+	Unknown []SleepNightStagesUnknownItem `json:"unknown"`
+}
+
+// GetNonrem12 returns the value of Nonrem12.
+func (s *SleepNightStages) GetNonrem12() []SleepNightStagesNonrem12Item {
+	return s.Nonrem12
+}
+
+// GetNonrem3 returns the value of Nonrem3.
+func (s *SleepNightStages) GetNonrem3() []SleepNightStagesNonrem3Item {
+	return s.Nonrem3
+}
+
+// GetRem returns the value of Rem.
+func (s *SleepNightStages) GetRem() []SleepNightStagesRemItem {
+	return s.Rem
+}
+
+// GetInterrupt returns the value of Interrupt.
+func (s *SleepNightStages) GetInterrupt() []SleepNightStagesInterruptItem {
+	return s.Interrupt
+}
+
+// GetUnknown returns the value of Unknown.
+func (s *SleepNightStages) GetUnknown() []SleepNightStagesUnknownItem {
+	return s.Unknown
+}
+
+// SetNonrem12 sets the value of Nonrem12.
+func (s *SleepNightStages) SetNonrem12(val []SleepNightStagesNonrem12Item) {
+	s.Nonrem12 = val
+}
+
+// SetNonrem3 sets the value of Nonrem3.
+func (s *SleepNightStages) SetNonrem3(val []SleepNightStagesNonrem3Item) {
+	s.Nonrem3 = val
+}
+
+// SetRem sets the value of Rem.
+func (s *SleepNightStages) SetRem(val []SleepNightStagesRemItem) {
+	s.Rem = val
+}
+
+// SetInterrupt sets the value of Interrupt.
+func (s *SleepNightStages) SetInterrupt(val []SleepNightStagesInterruptItem) {
+	s.Interrupt = val
+}
+
+// SetUnknown sets the value of Unknown.
+func (s *SleepNightStages) SetUnknown(val []SleepNightStagesUnknownItem) {
+	s.Unknown = val
+}
+
+type SleepNightStagesInterruptItem struct{}
+
+type SleepNightStagesNonrem12Item struct{}
+
+type SleepNightStagesNonrem3Item struct{}
+
+type SleepNightStagesRemItem struct{}
+
+type SleepNightStagesUnknownItem struct{}
+
+// One sport's share of a metric (duration / session count / distance) within
+// a progress-summary distribution list. Each entry has both `distribution*`
+// (the underlying values) and `*ForChart` (Highcharts-friendly copies) — they
+// are usually identical but kept separate to let Polar's UI tweak labels
+// for charting.
+// Ref: #/components/schemas/SportDistributionEntry
+type SportDistributionEntry struct {
+	// Localised sport name (e.g. `"Course à pied"`, `"Cyclisme"`). On a
+	// zero-session account, the API emits a placeholder
+	// `"Aucune donnée relative au sport"` (FR) / `"No sport-related data"` (EN).
+	SportName OptString `json:"sportName"`
+	// This sport's share of the metric, 0–100. Entries sum to 100.0.
+	DistributionPercent OptFloat32 `json:"distributionPercent"`
+	// Same as `sportName` (UI label override slot).
+	NameForChart OptString `json:"nameForChart"`
+	// Same as `distributionPercent` (chart label override slot).
+	PercentForChart OptFloat32 `json:"percentForChart"`
+	// Raw value the percent was computed from (seconds, count, or metres depending on which metric list
+	// this is in).
+	ValueForChart OptFloat32 `json:"valueForChart"`
+}
+
+// GetSportName returns the value of SportName.
+func (s *SportDistributionEntry) GetSportName() OptString {
+	return s.SportName
+}
+
+// GetDistributionPercent returns the value of DistributionPercent.
+func (s *SportDistributionEntry) GetDistributionPercent() OptFloat32 {
+	return s.DistributionPercent
+}
+
+// GetNameForChart returns the value of NameForChart.
+func (s *SportDistributionEntry) GetNameForChart() OptString {
+	return s.NameForChart
+}
+
+// GetPercentForChart returns the value of PercentForChart.
+func (s *SportDistributionEntry) GetPercentForChart() OptFloat32 {
+	return s.PercentForChart
+}
+
+// GetValueForChart returns the value of ValueForChart.
+func (s *SportDistributionEntry) GetValueForChart() OptFloat32 {
+	return s.ValueForChart
+}
+
+// SetSportName sets the value of SportName.
+func (s *SportDistributionEntry) SetSportName(val OptString) {
+	s.SportName = val
+}
+
+// SetDistributionPercent sets the value of DistributionPercent.
+func (s *SportDistributionEntry) SetDistributionPercent(val OptFloat32) {
+	s.DistributionPercent = val
+}
+
+// SetNameForChart sets the value of NameForChart.
+func (s *SportDistributionEntry) SetNameForChart(val OptString) {
+	s.NameForChart = val
+}
+
+// SetPercentForChart sets the value of PercentForChart.
+func (s *SportDistributionEntry) SetPercentForChart(val OptFloat32) {
+	s.PercentForChart = val
+}
+
+// SetValueForChart sets the value of ValueForChart.
+func (s *SportDistributionEntry) SetValueForChart(val OptFloat32) {
+	s.ValueForChart = val
+}
+
 // Map of numeric sport ID (as string key) to Polar sport name constant.
 // Full inventory captured 2026-05-25 from GET /api/sports/sports:
 // **165 sports**, IDs sparse (some retired numbers — gaps at 21, 26,
@@ -8062,6 +9457,77 @@ func (s *SportsMap) init() SportsMap {
 }
 
 func (*SportsMap) getSportsRes() {}
+
+// Polar's Joda/JSR-310-style serialized duration. Carries the wall-clock
+// breakdown plus a total `millis`. The breakdown fields are NOT additive with
+// `millis` — they're the same value expressed as `(d, h, m, s)`. Use `millis`
+// as the canonical total.
+// Note: this is yet another duration format on top of the API's existing
+// three (integer seconds, `HH:MM:SS` string, integer ms). Polar evidently
+// glued several backends together — see CLAUDE.md.
+// Ref: #/components/schemas/StandardDuration
+type StandardDuration struct {
+	// Days component (0+).
+	StandardDays int `json:"standardDays"`
+	// Hours component (0–23).
+	StandardHours int `json:"standardHours"`
+	// Minutes component (0–59).
+	StandardMinutes int `json:"standardMinutes"`
+	// Seconds component (0–59).
+	StandardSeconds int `json:"standardSeconds"`
+	// Canonical total duration in milliseconds.
+	Millis int64 `json:"millis"`
+}
+
+// GetStandardDays returns the value of StandardDays.
+func (s *StandardDuration) GetStandardDays() int {
+	return s.StandardDays
+}
+
+// GetStandardHours returns the value of StandardHours.
+func (s *StandardDuration) GetStandardHours() int {
+	return s.StandardHours
+}
+
+// GetStandardMinutes returns the value of StandardMinutes.
+func (s *StandardDuration) GetStandardMinutes() int {
+	return s.StandardMinutes
+}
+
+// GetStandardSeconds returns the value of StandardSeconds.
+func (s *StandardDuration) GetStandardSeconds() int {
+	return s.StandardSeconds
+}
+
+// GetMillis returns the value of Millis.
+func (s *StandardDuration) GetMillis() int64 {
+	return s.Millis
+}
+
+// SetStandardDays sets the value of StandardDays.
+func (s *StandardDuration) SetStandardDays(val int) {
+	s.StandardDays = val
+}
+
+// SetStandardHours sets the value of StandardHours.
+func (s *StandardDuration) SetStandardHours(val int) {
+	s.StandardHours = val
+}
+
+// SetStandardMinutes sets the value of StandardMinutes.
+func (s *StandardDuration) SetStandardMinutes(val int) {
+	s.StandardMinutes = val
+}
+
+// SetStandardSeconds sets the value of StandardSeconds.
+func (s *StandardDuration) SetStandardSeconds(val int) {
+	s.StandardSeconds = val
+}
+
+// SetMillis sets the value of Millis.
+func (s *StandardDuration) SetMillis(val int64) {
+	s.Millis = val
+}
 
 // Payload for manual session entry via POST /api/training/create.
 // ⚠ Multiple inconsistencies with TrainingTargetCreate — see
@@ -8559,6 +10025,8 @@ func (s *TrainingTargetCreate) SetExerciseTargets(val []ExerciseTarget) {
 	s.ExerciseTargets = val
 }
 
+func (*TrainingTargetCreate) getTrainingTargetRes() {}
+
 // Target category, drives which `exerciseTargets[i]` fields are populated.
 // - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` /
 // `calories` is non-null; `phases` is `[]`.
@@ -8618,6 +10086,7 @@ func (s *TrainingTargetCreateType) UnmarshalText(data []byte) error {
 // Ref: #/components/responses/Unauthorized
 type Unauthorized struct{}
 
+func (*Unauthorized) addRouteToFavoritesRes()       {}
 func (*Unauthorized) createFavoriteRes()            {}
 func (*Unauthorized) createTrainingSessionRes()     {}
 func (*Unauthorized) createTrainingTargetRes()      {}
@@ -8627,18 +10096,23 @@ func (*Unauthorized) deleteTrainingTargetRes()      {}
 func (*Unauthorized) getActivityTimelineFourRes()   {}
 func (*Unauthorized) getActivityTimelineRes()       {}
 func (*Unauthorized) getCalendarEventsRes()         {}
+func (*Unauthorized) getCalendarWeekSummaryRes()    {}
 func (*Unauthorized) getCurrentUserRes()            {}
 func (*Unauthorized) getFavoriteExerciseTargetRes() {}
 func (*Unauthorized) getFavoriteRes()               {}
 func (*Unauthorized) getFeaturesAvailableRes()      {}
+func (*Unauthorized) getProgressViewSummaryRes()    {}
+func (*Unauthorized) getSummaryDataRes()            {}
 func (*Unauthorized) getTrainingSessionDetailsRes() {}
 func (*Unauthorized) getTrainingSessionSummaryRes() {}
+func (*Unauthorized) getTrainingTargetRes()         {}
 func (*Unauthorized) importRouteRes()               {}
 func (*Unauthorized) listDeviceFavoritesRes()       {}
 func (*Unauthorized) listFavoritesRes()             {}
 func (*Unauthorized) listFavoritesSimpleRes()       {}
 func (*Unauthorized) listTrainingSessionsRes()      {}
 func (*Unauthorized) updateFavoriteRes()            {}
+func (*Unauthorized) updateTrainingTargetRes()      {}
 
 // UpdateFavoriteNotFound is response for UpdateFavorite operation.
 type UpdateFavoriteNotFound struct{}
@@ -8649,6 +10123,11 @@ func (*UpdateFavoriteNotFound) updateFavoriteRes() {}
 type UpdateFavoriteOK struct{}
 
 func (*UpdateFavoriteOK) updateFavoriteRes() {}
+
+// UpdateTrainingTargetOK is response for UpdateTrainingTarget operation.
+type UpdateTrainingTargetOK struct{}
+
+func (*UpdateTrainingTargetOK) updateTrainingTargetRes() {}
 
 // Ref: #/components/schemas/UserIdentity
 type UserIdentity struct {
@@ -8748,6 +10227,7 @@ func (s *ValidationError) init() ValidationError {
 }
 
 func (*ValidationError) createTrainingTargetRes() {}
+func (*ValidationError) updateTrainingTargetRes() {}
 
 // Read-back waypoint shape. Field names differ from the upload
 // `RoutePoint`: instead of cumulative `distance`, the server

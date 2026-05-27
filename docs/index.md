@@ -38,10 +38,14 @@ requires.
 | `create_training_target` | Schedule a structured workout (warmup / repeat / cooldown) |
 | `list_training_targets` | List upcoming scheduled targets |
 | `delete_training_target` | Delete a target by ID |
+| `get_training_target` | Read one target by ID |
+| `update_training_target` | Full-replace edit of one target by ID |
 | `get_calendar_events` | Raw calendar events in a date range |
+| `get_calendar_week_summary` | Per-ISO-week totals strip (≤45-day range) |
 | `list_training_sessions` | Completed training sessions in a date range |
 | `get_training_session_summary` | Summary view of one completed session |
 | `get_training_session_details` | Lap/sample-level detail of one session |
+| `get_progress_summary` | Aggregated training totals over a range |
 
 See the [MCP Tools reference](reference/mcp-tools.md) for argument details.
 

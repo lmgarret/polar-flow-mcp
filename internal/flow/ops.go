@@ -108,6 +108,122 @@ func extractTargetID(body []byte) (int64, error) {
 	return 0, fmt.Errorf("flow: create training target: cannot parse id from %q", trimmed)
 }
 
+// GetTrainingTarget returns the server-normalized view of a target by id.
+// Returns ErrTargetNotFound on 404.
+func (c *Client) GetTrainingTarget(ctx context.Context, id int64) (*gen.TrainingTargetCreate, error) {
+	if id <= 0 {
+		return nil, fmt.Errorf("flow: get training target: id must be > 0")
+	}
+	res, err := c.API.GetTrainingTarget(ctx, gen.GetTrainingTargetParams{ID: int(id)})
+	if err != nil {
+		return nil, fmt.Errorf("flow: get training target: %w", err)
+	}
+	switch v := res.(type) {
+	case *gen.TrainingTargetCreate:
+		return v, nil
+	case *gen.GetTrainingTargetNotFound:
+		return nil, ErrTargetNotFound
+	case *gen.Unauthorized:
+		return nil, ErrLoginFailed
+	default:
+		return nil, fmt.Errorf("flow: get training target: unexpected response %T", res)
+	}
+}
+
+// UpdateTrainingTarget replaces a target's body. The Polar Flow API is
+// full-replace semantics: the supplied body completely overwrites the prior
+// target. Returns ErrTargetNotFound on 404.
+func (c *Client) UpdateTrainingTarget(ctx context.Context, id int64, body *gen.TrainingTargetCreate) error {
+	if id <= 0 {
+		return fmt.Errorf("flow: update training target: id must be > 0")
+	}
+	res, err := c.API.UpdateTrainingTarget(ctx, body, gen.UpdateTrainingTargetParams{
+		XRequestedWith: gen.XRequestedWithXMLHttpRequest,
+		ID:             int(id),
+	})
+	if err != nil {
+		return fmt.Errorf("flow: update training target: %w", err)
+	}
+	switch res.(type) {
+	case *gen.UpdateTrainingTargetOK:
+		return nil
+	case *gen.ValidationError:
+		return fmt.Errorf("flow: update training target: validation rejected")
+	case *gen.Unauthorized:
+		return ErrLoginFailed
+	default:
+		return fmt.Errorf("flow: update training target: unexpected response %T", res)
+	}
+}
+
+// GetCalendarWeekSummary returns one entry per ISO week intersecting [from, to].
+// Polar caps the range at 45 days and rejects ISO-8601 dates — formatted internally
+// as D.M.YYYY. Empty array when no sessions fall in the range.
+//
+// The per-item schema is not yet pinned in the spec (test accounts return `[]`),
+// so callers get back the raw items as ogen sees them.
+func (c *Client) GetCalendarWeekSummary(ctx context.Context, from, to time.Time) ([]gen.GetCalendarWeekSummaryOKItem, error) {
+	if to.Sub(from) > 45*24*time.Hour {
+		return nil, fmt.Errorf("flow: calendar week summary: range exceeds Polar's 45-day limit")
+	}
+	res, err := c.API.GetCalendarWeekSummary(ctx,
+		&gen.GetCalendarWeekSummaryReq{From: formatDayMonthYear(from), To: formatDayMonthYear(to)},
+		gen.GetCalendarWeekSummaryParams{XRequestedWith: gen.XRequestedWithXMLHttpRequest},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("flow: calendar week summary: %w", err)
+	}
+	switch v := res.(type) {
+	case *gen.GetCalendarWeekSummaryOKApplicationJSON:
+		return []gen.GetCalendarWeekSummaryOKItem(*v), nil
+	case *gen.GetCalendarWeekSummaryBadRequest:
+		return nil, fmt.Errorf("flow: calendar week summary: bad request (check date range)")
+	case *gen.Unauthorized:
+		return nil, ErrLoginFailed
+	default:
+		return nil, fmt.Errorf("flow: calendar week summary: unexpected response %T", res)
+	}
+}
+
+// GetProgressViewSummary returns aggregated training totals (sessions, distance,
+// duration, zone time, sport distribution, training-benefit distribution) for the
+// supplied [from, to] range. `group` filters to a single sportId (use 0 for all
+// sports). `timeFrame` is the bucket size for breakdowns: "6w", "3m", or "1y".
+func (c *Client) GetProgressViewSummary(ctx context.Context, from, to time.Time, group int, timeFrame string) (*gen.ProgressViewSummary, error) {
+	req := &gen.GetProgressViewSummaryReq{
+		From: formatDayMonthYear(from),
+		To:   formatDayMonthYear(to),
+	}
+	if group > 0 {
+		req.Group.SetTo(gen.GetProgressViewSummaryReqGroup{
+			Type: gen.IntGetProgressViewSummaryReqGroup,
+			Int:  group,
+		})
+	} else {
+		req.Group.SetTo(gen.GetProgressViewSummaryReqGroup{
+			Type:   gen.StringGetProgressViewSummaryReqGroup,
+			String: "all",
+		})
+	}
+	if timeFrame != "" {
+		req.TimeFrame.SetTo(timeFrame)
+	}
+	res, err := c.API.GetProgressViewSummary(ctx, req,
+		gen.GetProgressViewSummaryParams{XRequestedWith: gen.XRequestedWithXMLHttpRequest},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("flow: progress view summary: %w", err)
+	}
+	switch v := res.(type) {
+	case *gen.ProgressViewSummary:
+		return v, nil
+	case *gen.Unauthorized:
+		return nil, ErrLoginFailed
+	default:
+		return nil, fmt.Errorf("flow: progress view summary: unexpected response %T", res)
+	}
+}
+
 // DeleteTrainingTarget deletes the target with the given numeric id.
 // Returns ErrTargetNotFound on 404.
 func (c *Client) DeleteTrainingTarget(ctx context.Context, id int64) error {

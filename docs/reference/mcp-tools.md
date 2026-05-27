@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-polar-flow-mcp exposes eight tools backed by the
+polar-flow-mcp exposes twelve tools backed by the
 [ogen](https://github.com/ogen-go/ogen)-generated client in `internal/flow/`.
 All tools act as the single Polar Flow account configured via `POLAR_EMAIL` /
 `POLAR_PASSWORD`.
@@ -89,6 +89,37 @@ Delete a target by numeric ID.
 
 ---
 
+## `get_training_target`
+
+Return the full server-normalized view of a single target. Use this before
+`update_training_target` to read the current shape, modify it, then write back.
+
+| Argument | Type | Required |
+|----------|------|----------|
+| `target_id` | integer | yes |
+
+**Response:** JSON `TrainingTargetCreate` object (same shape as the create
+payload, plus server-assigned ids and rolled-up totals).
+
+---
+
+## `update_training_target`
+
+Full-replace edit of a target by ID. The argument shape is identical to
+`create_training_target` with one extra required field (`target_id`). The
+server overwrites the target with the supplied body — there is no patch
+semantics, so always read the target with `get_training_target` first if you
+only want to change one field.
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `target_id` | integer | yes | Numeric ID of the target to edit. |
+
+All other arguments (`name`, `date`, `time`, `sport_id`, `description`,
+`phases`) match `create_training_target`.
+
+---
+
 ## `get_calendar_events`
 
 Raw calendar events (training targets, completed exercises, etc.) in a date
@@ -102,6 +133,43 @@ range.
 **Response:** JSON array of `CalendarEvent` objects (see the spec at
 [polar-openapi-maker](https://github.com/lmgarret/polar-openapi-maker) for
 the full shape).
+
+---
+
+## `get_calendar_week_summary`
+
+Returns one summary entry per ISO week intersecting `[from, to]` — the
+right-hand "week totals" strip in the Polar Flow diary.
+
+| Argument | Type | Default |
+|----------|------|---------|
+| `from_date` | `YYYY-MM-DD` | today − 28 days |
+| `to_date` | `YYYY-MM-DD` | today |
+
+Range is capped at **45 days** by the server. Larger ranges return a 400
+that's surfaced as a tool error.
+
+**Response:** JSON array of week-summary objects. Item shape is currently
+TBD upstream (test accounts return `[]`); the tool surfaces the raw JSON so
+callers can adapt as the spec firms up.
+
+---
+
+## `get_progress_summary`
+
+Aggregated training totals (sessions, distance, duration, calories, ascent /
+descent, zone time, sport distribution, training-benefit distribution) for
+the supplied range.
+
+| Argument | Type | Default |
+|----------|------|---------|
+| `from_date` | `YYYY-MM-DD` | today − 90 days |
+| `to_date` | `YYYY-MM-DD` | today |
+| `sport_id` | integer | `0` (all sports) |
+| `time_frame` | string | `3m` — also accepts `6w`, `1y` |
+
+**Response:** JSON `ProgressViewSummary` object — sport distributions,
+training-benefit distributions, HR-zone totals, fit/fat-zone totals.
 
 ---
 

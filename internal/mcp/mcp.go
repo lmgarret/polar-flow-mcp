@@ -82,6 +82,85 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Numeric target ID from create_training_target or list_training_targets")),
 	), DeleteTrainingTargetHandler(fc))
 
+	s.AddTool(mcpgo.NewTool("get_training_target",
+		mcpgo.WithDescription(
+			"Return the full server-normalized view of a single training target by ID. "+
+				"Use this to inspect a target's structure before editing it.",
+		),
+		mcpgo.WithNumber("target_id", mcpgo.Required(),
+			mcpgo.Description("Numeric target ID from list_training_targets")),
+	), GetTrainingTargetHandler(fc))
+
+	s.AddTool(mcpgo.NewTool("update_training_target",
+		mcpgo.WithDescription(
+			"Replace an existing training target's content. Full-replace semantics — "+
+				"supply the complete target body (use get_training_target first to read the "+
+				"current state, modify, then update).",
+		),
+		mcpgo.WithNumber("target_id", mcpgo.Required(),
+			mcpgo.Description("Numeric ID of the target to update")),
+		mcpgo.WithString("name", mcpgo.Required(),
+			mcpgo.Description("Session name shown in the diary")),
+		mcpgo.WithString("date", mcpgo.Required(),
+			mcpgo.Description("Scheduled date ISO 8601 YYYY-MM-DD")),
+		mcpgo.WithString("time",
+			mcpgo.Description("Scheduled local time HH:MM (default: 18:00)")),
+		mcpgo.WithNumber("sport_id",
+			mcpgo.Description("Polar sport ID (default 1 = running)")),
+		mcpgo.WithString("description",
+			mcpgo.Description("Free-text notes (optional)")),
+		mcpgo.WithArray("phases",
+			mcpgo.Description("Same shape as create_training_target.phases"),
+			mcpgo.Items(map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"type":       map[string]any{"type": "string", "enum": []string{"warmup", "repeat", "cooldown"}},
+					"duration_s": map[string]any{"type": "integer"},
+					"reps":       map[string]any{"type": "integer"},
+					"goal": map[string]any{"type": "object", "properties": map[string]any{
+						"distance_m": map[string]any{"type": "number"},
+						"duration_s": map[string]any{"type": "integer"},
+					}},
+					"intensity": map[string]any{"type": "object", "properties": map[string]any{
+						"label":   map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}},
+						"hr_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5},
+					}},
+					"recovery": map[string]any{"type": "object", "properties": map[string]any{
+						"duration_s": map[string]any{"type": "integer"},
+					}},
+				},
+				"required": []string{"type"},
+			}),
+		),
+	), UpdateTrainingTargetHandler(fc))
+
+	s.AddTool(mcpgo.NewTool("get_calendar_week_summary",
+		mcpgo.WithDescription(
+			"Return one summary entry per ISO week intersecting [from, to] — the right-hand "+
+				"\"week totals\" strip in the Polar Flow diary. Range capped at 45 days.",
+		),
+		mcpgo.WithString("from_date",
+			mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today - 28 days)")),
+		mcpgo.WithString("to_date",
+			mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today)")),
+	), GetCalendarWeekSummaryHandler(fc))
+
+	s.AddTool(mcpgo.NewTool("get_progress_summary",
+		mcpgo.WithDescription(
+			"Aggregated training totals (sessions, distance, duration, zone time, sport "+
+				"distribution, training-benefit distribution) for the [from, to] range. "+
+				"Good for coaching context: \"how is my training going this month?\"",
+		),
+		mcpgo.WithString("from_date",
+			mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today - 90 days)")),
+		mcpgo.WithString("to_date",
+			mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today)")),
+		mcpgo.WithNumber("sport_id",
+			mcpgo.Description("Optional sport ID filter (omit or 0 for all sports)")),
+		mcpgo.WithString("time_frame",
+			mcpgo.Description("Bucket size for per-slice breakdowns: \"6w\", \"3m\", or \"1y\" (default: \"3m\")")),
+	), GetProgressSummaryHandler(fc))
+
 	s.AddTool(mcpgo.NewTool("get_calendar_events",
 		mcpgo.WithDescription(
 			"Return the raw Polar Flow calendar events (training targets, exercises, etc.) in a date range.",

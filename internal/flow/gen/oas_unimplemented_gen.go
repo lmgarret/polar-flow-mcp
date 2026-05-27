@@ -13,6 +13,65 @@ type UnimplementedHandler struct{}
 
 var _ Handler = UnimplementedHandler{}
 
+// AddRouteToFavorites implements addRouteToFavorites operation.
+//
+// Creates a new ROUTE-type favorite by extracting the GPS track from a
+// completed training session's exercise. Counterpart to
+// `POST /api/favorites/trainingTargets/importRoute` — that one ingests
+// a GPX/TCX upload, this one references an already-recorded session.
+// Discovered in the JS bundle as `addRouteToFavorites` mapping. Probed
+// 2026-05-26 on an account with **no recorded sessions**, so the success
+// path could not be reached. Validation findings below are inferred from
+// error patterns.
+// ### Body shape (inferred)
+// Required field is `id` — when present (with any value), the server
+// reaches the data-load stage and returns Polar's familiar JSON error
+// envelope (`{"error":"...itinéraire..."}`). Any other field name
+// (`exerciseId`, `trainingSessionId`, `tsid`, `sessionId`, …) is
+// rejected upfront by the body parser with a generic HTML 500.
+// Most likely `id` refers to an **exercise id** within a session — the
+// URL path's "addExerciseRoute" wording and the existence of
+// multi-exercise sessions both point that way — but it could also be
+// the trainingSessionId. # TODO: confirm on a device-synced account.
+// ### Other gotchas
+// - Method is POST. GET → 404, PUT/PATCH presumably likewise.
+// - Missing `X-Requested-With: XMLHttpRequest` → 403.
+// - Error bodies use the same misleading boilerplate
+// (`"...itinéraire..."`) as other favorites endpoints.
+//
+// POST /api/favorites/trainingTargets/addExerciseRoute
+func (UnimplementedHandler) AddRouteToFavorites(ctx context.Context, req *AddRouteToFavoritesReq, params AddRouteToFavoritesParams) (r AddRouteToFavoritesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ChangeFavoriteSport implements changeFavoriteSport operation.
+//
+// Updates only the sport assignment of a favorite's exerciseTarget.
+// Takes `{favoriteId, favoriteSportId, exerciseTargetId}` — both the
+// favorite-level id AND the inner exerciseTarget id are required because
+// a favorite can hold multiple exerciseTargets (e.g. multi-sport sessions).
+// ### Method gotcha
+// Same as `saveName`: the verb is **`PUT`**, not POST.
+// ### Validation surprises
+// Polar's server is **dangerously lenient** here. Probed 2026-05-26:
+// | Body | Status |
+// |---|---|
+// | Missing `exerciseTargetId` | 400 |
+// | Unknown `exerciseTargetId` | **200** (silent no-op — favorite not actually updated
+// server-side) |
+// | Unknown `favoriteSportId` (e.g. `9999`, not in `/api/sports/sports`) | **200** (sport id is
+// accepted unchecked, then presumably 404s on watch sync) |
+// | Missing other fields | 400 |
+// Verify your changes by re-reading the favorite via
+// `GET /api/favoritetarget/{id}` rather than trusting the 200.
+// Error bodies share the same misleading boilerplate
+// (`{error: "...itinéraire..."}`) as `saveName`.
+//
+// PUT /api/favorites/saveSport
+func (UnimplementedHandler) ChangeFavoriteSport(ctx context.Context, req *ChangeFavoriteSportReq, params ChangeFavoriteSportParams) (r ChangeFavoriteSportRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CreateFavorite implements createFavorite operation.
 //
 // Creates a reusable training-target template. Body shape is identical
@@ -118,6 +177,31 @@ func (UnimplementedHandler) GetCalendarEvents(ctx context.Context, params GetCal
 	return r, ht.ErrNotImplemented
 }
 
+// GetCalendarWeekSummary implements getCalendarWeekSummary operation.
+//
+// Returns one summary entry per ISO week intersecting `[from, to]`, used by
+// the right-hand "week totals" strip in `/diary`. Backed by the legacy
+// `Calendar.get.weekSummary` action in
+// `static/13.318.0/javascript/views/diary/calendar.min.js`.
+// ### Constraints (probed 2026-05-26)
+// - Date format: **`D.M.YYYY`** strict (ISO 8601 rejected with
+// `content of from (...) is not a valid date: Text '...' could not be
+// parsed at index 4`).
+// - `to` must be ≥ `from` (reversed → `400 from (...) date must be before
+// to (...) date`).
+// - **`to - from ≤ 45 days`** ("Maximum week aligned range is 45,
+// requested N" beyond that). Same-day and partial-week ranges are OK —
+// the "week aligned" label in the error is misleading; the server does
+// not require Monday-aligned dates.
+// Returns an array of week-summary objects on success. Empty array (`[]`)
+// when no sessions fall in the range — element shape on populated accounts
+// is TBD.
+//
+// POST /training/getCalendarWeekSummary
+func (UnimplementedHandler) GetCalendarWeekSummary(ctx context.Context, req *GetCalendarWeekSummaryReq, params GetCalendarWeekSummaryParams) (r GetCalendarWeekSummaryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetCurrentUser implements getCurrentUser operation.
 //
 // Returns the authenticated user's identity, localization preferences,
@@ -169,6 +253,57 @@ func (UnimplementedHandler) GetFeaturesAvailable(ctx context.Context, params Get
 	return r, ht.ErrNotImplemented
 }
 
+// GetProgressViewSummary implements getProgressViewSummary operation.
+//
+// Returns aggregated training totals (sessions, distance, duration,
+// calories, ascent/descent, zone time, sport distribution, training-benefit
+// distribution) for the inclusive `[from, to]` date range.
+// Date format is **`D.M.YYYY`** (e.g. `1.5.2026`), matching the rest of the
+// legacy `/training/*` and `/progress/*` endpoints. ISO 8601
+// (`YYYY-MM-DD`) is rejected by sibling endpoints; this one happens to
+// accept malformed/missing dates without erroring on a zero-session account
+// (it just returns zeros) — strict validation behaviour on populated
+// accounts is TBD.
+// The Polar Flow JS bundle has a Coach-vs-free fork that picks
+// `/progress/getSummaryDataAsJson` for Coach users and this URL for
+// regular users — but **both URLs are reachable from a free account** and
+// return the same schema. The "Coach gate" is purely client-side.
+//
+// POST /progress/getProgressViewSummaryAsJson
+func (UnimplementedHandler) GetProgressViewSummary(ctx context.Context, req *GetProgressViewSummaryReq, params GetProgressViewSummaryParams) (r GetProgressViewSummaryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetSleepReport implements getSleepReport operation.
+//
+// Returns one `SleepNight` per recorded night in the inclusive date range
+// `[from, to]`. Lives on its own subdomain — `https://sleep-api.flow.polar.com`
+// — but reuses the `FLOW_SESSION` cookie via cross-origin credentials
+// (response carries `Access-Control-Allow-Credentials: true` and
+// `Access-Control-Allow-Origin: https://flow.polar.com`).
+// Backed by the `getSleepNights` action in the Polar Flow JS bundle.
+// ### Range constraints (probed empirically 2026-05-26)
+// - `to - from` must be **≥ 30 days and ≤ 365 days**. Shorter or longer
+// ranges return `400` with an empty body.
+// - `from == to` (single day) → 400.
+// - `from > to` → 400.
+// The 30-day floor is unusual — there's no `/api/sleep/<date>` per-night
+// endpoint (probed: 404), so to fetch a single night you must request the
+// surrounding ≥30-day window and filter the response client-side.
+// ### Auth gotchas
+// - Missing `X-Requested-With: XMLHttpRequest` → 401 (the CSRF guard differs
+// from `flow.polar.com`'s — there 403, here 401).
+// - The cross-origin CORS check requires `Origin: https://flow.polar.com`,
+// which browsers set automatically when the calling page is on
+// `flow.polar.com`. Non-browser clients must send it explicitly.
+// - Empty body (`[]`) is the normal response on accounts with no synced
+// sleep-capable Polar device.
+//
+// GET /api/sleep/report
+func (UnimplementedHandler) GetSleepReport(ctx context.Context, params GetSleepReportParams) (r GetSleepReportRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetSports implements getSports operation.
 //
 // Returns a flat object mapping numeric sport ID (as string key) to the
@@ -178,6 +313,25 @@ func (UnimplementedHandler) GetFeaturesAvailable(ctx context.Context, params Get
 //
 // GET /api/sports/sports
 func (UnimplementedHandler) GetSports(ctx context.Context) (r GetSportsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetSummaryData implements getSummaryData operation.
+//
+// Identical request/response shape to
+// [POST /progress/getProgressViewSummaryAsJson](#operations-progress-getProgressViewSummary).
+// The Polar Flow JS bundle routes Coach users to this URL via:
+// ```js
+// CommonHelpers.context.coach
+// ? "/progress/getSummaryDataAsJson"
+// : "/progress/getProgressViewSummaryAsJson"
+// ```
+// On the free test account, both URLs return the same payload, so the
+// server-side ACL (if any) is permissive. This alias is documented for
+// completeness; clients should prefer `getProgressViewSummaryAsJson`.
+//
+// POST /progress/getSummaryDataAsJson
+func (UnimplementedHandler) GetSummaryData(ctx context.Context, req *GetSummaryDataReq, params GetSummaryDataParams) (r GetSummaryDataRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -200,6 +354,20 @@ func (UnimplementedHandler) GetTrainingSessionDetails(ctx context.Context, param
 //
 // GET /api/training/analysis/{id}/summary
 func (UnimplementedHandler) GetTrainingSessionSummary(ctx context.Context, params GetTrainingSessionSummaryParams) (r GetTrainingSessionSummaryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetTrainingTarget implements getTrainingTarget operation.
+//
+// Returns the server-normalized training-target object. Discovered during
+// update-endpoint probing 2026-05-26 — same URL as `updateTrainingTarget`.
+// Server normalizes the stored shape: each `exerciseTargets[].duration`
+// is rolled up from its phases (e.g. `"00:03:00"` for a phase loop), and
+// PHASE-leaf phases carry `duration: "00:00:00"` even when
+// `goalType: DISTANCE`.
+//
+// GET /api/trainingtarget/{id}
+func (UnimplementedHandler) GetTrainingTarget(ctx context.Context, params GetTrainingTargetParams) (r GetTrainingTargetRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -260,6 +428,34 @@ func (UnimplementedHandler) ListTrainingSessions(ctx context.Context, req *ListT
 	return r, ht.ErrNotImplemented
 }
 
+// RenameFavorite implements renameFavorite operation.
+//
+// Updates only the favorite's `name`. Distinct from
+// `POST /api/favoritetarget/{id}` (full update) — this endpoint takes a
+// tiny `{favoriteId, favoriteName}` body and is the route Polar's React UI
+// uses when the user edits the rename field.
+// ### Method gotcha
+// The verb is **`PUT`**, not POST. Sending POST returns **404** (Play
+// binds the route to PUT only). This contrasts with most other
+// `/api/favorites/*` write endpoints which use POST.
+// ### Validation
+// - `favoriteId` accepts both integer and string forms (`"81388912"`
+// works the same as `81388912`).
+// - Empty `favoriteName` → 400.
+// - Missing fields → 400.
+// - Unknown `favoriteId` → **500** (not 404). Worse, all error bodies
+// carry the same boilerplate French/English message about a "route"
+// (`"Un problème est survenu lors de l'enregistrement de l'itinéraire.
+// Réessayez."`) regardless of which favorite type you're updating —
+// that's a Polar copy/paste bug in the error catalog.
+// Missing `X-Requested-With: XMLHttpRequest` → 403 (standard CSRF guard,
+// same as the rest of `/api/*` writes).
+//
+// PUT /api/favorites/saveName
+func (UnimplementedHandler) RenameFavorite(ctx context.Context, req *RenameFavoriteReq, params RenameFavoriteParams) (r RenameFavoriteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // UpdateFavorite implements updateFavorite operation.
 //
 // Full-body update (no PUT/PATCH). Send the same shape as create plus
@@ -268,5 +464,28 @@ func (UnimplementedHandler) ListTrainingSessions(ctx context.Context, req *ListT
 //
 // POST /api/favoritetarget/{id}
 func (UnimplementedHandler) UpdateFavorite(ctx context.Context, req *Favorite, params UpdateFavoriteParams) (r UpdateFavoriteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateTrainingTarget implements updateTrainingTarget operation.
+//
+// Replaces the training target with the supplied body. **POST**, not PUT
+// or PATCH — sending PUT returns 404. The body shape is identical to
+// `POST /api/trainingtarget` (create), with two requirements for
+// successful field updates:
+// 1. Include the **existing `exerciseTargets[].id`** from
+// `GET /api/trainingtarget/{id}`. Sending `id: null` is accepted
+// (returns 200) but **silently no-ops the exerciseTarget update** —
+// only top-level fields (`name`, `description`, `datetime`) land.
+// 2. Same field semantics as create (distance in metres, datetime without
+// timezone, phaseType `PHASE`/`REPEAT`, etc.).
+// Returns **200 with an empty body** on success — note this differs from
+// `POST /api/trainingtarget` (create), which returns the new id as a
+// bare string.
+// Re-read via `GET /api/trainingtarget/{id}` to confirm the change
+// landed (especially when modifying exerciseTargets).
+//
+// POST /api/trainingtarget/{id}
+func (UnimplementedHandler) UpdateTrainingTarget(ctx context.Context, req *TrainingTargetCreate, params UpdateTrainingTargetParams) (r UpdateTrainingTargetRes, _ error) {
 	return r, ht.ErrNotImplemented
 }

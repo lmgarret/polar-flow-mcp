@@ -28,6 +28,59 @@ func trimTrailingSlashes(u *url.URL) {
 
 // Invoker invokes operations described by OpenAPI v3 specification.
 type Invoker interface {
+	// AddRouteToFavorites invokes addRouteToFavorites operation.
+	//
+	// Creates a new ROUTE-type favorite by extracting the GPS track from a
+	// completed training session's exercise. Counterpart to
+	// `POST /api/favorites/trainingTargets/importRoute` — that one ingests
+	// a GPX/TCX upload, this one references an already-recorded session.
+	// Discovered in the JS bundle as `addRouteToFavorites` mapping. Probed
+	// 2026-05-26 on an account with **no recorded sessions**, so the success
+	// path could not be reached. Validation findings below are inferred from
+	// error patterns.
+	// ### Body shape (inferred)
+	// Required field is `id` — when present (with any value), the server
+	// reaches the data-load stage and returns Polar's familiar JSON error
+	// envelope (`{"error":"...itinéraire..."}`). Any other field name
+	// (`exerciseId`, `trainingSessionId`, `tsid`, `sessionId`, …) is
+	// rejected upfront by the body parser with a generic HTML 500.
+	// Most likely `id` refers to an **exercise id** within a session — the
+	// URL path's "addExerciseRoute" wording and the existence of
+	// multi-exercise sessions both point that way — but it could also be
+	// the trainingSessionId. # TODO: confirm on a device-synced account.
+	// ### Other gotchas
+	// - Method is POST. GET → 404, PUT/PATCH presumably likewise.
+	// - Missing `X-Requested-With: XMLHttpRequest` → 403.
+	// - Error bodies use the same misleading boilerplate
+	// (`"...itinéraire..."`) as other favorites endpoints.
+	//
+	// POST /api/favorites/trainingTargets/addExerciseRoute
+	AddRouteToFavorites(ctx context.Context, request *AddRouteToFavoritesReq, params AddRouteToFavoritesParams) (AddRouteToFavoritesRes, error)
+	// ChangeFavoriteSport invokes changeFavoriteSport operation.
+	//
+	// Updates only the sport assignment of a favorite's exerciseTarget.
+	// Takes `{favoriteId, favoriteSportId, exerciseTargetId}` — both the
+	// favorite-level id AND the inner exerciseTarget id are required because
+	// a favorite can hold multiple exerciseTargets (e.g. multi-sport sessions).
+	// ### Method gotcha
+	// Same as `saveName`: the verb is **`PUT`**, not POST.
+	// ### Validation surprises
+	// Polar's server is **dangerously lenient** here. Probed 2026-05-26:
+	// | Body | Status |
+	// |---|---|
+	// | Missing `exerciseTargetId` | 400 |
+	// | Unknown `exerciseTargetId` | **200** (silent no-op — favorite not actually updated
+	// server-side) |
+	// | Unknown `favoriteSportId` (e.g. `9999`, not in `/api/sports/sports`) | **200** (sport id is
+	// accepted unchecked, then presumably 404s on watch sync) |
+	// | Missing other fields | 400 |
+	// Verify your changes by re-reading the favorite via
+	// `GET /api/favoritetarget/{id}` rather than trusting the 200.
+	// Error bodies share the same misleading boilerplate
+	// (`{error: "...itinéraire..."}`) as `saveName`.
+	//
+	// PUT /api/favorites/saveSport
+	ChangeFavoriteSport(ctx context.Context, request *ChangeFavoriteSportReq, params ChangeFavoriteSportParams) (ChangeFavoriteSportRes, error)
 	// CreateFavorite invokes createFavorite operation.
 	//
 	// Creates a reusable training-target template. Body shape is identical
@@ -106,6 +159,28 @@ type Invoker interface {
 	//
 	// GET /training/getCalendarEvents
 	GetCalendarEvents(ctx context.Context, params GetCalendarEventsParams) (GetCalendarEventsRes, error)
+	// GetCalendarWeekSummary invokes getCalendarWeekSummary operation.
+	//
+	// Returns one summary entry per ISO week intersecting `[from, to]`, used by
+	// the right-hand "week totals" strip in `/diary`. Backed by the legacy
+	// `Calendar.get.weekSummary` action in
+	// `static/13.318.0/javascript/views/diary/calendar.min.js`.
+	// ### Constraints (probed 2026-05-26)
+	// - Date format: **`D.M.YYYY`** strict (ISO 8601 rejected with
+	// `content of from (...) is not a valid date: Text '...' could not be
+	// parsed at index 4`).
+	// - `to` must be ≥ `from` (reversed → `400 from (...) date must be before
+	// to (...) date`).
+	// - **`to - from ≤ 45 days`** ("Maximum week aligned range is 45,
+	// requested N" beyond that). Same-day and partial-week ranges are OK —
+	// the "week aligned" label in the error is misleading; the server does
+	// not require Monday-aligned dates.
+	// Returns an array of week-summary objects on success. Empty array (`[]`)
+	// when no sessions fall in the range — element shape on populated accounts
+	// is TBD.
+	//
+	// POST /training/getCalendarWeekSummary
+	GetCalendarWeekSummary(ctx context.Context, request *GetCalendarWeekSummaryReq, params GetCalendarWeekSummaryParams) (GetCalendarWeekSummaryRes, error)
 	// GetCurrentUser invokes getCurrentUser operation.
 	//
 	// Returns the authenticated user's identity, localization preferences,
@@ -145,6 +220,51 @@ type Invoker interface {
 	//
 	// GET /api/features-available
 	GetFeaturesAvailable(ctx context.Context, params GetFeaturesAvailableParams) (GetFeaturesAvailableRes, error)
+	// GetProgressViewSummary invokes getProgressViewSummary operation.
+	//
+	// Returns aggregated training totals (sessions, distance, duration,
+	// calories, ascent/descent, zone time, sport distribution, training-benefit
+	// distribution) for the inclusive `[from, to]` date range.
+	// Date format is **`D.M.YYYY`** (e.g. `1.5.2026`), matching the rest of the
+	// legacy `/training/*` and `/progress/*` endpoints. ISO 8601
+	// (`YYYY-MM-DD`) is rejected by sibling endpoints; this one happens to
+	// accept malformed/missing dates without erroring on a zero-session account
+	// (it just returns zeros) — strict validation behaviour on populated
+	// accounts is TBD.
+	// The Polar Flow JS bundle has a Coach-vs-free fork that picks
+	// `/progress/getSummaryDataAsJson` for Coach users and this URL for
+	// regular users — but **both URLs are reachable from a free account** and
+	// return the same schema. The "Coach gate" is purely client-side.
+	//
+	// POST /progress/getProgressViewSummaryAsJson
+	GetProgressViewSummary(ctx context.Context, request *GetProgressViewSummaryReq, params GetProgressViewSummaryParams) (GetProgressViewSummaryRes, error)
+	// GetSleepReport invokes getSleepReport operation.
+	//
+	// Returns one `SleepNight` per recorded night in the inclusive date range
+	// `[from, to]`. Lives on its own subdomain — `https://sleep-api.flow.polar.com`
+	// — but reuses the `FLOW_SESSION` cookie via cross-origin credentials
+	// (response carries `Access-Control-Allow-Credentials: true` and
+	// `Access-Control-Allow-Origin: https://flow.polar.com`).
+	// Backed by the `getSleepNights` action in the Polar Flow JS bundle.
+	// ### Range constraints (probed empirically 2026-05-26)
+	// - `to - from` must be **≥ 30 days and ≤ 365 days**. Shorter or longer
+	// ranges return `400` with an empty body.
+	// - `from == to` (single day) → 400.
+	// - `from > to` → 400.
+	// The 30-day floor is unusual — there's no `/api/sleep/<date>` per-night
+	// endpoint (probed: 404), so to fetch a single night you must request the
+	// surrounding ≥30-day window and filter the response client-side.
+	// ### Auth gotchas
+	// - Missing `X-Requested-With: XMLHttpRequest` → 401 (the CSRF guard differs
+	// from `flow.polar.com`'s — there 403, here 401).
+	// - The cross-origin CORS check requires `Origin: https://flow.polar.com`,
+	// which browsers set automatically when the calling page is on
+	// `flow.polar.com`. Non-browser clients must send it explicitly.
+	// - Empty body (`[]`) is the normal response on accounts with no synced
+	// sleep-capable Polar device.
+	//
+	// GET /api/sleep/report
+	GetSleepReport(ctx context.Context, params GetSleepReportParams) (GetSleepReportRes, error)
 	// GetSports invokes getSports operation.
 	//
 	// Returns a flat object mapping numeric sport ID (as string key) to the
@@ -154,6 +274,22 @@ type Invoker interface {
 	//
 	// GET /api/sports/sports
 	GetSports(ctx context.Context) (GetSportsRes, error)
+	// GetSummaryData invokes getSummaryData operation.
+	//
+	// Identical request/response shape to
+	// [POST /progress/getProgressViewSummaryAsJson](#operations-progress-getProgressViewSummary).
+	// The Polar Flow JS bundle routes Coach users to this URL via:
+	// ```js
+	// CommonHelpers.context.coach
+	// ? "/progress/getSummaryDataAsJson"
+	// : "/progress/getProgressViewSummaryAsJson"
+	// ```
+	// On the free test account, both URLs return the same payload, so the
+	// server-side ACL (if any) is permissive. This alias is documented for
+	// completeness; clients should prefer `getProgressViewSummaryAsJson`.
+	//
+	// POST /progress/getSummaryDataAsJson
+	GetSummaryData(ctx context.Context, request *GetSummaryDataReq, params GetSummaryDataParams) (GetSummaryDataRes, error)
 	// GetTrainingSessionDetails invokes getTrainingSessionDetails operation.
 	//
 	// Time-series sample data (HR, GPS, power, …), laps, zones, and
@@ -170,6 +306,17 @@ type Invoker interface {
 	//
 	// GET /api/training/analysis/{id}/summary
 	GetTrainingSessionSummary(ctx context.Context, params GetTrainingSessionSummaryParams) (GetTrainingSessionSummaryRes, error)
+	// GetTrainingTarget invokes getTrainingTarget operation.
+	//
+	// Returns the server-normalized training-target object. Discovered during
+	// update-endpoint probing 2026-05-26 — same URL as `updateTrainingTarget`.
+	// Server normalizes the stored shape: each `exerciseTargets[].duration`
+	// is rolled up from its phases (e.g. `"00:03:00"` for a phase loop), and
+	// PHASE-leaf phases carry `duration: "00:00:00"` even when
+	// `goalType: DISTANCE`.
+	//
+	// GET /api/trainingtarget/{id}
+	GetTrainingTarget(ctx context.Context, params GetTrainingTargetParams) (GetTrainingTargetRes, error)
 	// ImportRoute invokes importRoute operation.
 	//
 	// Creates a route favorite (`type: "ROUTE"`) from a parsed GPX/TCX
@@ -212,6 +359,31 @@ type Invoker interface {
 	//
 	// POST /api/training/history
 	ListTrainingSessions(ctx context.Context, request *ListTrainingSessionsReq, params ListTrainingSessionsParams) (ListTrainingSessionsRes, error)
+	// RenameFavorite invokes renameFavorite operation.
+	//
+	// Updates only the favorite's `name`. Distinct from
+	// `POST /api/favoritetarget/{id}` (full update) — this endpoint takes a
+	// tiny `{favoriteId, favoriteName}` body and is the route Polar's React UI
+	// uses when the user edits the rename field.
+	// ### Method gotcha
+	// The verb is **`PUT`**, not POST. Sending POST returns **404** (Play
+	// binds the route to PUT only). This contrasts with most other
+	// `/api/favorites/*` write endpoints which use POST.
+	// ### Validation
+	// - `favoriteId` accepts both integer and string forms (`"81388912"`
+	// works the same as `81388912`).
+	// - Empty `favoriteName` → 400.
+	// - Missing fields → 400.
+	// - Unknown `favoriteId` → **500** (not 404). Worse, all error bodies
+	// carry the same boilerplate French/English message about a "route"
+	// (`"Un problème est survenu lors de l'enregistrement de l'itinéraire.
+	// Réessayez."`) regardless of which favorite type you're updating —
+	// that's a Polar copy/paste bug in the error catalog.
+	// Missing `X-Requested-With: XMLHttpRequest` → 403 (standard CSRF guard,
+	// same as the rest of `/api/*` writes).
+	//
+	// PUT /api/favorites/saveName
+	RenameFavorite(ctx context.Context, request *RenameFavoriteReq, params RenameFavoriteParams) (RenameFavoriteRes, error)
 	// UpdateFavorite invokes updateFavorite operation.
 	//
 	// Full-body update (no PUT/PATCH). Send the same shape as create plus
@@ -220,6 +392,26 @@ type Invoker interface {
 	//
 	// POST /api/favoritetarget/{id}
 	UpdateFavorite(ctx context.Context, request *Favorite, params UpdateFavoriteParams) (UpdateFavoriteRes, error)
+	// UpdateTrainingTarget invokes updateTrainingTarget operation.
+	//
+	// Replaces the training target with the supplied body. **POST**, not PUT
+	// or PATCH — sending PUT returns 404. The body shape is identical to
+	// `POST /api/trainingtarget` (create), with two requirements for
+	// successful field updates:
+	// 1. Include the **existing `exerciseTargets[].id`** from
+	// `GET /api/trainingtarget/{id}`. Sending `id: null` is accepted
+	// (returns 200) but **silently no-ops the exerciseTarget update** —
+	// only top-level fields (`name`, `description`, `datetime`) land.
+	// 2. Same field semantics as create (distance in metres, datetime without
+	// timezone, phaseType `PHASE`/`REPEAT`, etc.).
+	// Returns **200 with an empty body** on success — note this differs from
+	// `POST /api/trainingtarget` (create), which returns the new id as a
+	// bare string.
+	// Re-read via `GET /api/trainingtarget/{id}` to confirm the change
+	// landed (especially when modifying exerciseTargets).
+	//
+	// POST /api/trainingtarget/{id}
+	UpdateTrainingTarget(ctx context.Context, request *TrainingTargetCreate, params UpdateTrainingTargetParams) (UpdateTrainingTargetRes, error)
 }
 
 // Client implements OAS client.
@@ -261,6 +453,295 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 		return c.serverURL
 	}
 	return u
+}
+
+// AddRouteToFavorites invokes addRouteToFavorites operation.
+//
+// Creates a new ROUTE-type favorite by extracting the GPS track from a
+// completed training session's exercise. Counterpart to
+// `POST /api/favorites/trainingTargets/importRoute` — that one ingests
+// a GPX/TCX upload, this one references an already-recorded session.
+// Discovered in the JS bundle as `addRouteToFavorites` mapping. Probed
+// 2026-05-26 on an account with **no recorded sessions**, so the success
+// path could not be reached. Validation findings below are inferred from
+// error patterns.
+// ### Body shape (inferred)
+// Required field is `id` — when present (with any value), the server
+// reaches the data-load stage and returns Polar's familiar JSON error
+// envelope (`{"error":"...itinéraire..."}`). Any other field name
+// (`exerciseId`, `trainingSessionId`, `tsid`, `sessionId`, …) is
+// rejected upfront by the body parser with a generic HTML 500.
+// Most likely `id` refers to an **exercise id** within a session — the
+// URL path's "addExerciseRoute" wording and the existence of
+// multi-exercise sessions both point that way — but it could also be
+// the trainingSessionId. # TODO: confirm on a device-synced account.
+// ### Other gotchas
+// - Method is POST. GET → 404, PUT/PATCH presumably likewise.
+// - Missing `X-Requested-With: XMLHttpRequest` → 403.
+// - Error bodies use the same misleading boilerplate
+// (`"...itinéraire..."`) as other favorites endpoints.
+//
+// POST /api/favorites/trainingTargets/addExerciseRoute
+func (c *Client) AddRouteToFavorites(ctx context.Context, request *AddRouteToFavoritesReq, params AddRouteToFavoritesParams) (AddRouteToFavoritesRes, error) {
+	res, err := c.sendAddRouteToFavorites(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendAddRouteToFavorites(ctx context.Context, request *AddRouteToFavoritesReq, params AddRouteToFavoritesParams) (res AddRouteToFavoritesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("addRouteToFavorites"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/api/favorites/trainingTargets/addExerciseRoute"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, AddRouteToFavoritesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/api/favorites/trainingTargets/addExerciseRoute"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeAddRouteToFavoritesRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, AddRouteToFavoritesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeAddRouteToFavoritesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ChangeFavoriteSport invokes changeFavoriteSport operation.
+//
+// Updates only the sport assignment of a favorite's exerciseTarget.
+// Takes `{favoriteId, favoriteSportId, exerciseTargetId}` — both the
+// favorite-level id AND the inner exerciseTarget id are required because
+// a favorite can hold multiple exerciseTargets (e.g. multi-sport sessions).
+// ### Method gotcha
+// Same as `saveName`: the verb is **`PUT`**, not POST.
+// ### Validation surprises
+// Polar's server is **dangerously lenient** here. Probed 2026-05-26:
+// | Body | Status |
+// |---|---|
+// | Missing `exerciseTargetId` | 400 |
+// | Unknown `exerciseTargetId` | **200** (silent no-op — favorite not actually updated
+// server-side) |
+// | Unknown `favoriteSportId` (e.g. `9999`, not in `/api/sports/sports`) | **200** (sport id is
+// accepted unchecked, then presumably 404s on watch sync) |
+// | Missing other fields | 400 |
+// Verify your changes by re-reading the favorite via
+// `GET /api/favoritetarget/{id}` rather than trusting the 200.
+// Error bodies share the same misleading boilerplate
+// (`{error: "...itinéraire..."}`) as `saveName`.
+//
+// PUT /api/favorites/saveSport
+func (c *Client) ChangeFavoriteSport(ctx context.Context, request *ChangeFavoriteSportReq, params ChangeFavoriteSportParams) (ChangeFavoriteSportRes, error) {
+	res, err := c.sendChangeFavoriteSport(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendChangeFavoriteSport(ctx context.Context, request *ChangeFavoriteSportReq, params ChangeFavoriteSportParams) (res ChangeFavoriteSportRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("changeFavoriteSport"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/api/favorites/saveSport"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ChangeFavoriteSportOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/api/favorites/saveSport"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeChangeFavoriteSportRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, ChangeFavoriteSportOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeChangeFavoriteSportResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
 }
 
 // CreateFavorite invokes createFavorite operation.
@@ -1486,6 +1967,146 @@ func (c *Client) sendGetCalendarEvents(ctx context.Context, params GetCalendarEv
 	return result, nil
 }
 
+// GetCalendarWeekSummary invokes getCalendarWeekSummary operation.
+//
+// Returns one summary entry per ISO week intersecting `[from, to]`, used by
+// the right-hand "week totals" strip in `/diary`. Backed by the legacy
+// `Calendar.get.weekSummary` action in
+// `static/13.318.0/javascript/views/diary/calendar.min.js`.
+// ### Constraints (probed 2026-05-26)
+// - Date format: **`D.M.YYYY`** strict (ISO 8601 rejected with
+// `content of from (...) is not a valid date: Text '...' could not be
+// parsed at index 4`).
+// - `to` must be ≥ `from` (reversed → `400 from (...) date must be before
+// to (...) date`).
+// - **`to - from ≤ 45 days`** ("Maximum week aligned range is 45,
+// requested N" beyond that). Same-day and partial-week ranges are OK —
+// the "week aligned" label in the error is misleading; the server does
+// not require Monday-aligned dates.
+// Returns an array of week-summary objects on success. Empty array (`[]`)
+// when no sessions fall in the range — element shape on populated accounts
+// is TBD.
+//
+// POST /training/getCalendarWeekSummary
+func (c *Client) GetCalendarWeekSummary(ctx context.Context, request *GetCalendarWeekSummaryReq, params GetCalendarWeekSummaryParams) (GetCalendarWeekSummaryRes, error) {
+	res, err := c.sendGetCalendarWeekSummary(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendGetCalendarWeekSummary(ctx context.Context, request *GetCalendarWeekSummaryReq, params GetCalendarWeekSummaryParams) (res GetCalendarWeekSummaryRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getCalendarWeekSummary"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/training/getCalendarWeekSummary"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetCalendarWeekSummaryOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/training/getCalendarWeekSummary"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeGetCalendarWeekSummaryRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, GetCalendarWeekSummaryOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetCalendarWeekSummaryResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetCurrentUser invokes getCurrentUser operation.
 //
 // Returns the authenticated user's identity, localization preferences,
@@ -1983,6 +2604,316 @@ func (c *Client) sendGetFeaturesAvailable(ctx context.Context, params GetFeature
 	return result, nil
 }
 
+// GetProgressViewSummary invokes getProgressViewSummary operation.
+//
+// Returns aggregated training totals (sessions, distance, duration,
+// calories, ascent/descent, zone time, sport distribution, training-benefit
+// distribution) for the inclusive `[from, to]` date range.
+// Date format is **`D.M.YYYY`** (e.g. `1.5.2026`), matching the rest of the
+// legacy `/training/*` and `/progress/*` endpoints. ISO 8601
+// (`YYYY-MM-DD`) is rejected by sibling endpoints; this one happens to
+// accept malformed/missing dates without erroring on a zero-session account
+// (it just returns zeros) — strict validation behaviour on populated
+// accounts is TBD.
+// The Polar Flow JS bundle has a Coach-vs-free fork that picks
+// `/progress/getSummaryDataAsJson` for Coach users and this URL for
+// regular users — but **both URLs are reachable from a free account** and
+// return the same schema. The "Coach gate" is purely client-side.
+//
+// POST /progress/getProgressViewSummaryAsJson
+func (c *Client) GetProgressViewSummary(ctx context.Context, request *GetProgressViewSummaryReq, params GetProgressViewSummaryParams) (GetProgressViewSummaryRes, error) {
+	res, err := c.sendGetProgressViewSummary(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendGetProgressViewSummary(ctx context.Context, request *GetProgressViewSummaryReq, params GetProgressViewSummaryParams) (res GetProgressViewSummaryRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getProgressViewSummary"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/progress/getProgressViewSummaryAsJson"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetProgressViewSummaryOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/progress/getProgressViewSummaryAsJson"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeGetProgressViewSummaryRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, GetProgressViewSummaryOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetProgressViewSummaryResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetSleepReport invokes getSleepReport operation.
+//
+// Returns one `SleepNight` per recorded night in the inclusive date range
+// `[from, to]`. Lives on its own subdomain — `https://sleep-api.flow.polar.com`
+// — but reuses the `FLOW_SESSION` cookie via cross-origin credentials
+// (response carries `Access-Control-Allow-Credentials: true` and
+// `Access-Control-Allow-Origin: https://flow.polar.com`).
+// Backed by the `getSleepNights` action in the Polar Flow JS bundle.
+// ### Range constraints (probed empirically 2026-05-26)
+// - `to - from` must be **≥ 30 days and ≤ 365 days**. Shorter or longer
+// ranges return `400` with an empty body.
+// - `from == to` (single day) → 400.
+// - `from > to` → 400.
+// The 30-day floor is unusual — there's no `/api/sleep/<date>` per-night
+// endpoint (probed: 404), so to fetch a single night you must request the
+// surrounding ≥30-day window and filter the response client-side.
+// ### Auth gotchas
+// - Missing `X-Requested-With: XMLHttpRequest` → 401 (the CSRF guard differs
+// from `flow.polar.com`'s — there 403, here 401).
+// - The cross-origin CORS check requires `Origin: https://flow.polar.com`,
+// which browsers set automatically when the calling page is on
+// `flow.polar.com`. Non-browser clients must send it explicitly.
+// - Empty body (`[]`) is the normal response on accounts with no synced
+// sleep-capable Polar device.
+//
+// GET /api/sleep/report
+func (c *Client) GetSleepReport(ctx context.Context, params GetSleepReportParams) (GetSleepReportRes, error) {
+	res, err := c.sendGetSleepReport(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetSleepReport(ctx context.Context, params GetSleepReportParams) (res GetSleepReportRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getSleepReport"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/api/sleep/report"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSleepReportOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/api/sleep/report"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "from" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "from",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.DateToString(params.From))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "to" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "to",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.DateToString(params.To))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, GetSleepReportOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetSleepReportResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetSports invokes getSports operation.
 //
 // Returns a flat object mapping numeric sport ID (as string key) to the
@@ -2053,6 +2984,140 @@ func (c *Client) sendGetSports(ctx context.Context) (res GetSportsRes, err error
 
 	stage = "DecodeResponse"
 	result, err := decodeGetSportsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetSummaryData invokes getSummaryData operation.
+//
+// Identical request/response shape to
+// [POST /progress/getProgressViewSummaryAsJson](#operations-progress-getProgressViewSummary).
+// The Polar Flow JS bundle routes Coach users to this URL via:
+// ```js
+// CommonHelpers.context.coach
+// ? "/progress/getSummaryDataAsJson"
+// : "/progress/getProgressViewSummaryAsJson"
+// ```
+// On the free test account, both URLs return the same payload, so the
+// server-side ACL (if any) is permissive. This alias is documented for
+// completeness; clients should prefer `getProgressViewSummaryAsJson`.
+//
+// POST /progress/getSummaryDataAsJson
+func (c *Client) GetSummaryData(ctx context.Context, request *GetSummaryDataReq, params GetSummaryDataParams) (GetSummaryDataRes, error) {
+	res, err := c.sendGetSummaryData(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendGetSummaryData(ctx context.Context, request *GetSummaryDataReq, params GetSummaryDataParams) (res GetSummaryDataRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getSummaryData"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/progress/getSummaryDataAsJson"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSummaryDataOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/progress/getSummaryDataAsJson"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeGetSummaryDataRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, GetSummaryDataOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetSummaryDataResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -2309,6 +3374,136 @@ func (c *Client) sendGetTrainingSessionSummary(ctx context.Context, params GetTr
 
 	stage = "DecodeResponse"
 	result, err := decodeGetTrainingSessionSummaryResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetTrainingTarget invokes getTrainingTarget operation.
+//
+// Returns the server-normalized training-target object. Discovered during
+// update-endpoint probing 2026-05-26 — same URL as `updateTrainingTarget`.
+// Server normalizes the stored shape: each `exerciseTargets[].duration`
+// is rolled up from its phases (e.g. `"00:03:00"` for a phase loop), and
+// PHASE-leaf phases carry `duration: "00:00:00"` even when
+// `goalType: DISTANCE`.
+//
+// GET /api/trainingtarget/{id}
+func (c *Client) GetTrainingTarget(ctx context.Context, params GetTrainingTargetParams) (GetTrainingTargetRes, error) {
+	res, err := c.sendGetTrainingTarget(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetTrainingTarget(ctx context.Context, params GetTrainingTargetParams) (res GetTrainingTargetRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getTrainingTarget"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/api/trainingtarget/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetTrainingTargetOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/api/trainingtarget/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.IntToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, GetTrainingTargetOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetTrainingTargetResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -2897,6 +4092,149 @@ func (c *Client) sendListTrainingSessions(ctx context.Context, request *ListTrai
 	return result, nil
 }
 
+// RenameFavorite invokes renameFavorite operation.
+//
+// Updates only the favorite's `name`. Distinct from
+// `POST /api/favoritetarget/{id}` (full update) — this endpoint takes a
+// tiny `{favoriteId, favoriteName}` body and is the route Polar's React UI
+// uses when the user edits the rename field.
+// ### Method gotcha
+// The verb is **`PUT`**, not POST. Sending POST returns **404** (Play
+// binds the route to PUT only). This contrasts with most other
+// `/api/favorites/*` write endpoints which use POST.
+// ### Validation
+// - `favoriteId` accepts both integer and string forms (`"81388912"`
+// works the same as `81388912`).
+// - Empty `favoriteName` → 400.
+// - Missing fields → 400.
+// - Unknown `favoriteId` → **500** (not 404). Worse, all error bodies
+// carry the same boilerplate French/English message about a "route"
+// (`"Un problème est survenu lors de l'enregistrement de l'itinéraire.
+// Réessayez."`) regardless of which favorite type you're updating —
+// that's a Polar copy/paste bug in the error catalog.
+// Missing `X-Requested-With: XMLHttpRequest` → 403 (standard CSRF guard,
+// same as the rest of `/api/*` writes).
+//
+// PUT /api/favorites/saveName
+func (c *Client) RenameFavorite(ctx context.Context, request *RenameFavoriteReq, params RenameFavoriteParams) (RenameFavoriteRes, error) {
+	res, err := c.sendRenameFavorite(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendRenameFavorite(ctx context.Context, request *RenameFavoriteReq, params RenameFavoriteParams) (res RenameFavoriteRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("renameFavorite"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/api/favorites/saveName"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RenameFavoriteOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/api/favorites/saveName"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeRenameFavoriteRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, RenameFavoriteOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRenameFavoriteResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // UpdateFavorite invokes updateFavorite operation.
 //
 // Full-body update (no PUT/PATCH). Send the same shape as create plus
@@ -3034,6 +4372,162 @@ func (c *Client) sendUpdateFavorite(ctx context.Context, request *Favorite, para
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateFavoriteResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateTrainingTarget invokes updateTrainingTarget operation.
+//
+// Replaces the training target with the supplied body. **POST**, not PUT
+// or PATCH — sending PUT returns 404. The body shape is identical to
+// `POST /api/trainingtarget` (create), with two requirements for
+// successful field updates:
+// 1. Include the **existing `exerciseTargets[].id`** from
+// `GET /api/trainingtarget/{id}`. Sending `id: null` is accepted
+// (returns 200) but **silently no-ops the exerciseTarget update** —
+// only top-level fields (`name`, `description`, `datetime`) land.
+// 2. Same field semantics as create (distance in metres, datetime without
+// timezone, phaseType `PHASE`/`REPEAT`, etc.).
+// Returns **200 with an empty body** on success — note this differs from
+// `POST /api/trainingtarget` (create), which returns the new id as a
+// bare string.
+// Re-read via `GET /api/trainingtarget/{id}` to confirm the change
+// landed (especially when modifying exerciseTargets).
+//
+// POST /api/trainingtarget/{id}
+func (c *Client) UpdateTrainingTarget(ctx context.Context, request *TrainingTargetCreate, params UpdateTrainingTargetParams) (UpdateTrainingTargetRes, error) {
+	res, err := c.sendUpdateTrainingTarget(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateTrainingTarget(ctx context.Context, request *TrainingTargetCreate, params UpdateTrainingTargetParams) (res UpdateTrainingTargetRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateTrainingTarget"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/api/trainingtarget/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateTrainingTargetOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/api/trainingtarget/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.IntToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateTrainingTargetRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, UpdateTrainingTargetOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateTrainingTargetResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

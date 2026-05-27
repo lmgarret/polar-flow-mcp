@@ -33,10 +33,14 @@ runs. The password is held in memory only.
 | `create_training_target` | Schedule a target (warmup / repeat / cooldown phases) |
 | `list_training_targets` | Targets in a date range |
 | `delete_training_target` | Delete a target by ID |
+| `get_training_target` | Read one target by ID |
+| `update_training_target` | Full-replace edit of one target by ID |
 | `get_calendar_events` | Raw calendar events in a date range |
+| `get_calendar_week_summary` | Per-ISO-week totals strip (≤45-day range) |
 | `list_training_sessions` | Completed sessions in a date range |
 | `get_training_session_summary` | Summary view of one session |
 | `get_training_session_details` | Lap and sample detail of one session |
+| `get_progress_summary` | Aggregated training totals over a range |
 
 ## Configuration
 

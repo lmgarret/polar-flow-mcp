@@ -11,28 +11,52 @@ import (
 )
 
 var (
-	rn8AllowedHeaders = map[string]string{
+	rn11AllowedHeaders = map[string]string{
 		"DELETE": "X-Requested-With",
 	}
-	rn35AllowedHeaders = map[string]string{
-		"POST": "Content-Type,X-Requested-With",
+	rn53AllowedHeaders = map[string]string{
+		"PUT": "Content-Type,X-Requested-With",
+	}
+	rn3AllowedHeaders = map[string]string{
+		"PUT": "Content-Type,X-Requested-With",
 	}
 	rn1AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
 	}
-	rn23AllowedHeaders = map[string]string{
-		"POST": "Content-Type,X-Requested-With",
-	}
-	rn3AllowedHeaders = map[string]string{
-		"POST": "Content-Type,X-Requested-With",
-	}
-	rn12AllowedHeaders = map[string]string{
-		"DELETE": "X-Requested-With",
-	}
-	rn39AllowedHeaders = map[string]string{
+	rn47AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
 	}
 	rn5AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn28AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn34AllowedHeaders = map[string]string{
+		"GET": "X-Requested-With",
+	}
+	rn7AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn15AllowedHeaders = map[string]string{
+		"DELETE": "X-Requested-With",
+	}
+	rn51AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn9AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn45AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn33AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn38AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn24AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
 	}
 )
@@ -302,7 +326,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										default:
 											s.notAllowed(w, r, notAllowedParams{
 												allowedMethods: "DELETE",
-												allowedHeaders: rn8AllowedHeaders,
+												allowedHeaders: rn11AllowedHeaders,
 												acceptPost:     "",
 												acceptPatch:    "",
 											})
@@ -372,29 +396,132 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										return
 									}
 
-								case 't': // Prefix: "trainingTargets/importRoute"
+								case 's': // Prefix: "save"
 
-									if l := len("trainingTargets/importRoute"); len(elem) >= l && elem[0:l] == "trainingTargets/importRoute" {
+									if l := len("save"); len(elem) >= l && elem[0:l] == "save" {
 										elem = elem[l:]
 									} else {
 										break
 									}
 
 									if len(elem) == 0 {
-										// Leaf node.
-										switch r.Method {
-										case "POST":
-											s.handleImportRouteRequest([0]string{}, elemIsEscaped, w, r)
-										default:
-											s.notAllowed(w, r, notAllowedParams{
-												allowedMethods: "POST",
-												allowedHeaders: rn35AllowedHeaders,
-												acceptPost:     "application/json",
-												acceptPatch:    "",
-											})
+										break
+									}
+									switch elem[0] {
+									case 'N': // Prefix: "Name"
+
+										if l := len("Name"); len(elem) >= l && elem[0:l] == "Name" {
+											elem = elem[l:]
+										} else {
+											break
 										}
 
-										return
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "PUT":
+												s.handleRenameFavoriteRequest([0]string{}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, notAllowedParams{
+													allowedMethods: "PUT",
+													allowedHeaders: rn53AllowedHeaders,
+													acceptPost:     "",
+													acceptPatch:    "",
+												})
+											}
+
+											return
+										}
+
+									case 'S': // Prefix: "Sport"
+
+										if l := len("Sport"); len(elem) >= l && elem[0:l] == "Sport" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "PUT":
+												s.handleChangeFavoriteSportRequest([0]string{}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, notAllowedParams{
+													allowedMethods: "PUT",
+													allowedHeaders: rn3AllowedHeaders,
+													acceptPost:     "",
+													acceptPatch:    "",
+												})
+											}
+
+											return
+										}
+
+									}
+
+								case 't': // Prefix: "trainingTargets/"
+
+									if l := len("trainingTargets/"); len(elem) >= l && elem[0:l] == "trainingTargets/" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'a': // Prefix: "addExerciseRoute"
+
+										if l := len("addExerciseRoute"); len(elem) >= l && elem[0:l] == "addExerciseRoute" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleAddRouteToFavoritesRequest([0]string{}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, notAllowedParams{
+													allowedMethods: "POST",
+													allowedHeaders: rn1AllowedHeaders,
+													acceptPost:     "application/json",
+													acceptPatch:    "",
+												})
+											}
+
+											return
+										}
+
+									case 'i': // Prefix: "importRoute"
+
+										if l := len("importRoute"); len(elem) >= l && elem[0:l] == "importRoute" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch r.Method {
+											case "POST":
+												s.handleImportRouteRequest([0]string{}, elemIsEscaped, w, r)
+											default:
+												s.notAllowed(w, r, notAllowedParams{
+													allowedMethods: "POST",
+													allowedHeaders: rn47AllowedHeaders,
+													acceptPost:     "application/json",
+													acceptPatch:    "",
+												})
+											}
+
+											return
+										}
+
 									}
 
 								}
@@ -416,7 +543,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn1AllowedHeaders,
+										allowedHeaders: rn5AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -456,7 +583,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "GET,POST",
-											allowedHeaders: rn23AllowedHeaders,
+											allowedHeaders: rn28AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -496,29 +623,68 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 					}
 
-				case 's': // Prefix: "sports/sports"
+				case 's': // Prefix: "s"
 
-					if l := len("sports/sports"); len(elem) >= l && elem[0:l] == "sports/sports" {
+					if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
 					if len(elem) == 0 {
-						// Leaf node.
-						switch r.Method {
-						case "GET":
-							s.handleGetSportsRequest([0]string{}, elemIsEscaped, w, r)
-						default:
-							s.notAllowed(w, r, notAllowedParams{
-								allowedMethods: "GET",
-								allowedHeaders: nil,
-								acceptPost:     "",
-								acceptPatch:    "",
-							})
+						break
+					}
+					switch elem[0] {
+					case 'l': // Prefix: "leep/report"
+
+						if l := len("leep/report"); len(elem) >= l && elem[0:l] == "leep/report" {
+							elem = elem[l:]
+						} else {
+							break
 						}
 
-						return
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "GET":
+								s.handleGetSleepReportRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, notAllowedParams{
+									allowedMethods: "GET",
+									allowedHeaders: rn34AllowedHeaders,
+									acceptPost:     "",
+									acceptPatch:    "",
+								})
+							}
+
+							return
+						}
+
+					case 'p': // Prefix: "ports/sports"
+
+						if l := len("ports/sports"); len(elem) >= l && elem[0:l] == "ports/sports" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "GET":
+								s.handleGetSportsRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, notAllowedParams{
+									allowedMethods: "GET",
+									allowedHeaders: nil,
+									acceptPost:     "",
+									acceptPatch:    "",
+								})
+							}
+
+							return
+						}
+
 					}
 
 				case 't': // Prefix: "training"
@@ -652,7 +818,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn3AllowedHeaders,
+										allowedHeaders: rn7AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -700,7 +866,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "DELETE",
-											allowedHeaders: rn12AllowedHeaders,
+											allowedHeaders: rn15AllowedHeaders,
 											acceptPost:     "",
 											acceptPatch:    "",
 										})
@@ -727,7 +893,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn39AllowedHeaders,
+										allowedHeaders: rn51AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -747,14 +913,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						}
 
 						if len(elem) == 0 {
-							// Leaf node.
 							switch r.Method {
 							case "POST":
 								s.handleCreateTrainingTargetRequest([0]string{}, elemIsEscaped, w, r)
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn5AllowedHeaders,
+									allowedHeaders: rn9AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -762,7 +927,113 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 							return
 						}
+						switch elem[0] {
+						case '/': // Prefix: "/"
 
+							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							// Param: "id"
+							// Leaf parameter, slashes are prohibited
+							idx := strings.IndexByte(elem, '/')
+							if idx >= 0 {
+								break
+							}
+							args[0] = elem
+							elem = ""
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "GET":
+									s.handleGetTrainingTargetRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								case "POST":
+									s.handleUpdateTrainingTargetRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "GET,POST",
+										allowedHeaders: rn45AllowedHeaders,
+										acceptPost:     "application/json",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						}
+
+					}
+
+				}
+
+			case 'p': // Prefix: "progress/get"
+
+				if l := len("progress/get"); len(elem) >= l && elem[0:l] == "progress/get" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 'P': // Prefix: "ProgressViewSummaryAsJson"
+
+					if l := len("ProgressViewSummaryAsJson"); len(elem) >= l && elem[0:l] == "ProgressViewSummaryAsJson" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleGetProgressViewSummaryRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, notAllowedParams{
+								allowedMethods: "POST",
+								allowedHeaders: rn33AllowedHeaders,
+								acceptPost:     "application/json",
+								acceptPatch:    "",
+							})
+						}
+
+						return
+					}
+
+				case 'S': // Prefix: "SummaryDataAsJson"
+
+					if l := len("SummaryDataAsJson"); len(elem) >= l && elem[0:l] == "SummaryDataAsJson" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleGetSummaryDataRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, notAllowedParams{
+								allowedMethods: "POST",
+								allowedHeaders: rn38AllowedHeaders,
+								acceptPost:     "application/json",
+								acceptPatch:    "",
+							})
+						}
+
+						return
 					}
 
 				}
@@ -779,29 +1050,68 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 				switch elem[0] {
-				case 'g': // Prefix: "getCalendarEvents"
+				case 'g': // Prefix: "getCalendar"
 
-					if l := len("getCalendarEvents"); len(elem) >= l && elem[0:l] == "getCalendarEvents" {
+					if l := len("getCalendar"); len(elem) >= l && elem[0:l] == "getCalendar" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
 					if len(elem) == 0 {
-						// Leaf node.
-						switch r.Method {
-						case "GET":
-							s.handleGetCalendarEventsRequest([0]string{}, elemIsEscaped, w, r)
-						default:
-							s.notAllowed(w, r, notAllowedParams{
-								allowedMethods: "GET",
-								allowedHeaders: nil,
-								acceptPost:     "",
-								acceptPatch:    "",
-							})
+						break
+					}
+					switch elem[0] {
+					case 'E': // Prefix: "Events"
+
+						if l := len("Events"); len(elem) >= l && elem[0:l] == "Events" {
+							elem = elem[l:]
+						} else {
+							break
 						}
 
-						return
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "GET":
+								s.handleGetCalendarEventsRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, notAllowedParams{
+									allowedMethods: "GET",
+									allowedHeaders: nil,
+									acceptPost:     "",
+									acceptPatch:    "",
+								})
+							}
+
+							return
+						}
+
+					case 'W': // Prefix: "WeekSummary"
+
+						if l := len("WeekSummary"); len(elem) >= l && elem[0:l] == "WeekSummary" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "POST":
+								s.handleGetCalendarWeekSummaryRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, notAllowedParams{
+									allowedMethods: "POST",
+									allowedHeaders: rn24AllowedHeaders,
+									acceptPost:     "application/json",
+									acceptPatch:    "",
+								})
+							}
+
+							return
+						}
+
 					}
 
 				case 't': // Prefix: "target/"
@@ -1222,29 +1532,132 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										}
 									}
 
-								case 't': // Prefix: "trainingTargets/importRoute"
+								case 's': // Prefix: "save"
 
-									if l := len("trainingTargets/importRoute"); len(elem) >= l && elem[0:l] == "trainingTargets/importRoute" {
+									if l := len("save"); len(elem) >= l && elem[0:l] == "save" {
 										elem = elem[l:]
 									} else {
 										break
 									}
 
 									if len(elem) == 0 {
-										// Leaf node.
-										switch method {
-										case "POST":
-											r.name = ImportRouteOperation
-											r.summary = "Import a GPX/TCX route as a favorite"
-											r.operationID = "importRoute"
-											r.operationGroup = ""
-											r.pathPattern = "/api/favorites/trainingTargets/importRoute"
-											r.args = args
-											r.count = 0
-											return r, true
-										default:
-											return
+										break
+									}
+									switch elem[0] {
+									case 'N': // Prefix: "Name"
+
+										if l := len("Name"); len(elem) >= l && elem[0:l] == "Name" {
+											elem = elem[l:]
+										} else {
+											break
 										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "PUT":
+												r.name = RenameFavoriteOperation
+												r.summary = "Rename a favorite (granular update)"
+												r.operationID = "renameFavorite"
+												r.operationGroup = ""
+												r.pathPattern = "/api/favorites/saveName"
+												r.args = args
+												r.count = 0
+												return r, true
+											default:
+												return
+											}
+										}
+
+									case 'S': // Prefix: "Sport"
+
+										if l := len("Sport"); len(elem) >= l && elem[0:l] == "Sport" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "PUT":
+												r.name = ChangeFavoriteSportOperation
+												r.summary = "Change a favorite's sport (granular update)"
+												r.operationID = "changeFavoriteSport"
+												r.operationGroup = ""
+												r.pathPattern = "/api/favorites/saveSport"
+												r.args = args
+												r.count = 0
+												return r, true
+											default:
+												return
+											}
+										}
+
+									}
+
+								case 't': // Prefix: "trainingTargets/"
+
+									if l := len("trainingTargets/"); len(elem) >= l && elem[0:l] == "trainingTargets/" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										break
+									}
+									switch elem[0] {
+									case 'a': // Prefix: "addExerciseRoute"
+
+										if l := len("addExerciseRoute"); len(elem) >= l && elem[0:l] == "addExerciseRoute" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "POST":
+												r.name = AddRouteToFavoritesOperation
+												r.summary = "Create a route favorite from a recorded session's GPS track"
+												r.operationID = "addRouteToFavorites"
+												r.operationGroup = ""
+												r.pathPattern = "/api/favorites/trainingTargets/addExerciseRoute"
+												r.args = args
+												r.count = 0
+												return r, true
+											default:
+												return
+											}
+										}
+
+									case 'i': // Prefix: "importRoute"
+
+										if l := len("importRoute"); len(elem) >= l && elem[0:l] == "importRoute" {
+											elem = elem[l:]
+										} else {
+											break
+										}
+
+										if len(elem) == 0 {
+											// Leaf node.
+											switch method {
+											case "POST":
+												r.name = ImportRouteOperation
+												r.summary = "Import a GPX/TCX route as a favorite"
+												r.operationID = "importRoute"
+												r.operationGroup = ""
+												r.pathPattern = "/api/favorites/trainingTargets/importRoute"
+												r.args = args
+												r.count = 0
+												return r, true
+											default:
+												return
+											}
+										}
+
 									}
 
 								}
@@ -1349,29 +1762,68 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 
 					}
 
-				case 's': // Prefix: "sports/sports"
+				case 's': // Prefix: "s"
 
-					if l := len("sports/sports"); len(elem) >= l && elem[0:l] == "sports/sports" {
+					if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
 					if len(elem) == 0 {
-						// Leaf node.
-						switch method {
-						case "GET":
-							r.name = GetSportsOperation
-							r.summary = "List all sports with their numeric IDs"
-							r.operationID = "getSports"
-							r.operationGroup = ""
-							r.pathPattern = "/api/sports/sports"
-							r.args = args
-							r.count = 0
-							return r, true
-						default:
-							return
+						break
+					}
+					switch elem[0] {
+					case 'l': // Prefix: "leep/report"
+
+						if l := len("leep/report"); len(elem) >= l && elem[0:l] == "leep/report" {
+							elem = elem[l:]
+						} else {
+							break
 						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "GET":
+								r.name = GetSleepReportOperation
+								r.summary = "Sleep nights report"
+								r.operationID = "getSleepReport"
+								r.operationGroup = ""
+								r.pathPattern = "/api/sleep/report"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+
+					case 'p': // Prefix: "ports/sports"
+
+						if l := len("ports/sports"); len(elem) >= l && elem[0:l] == "ports/sports" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "GET":
+								r.name = GetSportsOperation
+								r.summary = "List all sports with their numeric IDs"
+								r.operationID = "getSports"
+								r.operationGroup = ""
+								r.pathPattern = "/api/sports/sports"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+
 					}
 
 				case 't': // Prefix: "training"
@@ -1594,7 +2046,6 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						}
 
 						if len(elem) == 0 {
-							// Leaf node.
 							switch method {
 							case "POST":
 								r.name = CreateTrainingTargetOperation
@@ -1609,7 +2060,116 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								return
 							}
 						}
+						switch elem[0] {
+						case '/': // Prefix: "/"
 
+							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							// Param: "id"
+							// Leaf parameter, slashes are prohibited
+							idx := strings.IndexByte(elem, '/')
+							if idx >= 0 {
+								break
+							}
+							args[0] = elem
+							elem = ""
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "GET":
+									r.name = GetTrainingTargetOperation
+									r.summary = "Read a training target"
+									r.operationID = "getTrainingTarget"
+									r.operationGroup = ""
+									r.pathPattern = "/api/trainingtarget/{id}"
+									r.args = args
+									r.count = 1
+									return r, true
+								case "POST":
+									r.name = UpdateTrainingTargetOperation
+									r.summary = "Update a training target (full replace)"
+									r.operationID = "updateTrainingTarget"
+									r.operationGroup = ""
+									r.pathPattern = "/api/trainingtarget/{id}"
+									r.args = args
+									r.count = 1
+									return r, true
+								default:
+									return
+								}
+							}
+
+						}
+
+					}
+
+				}
+
+			case 'p': // Prefix: "progress/get"
+
+				if l := len("progress/get"); len(elem) >= l && elem[0:l] == "progress/get" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 'P': // Prefix: "ProgressViewSummaryAsJson"
+
+					if l := len("ProgressViewSummaryAsJson"); len(elem) >= l && elem[0:l] == "ProgressViewSummaryAsJson" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "POST":
+							r.name = GetProgressViewSummaryOperation
+							r.summary = "Training summary totals over a date range"
+							r.operationID = "getProgressViewSummary"
+							r.operationGroup = ""
+							r.pathPattern = "/progress/getProgressViewSummaryAsJson"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+				case 'S': // Prefix: "SummaryDataAsJson"
+
+					if l := len("SummaryDataAsJson"); len(elem) >= l && elem[0:l] == "SummaryDataAsJson" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "POST":
+							r.name = GetSummaryDataOperation
+							r.summary = "Training summary totals (Coach variant — same shape as getProgressViewSummaryAsJson)"
+							r.operationID = "getSummaryData"
+							r.operationGroup = ""
+							r.pathPattern = "/progress/getSummaryDataAsJson"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
 					}
 
 				}
@@ -1626,29 +2186,68 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					break
 				}
 				switch elem[0] {
-				case 'g': // Prefix: "getCalendarEvents"
+				case 'g': // Prefix: "getCalendar"
 
-					if l := len("getCalendarEvents"); len(elem) >= l && elem[0:l] == "getCalendarEvents" {
+					if l := len("getCalendar"); len(elem) >= l && elem[0:l] == "getCalendar" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
 					if len(elem) == 0 {
-						// Leaf node.
-						switch method {
-						case "GET":
-							r.name = GetCalendarEventsOperation
-							r.summary = "List calendar events (includes training targets)"
-							r.operationID = "getCalendarEvents"
-							r.operationGroup = ""
-							r.pathPattern = "/training/getCalendarEvents"
-							r.args = args
-							r.count = 0
-							return r, true
-						default:
-							return
+						break
+					}
+					switch elem[0] {
+					case 'E': // Prefix: "Events"
+
+						if l := len("Events"); len(elem) >= l && elem[0:l] == "Events" {
+							elem = elem[l:]
+						} else {
+							break
 						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "GET":
+								r.name = GetCalendarEventsOperation
+								r.summary = "List calendar events (includes training targets)"
+								r.operationID = "getCalendarEvents"
+								r.operationGroup = ""
+								r.pathPattern = "/training/getCalendarEvents"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+
+					case 'W': // Prefix: "WeekSummary"
+
+						if l := len("WeekSummary"); len(elem) >= l && elem[0:l] == "WeekSummary" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "POST":
+								r.name = GetCalendarWeekSummaryOperation
+								r.summary = "Weekly summary strip for the diary calendar"
+								r.operationID = "getCalendarWeekSummary"
+								r.operationGroup = ""
+								r.pathPattern = "/training/getCalendarWeekSummary"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+
 					}
 
 				case 't': // Prefix: "target/"

@@ -10,6 +10,34 @@ import (
 	ht "github.com/ogen-go/ogen/http"
 )
 
+func encodeAddRouteToFavoritesRequest(
+	req *AddRouteToFavoritesReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeChangeFavoriteSportRequest(
+	req *ChangeFavoriteSportReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeCreateFavoriteRequest(
 	req *FavoriteCreate,
 	r *http.Request,
@@ -52,6 +80,48 @@ func encodeCreateTrainingTargetRequest(
 	return nil
 }
 
+func encodeGetCalendarWeekSummaryRequest(
+	req *GetCalendarWeekSummaryReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeGetProgressViewSummaryRequest(
+	req *GetProgressViewSummaryReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeGetSummaryDataRequest(
+	req *GetSummaryDataReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeImportRouteRequest(
 	req *RouteImport,
 	r *http.Request,
@@ -80,8 +150,36 @@ func encodeListTrainingSessionsRequest(
 	return nil
 }
 
+func encodeRenameFavoriteRequest(
+	req *RenameFavoriteReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeUpdateFavoriteRequest(
 	req *Favorite,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateTrainingTargetRequest(
+	req *TrainingTargetCreate,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

@@ -15,54 +15,64 @@ import (
 // facing phase array and POSTs it to /api/trainingtarget.
 func CreateTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 	return func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
-		name := req.GetString("name", "")
-		if name == "" {
-			return mcpgo.NewToolResultError("name is required"), nil
+		body, errMsg := buildTrainingTargetCreate(req)
+		if errMsg != "" {
+			return mcpgo.NewToolResultError(errMsg), nil
 		}
-		date := req.GetString("date", "")
-		if date == "" {
-			return mcpgo.NewToolResultError("date is required (YYYY-MM-DD)"), nil
-		}
-		if _, err := time.Parse(isoDate, date); err != nil {
-			return mcpgo.NewToolResultError("date must be ISO 8601 YYYY-MM-DD: " + err.Error()), nil
-		}
-		clock := req.GetString("time", "18:00")
-		if _, err := time.Parse("15:04", clock); err != nil {
-			return mcpgo.NewToolResultError("time must be HH:MM (24h): " + err.Error()), nil
-		}
-		sportID := req.GetInt("sport_id", 1)
-		description := req.GetString("description", "")
-
-		args, _ := req.GetArguments()["phases"].([]any)
-		phases, err := buildPhases(args)
-		if err != nil {
-			return mcpgo.NewToolResultError(err.Error()), nil
-		}
-
-		targetType := gen.TrainingTargetCreateTypeVOLUME
-		if len(phases) > 0 {
-			targetType = gen.TrainingTargetCreateTypePHASED
-		}
-
-		body := &gen.TrainingTargetCreate{
-			Type:     targetType,
-			Name:     name,
-			Datetime: date + "T" + clock,
-			ExerciseTargets: []gen.ExerciseTarget{{
-				SportId: sportID,
-				Phases:  phases,
-			}},
-		}
-		if description != "" {
-			body.Description.SetTo(description)
-		}
-
 		id, err := fc.CreateTrainingTarget(ctx, body)
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		return mcpgo.NewToolResultText(fmt.Sprintf("Created training target %d (%q on %s %s).", id, name, date, clock)), nil
+		return mcpgo.NewToolResultText(fmt.Sprintf("Created training target %d (%q at %s).", id, body.Name, body.Datetime)), nil
 	}
+}
+
+// buildTrainingTargetCreate parses the user-facing create/update arguments into
+// the wire-format TrainingTargetCreate body. On validation failure it returns
+// an empty body and a non-empty error message suitable for direct surfacing
+// via NewToolResultError.
+func buildTrainingTargetCreate(req mcpgo.CallToolRequest) (*gen.TrainingTargetCreate, string) {
+	name := req.GetString("name", "")
+	if name == "" {
+		return nil, "name is required"
+	}
+	date := req.GetString("date", "")
+	if date == "" {
+		return nil, "date is required (YYYY-MM-DD)"
+	}
+	if _, err := time.Parse(isoDate, date); err != nil {
+		return nil, "date must be ISO 8601 YYYY-MM-DD: " + err.Error()
+	}
+	clock := req.GetString("time", "18:00")
+	if _, err := time.Parse("15:04", clock); err != nil {
+		return nil, "time must be HH:MM (24h): " + err.Error()
+	}
+	sportID := req.GetInt("sport_id", 1)
+	description := req.GetString("description", "")
+
+	args, _ := req.GetArguments()["phases"].([]any)
+	phases, err := buildPhases(args)
+	if err != nil {
+		return nil, err.Error()
+	}
+
+	targetType := gen.TrainingTargetCreateTypeVOLUME
+	if len(phases) > 0 {
+		targetType = gen.TrainingTargetCreateTypePHASED
+	}
+	body := &gen.TrainingTargetCreate{
+		Type:     targetType,
+		Name:     name,
+		Datetime: date + "T" + clock,
+		ExerciseTargets: []gen.ExerciseTarget{{
+			SportId: sportID,
+			Phases:  phases,
+		}},
+	}
+	if description != "" {
+		body.Description.SetTo(description)
+	}
+	return body, ""
 }
 
 // hrZoneForLabel maps an effort label to a (lower, upper) Polar HR zone pair.

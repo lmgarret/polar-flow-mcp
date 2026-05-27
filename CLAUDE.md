@@ -55,7 +55,11 @@ and silent refresh.
 | `create_training_target` | Create a scheduled target (warmup / repeat / cooldown) |
 | `list_training_targets` | Targets in a date range (filtered from calendar) |
 | `delete_training_target` | Delete a target by ID |
+| `get_training_target` | Read one target by ID (full server-normalized view) |
+| `update_training_target` | Full-replace edit of one target by ID |
 | `get_calendar_events` | Raw calendar events in a date range |
+| `get_calendar_week_summary` | Per-ISO-week totals strip (≤45-day range) |
 | `list_training_sessions` | Completed sessions in a date range |
 | `get_training_session_summary` | Summary view of one session |
 | `get_training_session_details` | Lap / sample detail of one session |
+| `get_progress_summary` | Aggregated training totals over a range |

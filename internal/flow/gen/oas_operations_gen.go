@@ -6,6 +6,8 @@ package gen
 type OperationName = string
 
 const (
+	AddRouteToFavoritesOperation       OperationName = "AddRouteToFavorites"
+	ChangeFavoriteSportOperation       OperationName = "ChangeFavoriteSport"
 	CreateFavoriteOperation            OperationName = "CreateFavorite"
 	CreateTrainingSessionOperation     OperationName = "CreateTrainingSession"
 	CreateTrainingTargetOperation      OperationName = "CreateTrainingTarget"
@@ -15,17 +17,24 @@ const (
 	GetActivityTimelineOperation       OperationName = "GetActivityTimeline"
 	GetActivityTimelineFourOperation   OperationName = "GetActivityTimelineFour"
 	GetCalendarEventsOperation         OperationName = "GetCalendarEvents"
+	GetCalendarWeekSummaryOperation    OperationName = "GetCalendarWeekSummary"
 	GetCurrentUserOperation            OperationName = "GetCurrentUser"
 	GetFavoriteOperation               OperationName = "GetFavorite"
 	GetFavoriteExerciseTargetOperation OperationName = "GetFavoriteExerciseTarget"
 	GetFeaturesAvailableOperation      OperationName = "GetFeaturesAvailable"
+	GetProgressViewSummaryOperation    OperationName = "GetProgressViewSummary"
+	GetSleepReportOperation            OperationName = "GetSleepReport"
 	GetSportsOperation                 OperationName = "GetSports"
+	GetSummaryDataOperation            OperationName = "GetSummaryData"
 	GetTrainingSessionDetailsOperation OperationName = "GetTrainingSessionDetails"
 	GetTrainingSessionSummaryOperation OperationName = "GetTrainingSessionSummary"
+	GetTrainingTargetOperation         OperationName = "GetTrainingTarget"
 	ImportRouteOperation               OperationName = "ImportRoute"
 	ListDeviceFavoritesOperation       OperationName = "ListDeviceFavorites"
 	ListFavoritesOperation             OperationName = "ListFavorites"
 	ListFavoritesSimpleOperation       OperationName = "ListFavoritesSimple"
 	ListTrainingSessionsOperation      OperationName = "ListTrainingSessions"
+	RenameFavoriteOperation            OperationName = "RenameFavorite"
 	UpdateFavoriteOperation            OperationName = "UpdateFavorite"
+	UpdateTrainingTargetOperation      OperationName = "UpdateTrainingTarget"
 )

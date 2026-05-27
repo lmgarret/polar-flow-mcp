@@ -39,6 +39,8 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 
 // operationRolesSessionCookie is a private map storing roles per operation.
 var operationRolesSessionCookie = map[string][]string{
+	AddRouteToFavoritesOperation:       []string{},
+	ChangeFavoriteSportOperation:       []string{},
 	CreateFavoriteOperation:            []string{},
 	CreateTrainingSessionOperation:     []string{},
 	CreateTrainingTargetOperation:      []string{},
@@ -48,18 +50,25 @@ var operationRolesSessionCookie = map[string][]string{
 	GetActivityTimelineOperation:       []string{},
 	GetActivityTimelineFourOperation:   []string{},
 	GetCalendarEventsOperation:         []string{},
+	GetCalendarWeekSummaryOperation:    []string{},
 	GetCurrentUserOperation:            []string{},
 	GetFavoriteOperation:               []string{},
 	GetFavoriteExerciseTargetOperation: []string{},
 	GetFeaturesAvailableOperation:      []string{},
+	GetProgressViewSummaryOperation:    []string{},
+	GetSleepReportOperation:            []string{},
+	GetSummaryDataOperation:            []string{},
 	GetTrainingSessionDetailsOperation: []string{},
 	GetTrainingSessionSummaryOperation: []string{},
+	GetTrainingTargetOperation:         []string{},
 	ImportRouteOperation:               []string{},
 	ListDeviceFavoritesOperation:       []string{},
 	ListFavoritesOperation:             []string{},
 	ListFavoritesSimpleOperation:       []string{},
 	ListTrainingSessionsOperation:      []string{},
+	RenameFavoriteOperation:            []string{},
 	UpdateFavoriteOperation:            []string{},
+	UpdateTrainingTargetOperation:      []string{},
 }
 
 // GetRolesForSessionCookie returns the required roles for the given operation.

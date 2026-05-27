@@ -1,6 +1,6 @@
 # Usage
 
-This guide covers the eight MCP tools exposed by polar-flow-mcp, with worked examples,
+This guide covers the twelve MCP tools exposed by polar-flow-mcp, with worked examples,
 HR zone vocabulary, and instructions for installing the `polar-coach` skill in Claude.
 
 ---
@@ -11,7 +11,7 @@ Once polar-flow-mcp is deployed and your Polar account is linked, you interact w
 through Claude conversations. The `polar-coach` skill guides Claude on when and how to
 call each tool, so you can use plain language rather than remembering API parameters.
 
-The eight available tools are:
+The twelve available tools are:
 
 | Tool | Purpose |
 |------|---------|
@@ -19,10 +19,14 @@ The eight available tools are:
 | `create_training_target` | Create a structured workout in Polar Flow |
 | `list_training_targets` | List upcoming scheduled workouts |
 | `delete_training_target` | Delete a workout by its ID |
+| `get_training_target` | Read one target by ID |
+| `update_training_target` | Full-replace edit of one target |
 | `get_calendar_events` | Raw calendar events (targets, exercises, etc.) |
+| `get_calendar_week_summary` | Per-ISO-week totals strip (≤45-day range) |
 | `list_training_sessions` | Completed training sessions in a date range |
 | `get_training_session_summary` | Summary view of a completed session |
 | `get_training_session_details` | Lap/sample-level detail of a completed session |
+| `get_progress_summary` | Aggregated training totals over a range |
 
 ![Claude tool call](images/claude-tool-call.png)
 

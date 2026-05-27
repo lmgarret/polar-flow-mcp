@@ -30,6 +30,12 @@ tags:
   description: Current user profile, settings, and physical info
 - name: favorites
   description: Favorite training-target templates and route favorites
+- name: activity
+  description: Activity / steps / inactivity rollups
+- name: sleep
+  description: Sleep nights (lives on sleep-api.flow.polar.com subdomain)
+- name: progress
+  description: Aggregated progress / report totals (weekly, monthly, yearly)
 paths:
   /api/trainingtarget:
     post:
@@ -184,6 +190,83 @@ paths:
                   value:
                     time:
                     - error.trainingTarget.twoTargetsForSameTime
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/trainingtarget/{id}:
+    parameters:
+    - $ref: '#/components/parameters/TrainingTargetId'
+    get:
+      summary: Read a training target
+      description: 'Returns the server-normalized training-target object. Discovered during
+
+        update-endpoint probing 2026-05-26 — same URL as `updateTrainingTarget`.
+
+        Server normalizes the stored shape: each `exerciseTargets[].duration`
+
+        is rolled up from its phases (e.g. `"00:03:00"` for a phase loop), and
+
+        PHASE-leaf phases carry `duration: "00:00:00"` even when
+
+        `goalType: DISTANCE`.
+
+        '
+      operationId: getTrainingTarget
+      tags:
+      - training-targets
+      responses:
+        '200':
+          description: The training target as JSON. Shape mirrors the create payload plus server-assigned ids and rolled-up
+            totals.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingTargetCreate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No training target with that id (or it belongs to another user).
+    post:
+      summary: Update a training target (full replace)
+      description: "Replaces the training target with the supplied body. **POST**, not PUT\nor PATCH — sending PUT returns\
+        \ 404. The body shape is identical to\n`POST /api/trainingtarget` (create), with two requirements for\nsuccessful\
+        \ field updates:\n\n1. Include the **existing `exerciseTargets[].id`** from\n   `GET /api/trainingtarget/{id}`. Sending\
+        \ `id: null` is accepted\n   (returns 200) but **silently no-ops the exerciseTarget update** —\n   only top-level\
+        \ fields (`name`, `description`, `datetime`) land.\n2. Same field semantics as create (distance in metres, datetime\
+        \ without\n   timezone, phaseType `PHASE`/`REPEAT`, etc.).\n\nReturns **200 with an empty body** on success — note\
+        \ this differs from\n`POST /api/trainingtarget` (create), which returns the new id as a\nbare string.\n\nRe-read via\
+        \ `GET /api/trainingtarget/{id}` to confirm the change\nlanded (especially when modifying exerciseTargets).\n"
+      operationId: updateTrainingTarget
+      tags:
+      - training-targets
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingTargetCreate'
+            example:
+              type: VOLUME
+              name: Renamed run
+              description: updated description
+              datetime: 2026-08-16T10:30
+              exerciseTargets:
+              - sportId: 2
+                distance: 8000
+                duration: null
+                calories: null
+                phases: []
+                id: 1530729599
+      responses:
+        '200':
+          description: Updated successfully. Empty body.
+        '400':
+          description: Validation error (e.g. time conflict). Same envelope as create.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /training/target/{id}:
@@ -466,6 +549,77 @@ paths:
             '
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/favorites/trainingTargets/addExerciseRoute:
+    post:
+      summary: Create a route favorite from a recorded session's GPS track
+      description: "Creates a new ROUTE-type favorite by extracting the GPS track from a\ncompleted training session's exercise.\
+        \ Counterpart to\n`POST /api/favorites/trainingTargets/importRoute` — that one ingests\na GPX/TCX upload, this one\
+        \ references an already-recorded session.\n\nDiscovered in the JS bundle as `addRouteToFavorites` mapping. Probed\n\
+        2026-05-26 on an account with **no recorded sessions**, so the success\npath could not be reached. Validation findings\
+        \ below are inferred from\nerror patterns.\n\n### Body shape (inferred)\n\nRequired field is `id` — when present (with\
+        \ any value), the server\nreaches the data-load stage and returns Polar's familiar JSON error\nenvelope (`{\"error\"\
+        :\"...itinéraire...\"}`). Any other field name\n(`exerciseId`, `trainingSessionId`, `tsid`, `sessionId`, …) is\nrejected\
+        \ upfront by the body parser with a generic HTML 500.\n\nMost likely `id` refers to an **exercise id** within a session\
+        \ — the\nURL path's \"addExerciseRoute\" wording and the existence of\nmulti-exercise sessions both point that way\
+        \ — but it could also be\nthe trainingSessionId. # TODO: confirm on a device-synced account.\n\n### Other gotchas\n\
+        \n- Method is POST. GET → 404, PUT/PATCH presumably likewise.\n- Missing `X-Requested-With: XMLHttpRequest` → 403.\n\
+        - Error bodies use the same misleading boilerplate\n  (`\"...itinéraire...\"`) as other favorites endpoints.\n"
+      operationId: addRouteToFavorites
+      tags:
+      - favorites
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - id
+              properties:
+                id:
+                  type: integer
+                  format: int64
+                  description: 'Source exercise (or session) id whose GPS track will be
+
+                    copied into a new ROUTE favorite. # TODO: verify which one
+
+                    — name suggests exercise; URL suggests "exercise route".
+
+                    '
+              example:
+                id: 8346808740
+      responses:
+        '200':
+          description: 'Expected success status (not yet verified — no sessions to test
+
+            with). Probably returns 200 with the new favorite id as a bare
+
+            string, mirroring `POST /api/favoritetarget`. # TODO: verify.
+
+            '
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: 'Source exercise/session not found. Polar returns 500 (not 404) with
+
+            a JSON envelope: `{"error":"Un problème est survenu lors de
+
+            l''enregistrement de l''itinéraire. Réessayez."}` (locale-dependent).
+
+            Same misleading boilerplate as `/api/favorites/saveName`. Empty
+
+            body or wrong field names → generic HTML 500 instead.
+
+            '
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
   /api/favorites/exerciseTarget/{id}:
     get:
       summary: Get a favorite's full exercise target (incl. route geometry)
@@ -662,6 +816,198 @@ paths:
                 $ref: '#/components/schemas/FavoritesListing'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/favorites/saveName:
+    put:
+      summary: Rename a favorite (granular update)
+      description: "Updates only the favorite's `name`. Distinct from\n`POST /api/favoritetarget/{id}` (full update) — this\
+        \ endpoint takes a\ntiny `{favoriteId, favoriteName}` body and is the route Polar's React UI\nuses when the user edits\
+        \ the rename field.\n\n### Method gotcha\n\nThe verb is **`PUT`**, not POST. Sending POST returns **404** (Play\n\
+        binds the route to PUT only). This contrasts with most other\n`/api/favorites/*` write endpoints which use POST.\n\
+        \n### Validation\n\n- `favoriteId` accepts both integer and string forms (`\"81388912\"`\n  works the same as `81388912`).\n\
+        - Empty `favoriteName` → 400.\n- Missing fields → 400.\n- Unknown `favoriteId` → **500** (not 404). Worse, all error\
+        \ bodies\n  carry the same boilerplate French/English message about a \"route\"\n  (`\"Un problème est survenu lors\
+        \ de l'enregistrement de l'itinéraire.\n  Réessayez.\"`) regardless of which favorite type you're updating —\n  that's\
+        \ a Polar copy/paste bug in the error catalog.\n\nMissing `X-Requested-With: XMLHttpRequest` → 403 (standard CSRF\
+        \ guard,\nsame as the rest of `/api/*` writes).\n"
+      operationId: renameFavorite
+      tags:
+      - favorites
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - favoriteId
+              - favoriteName
+              properties:
+                favoriteId:
+                  oneOf:
+                  - type: integer
+                    format: int64
+                  - type: string
+                  description: Numeric favorite id. Accepts string form too.
+                  example: 81388912
+                favoriteName:
+                  type: string
+                  minLength: 1
+                  description: New name. Empty string is rejected (400).
+                  example: Long run — Sundays
+      responses:
+        '200':
+          description: Renamed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                properties:
+                  success:
+                    type: string
+                    description: Localised confirmation message (e.g. `"Modifications enregistrées"` in French, `"Changes
+                      saved"` in English).
+              example:
+                success: Modifications enregistrées
+        '400':
+          description: 'Validation failure — missing fields or empty `favoriteName`. Body
+
+            is a misleading boilerplate error (`{error: "...itinéraire..."}`)
+
+            — Polar''s server reuses a route-import error string here.
+
+            '
+        '500':
+          description: 'Server-side error — observed when `favoriteId` doesn''t exist.
+
+            Polar returns 500 (not 404) with the same misleading error body
+
+            as 400.
+
+            '
+  /api/favorites/saveSport:
+    put:
+      summary: Change a favorite's sport (granular update)
+      description: 'Updates only the sport assignment of a favorite''s exerciseTarget.
+
+        Takes `{favoriteId, favoriteSportId, exerciseTargetId}` — both the
+
+        favorite-level id AND the inner exerciseTarget id are required because
+
+        a favorite can hold multiple exerciseTargets (e.g. multi-sport sessions).
+
+
+        ### Method gotcha
+
+
+        Same as `saveName`: the verb is **`PUT`**, not POST.
+
+
+        ### Validation surprises
+
+
+        Polar''s server is **dangerously lenient** here. Probed 2026-05-26:
+
+
+        | Body | Status |
+
+        |---|---|
+
+        | Missing `exerciseTargetId` | 400 |
+
+        | Unknown `exerciseTargetId` | **200** (silent no-op — favorite not actually updated server-side) |
+
+        | Unknown `favoriteSportId` (e.g. `9999`, not in `/api/sports/sports`) | **200** (sport id is accepted unchecked,
+        then presumably 404s on watch sync) |
+
+        | Missing other fields | 400 |
+
+
+        Verify your changes by re-reading the favorite via
+
+        `GET /api/favoritetarget/{id}` rather than trusting the 200.
+
+
+        Error bodies share the same misleading boilerplate
+
+        (`{error: "...itinéraire..."}`) as `saveName`.
+
+        '
+      operationId: changeFavoriteSport
+      tags:
+      - favorites
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - favoriteId
+              - favoriteSportId
+              - exerciseTargetId
+              properties:
+                favoriteId:
+                  type: integer
+                  format: int64
+                  description: Numeric favorite id.
+                  example: 81388912
+                favoriteSportId:
+                  type: integer
+                  description: 'New sport id. **Not validated against the sport catalog**
+
+                    — any integer is accepted (verified by sending 9999 and
+
+                    receiving 200). Use a valid id from
+
+                    `GET /api/sports/sports`.
+
+                    '
+                  example: 2
+                exerciseTargetId:
+                  type: integer
+                  format: int64
+                  description: 'Id of the inner exerciseTarget to retarget (one favorite can
+
+                    hold multiple). Get it from
+
+                    `GET /api/favoritetarget/{favoriteId}` →
+
+                    `exerciseTargets[].id`. **Not validated** either — unknown
+
+                    ids return 200 with no effect.
+
+                    '
+                  example: 1530728501
+      responses:
+        '200':
+          description: 'Always returned on requests that include the three required fields,
+
+            even when `exerciseTargetId` or `favoriteSportId` don''t exist.
+
+            Re-read via `GET /api/favoritetarget/{id}` to confirm the change
+
+            landed.
+
+            '
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                properties:
+                  success:
+                    type: string
+              example:
+                success: Modifications enregistrées
+        '400':
+          description: Required field missing.
   /api/favorites/favoriteTargetsJson:
     get:
       summary: List favorites (simple shape, used by diary picker)
@@ -912,6 +1258,282 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           description: Session not found
+  /api/sleep/report:
+    get:
+      summary: Sleep nights report
+      description: "Returns one `SleepNight` per recorded night in the inclusive date range\n`[from, to]`. Lives on its own\
+        \ subdomain — `https://sleep-api.flow.polar.com`\n— but reuses the `FLOW_SESSION` cookie via cross-origin credentials\n\
+        (response carries `Access-Control-Allow-Credentials: true` and\n`Access-Control-Allow-Origin: https://flow.polar.com`).\n\
+        \nBacked by the `getSleepNights` action in the Polar Flow JS bundle.\n\n### Range constraints (probed empirically\
+        \ 2026-05-26)\n\n- `to - from` must be **≥ 30 days and ≤ 365 days**. Shorter or longer\n  ranges return `400` with\
+        \ an empty body.\n- `from == to` (single day) → 400.\n- `from > to` → 400.\n\nThe 30-day floor is unusual — there's\
+        \ no `/api/sleep/<date>` per-night\nendpoint (probed: 404), so to fetch a single night you must request the\nsurrounding\
+        \ ≥30-day window and filter the response client-side.\n\n### Auth gotchas\n\n- Missing `X-Requested-With: XMLHttpRequest`\
+        \ → 401 (the CSRF guard differs\n  from `flow.polar.com`'s — there 403, here 401).\n- The cross-origin CORS check\
+        \ requires `Origin: https://flow.polar.com`,\n  which browsers set automatically when the calling page is on\n  `flow.polar.com`.\
+        \ Non-browser clients must send it explicitly.\n- Empty body (`[]`) is the normal response on accounts with no synced\n\
+        \  sleep-capable Polar device.\n"
+      operationId: getSleepReport
+      tags:
+      - sleep
+      servers:
+      - url: https://sleep-api.flow.polar.com
+        description: Sleep API (separate subdomain). Reuses FLOW_SESSION cookie via CORS.
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Inclusive start date (`YYYY-MM-DD`).
+        example: '2026-02-25'
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+        description: Inclusive end date (`YYYY-MM-DD`). Must be ≥ 30 days and ≤ 365 days after `from`.
+        example: '2026-05-26'
+      - $ref: '#/components/parameters/XRequestedWith'
+      responses:
+        '200':
+          description: Array of sleep nights, one per night with recorded data. Empty array when none.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SleepNight'
+              example: []
+        '400':
+          description: 'Range invalid: too narrow (< 30 days inclusive), too wide (> 365 days),
+
+            reversed (`from > to`), or malformed date format. Body is empty.
+
+            '
+        '401':
+          description: 'Missing `X-Requested-With: XMLHttpRequest` header, missing/invalid
+
+            `FLOW_SESSION` cookie, or CORS origin not whitelisted.
+
+            '
+  /progress/getProgressViewSummaryAsJson:
+    post:
+      summary: Training summary totals over a date range
+      description: 'Returns aggregated training totals (sessions, distance, duration,
+
+        calories, ascent/descent, zone time, sport distribution, training-benefit
+
+        distribution) for the inclusive `[from, to]` date range.
+
+
+        Date format is **`D.M.YYYY`** (e.g. `1.5.2026`), matching the rest of the
+
+        legacy `/training/*` and `/progress/*` endpoints. ISO 8601
+
+        (`YYYY-MM-DD`) is rejected by sibling endpoints; this one happens to
+
+        accept malformed/missing dates without erroring on a zero-session account
+
+        (it just returns zeros) — strict validation behaviour on populated
+
+        accounts is TBD.
+
+
+        The Polar Flow JS bundle has a Coach-vs-free fork that picks
+
+        `/progress/getSummaryDataAsJson` for Coach users and this URL for
+
+        regular users — but **both URLs are reachable from a free account** and
+
+        return the same schema. The "Coach gate" is purely client-side.
+
+        '
+      operationId: getProgressViewSummary
+      tags:
+      - progress
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - from
+              - to
+              properties:
+                from:
+                  type: string
+                  description: Inclusive start date, `D.M.YYYY` (no leading zeros required).
+                  example: 1.5.2026
+                to:
+                  type: string
+                  description: Inclusive end date, `D.M.YYYY`.
+                  example: 31.5.2026
+                group:
+                  description: 'Optional sport-group filter. JS passes `"all"` for the
+
+                    "Tous les sports" tab; a numeric sportId filters to that
+
+                    sport. # TODO: verify scoping with real data.
+
+                    '
+                  oneOf:
+                  - type: string
+                  - type: integer
+                  example: all
+                timeFrame:
+                  type: string
+                  description: 'Bucket size for the per-time-slice breakdowns. JS values
+
+                    observed: `"6w"`, `"3m"`, `"1y"`. The server accepted
+
+                    arbitrary strings (including empty / omitted) on the test
+
+                    account, so it likely only influences how the breakdown is
+
+                    grouped, not whether the request succeeds.
+
+                    '
+                  example: 6w
+            examples:
+              monthAllSports:
+                value:
+                  from: 1.5.2026
+                  to: 31.5.2026
+                  group: all
+                  timeFrame: 6w
+      responses:
+        '200':
+          description: Aggregated totals + distributions. Always returned with zeros on accounts with no recorded sessions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressViewSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /progress/getSummaryDataAsJson:
+    post:
+      summary: Training summary totals (Coach variant — same shape as getProgressViewSummaryAsJson)
+      description: "Identical request/response shape to\n[POST /progress/getProgressViewSummaryAsJson](#operations-progress-getProgressViewSummary).\n\
+        The Polar Flow JS bundle routes Coach users to this URL via:\n\n```js\nCommonHelpers.context.coach\n  ? \"/progress/getSummaryDataAsJson\"\
+        \n  : \"/progress/getProgressViewSummaryAsJson\"\n```\n\nOn the free test account, both URLs return the same payload,\
+        \ so the\nserver-side ACL (if any) is permissive. This alias is documented for\ncompleteness; clients should prefer\
+        \ `getProgressViewSummaryAsJson`.\n"
+      operationId: getSummaryData
+      tags:
+      - progress
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - from
+              - to
+              properties:
+                from:
+                  type: string
+                  example: 1.5.2026
+                to:
+                  type: string
+                  example: 31.5.2026
+                group:
+                  oneOf:
+                  - type: string
+                  - type: integer
+                timeFrame:
+                  type: string
+                  example: 6w
+      responses:
+        '200':
+          description: See `ProgressViewSummary`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressViewSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /training/getCalendarWeekSummary:
+    post:
+      summary: Weekly summary strip for the diary calendar
+      description: "Returns one summary entry per ISO week intersecting `[from, to]`, used by\nthe right-hand \"week totals\"\
+        \ strip in `/diary`. Backed by the legacy\n`Calendar.get.weekSummary` action in\n`static/13.318.0/javascript/views/diary/calendar.min.js`.\n\
+        \n### Constraints (probed 2026-05-26)\n\n- Date format: **`D.M.YYYY`** strict (ISO 8601 rejected with\n  `content\
+        \ of from (...) is not a valid date: Text '...' could not be\n  parsed at index 4`).\n- `to` must be ≥ `from` (reversed\
+        \ → `400 from (...) date must be before\n  to (...) date`).\n- **`to - from ≤ 45 days`** (\"Maximum week aligned range\
+        \ is 45,\n  requested N\" beyond that). Same-day and partial-week ranges are OK —\n  the \"week aligned\" label in\
+        \ the error is misleading; the server does\n  not require Monday-aligned dates.\n\nReturns an array of week-summary\
+        \ objects on success. Empty array (`[]`)\nwhen no sessions fall in the range — element shape on populated accounts\n\
+        is TBD.\n"
+      operationId: getCalendarWeekSummary
+      tags:
+      - calendar
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - from
+              - to
+              properties:
+                from:
+                  type: string
+                  description: Inclusive start date, `D.M.YYYY`.
+                  example: 24.5.2026
+                to:
+                  type: string
+                  description: Inclusive end date, `D.M.YYYY`. Must satisfy `to - from ≤ 45 days`.
+                  example: 30.5.2026
+      responses:
+        '200':
+          description: 'One entry per ISO week touched by the range. Empty array when no
+
+            sessions are recorded. # TODO: capture a populated week to learn
+
+            the element shape (likely
+
+            `{weekNumber, totalDuration, totalDistance, totalCalories, …}`).
+
+            '
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+              example: []
+        '400':
+          description: 'Range invalid (reversed, > 45 days) or date format not `D.M.YYYY`.
+
+            Body is a plain-text Play error message — not JSON.
+
+            '
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                tooWide:
+                  value: Maximum week aligned range is 45, requested 365
+                reversed:
+                  value: from (2026-05-30) date must be before to (2026-05-24) date
+                badFormat:
+                  value: 'content of from (2026-05-24) is not a valid date: Text ''2026-05-24'' could not be parsed at index
+                    4'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 components:
   securitySchemes:
     sessionCookie:
@@ -2990,6 +3612,374 @@ components:
             sleepDuration: 0
             inactivityAlertCount: 0
             sleepPlus: false
+    SleepNight:
+      type: object
+      description: 'A single recorded night of sleep on a Polar device with `Sleep Plus Stages`
+
+        support. Field semantics reconstructed from the Polar Flow JS bundle
+
+        (`/flow-ui-mono/static/js/async/1608.16456f2f.js`) — no live capture with
+
+        data was possible on the test account, so element shapes for nested arrays
+
+        carry `# TODO: verify on a device-synced account`. The endpoint may also
+
+        return entries with most fields null/zero for nights where the device was
+
+        not worn.
+
+        '
+      required:
+      - date
+      - sleepStartTime
+      - sleepEndTime
+      - sleepStartOffset
+      - sleepEndOffset
+      properties:
+        date:
+          type: string
+          format: date
+          description: 'Calendar date the sleep is associated with — the morning the user
+
+            woke up (Polar convention: a night that crosses midnight is bucketed
+
+            under the wake-up date). Used by the JS as `moment.utc(date)` and
+
+            then `.subtract(1, "days")` to anchor the previous evening.
+
+            '
+          example: '2026-05-26'
+        sleepStartTime:
+          type: string
+          description: 'ISO datetime when the device detected sleep onset. The Polar bundle
+
+            parses this with `jsonDatetimeAsMoment` — the exact format (zoneless
+
+            vs UTC vs local) is TBD without a populated capture, but it is
+
+            additive with `sleepStartOffset`.
+
+            '
+          example: '2026-05-25T23:14:00'
+        sleepEndTime:
+          type: string
+          description: ISO datetime of wake-up. Paired with `sleepEndOffset`.
+          example: '2026-05-26T07:02:00'
+        sleepStartOffset:
+          type: integer
+          description: 'Offset in **seconds** added to `sleepStartTime` to get the "fell
+
+            asleep" moment. Polar splits the bedtime / asleep-time distinction
+
+            across these two fields.
+
+            '
+        sleepEndOffset:
+          type: integer
+          description: Offset in seconds added to `sleepEndTime` (wake-up offset).
+        sleepScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: 'Overall sleep score 0–100. The JS bundle treats `0` as "no score"
+
+            (excluded from averages). Polar''s marketing calls this "Sleep Score".
+
+            '
+        sleepCycles:
+          type: integer
+          description: Count of detected sleep cycles. Used in the summary table.
+          nullable: true
+        continuityIndex:
+          type: number
+          description: 'Sleep continuity rating, 1–5. The UI renders it as `"<n>/5"`. Polar
+
+            calls this "Sleep continuity". # TODO: verify exact bounds / precision.
+
+            '
+          nullable: true
+        sleepRating:
+          type: integer
+          description: 'User-provided sleep rating (a "how well did I sleep?" star/number).
+
+            Indexes into a localised label table in the UI. # TODO: enum once
+
+            observed.
+
+            '
+          nullable: true
+        sleepWakeStates:
+          type: array
+          description: 'Time-series of sleep-state transitions detected by the device.
+
+            Element shape inferred from JS:
+
+            `{sleepWakeState: 1|2|3|4|…, offsetFromStart: <seconds>, longInterruption?: boolean}`.
+
+            The JS sorts/groups these into LIGHT (code 2 → `nonrem12`),
+
+            DEEP (code 3 → `nonrem3`), REM (code 1 → `rem`), UNKNOWN (code 4),
+
+            and INTERRUPTIONS (special path that toggles `longInterruption`).
+
+            # TODO: verify codes against device documentation.
+
+            '
+          items:
+            type: object
+            properties:
+              sleepWakeState:
+                type: integer
+                description: Stage code (1=REM, 2=light, 3=deep, 4=unknown — verified mapping).
+              offsetFromStart:
+                type: integer
+                description: Seconds from the start of the night.
+              longInterruption:
+                type: boolean
+                description: Set true on `INTERRUPTIONS`-state entries that exceeded the "long" threshold (Polar treats these
+                  separately in the summary).
+        stages:
+          type: object
+          description: 'Pre-grouped stage intervals — present only on accounts/devices with
+
+            Sleep Plus Stages enabled. The JS bundle constructs this client-side
+
+            from `sleepWakeStates`, but the same keys appear server-side in the
+
+            response shape. # TODO: confirm server emits `stages` directly vs
+
+            only `sleepWakeStates`.
+
+            '
+          properties:
+            nonrem12:
+              type: array
+              description: Light sleep intervals.
+              items:
+                type: object
+            nonrem3:
+              type: array
+              description: Deep sleep intervals.
+              items:
+                type: object
+            rem:
+              type: array
+              description: REM intervals.
+              items:
+                type: object
+            interrupt:
+              type: array
+              description: 'Wake/interruption intervals. Each carries an optional
+
+                `longInterrupt: true` boolean.
+
+                '
+              items:
+                type: object
+            unknown:
+              type: array
+              description: Periods the device couldn't classify (sensor lost contact, etc.).
+              items:
+                type: object
+    SportDistributionEntry:
+      type: object
+      description: 'One sport''s share of a metric (duration / session count / distance) within
+
+        a progress-summary distribution list. Each entry has both `distribution*`
+
+        (the underlying values) and `*ForChart` (Highcharts-friendly copies) — they
+
+        are usually identical but kept separate to let Polar''s UI tweak labels
+
+        for charting.
+
+        '
+      properties:
+        sportName:
+          type: string
+          description: 'Localised sport name (e.g. `"Course à pied"`, `"Cyclisme"`). On a
+
+            zero-session account, the API emits a placeholder
+
+            `"Aucune donnée relative au sport"` (FR) / `"No sport-related data"` (EN).
+
+            '
+        distributionPercent:
+          type: number
+          format: float
+          description: This sport's share of the metric, 0–100. Entries sum to 100.0.
+        nameForChart:
+          type: string
+          description: Same as `sportName` (UI label override slot).
+        percentForChart:
+          type: number
+          format: float
+          description: Same as `distributionPercent` (chart label override slot).
+        valueForChart:
+          type: number
+          format: float
+          description: Raw value the percent was computed from (seconds, count, or metres depending on which metric list this
+            is in).
+    StandardDuration:
+      type: object
+      description: 'Polar''s Joda/JSR-310-style serialized duration. Carries the wall-clock
+
+        breakdown plus a total `millis`. The breakdown fields are NOT additive with
+
+        `millis` — they''re the same value expressed as `(d, h, m, s)`. Use `millis`
+
+        as the canonical total.
+
+
+        Note: this is yet another duration format on top of the API''s existing
+
+        three (integer seconds, `HH:MM:SS` string, integer ms). Polar evidently
+
+        glued several backends together — see CLAUDE.md.
+
+        '
+      required:
+      - standardDays
+      - standardHours
+      - standardMinutes
+      - standardSeconds
+      - millis
+      properties:
+        standardDays:
+          type: integer
+          description: Days component (0+).
+        standardHours:
+          type: integer
+          description: Hours component (0–23).
+        standardMinutes:
+          type: integer
+          description: Minutes component (0–59).
+        standardSeconds:
+          type: integer
+          description: Seconds component (0–59).
+        millis:
+          type: integer
+          format: int64
+          description: Canonical total duration in milliseconds.
+    ProgressViewSummary:
+      type: object
+      description: 'Aggregated training totals over a date range. Returned by both
+
+        `/progress/getProgressViewSummaryAsJson` (regular users) and
+
+        `/progress/getSummaryDataAsJson` (Coach view — but both work on free
+
+        accounts; the Coach gate is purely client-side in the JS bundle).
+
+
+        Schema captured 2026-05-26 on an account with zero sessions —
+
+        `captures/responses/16-progress-summary-empty.json`. Numeric fields are
+
+        zero; distribution lists contain a single placeholder entry with
+
+        `sportName: "Aucune donnée relative au sport"` (localised) and
+
+        `distributionPercent: 100.0`. # TODO: verify shape on an account with
+
+        recorded sessions — element shapes for the zone lists are likely
+
+        `[{zoneIndex, durationMillis, percent}]` but the empty arrays don''t
+
+        expose them.
+
+        '
+      properties:
+        sportDistributions:
+          type: object
+          description: 'Per-metric sport-distribution breakdowns. Each entry is a list of
+
+            `SportDistributionEntry` summing to 100% for that metric.
+
+            '
+          properties:
+            duration:
+              type: array
+              items:
+                $ref: '#/components/schemas/SportDistributionEntry'
+            sessions:
+              type: array
+              items:
+                $ref: '#/components/schemas/SportDistributionEntry'
+            distance:
+              type: array
+              items:
+                $ref: '#/components/schemas/SportDistributionEntry'
+        trainingBenefitDistributionList:
+          type: array
+          description: 'Distribution of Polar''s "Training Benefit" categories
+
+            (RECOVERY/STEADY_STATE/TEMPO/THRESHOLD/MAX/INTERVAL/…). On a
+
+            zero-session account the list contains a single `{trainingBenefit: "NONE"}`
+
+            placeholder. # TODO: enumerate values once a populated account is captured.
+
+            '
+          items:
+            type: object
+            properties:
+              trainingBenefit:
+                type: string
+                description: Benefit category code, e.g. `"NONE"` (placeholder). Other values TBD.
+              distributionPercent:
+                type: number
+                format: float
+              trainingBenefitTotal:
+                type: number
+                format: float
+                description: Raw value the percent was computed from (units depend on metric — likely seconds).
+              nameForChart:
+                type: string
+              percentForChart:
+                type: number
+                format: float
+        totalHeartRateZoneList:
+          type: array
+          description: Time spent in each HR zone across all sessions. Element shape TBD.
+          items:
+            type: object
+        totalFitFatZonesList:
+          type: array
+          description: Time in fit/fat-burning zones. Element shape TBD.
+          items:
+            type: object
+        totalPowerZoneList:
+          type: array
+          description: Time in cycling power zones. Element shape TBD.
+          items:
+            type: object
+        totalSpeedZoneList:
+          type: array
+          description: Time in speed/pace zones. Element shape TBD.
+          items:
+            type: object
+        totalTrainingSessionCount:
+          type: integer
+          description: Total number of training sessions in the date range.
+        totalDistance:
+          type: number
+          format: float
+          description: Total distance covered in **metres** (matches the rest of the API's metres convention).
+        totalDuration:
+          $ref: '#/components/schemas/StandardDuration'
+        totalCalories:
+          type: number
+          format: float
+          description: Total kcal burned across all sessions.
+        totalAscent:
+          type: number
+          format: float
+          description: Cumulative ascent in metres.
+        totalDescent:
+          type: number
+          format: float
+          description: Cumulative descent in metres.
   responses:
     Unauthorized:
       description: Session cookie missing or expired

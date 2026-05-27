@@ -19,7 +19,7 @@ this skill does NOT apply — see the "When NOT to call tools" section below.
 
 ## Tools
 
-Eight tools are exposed by the polar-flow-mcp server. Use the **exact** names below.
+Twelve tools are exposed by the polar-flow-mcp server. Use the **exact** names below.
 
 | Tool | Purpose |
 |------|---------|
@@ -27,10 +27,14 @@ Eight tools are exposed by the polar-flow-mcp server. Use the **exact** names be
 | `create_training_target` | Create a single scheduled workout in Polar Flow. Accepts a flat phases array (warmup, one or more repeat blocks, cooldown). |
 | `list_training_targets` | List upcoming training targets in a date range. Defaults to today through +30 days. |
 | `delete_training_target` | Delete a training target by its numeric `target_id`. |
+| `get_training_target` | Read one target by id. Use this before `update_training_target` to know the current structure. |
+| `update_training_target` | Full-replace edit of a target. Same args as `create_training_target` plus `target_id`. Use for "move Thursday's session to Friday" / "change recovery from 90s to 120s" — read first, edit fields, send the whole body back. |
 | `get_calendar_events` | Raw calendar events (targets, exercises, etc.) in a date range. Use only if `list_training_targets` doesn't give what you need. |
+| `get_calendar_week_summary` | Per-ISO-week totals strip (≤45-day range). Use for "how much have I run this week?" |
 | `list_training_sessions` | Completed training sessions in a date range. Use for "how did my last run go?" / "what have I done this week?" |
 | `get_training_session_summary` | Summary of one completed session by id (duration, distance, calories, HR averages). |
 | `get_training_session_details` | Lap- and sample-level detail of one completed session. Use for "split times" / "what were my paces". |
+| `get_progress_summary` | Aggregated training totals (volume, zone time, training-benefit distribution) over a range. Default range is the last 90 days. Use for "how's my training going this month?" or training-load questions. |
 
 ### Tool availability check
 
