@@ -199,7 +199,7 @@ func buildWorkLeaf(goal, intensityCtx map[string]any) (gen.PhaseLeaf, error) {
 			return leaf, fmt.Errorf("goal.distance_m must be > 0")
 		}
 		leaf.GoalType = "DISTANCE"
-		leaf.Distance.SetTo(dist)
+		leaf.Distance.SetTo(float64(dist))
 	case goal != nil && goalHasFloat(goal, "duration_s"):
 		dur, _ := goalDuration(goal, "duration_s")
 		leaf.GoalType = "DURATION"
@@ -216,15 +216,15 @@ func buildWorkLeaf(goal, intensityCtx map[string]any) (gen.PhaseLeaf, error) {
 func applyIntensity(leaf *gen.PhaseLeaf, intensity map[string]any) {
 	if zone, ok := intensity["hr_zone"].(float64); ok && zone >= 1 && zone <= 5 {
 		leaf.IntensityType = "HEART_RATE_ZONES"
-		leaf.LowerZone.SetTo(int(zone))
-		leaf.UpperZone.SetTo(int(zone))
+		leaf.LowerZone.SetTo(zone)
+		leaf.UpperZone.SetTo(zone)
 		return
 	}
 	if label, ok := intensity["label"].(string); ok {
 		if lo, hi, ok := hrZoneForLabel(label); ok {
 			leaf.IntensityType = "HEART_RATE_ZONES"
-			leaf.LowerZone.SetTo(lo)
-			leaf.UpperZone.SetTo(hi)
+			leaf.LowerZone.SetTo(float64(lo))
+			leaf.UpperZone.SetTo(float64(hi))
 		}
 	}
 }

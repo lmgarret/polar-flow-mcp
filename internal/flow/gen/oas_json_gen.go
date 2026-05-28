@@ -7061,52 +7061,6 @@ func (s *NilFloat64) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes int as json.
-func (o NilInt) Encode(e *jx.Encoder) {
-	if o.Null {
-		e.Null()
-		return
-	}
-	e.Int(int(o.Value))
-}
-
-// Decode decodes int from json.
-func (o *NilInt) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode NilInt to nil")
-	}
-	if d.Next() == jx.Null {
-		if err := d.Null(); err != nil {
-			return err
-		}
-
-		var v int
-		o.Value = v
-		o.Null = true
-		return nil
-	}
-	o.Null = false
-	v, err := d.Int()
-	if err != nil {
-		return err
-	}
-	o.Value = int(v)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s NilInt) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *NilInt) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes string as json.
 func (o NilString) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -9242,24 +9196,32 @@ func (s Phase) encodeFields(e *jx.Encoder) {
 				s.GoalType.Encode(e)
 			}
 			{
-				e.FieldStart("distance")
-				s.Distance.Encode(e)
+				if s.Distance.Set {
+					e.FieldStart("distance")
+					s.Distance.Encode(e)
+				}
 			}
 			{
-				e.FieldStart("duration")
-				s.Duration.Encode(e)
+				if s.Duration.Set {
+					e.FieldStart("duration")
+					s.Duration.Encode(e)
+				}
 			}
 			{
 				e.FieldStart("intensityType")
 				s.IntensityType.Encode(e)
 			}
 			{
-				e.FieldStart("lowerZone")
-				s.LowerZone.Encode(e)
+				if s.LowerZone.Set {
+					e.FieldStart("lowerZone")
+					s.LowerZone.Encode(e)
+				}
 			}
 			{
-				e.FieldStart("upperZone")
-				s.UpperZone.Encode(e)
+				if s.UpperZone.Set {
+					e.FieldStart("upperZone")
+					s.UpperZone.Encode(e)
+				}
 			}
 		}
 	case PhaseRepeatPhase:
@@ -9379,24 +9341,32 @@ func (s *PhaseLeaf) encodeFields(e *jx.Encoder) {
 		s.GoalType.Encode(e)
 	}
 	{
-		e.FieldStart("distance")
-		s.Distance.Encode(e)
+		if s.Distance.Set {
+			e.FieldStart("distance")
+			s.Distance.Encode(e)
+		}
 	}
 	{
-		e.FieldStart("duration")
-		s.Duration.Encode(e)
+		if s.Duration.Set {
+			e.FieldStart("duration")
+			s.Duration.Encode(e)
+		}
 	}
 	{
 		e.FieldStart("intensityType")
 		s.IntensityType.Encode(e)
 	}
 	{
-		e.FieldStart("lowerZone")
-		s.LowerZone.Encode(e)
+		if s.LowerZone.Set {
+			e.FieldStart("lowerZone")
+			s.LowerZone.Encode(e)
+		}
 	}
 	{
-		e.FieldStart("upperZone")
-		s.UpperZone.Encode(e)
+		if s.UpperZone.Set {
+			e.FieldStart("upperZone")
+			s.UpperZone.Encode(e)
+		}
 	}
 }
 
@@ -9464,8 +9434,8 @@ func (s *PhaseLeaf) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"goalType\"")
 			}
 		case "distance":
-			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
+				s.Distance.Reset()
 				if err := s.Distance.Decode(d); err != nil {
 					return err
 				}
@@ -9474,8 +9444,8 @@ func (s *PhaseLeaf) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"distance\"")
 			}
 		case "duration":
-			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
+				s.Duration.Reset()
 				if err := s.Duration.Decode(d); err != nil {
 					return err
 				}
@@ -9494,8 +9464,8 @@ func (s *PhaseLeaf) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"intensityType\"")
 			}
 		case "lowerZone":
-			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
+				s.LowerZone.Reset()
 				if err := s.LowerZone.Decode(d); err != nil {
 					return err
 				}
@@ -9504,8 +9474,8 @@ func (s *PhaseLeaf) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"lowerZone\"")
 			}
 		case "upperZone":
-			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
+				s.UpperZone.Reset()
 				if err := s.UpperZone.Decode(d); err != nil {
 					return err
 				}
@@ -9523,8 +9493,8 @@ func (s *PhaseLeaf) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
-		0b11111111,
-		0b00000001,
+		0b01001111,
+		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

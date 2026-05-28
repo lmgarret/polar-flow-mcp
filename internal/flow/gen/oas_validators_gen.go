@@ -448,6 +448,42 @@ func (s *ExerciseTarget) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.Distance.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "distance",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Calories.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "calories",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.Phases == nil {
 			return errors.New("nil is invalid value")
 		}
@@ -472,6 +508,24 @@ func (s *ExerciseTarget) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "phases",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ID.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "id",
 			Error: err,
 		})
 	}
@@ -709,6 +763,42 @@ func (s *FavoriteExerciseTargetsItem) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.Distance.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "distance",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Calories.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "calories",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if s.Phases == nil {
 			return errors.New("nil is invalid value")
 		}
@@ -733,6 +823,24 @@ func (s *FavoriteExerciseTargetsItem) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "phases",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ID.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "id",
 			Error: err,
 		})
 	}
@@ -1379,6 +1487,24 @@ func (s *PhaseLeaf) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Distance.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "distance",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if err := s.IntensityType.Validate(); err != nil {
 			return err
 		}
@@ -1392,7 +1518,7 @@ func (s *PhaseLeaf) Validate() error {
 	if err := func() error {
 		if value, ok := s.LowerZone.Get(); ok {
 			if err := func() error {
-				if err := (validate.Int{
+				if err := (validate.Float{
 					MinSet:        true,
 					Min:           1,
 					MaxSet:        true,
@@ -1400,10 +1526,10 @@ func (s *PhaseLeaf) Validate() error {
 					MinExclusive:  false,
 					MaxExclusive:  false,
 					MultipleOfSet: false,
-					MultipleOf:    0,
+					MultipleOf:    nil,
 					Pattern:       nil,
-				}).Validate(int64(value)); err != nil {
-					return errors.Wrap(err, "int")
+				}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
 				}
 				return nil
 			}(); err != nil {
@@ -1420,7 +1546,7 @@ func (s *PhaseLeaf) Validate() error {
 	if err := func() error {
 		if value, ok := s.UpperZone.Get(); ok {
 			if err := func() error {
-				if err := (validate.Int{
+				if err := (validate.Float{
 					MinSet:        true,
 					Min:           1,
 					MaxSet:        true,
@@ -1428,10 +1554,10 @@ func (s *PhaseLeaf) Validate() error {
 					MinExclusive:  false,
 					MaxExclusive:  false,
 					MultipleOfSet: false,
-					MultipleOf:    0,
+					MultipleOf:    nil,
 					Pattern:       nil,
-				}).Validate(int64(value)); err != nil {
-					return errors.Wrap(err, "int")
+				}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
 				}
 				return nil
 			}(); err != nil {

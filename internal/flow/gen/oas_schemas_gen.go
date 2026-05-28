@@ -1303,14 +1303,14 @@ type ExerciseTarget struct {
 	Duration OptNilString `json:"duration"`
 	// Target distance in **metres** (the UI shows km but the wire value is metres —
 	// UI 5 km → payload 5000). Null when not distance-based.
-	Distance OptNilInt `json:"distance"`
+	Distance OptNilFloat64 `json:"distance"`
 	// Target calorie burn (kcal). Null when not calorie-based.
-	Calories OptNilInt `json:"calories"`
+	Calories OptNilFloat64 `json:"calories"`
 	// Structured phases (e.g. warm-up / main / cool-down). Empty `[]` for VOLUME /
 	// STEADY_RACE_PACE targets; populated for PHASED targets.
 	Phases []Phase `json:"phases"`
 	// Populated by the server on create; send null when creating.
-	ID OptNilInt `json:"id"`
+	ID OptNilFloat64 `json:"id"`
 }
 
 // GetIndex returns the value of Index.
@@ -1329,12 +1329,12 @@ func (s *ExerciseTarget) GetDuration() OptNilString {
 }
 
 // GetDistance returns the value of Distance.
-func (s *ExerciseTarget) GetDistance() OptNilInt {
+func (s *ExerciseTarget) GetDistance() OptNilFloat64 {
 	return s.Distance
 }
 
 // GetCalories returns the value of Calories.
-func (s *ExerciseTarget) GetCalories() OptNilInt {
+func (s *ExerciseTarget) GetCalories() OptNilFloat64 {
 	return s.Calories
 }
 
@@ -1344,7 +1344,7 @@ func (s *ExerciseTarget) GetPhases() []Phase {
 }
 
 // GetID returns the value of ID.
-func (s *ExerciseTarget) GetID() OptNilInt {
+func (s *ExerciseTarget) GetID() OptNilFloat64 {
 	return s.ID
 }
 
@@ -1364,12 +1364,12 @@ func (s *ExerciseTarget) SetDuration(val OptNilString) {
 }
 
 // SetDistance sets the value of Distance.
-func (s *ExerciseTarget) SetDistance(val OptNilInt) {
+func (s *ExerciseTarget) SetDistance(val OptNilFloat64) {
 	s.Distance = val
 }
 
 // SetCalories sets the value of Calories.
-func (s *ExerciseTarget) SetCalories(val OptNilInt) {
+func (s *ExerciseTarget) SetCalories(val OptNilFloat64) {
 	s.Calories = val
 }
 
@@ -1379,7 +1379,7 @@ func (s *ExerciseTarget) SetPhases(val []Phase) {
 }
 
 // SetID sets the value of ID.
-func (s *ExerciseTarget) SetID(val OptNilInt) {
+func (s *ExerciseTarget) SetID(val OptNilFloat64) {
 	s.ID = val
 }
 
@@ -1763,14 +1763,14 @@ type FavoriteExerciseTargetsItem struct {
 	Duration OptNilString `json:"duration"`
 	// Target distance in **metres** (the UI shows km but the wire value is metres —
 	// UI 5 km → payload 5000). Null when not distance-based.
-	Distance OptNilInt `json:"distance"`
+	Distance OptNilFloat64 `json:"distance"`
 	// Target calorie burn (kcal). Null when not calorie-based.
-	Calories OptNilInt `json:"calories"`
+	Calories OptNilFloat64 `json:"calories"`
 	// Structured phases (e.g. warm-up / main / cool-down). Empty `[]` for VOLUME /
 	// STEADY_RACE_PACE targets; populated for PHASED targets.
 	Phases []Phase `json:"phases"`
 	// Populated by the server on create; send null when creating.
-	ID OptNilInt `json:"id"`
+	ID OptNilFloat64 `json:"id"`
 }
 
 // GetIndex returns the value of Index.
@@ -1789,12 +1789,12 @@ func (s *FavoriteExerciseTargetsItem) GetDuration() OptNilString {
 }
 
 // GetDistance returns the value of Distance.
-func (s *FavoriteExerciseTargetsItem) GetDistance() OptNilInt {
+func (s *FavoriteExerciseTargetsItem) GetDistance() OptNilFloat64 {
 	return s.Distance
 }
 
 // GetCalories returns the value of Calories.
-func (s *FavoriteExerciseTargetsItem) GetCalories() OptNilInt {
+func (s *FavoriteExerciseTargetsItem) GetCalories() OptNilFloat64 {
 	return s.Calories
 }
 
@@ -1804,7 +1804,7 @@ func (s *FavoriteExerciseTargetsItem) GetPhases() []Phase {
 }
 
 // GetID returns the value of ID.
-func (s *FavoriteExerciseTargetsItem) GetID() OptNilInt {
+func (s *FavoriteExerciseTargetsItem) GetID() OptNilFloat64 {
 	return s.ID
 }
 
@@ -1824,12 +1824,12 @@ func (s *FavoriteExerciseTargetsItem) SetDuration(val OptNilString) {
 }
 
 // SetDistance sets the value of Distance.
-func (s *FavoriteExerciseTargetsItem) SetDistance(val OptNilInt) {
+func (s *FavoriteExerciseTargetsItem) SetDistance(val OptNilFloat64) {
 	s.Distance = val
 }
 
 // SetCalories sets the value of Calories.
-func (s *FavoriteExerciseTargetsItem) SetCalories(val OptNilInt) {
+func (s *FavoriteExerciseTargetsItem) SetCalories(val OptNilFloat64) {
 	s.Calories = val
 }
 
@@ -1839,7 +1839,7 @@ func (s *FavoriteExerciseTargetsItem) SetPhases(val []Phase) {
 }
 
 // SetID sets the value of ID.
-func (s *FavoriteExerciseTargetsItem) SetID(val OptNilInt) {
+func (s *FavoriteExerciseTargetsItem) SetID(val OptNilFloat64) {
 	s.ID = val
 }
 
@@ -3492,51 +3492,6 @@ func (o NilFloat64) Get() (v float64, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o NilFloat64) Or(d float64) float64 {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewNilInt returns new NilInt with value set to v.
-func NewNilInt(v int) NilInt {
-	return NilInt{
-		Value: v,
-	}
-}
-
-// NilInt is nullable int.
-type NilInt struct {
-	Value int
-	Null  bool
-}
-
-// SetTo sets value to v.
-func (o *NilInt) SetTo(v int) {
-	o.Null = false
-	o.Value = v
-}
-
-// IsNull returns true if value is Null.
-func (o NilInt) IsNull() bool { return o.Null }
-
-// SetToNull sets value to null.
-func (o *NilInt) SetToNull() {
-	o.Null = true
-	var v int
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o NilInt) Get() (v int, ok bool) {
-	if o.Null {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o NilInt) Or(d int) int {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -6461,19 +6416,19 @@ type PhaseLeaf struct {
 	// Drives which of `distance` / `duration` is non-null on this phase.
 	GoalType PhaseLeafGoalType `json:"goalType"`
 	// Phase distance in **metres** (not km). Non-null iff `goalType=DISTANCE`.
-	Distance NilInt `json:"distance"`
+	Distance OptNilFloat64 `json:"distance"`
 	// Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the
 	// UI validator). Non-null iff `goalType=DURATION`.
-	Duration NilString `json:"duration"`
+	Duration OptNilString `json:"duration"`
 	// Intensity metric for the phase. All four values verified from captures.
 	// Toggling off "Utiliser les zones d'entraînement" in the UI sets this to
 	// "NONE" and nulls both zones. POWER_ZONES requires a power-capable sport
 	// (e.g. CYCLING, sportId 2) — verified via capture 11-phased-power.json.
 	IntensityType PhaseLeafIntensityType `json:"intensityType"`
 	// Lower zone bound (1–5) when `intensityType != NONE`; otherwise null.
-	LowerZone NilInt `json:"lowerZone"`
+	LowerZone OptNilFloat64 `json:"lowerZone"`
 	// Upper zone bound (1–5) when `intensityType != NONE`; otherwise null.
-	UpperZone NilInt `json:"upperZone"`
+	UpperZone OptNilFloat64 `json:"upperZone"`
 }
 
 // GetPhaseType returns the value of PhaseType.
@@ -6497,12 +6452,12 @@ func (s *PhaseLeaf) GetGoalType() PhaseLeafGoalType {
 }
 
 // GetDistance returns the value of Distance.
-func (s *PhaseLeaf) GetDistance() NilInt {
+func (s *PhaseLeaf) GetDistance() OptNilFloat64 {
 	return s.Distance
 }
 
 // GetDuration returns the value of Duration.
-func (s *PhaseLeaf) GetDuration() NilString {
+func (s *PhaseLeaf) GetDuration() OptNilString {
 	return s.Duration
 }
 
@@ -6512,12 +6467,12 @@ func (s *PhaseLeaf) GetIntensityType() PhaseLeafIntensityType {
 }
 
 // GetLowerZone returns the value of LowerZone.
-func (s *PhaseLeaf) GetLowerZone() NilInt {
+func (s *PhaseLeaf) GetLowerZone() OptNilFloat64 {
 	return s.LowerZone
 }
 
 // GetUpperZone returns the value of UpperZone.
-func (s *PhaseLeaf) GetUpperZone() NilInt {
+func (s *PhaseLeaf) GetUpperZone() OptNilFloat64 {
 	return s.UpperZone
 }
 
@@ -6542,12 +6497,12 @@ func (s *PhaseLeaf) SetGoalType(val PhaseLeafGoalType) {
 }
 
 // SetDistance sets the value of Distance.
-func (s *PhaseLeaf) SetDistance(val NilInt) {
+func (s *PhaseLeaf) SetDistance(val OptNilFloat64) {
 	s.Distance = val
 }
 
 // SetDuration sets the value of Duration.
-func (s *PhaseLeaf) SetDuration(val NilString) {
+func (s *PhaseLeaf) SetDuration(val OptNilString) {
 	s.Duration = val
 }
 
@@ -6557,12 +6512,12 @@ func (s *PhaseLeaf) SetIntensityType(val PhaseLeafIntensityType) {
 }
 
 // SetLowerZone sets the value of LowerZone.
-func (s *PhaseLeaf) SetLowerZone(val NilInt) {
+func (s *PhaseLeaf) SetLowerZone(val OptNilFloat64) {
 	s.LowerZone = val
 }
 
 // SetUpperZone sets the value of UpperZone.
-func (s *PhaseLeaf) SetUpperZone(val NilInt) {
+func (s *PhaseLeaf) SetUpperZone(val OptNilFloat64) {
 	s.UpperZone = val
 }
 

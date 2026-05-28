@@ -1610,11 +1610,7 @@ components:
       - name
       - phaseChangeType
       - goalType
-      - distance
-      - duration
       - intensityType
-      - lowerZone
-      - upperZone
       properties:
         phaseType:
           type: string
@@ -1647,7 +1643,7 @@ components:
           - DURATION
           description: Drives which of `distance` / `duration` is non-null on this phase.
         distance:
-          type: integer
+          type: number
           description: Phase distance in **metres** (not km). Non-null iff `goalType=DISTANCE`.
           example: 5000
           nullable: true
@@ -1677,13 +1673,13 @@ components:
 
             '
         lowerZone:
-          type: integer
+          type: number
           minimum: 1
           maximum: 5
           description: Lower zone bound (1–5) when `intensityType != NONE`; otherwise null.
           nullable: true
         upperZone:
-          type: integer
+          type: number
           minimum: 1
           maximum: 5
           description: Upper zone bound (1–5) when `intensityType != NONE`; otherwise null.
@@ -1769,7 +1765,7 @@ components:
           example: 01:00:00
           nullable: true
         distance:
-          type: integer
+          type: number
           description: 'Target distance in **metres** (the UI shows km but the wire value is metres —
 
             UI 5 km → payload 5000). Null when not distance-based.
@@ -1778,7 +1774,7 @@ components:
           example: 5000
           nullable: true
         calories:
-          type: integer
+          type: number
           description: Target calorie burn (kcal). Null when not calorie-based.
           nullable: true
         phases:
@@ -1791,7 +1787,7 @@ components:
           items:
             $ref: '#/components/schemas/Phase'
         id:
-          type: integer
+          type: number
           description: Populated by the server on create; send null when creating.
           nullable: true
     TrainingTargetCreate:

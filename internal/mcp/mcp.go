@@ -47,7 +47,13 @@ func withLogging(name string, h func(context.Context, mcpgo.CallToolRequest) (*m
 		case err != nil:
 			slog.Warn("tool: error", "tool", name, "duration_ms", ms, "error", err)
 		case result != nil && result.IsError:
-			slog.Warn("tool: tool_error", "tool", name, "duration_ms", ms)
+			msg := ""
+			if len(result.Content) > 0 {
+				if t, ok := result.Content[0].(mcpgo.TextContent); ok {
+					msg = t.Text
+				}
+			}
+			slog.Warn("tool: tool_error", "tool", name, "duration_ms", ms, "error", msg)
 		default:
 			slog.Info("tool: done", "tool", name, "duration_ms", ms)
 		}

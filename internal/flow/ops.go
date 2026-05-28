@@ -400,3 +400,4 @@ func (c *Client) CreateTrainingSession(ctx context.Context, body *gen.TrainingSe
 func formatDayMonthYear(t time.Time) string {
 	return fmt.Sprintf("%d.%d.%d", t.Day(), int(t.Month()), t.Year())
 }
+
