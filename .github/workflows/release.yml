@@ -22,7 +22,7 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: CGO_ENABLED=0 go test -tags=polartest -race -count=1 ./...
+        run: CGO_ENABLED=0 go test -tags=polartest -count=1 ./...
 
       - name: Lint
         uses: golangci/golangci-lint-action@v9

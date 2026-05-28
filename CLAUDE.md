@@ -13,7 +13,7 @@ and silent refresh.
 ## Pre-Commit Checklist
 
 1. **Lint**: `~/go/bin/golangci-lint run ./...` — fix all errors.
-2. **Tests**: `CGO_ENABLED=0 go test -race -count=1 ./...` — fix all failures.
+2. **Tests**: `CGO_ENABLED=0 go test -count=1 ./...` — fix all failures. (`-race` requires CGO and is skipped here.)
 3. **Docs**: keep `README.md`, `internal/flow/README.md`, and this file in sync
    when adding or removing tools, env vars, or persistence behaviour.
 
