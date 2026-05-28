@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -174,7 +173,9 @@ type transport struct {
 
 // Do implements ogen-go/ogen/http.Client.
 func (t *transport) Do(req *http.Request) (*http.Response, error) {
-	if req.Method != http.MethodGet && strings.HasPrefix(req.URL.Path, "/api/") {
+	// Play's CSRF filter requires X-Requested-With on every mutation, not just
+	// /api/* — DELETE /training/target/{id} 403s without it.
+	if req.Method != http.MethodGet {
 		req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	}
 	if req.Header.Get("User-Agent") == "" {
