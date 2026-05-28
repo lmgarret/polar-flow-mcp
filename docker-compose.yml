@@ -1,8 +1,18 @@
 # polar-flow-mcp docker-compose example
 #
 # This server is single-user — one container per Polar Flow account.
-# The server refuses to start unless POLAR_EMAIL and POLAR_PASSWORD are set.
-# See https://lmgarret.github.io/polar-flow-mcp for setup instructions.
+# Credentials are loaded from a secrets file bind-mounted at /.env so they
+# never appear in docker inspect, Portainer's UI, or the container environment.
+#
+# Setup:
+#   sudo mkdir -p /etc/polar-flow
+#   sudo tee /etc/polar-flow/secrets.env <<'EOF'
+#   POLAR_EMAIL=you@example.com
+#   POLAR_PASSWORD=yourpassword
+#   EOF
+#   sudo chmod 600 /etc/polar-flow/secrets.env
+#
+# See https://lmgarret.github.io/polar-flow-mcp for full setup instructions.
 
 services:
   polar-flow-mcp:
@@ -11,26 +21,20 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
+      # Secrets file — contains POLAR_EMAIL and POLAR_PASSWORD.
+      # chmod 600, owned by root. Never put credentials in the environment
+      # block below; they would be visible in docker inspect and Portainer.
+      - /etc/polar-flow/secrets.env:/.env:ro
+
+      # Cookie jar — keep on a named volume so sessions survive restarts.
       - polar-data:/data
     environment:
-      # REQUIRED: Polar Flow account credentials.
-      # Use a TEST account where possible. The password is held in memory
-      # only — never written to disk by this server.
-      POLAR_EMAIL: ""
-      POLAR_PASSWORD: ""
-
-      # Cookie jar path (chmod 600). Keep on the named volume so the cookies
-      # survive container restarts.
       COOKIE_JAR_PATH: "/data/polar-cookies.json"
+      TRANSPORT: "http"
 
-      # OPTIONAL: bind address inside the container. Keep loopback unless
-      # you understand the security implications — this server has no
-      # built-in authentication.
-      # BIND_ADDRESS: "0.0.0.0"
-
-      # OPTIONAL: transport. Use "stdio" only if you launch the container
-      # via `docker compose run` from an MCP client.
-      # TRANSPORT: "http"
+      # BIND_ADDRESS must be 0.0.0.0 inside the container so the port
+      # is reachable from the host via the mapping above.
+      BIND_ADDRESS: "0.0.0.0"
 
       # OPTIONAL: logging.
       # LOG_LEVEL: "info"

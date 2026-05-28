@@ -32,9 +32,13 @@ A pre-built image is published to GHCR on every push to `main`.
 ### HTTP transport (recommended for persistent servers)
 
 ```bash
+# Put credentials in a chmod-600 file, not on the command line
+echo "POLAR_EMAIL=you@example.com" | sudo tee /etc/polar-flow/secrets.env
+echo "POLAR_PASSWORD=yourpassword" | sudo tee -a /etc/polar-flow/secrets.env
+sudo chmod 600 /etc/polar-flow/secrets.env
+
 docker run -d \
-  -e POLAR_EMAIL=you@example.com \
-  -e POLAR_PASSWORD=yourpassword \
+  -v /etc/polar-flow/secrets.env:/.env:ro \
   -e TRANSPORT=http \
   -e BIND_ADDRESS=0.0.0.0 \
   -e COOKIE_JAR_PATH=/data/cookies.json \
@@ -70,29 +74,44 @@ Pass `docker run` as the MCP command so Claude spawns the container itself:
 }
 ```
 
-### Docker Compose
+### Docker Compose (Portainer / persistent server)
+
+Credentials are loaded from a secrets file bind-mounted into the container so
+they never appear in `docker inspect`, Portainer's UI, or the environment block.
+
+**1. Create the secrets file on the host (once):**
+
+```bash
+sudo mkdir -p /etc/polar-flow
+sudo tee /etc/polar-flow/secrets.env <<'EOF'
+POLAR_EMAIL=you@example.com
+POLAR_PASSWORD=yourpassword
+EOF
+sudo chmod 600 /etc/polar-flow/secrets.env
+```
+
+**2. Deploy with the bundled `docker-compose.yml`:**
 
 ```yaml
 services:
   polar-flow-mcp:
     image: ghcr.io/lmgarret/polar-flow-mcp:latest
+    volumes:
+      - /etc/polar-flow/secrets.env:/.env:ro   # secrets, never in env block
+      - polar-data:/data
     environment:
-      POLAR_EMAIL: ${POLAR_EMAIL}
-      POLAR_PASSWORD: ${POLAR_PASSWORD}
+      COOKIE_JAR_PATH: /data/polar-cookies.json
       TRANSPORT: http
       BIND_ADDRESS: "0.0.0.0"
-      COOKIE_JAR_PATH: /data/cookies.json
-    volumes:
-      - polar-cookies:/data
     ports:
       - "127.0.0.1:8080:8080"
     restart: unless-stopped
 
 volumes:
-  polar-cookies:
+  polar-data:
 ```
 
-Set `POLAR_EMAIL` and `POLAR_PASSWORD` in a `.env` file next to the compose file (Compose picks them up automatically).
+The server reads `/.env` on startup via `godotenv` — credentials are in memory only and never written to disk by the server itself.
 
 ## Tools
 
