@@ -7,11 +7,53 @@
 package mcp
 
 import (
+	"context"
+	"log/slog"
+	"time"
+
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/lm/polar-flow-mcp/internal/flow"
 )
+
+// sensitiveArgKeys holds arg names whose values must not appear in logs.
+var sensitiveArgKeys = map[string]bool{
+	"name": true, "note": true, "description": true, "phases": true,
+}
+
+func safeArgs(args map[string]any) map[string]any {
+	if len(args) == 0 {
+		return nil
+	}
+	out := make(map[string]any, len(args))
+	for k, v := range args {
+		if sensitiveArgKeys[k] {
+			out[k] = "[redacted]"
+		} else {
+			out[k] = v
+		}
+	}
+	return out
+}
+
+func withLogging(name string, h func(context.Context, mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error)) func(context.Context, mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+	return func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+		start := time.Now()
+		slog.Info("tool: call", "tool", name, "args", safeArgs(req.GetArguments()))
+		result, err := h(ctx, req)
+		ms := time.Since(start).Milliseconds()
+		switch {
+		case err != nil:
+			slog.Warn("tool: error", "tool", name, "duration_ms", ms, "error", err)
+		case result != nil && result.IsError:
+			slog.Warn("tool: tool_error", "tool", name, "duration_ms", ms)
+		default:
+			slog.Info("tool: done", "tool", name, "duration_ms", ms)
+		}
+		return result, err
+	}
+}
 
 // RegisterTools registers all Polar Flow MCP tools with the given server.
 func RegisterTools(s *server.MCPServer, fc *flow.Client) {
@@ -19,7 +61,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithDescription(
 			"Return identity, country, and basic profile info for the linked Polar Flow account.",
 		),
-	), GetUserInfoHandler(fc))
+	), withLogging("get_user_info", GetUserInfoHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("create_training_target",
 		mcpgo.WithDescription(
@@ -62,7 +104,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"required": []string{"type"},
 			}),
 		),
-	), CreateTrainingTargetHandler(fc))
+	), withLogging("create_training_target", CreateTrainingTargetHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("list_training_targets",
 		mcpgo.WithDescription(
@@ -72,7 +114,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today)")),
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today + 30 days)")),
-	), ListTrainingTargetsHandler(fc))
+	), withLogging("list_training_targets", ListTrainingTargetsHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("delete_training_target",
 		mcpgo.WithDescription(
@@ -80,7 +122,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		),
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
 			mcpgo.Description("Numeric target ID from create_training_target or list_training_targets")),
-	), DeleteTrainingTargetHandler(fc))
+	), withLogging("delete_training_target", DeleteTrainingTargetHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("get_training_target",
 		mcpgo.WithDescription(
@@ -89,7 +131,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		),
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
 			mcpgo.Description("Numeric target ID from list_training_targets")),
-	), GetTrainingTargetHandler(fc))
+	), withLogging("get_training_target", GetTrainingTargetHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("update_training_target",
 		mcpgo.WithDescription(
@@ -132,7 +174,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"required": []string{"type"},
 			}),
 		),
-	), UpdateTrainingTargetHandler(fc))
+	), withLogging("update_training_target", UpdateTrainingTargetHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("get_calendar_week_summary",
 		mcpgo.WithDescription(
@@ -143,7 +185,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today - 28 days)")),
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today)")),
-	), GetCalendarWeekSummaryHandler(fc))
+	), withLogging("get_calendar_week_summary", GetCalendarWeekSummaryHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("get_progress_summary",
 		mcpgo.WithDescription(
@@ -159,7 +201,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Optional sport ID filter (omit or 0 for all sports)")),
 		mcpgo.WithString("time_frame",
 			mcpgo.Description("Bucket size for per-slice breakdowns: \"6w\", \"3m\", or \"1y\" (default: \"3m\")")),
-	), GetProgressSummaryHandler(fc))
+	), withLogging("get_progress_summary", GetProgressSummaryHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("get_calendar_events",
 		mcpgo.WithDescription(
@@ -169,7 +211,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today)")),
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today + 30 days)")),
-	), GetCalendarEventsHandler(fc))
+	), withLogging("get_calendar_events", GetCalendarEventsHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("list_training_sessions",
 		mcpgo.WithDescription(
@@ -179,7 +221,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today - 30 days)")),
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today)")),
-	), ListTrainingSessionsHandler(fc))
+	), withLogging("list_training_sessions", ListTrainingSessionsHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("get_training_session_summary",
 		mcpgo.WithDescription(
@@ -187,7 +229,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		),
 		mcpgo.WithNumber("session_id", mcpgo.Required(),
 			mcpgo.Description("Numeric session ID from list_training_sessions")),
-	), GetTrainingSessionSummaryHandler(fc))
+	), withLogging("get_training_session_summary", GetTrainingSessionSummaryHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("create_training_session",
 		mcpgo.WithDescription(
@@ -220,7 +262,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Polar sport ID (default 1 = running)")),
 		mcpgo.WithString("note",
 			mcpgo.Description("Free-text note (optional)")),
-	), CreateTrainingSessionHandler(fc))
+	), withLogging("create_training_session", CreateTrainingSessionHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("get_training_session_details",
 		mcpgo.WithDescription(
@@ -228,5 +270,5 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		),
 		mcpgo.WithNumber("session_id", mcpgo.Required(),
 			mcpgo.Description("Numeric session ID from list_training_sessions")),
-	), GetTrainingSessionDetailsHandler(fc))
+	), withLogging("get_training_session_details", GetTrainingSessionDetailsHandler(fc)))
 }

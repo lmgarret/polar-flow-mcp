@@ -202,6 +202,7 @@ func (t *transport) Do(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+	slog.Debug("flow: http", "method", req.Method, "path", req.URL.Path, "status", resp.StatusCode)
 	if resp.StatusCode != http.StatusUnauthorized {
 		return resp, nil
 	}
@@ -232,7 +233,11 @@ func (t *transport) Do(req *http.Request) (*http.Response, error) {
 	if v := t.c.flowSessionValue(); v != "" {
 		retry.AddCookie(&http.Cookie{Name: "FLOW_SESSION", Value: v})
 	}
-	return t.c.httpClient.Do(retry)
+	retryResp, retryErr := t.c.httpClient.Do(retry)
+	if retryErr == nil {
+		slog.Debug("flow: http retry", "method", retry.Method, "path", retry.URL.Path, "status", retryResp.StatusCode)
+	}
+	return retryResp, retryErr
 }
 
 // stripCookie removes any cookie with the given name from r.Header["Cookie"].
