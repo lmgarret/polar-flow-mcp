@@ -189,6 +189,39 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Numeric session ID from list_training_sessions")),
 	), GetTrainingSessionSummaryHandler(fc))
 
+	s.AddTool(mcpgo.NewTool("create_training_session",
+		mcpgo.WithDescription(
+			"Log a manually-entered completed training session (the \"Manual training result\" "+
+				"form in Polar Flow). WRITES A REAL SESSION — it counts toward weekly volume, "+
+				"progress summaries, and Polar's training-load model. Intended for user-initiated "+
+				"logging of off-watch sessions, NOT for synthesizing test data on a production "+
+				"account. Coach skills should only call this when the user explicitly asks to "+
+				"log a session.",
+		),
+		mcpgo.WithString("name", mcpgo.Required(),
+			mcpgo.Description("Display name shown in the diary (e.g. \"Easy 5km\")")),
+		mcpgo.WithString("date", mcpgo.Required(),
+			mcpgo.Description("Date the session happened, ISO 8601 YYYY-MM-DD")),
+		mcpgo.WithString("time",
+			mcpgo.Description("Local time the session started, HH:MM (default: 18:00)")),
+		mcpgo.WithNumber("duration_s", mcpgo.Required(),
+			mcpgo.Description("Duration in seconds")),
+		mcpgo.WithNumber("distance_m",
+			mcpgo.Description("Distance in metres (default: 0)")),
+		mcpgo.WithNumber("kcal",
+			mcpgo.Description("Kilocalories burned (default: 0)")),
+		mcpgo.WithNumber("hr_avg",
+			mcpgo.Description("Average heart rate in bpm (omit or 0 for unset)")),
+		mcpgo.WithNumber("hr_max",
+			mcpgo.Description("Max heart rate in bpm (omit or 0 for unset)")),
+		mcpgo.WithNumber("speed_kmh",
+			mcpgo.Description("Average speed in km/h (omit or 0 for unset)")),
+		mcpgo.WithNumber("sport_id",
+			mcpgo.Description("Polar sport ID (default 1 = running)")),
+		mcpgo.WithString("note",
+			mcpgo.Description("Free-text note (optional)")),
+	), CreateTrainingSessionHandler(fc))
+
 	s.AddTool(mcpgo.NewTool("get_training_session_details",
 		mcpgo.WithDescription(
 			"Return the lap- and sample-level details for a completed training session.",

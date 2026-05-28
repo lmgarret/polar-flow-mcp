@@ -63,3 +63,4 @@ and silent refresh.
 | `get_training_session_summary` | Summary view of one session |
 | `get_training_session_details` | Lap / sample detail of one session |
 | `get_progress_summary` | Aggregated training totals over a range |
+| `create_training_session` | Log a manually-entered completed session — writes real data; coach must only call on explicit user request |

@@ -173,6 +173,38 @@ training-benefit distributions, HR-zone totals, fit/fat-zone totals.
 
 ---
 
+## `create_training_session`
+
+Log a manually-entered completed training session via `POST /api/training/create`
+— the endpoint behind the "Manual training result" form (`/exercises/add`) in
+the Polar Flow web UI.
+
+**⚠ Writes real data.** The created session counts toward weekly volume,
+progress summaries, and Polar's training-load model. Intended for
+user-initiated logging of sessions that weren't recorded on a watch — not for
+synthesizing test data on a production account. Coach skills should only call
+this when the user explicitly asks to log a session.
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | string | yes | Display name shown in the diary. |
+| `date` | `YYYY-MM-DD` | yes | Date the session happened. |
+| `time` | `HH:MM` | no | Local start time. Default `18:00`. |
+| `duration_s` | integer | yes | Duration in seconds. |
+| `distance_m` | integer | no | Distance in metres. Default `0`. |
+| `kcal` | integer | no | Kilocalories burned. Default `0`. |
+| `hr_avg` | integer | no | Average HR (bpm). Omit / `0` for unset. |
+| `hr_max` | integer | no | Max HR (bpm). Omit / `0` for unset. |
+| `speed_kmh` | number | no | Average speed (km/h). Omit / `0` for unset. |
+| `sport_id` | integer | no | Polar sport ID. Default `1` (running). |
+| `note` | string | no | Free-text note. |
+
+**Response:** confirmation string. The endpoint returns an empty body — Polar
+does not surface the new session id; call `list_training_sessions` afterwards
+if you need it.
+
+---
+
 ## `list_training_sessions`
 
 List **completed** training sessions in a date range.

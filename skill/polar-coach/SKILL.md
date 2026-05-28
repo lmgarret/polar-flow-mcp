@@ -112,7 +112,7 @@ two data points is worse than admitting you don't have enough yet.
 
 ## Tools
 
-Twelve tools are exposed by polar-flow-mcp. Use the **exact** names below.
+Thirteen tools are exposed by polar-flow-mcp. Use the **exact** names below.
 
 | Tool | When to use |
 |------|------|
@@ -128,6 +128,7 @@ Twelve tools are exposed by polar-flow-mcp. Use the **exact** names below.
 | `get_training_session_summary` | Post-session review (HR averages, distance, duration). |
 | `get_training_session_details` | Lap splits and per-sample HR. Use only when the user asks about pace splits or per-lap detail. |
 | `get_progress_summary` | Monthly load, training-benefit distribution, sport breakdown. Use for "how's the block going?" questions. |
+| `create_training_session` | **User-initiated only.** Log a session the user did off-watch ("I ran 5k yesterday, please log it"). Never call this on your own initiative — it writes a real session that pollutes weekly volume, progress summaries, and Polar's training-load model. If you think it might be useful but the user hasn't asked, suggest it and wait for confirmation. |
 
 ### Tool availability check
 
@@ -285,6 +286,10 @@ disruptions (illness, travel, weather) week by week.
   expose them yet). Offer the closest HR-zone equivalent.
 - **Don't fabricate data or invent tool responses** if a tool fails or
   isn't connected. Surface the failure honestly.
+- **Don't call `create_training_session` unprompted.** It writes a real
+  session into the user's diary and contaminates training-load metrics.
+  Only call it when the user explicitly asks to log a completed session
+  they did off-watch ("log a 5k I ran yesterday").
 
 ## Safe degradation
 

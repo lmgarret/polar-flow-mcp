@@ -8,9 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-faster/jx"
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/lm/polar-flow-mcp/internal/flow"
+	"github.com/lm/polar-flow-mcp/internal/flow/gen"
 )
 
 const isoDate = "2006-01-02"
@@ -148,6 +150,75 @@ func GetTrainingSessionDetailsHandler(fc *flow.Client) func(context.Context, mcp
 		}
 		body, _ := json.MarshalIndent(details, "", "  ")
 		return mcpgo.NewToolResultText(string(body)), nil
+	}
+}
+
+// CreateTrainingSessionHandler creates a manual training session entry. This
+// is what the Polar Flow web UI calls the "Manual training result" form
+// (/exercises/add). The created session counts as a real training session —
+// it affects weekly totals, progress summaries, and Polar's training-load
+// model. Intended for user-initiated off-watch logging, not synthetic data.
+func CreateTrainingSessionHandler(fc *flow.Client) func(context.Context, mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+	return func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+		name := req.GetString("name", "")
+		if strings.TrimSpace(name) == "" {
+			return mcpgo.NewToolResultError("name is required"), nil
+		}
+		dateStr := req.GetString("date", "")
+		if strings.TrimSpace(dateStr) == "" {
+			return mcpgo.NewToolResultError("date is required (YYYY-MM-DD)"), nil
+		}
+		day, err := time.ParseInLocation(isoDate, dateStr, time.Local)
+		if err != nil {
+			return mcpgo.NewToolResultError(fmt.Sprintf("date must be ISO 8601 YYYY-MM-DD: %v", err)), nil
+		}
+		timeStr := req.GetString("time", "18:00")
+		hhmm, err := time.ParseInLocation("15:04", timeStr, time.Local)
+		if err != nil {
+			return mcpgo.NewToolResultError(fmt.Sprintf("time must be HH:MM 24h: %v", err)), nil
+		}
+		when := time.Date(day.Year(), day.Month(), day.Day(),
+			hhmm.Hour(), hhmm.Minute(), 0, 0, time.Local)
+		// Format: YYYY-MM-DDTHH:MM±ZZZZ
+		datePayload := when.Format("2006-01-02T15:04-0700")
+
+		duration := int(req.GetFloat("duration_s", 0))
+		if duration <= 0 {
+			return mcpgo.NewToolResultError("duration_s is required and must be > 0"), nil
+		}
+
+		body := &gen.TrainingSessionCreate{
+			Date:                         datePayload,
+			Sport:                        int(req.GetFloat("sport_id", 1)),
+			Duration:                     duration,
+			Distance:                     int(req.GetFloat("distance_m", 0)),
+			KiloCalories:                 int(req.GetFloat("kcal", 0)),
+			Note:                         req.GetString("note", ""),
+			TrainingSessionName:          name,
+			InterpolatedHeartRateSamples: []jx.Raw{},
+			SaveHeartRateSamples:         false,
+		}
+		// HR: integer-as-string convention, "" when unset.
+		if v := int(req.GetFloat("hr_avg", 0)); v > 0 {
+			body.HrAverage = fmt.Sprintf("%d", v)
+		}
+		if v := int(req.GetFloat("hr_max", 0)); v > 0 {
+			body.HrMax = fmt.Sprintf("%d", v)
+		}
+		// SpeedAverage: nullable float (km/h). Omit by leaving NilFloat64 zero
+		// (Null:true via SetToNull).
+		body.SpeedAverage.SetToNull()
+		if v := req.GetFloat("speed_kmh", 0); v > 0 {
+			body.SpeedAverage.SetTo(v)
+		}
+		body.Feeling.SetToNull()
+
+		if err := fc.CreateTrainingSession(ctx, body); err != nil {
+			return mcpgo.NewToolResultError(err.Error()), nil
+		}
+		return mcpgo.NewToolResultText(fmt.Sprintf(
+			"Created training session %q on %s (duration %ds). Note: this writes a real session to your diary and counts toward your training stats.",
+			name, datePayload, duration)), nil
 	}
 }
 

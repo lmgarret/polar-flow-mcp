@@ -368,6 +368,33 @@ func (c *Client) GetTrainingSessionDetails(ctx context.Context, id int64) (*gen.
 	}
 }
 
+// CreateTrainingSession posts a manual session entry to /api/training/create —
+// the endpoint behind the "Manual training result" form. The response body is
+// empty (Polar does not return the new session id); call ListTrainingSessions
+// afterwards if you need to look it up.
+//
+// WARNING: this writes a real session into Polar Flow. It contributes to
+// weekly volume, progress summaries, and training-load models. Intended for
+// user-initiated logging of off-watch sessions, not for synthesizing data.
+func (c *Client) CreateTrainingSession(ctx context.Context, body *gen.TrainingSessionCreate) error {
+	res, err := c.API.CreateTrainingSession(ctx, body, gen.CreateTrainingSessionParams{
+		XRequestedWith: gen.XRequestedWithXMLHttpRequest,
+	})
+	if err != nil {
+		return fmt.Errorf("flow: create training session: %w", err)
+	}
+	switch res.(type) {
+	case *gen.CreateTrainingSessionOK:
+		return nil
+	case *gen.CreateTrainingSessionBadRequest:
+		return fmt.Errorf("flow: create training session: validation rejected")
+	case *gen.Unauthorized:
+		return ErrLoginFailed
+	default:
+		return fmt.Errorf("flow: create training session: unexpected response %T", res)
+	}
+}
+
 // formatDayMonthYear formats t as "D.M.YYYY" — the format the calendar endpoint
 // expects (single-digit days/months, no zero-padding).
 func formatDayMonthYear(t time.Time) string {
