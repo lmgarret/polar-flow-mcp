@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-polar-flow-mcp exposes twelve tools backed by the
+polar-flow-mcp exposes thirteen tools backed by the
 [ogen](https://github.com/ogen-go/ogen)-generated client in `internal/flow/`.
 All tools act as the single Polar Flow account configured via `POLAR_EMAIL` /
 `POLAR_PASSWORD`.

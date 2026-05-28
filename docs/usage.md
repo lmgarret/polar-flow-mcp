@@ -1,6 +1,6 @@
 # Usage
 
-This guide covers the twelve MCP tools exposed by polar-flow-mcp, with worked examples,
+This guide covers the thirteen MCP tools exposed by polar-flow-mcp, with worked examples,
 HR zone vocabulary, and instructions for installing the `polar-coach` skill in Claude.
 
 ---
@@ -11,7 +11,7 @@ Once polar-flow-mcp is deployed and your Polar account is linked, you interact w
 through Claude conversations. The `polar-coach` skill guides Claude on when and how to
 call each tool, so you can use plain language rather than remembering API parameters.
 
-The twelve available tools are:
+The thirteen available tools are:
 
 | Tool | Purpose |
 |------|---------|
@@ -27,6 +27,7 @@ The twelve available tools are:
 | `get_training_session_summary` | Summary view of a completed session |
 | `get_training_session_details` | Lap/sample-level detail of a completed session |
 | `get_progress_summary` | Aggregated training totals over a range |
+| `create_training_session` | Log a manually-entered completed session (user-initiated only) |
 
 ![Claude tool call](images/claude-tool-call.png)
 

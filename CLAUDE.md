@@ -35,7 +35,8 @@ and silent refresh.
 | **`ogen` for client generation** | Best OpenAPI 3.1 coverage in Go. Quirk: rejects 3.1 nullable union syntax — we preprocess to 3.0.3 via `internal/flow/preprocess-spec.py`. |
 | **Single-user via env vars** (`POLAR_EMAIL`, `POLAR_PASSWORD`) | Storing per-user passwords would be a step up in risk over OAuth tokens — passwords often reused, can't be revoked granularly. One container per Polar account is the recommended multi-user pattern. |
 | **Cookies-only persistence** in chmod-600 JSON jar (`COOKIE_JAR_PATH`) | Password stays in env / memory; only the `remember-me` cookie + `FLOW_SESSION` are persisted. Rolling 14d remember-me means an active server never has to re-prompt. |
-| **`X-Requested-With: XMLHttpRequest` on every `/api/*` mutation** | Play's CSRF filter whitelists this header. Without it: `403` with HTML body — looks like an auth failure but isn't. Easy footgun. |
+| **`X-Requested-With: XMLHttpRequest` on every mutation** (any method ≠ GET, not just `/api/*`) | Play's CSRF filter whitelists this header. Required on `DELETE /training/target/{id}` too — that path sits outside `/api/*`. Without it: `403` with HTML body. Easy footgun. |
+| **Browser-fingerprint TLS + HTTP/2 for the login chain** (`azuretls` Chrome preset) and **for stdlib http.Client API calls** (`utls` Chrome ClientHello over `http2.Transport`) | `flow.polar.com` is behind a CloudFront WAF that inspects JA3/JA4 **and** HTTP/2 framing. Default Go net/http gets `403 X-Cache: Error from cloudfront` on `/flowSso/redirect`. uTLS alone (TLS only) is insufficient. |
 | **3-hop silent refresh on `401 {"error":"NotAuthenticated"}`** | Standard Polar Flow session-rotation path; falls back to full login if `session_id` on `auth.polar.com` has also expired. |
 | **Custom `ht.Client` transport wraps ogen's `gen.Client`** | Lets us inject `X-Requested-With`, the cookie jar, and the 401-retry without touching generated code. |
 
@@ -45,6 +46,8 @@ and silent refresh.
 - `github.com/mark3labs/mcp-go` — MCP server (stdio + streamable HTTP)
 - `github.com/ogen-go/ogen` — OpenAPI client generator
 - `github.com/joho/godotenv` — `.env` loader
+- `github.com/Noooste/azuretls-client` — Chrome JA3 + HTTP/2 fingerprint for login chain
+- `github.com/refraction-networking/utls` + `golang.org/x/net/http2` — Chrome ClientHello over HTTP/2 for the stdlib http.Client (used by ogen for API calls)
 - `log/slog`, `net/http`, `net/http/cookiejar` — stdlib for everything else
 
 ## Tools exposed
