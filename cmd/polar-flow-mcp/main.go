@@ -57,8 +57,10 @@ func main() {
 		"polar-flow-mcp",
 		"0.2.0",
 		server.WithToolCapabilities(true),
+		server.WithResourceCapabilities(false, false),
 	)
 	mcp.RegisterTools(mcpServer, flowClient)
+	mcp.RegisterResources(mcpServer)
 
 	switch cfg.Transport {
 	case "stdio":

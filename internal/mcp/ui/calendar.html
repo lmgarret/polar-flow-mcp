@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0d0d0d;color:#f0f0f0;font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px}
+body{padding:16px}
+.hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
+.hdr-label{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#d9232e}
+.hdr-sub{font-size:.72rem;color:#555}
+.day-group{margin-bottom:12px}
+.day-header{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#444;padding-bottom:6px;border-bottom:1px solid #1a1a1a;margin-bottom:6px}
+.event-row{display:flex;align-items:center;gap:10px;padding:7px 10px;background:#111;border-radius:5px;margin-bottom:3px;border-left:3px solid #d9232e}
+.ev-time{font-size:.7rem;color:#555;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;min-width:36px;flex-shrink:0}
+.ev-title{flex:1;font-size:.82rem;font-weight:500;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-type{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#444;flex-shrink:0}
+/* Week summary bars */
+.week-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.wk-label{font-size:.7rem;font-weight:700;letter-spacing:.06em;color:#555;min-width:32px;flex-shrink:0;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.wk-track{flex:1;height:8px;background:#1a1a1a;border-radius:4px;overflow:hidden}
+.wk-fill{height:100%;background:#d9232e;border-radius:4px;min-width:2px;transition:width .4s cubic-bezier(.4,0,.2,1)}
+.wk-val{font-size:.7rem;color:#555;min-width:70px;text-align:right;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.empty-state{color:#444;font-size:.8rem;font-style:italic;padding:12px 0}
+.loading{color:#444;font-size:.8rem;font-style:italic}
+.fade-in{animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="hdr"><span class="hdr-label" id="hdr-label">Calendar</span><span class="hdr-sub" id="hdr-sub"></span></div>
+<div id="root" class="loading">Loading…</div>
+<script>
+const pending = new Map(); let msgId = 0;
+window.addEventListener("message", e => {
+  const m = e.data; if (!m || m.jsonrpc !== "2.0") return;
+  if (m.id != null && pending.has(m.id)) {
+    const {resolve,reject} = pending.get(m.id); pending.delete(m.id);
+    m.error ? reject(new Error(m.error?.message ?? "RPC error")) : resolve(m.result);
+  } else if (m.method === "ui/notifications/tool-result") render(m.params?.structuredContent);
+});
+function rpc(method, params) {
+  const id = ++msgId;
+  return new Promise((resolve,reject) => { pending.set(id,{resolve,reject}); window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*"); });
+}
+rpc("ui/initialize",{clientInfo:{name:"polar-calendar-ui",version:"2.0"},appCapabilities:{}})
+  .then(()=>window.parent.postMessage({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}},"*"));
+
+const esc = s => String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function fmtDur(secs) {
+  const s = Math.round(Number(secs)||0); if (!s) return "0m";
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60);
+  return h>0 ? `${h}h ${m}m` : `${m}m`;
+}
+function fmtDay(iso) {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso+"T00:00:00");
+    return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} · ${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]}`;
+  } catch { return iso; }
+}
+function isoWeek(iso) {
+  try {
+    const d = new Date(iso+"T00:00:00");
+    const jan4 = new Date(d.getFullYear(),0,4);
+    const w1start = new Date(jan4); w1start.setDate(jan4.getDate()-((jan4.getDay()+6)%7));
+    return Math.ceil(((d-w1start)/86400000+1)/7);
+  } catch { return "?"; }
+}
+
+function render(sc) {
+  if (!sc) return;
+  const root = document.getElementById("root");
+  const label = document.getElementById("hdr-label");
+  const sub = document.getElementById("hdr-sub");
+
+  if (sc.type === "calendar_events") {
+    label.textContent = "Calendar";
+    sub.textContent = `${sc.from} → ${sc.to}`;
+    const events = (sc.events ?? []).filter(e => {
+      const t = (e.type?.value ?? e.type ?? "").toUpperCase();
+      return t !== "EXERCISE";
+    });
+    if (!events.length) { root.innerHTML = `<div class="empty-state">No events in this period.</div>`; return; }
+    const byDay = {};
+    for (const e of events) {
+      const start = String(e.start?.value ?? e.start ?? "");
+      const day = start.slice(0,10);
+      if (day) (byDay[day] = byDay[day]??[]).push(e);
+    }
+    root.innerHTML = `<div class="fade-in">${Object.keys(byDay).sort().map(day => `
+      <div class="day-group">
+        <div class="day-header">${esc(fmtDay(day))}</div>
+        ${byDay[day].map(e => {
+          const start = String(e.start?.value ?? e.start ?? "");
+          const time = start.slice(11,16);
+          const evtype = (e.type?.value ?? e.type ?? "").replace(/_/g," ").toLowerCase();
+          const evtitle = e.title?.value ?? e.title ?? evtype;
+          return `<div class="event-row">
+            <span class="ev-time">${esc(time)}</span>
+            <span class="ev-title">${esc(evtitle)}</span>
+            <span class="ev-type">${esc(evtype)}</span>
+          </div>`;
+        }).join("")}
+      </div>`).join("")}</div>`;
+    return;
+  }
+
+  if (sc.type === "week_summary") {
+    label.textContent = "Weekly Load";
+    sub.textContent = "";
+    const weeks = sc.weeks ?? [];
+    if (!weeks.length) { root.innerHTML = `<div class="empty-state">No weekly data available.</div>`; return; }
+    const maxDur = Math.max(...weeks.map(w => Number(w.duration?.value ?? w.total_duration_s ?? w.total_duration ?? 0)), 1);
+    root.innerHTML = `<div class="fade-in">${weeks.map(w => {
+      const week = w.week_start ?? w.start_date ?? w.date ?? "";
+      const dur = Number(w.duration?.value ?? w.total_duration_s ?? w.total_duration ?? 0);
+      const sessions = w.sessions ?? w.number_of_sessions ?? 0;
+      const pct = Math.max(2, Math.round(dur/maxDur*100));
+      const wnum = week ? `W${isoWeek(week.slice(0,10))}` : "—";
+      return `<div class="week-row">
+        <span class="wk-label">${esc(wnum)}</span>
+        <div class="wk-track"><div class="wk-fill" style="width:${pct}%"></div></div>
+        <span class="wk-val">${esc(fmtDur(dur))}${sessions ? ` · ${sessions}×` : ""}</span>
+      </div>`;
+    }).join("")}</div>`;
+    return;
+  }
+}
+</script>
+</body>
+</html>

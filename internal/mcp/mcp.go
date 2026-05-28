@@ -61,6 +61,12 @@ func withLogging(name string, h func(context.Context, mcpgo.CallToolRequest) (*m
 	}
 }
 
+func uiMeta(resourceURI string) *mcpgo.Meta {
+	return mcpgo.NewMetaFromMap(map[string]any{
+		"ui": map[string]any{"resourceUri": resourceURI},
+	})
+}
+
 // RegisterTools registers all Polar Flow MCP tools with the given server.
 //
 // Documentation convention (read before adding or editing a tool):
@@ -75,16 +81,18 @@ func withLogging(name string, h func(context.Context, mcpgo.CallToolRequest) (*m
 // to read the spec: state units explicitly, and give a concrete worked example
 // in the tool description for any tool with non-trivial inputs.
 func RegisterTools(s *server.MCPServer, fc *flow.Client) {
-	s.AddTool(mcpgo.NewTool("get_user_info",
+	t := mcpgo.NewTool("get_user_info",
 		mcpgo.WithDescription(
 			"Return identity, country, and basic profile info for the linked Polar Flow "+
 				"account. Returns the account's numeric user id (used internally to scope "+
 				"session queries), email, first/last name, and country. Takes no arguments. "+
 				"Good first call to confirm which account the server is driving.",
 		),
-	), withLogging("get_user_info", GetUserInfoHandler(fc)))
+	)
+	t.Meta = uiMeta("ui://polar-flow/user.html")
+	s.AddTool(t, withLogging("get_user_info", GetUserInfoHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("create_training_target",
+	ct := mcpgo.NewTool("create_training_target",
 		mcpgo.WithDescription(
 			"Create a scheduled Polar Flow training target (a planned workout in the diary). "+
 				"Returns the new target's numeric id.\n\n"+
@@ -171,9 +179,11 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"required": []string{"type"},
 			}),
 		),
-	), withLogging("create_training_target", CreateTrainingTargetHandler(fc)))
+	)
+	ct.Meta = uiMeta("ui://polar-flow/targets.html")
+	s.AddTool(ct, withLogging("create_training_target", CreateTrainingTargetHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("list_training_targets",
+	ltt := mcpgo.NewTool("list_training_targets",
 		mcpgo.WithDescription(
 			"List scheduled (future or planned) Polar Flow training targets in a date range, "+
 				"each with its numeric id, title, and start time. Use the ids with "+
@@ -184,7 +194,9 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Start date, ISO 8601 YYYY-MM-DD (default: today).")),
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today + 30 days).")),
-	), withLogging("list_training_targets", ListTrainingTargetsHandler(fc)))
+	)
+	ltt.Meta = uiMeta("ui://polar-flow/targets.html")
+	s.AddTool(ltt, withLogging("list_training_targets", ListTrainingTargetsHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("delete_training_target",
 		mcpgo.WithDescription(
@@ -196,7 +208,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Numeric target id from create_training_target or list_training_targets.")),
 	), withLogging("delete_training_target", DeleteTrainingTargetHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("get_training_target",
+	gtt := mcpgo.NewTool("get_training_target",
 		mcpgo.WithDescription(
 			"Return the full, server-normalized JSON of a single training target by id — "+
 				"name, datetime, and the per-sport exercise targets with their rolled-up "+
@@ -207,7 +219,9 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		),
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
 			mcpgo.Description("Numeric target id from list_training_targets.")),
-	), withLogging("get_training_target", GetTrainingTargetHandler(fc)))
+	)
+	gtt.Meta = uiMeta("ui://polar-flow/targets.html")
+	s.AddTool(gtt, withLogging("get_training_target", GetTrainingTargetHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("update_training_target",
 		mcpgo.WithDescription(
@@ -281,7 +295,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		),
 	), withLogging("update_training_target", UpdateTrainingTargetHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("get_calendar_week_summary",
+	cws := mcpgo.NewTool("get_calendar_week_summary",
 		mcpgo.WithDescription(
 			"Return one summary entry per ISO week intersecting [from, to] — the right-hand "+
 				"\"week totals\" strip in the Polar Flow diary. Use for weekly volume trends "+
@@ -293,9 +307,11 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Start date, ISO 8601 YYYY-MM-DD (default: today - 28 days).")),
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today). Must be within 45 days of from_date.")),
-	), withLogging("get_calendar_week_summary", GetCalendarWeekSummaryHandler(fc)))
+	)
+	cws.Meta = uiMeta("ui://polar-flow/calendar.html")
+	s.AddTool(cws, withLogging("get_calendar_week_summary", GetCalendarWeekSummaryHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("get_progress_summary",
+	ps := mcpgo.NewTool("get_progress_summary",
 		mcpgo.WithDescription(
 			"Aggregated training totals over [from, to]: session count, total distance "+
 				"(metres) and duration, time-in-HR-zone, per-sport distribution, and "+
@@ -313,9 +329,11 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Bucket size for the per-time-slice breakdowns: \"6w\" (6 weeks), "+
 				"\"3m\" (3 months), or \"1y\" (1 year). Default: \"3m\". Affects only how the "+
 				"breakdown is grouped, not the headline totals.")),
-	), withLogging("get_progress_summary", GetProgressSummaryHandler(fc)))
+	)
+	ps.Meta = uiMeta("ui://polar-flow/progress.html")
+	s.AddTool(ps, withLogging("get_progress_summary", GetProgressSummaryHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("get_calendar_events",
+	ce := mcpgo.NewTool("get_calendar_events",
 		mcpgo.WithDescription(
 			"Return raw Polar Flow diary events in a date range — completed sessions, "+
 				"scheduled training targets (type \"TRAININGTARGET\"), and other diary items. "+
@@ -327,9 +345,11 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Start date, ISO 8601 YYYY-MM-DD (default: today).")),
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today + 30 days).")),
-	), withLogging("get_calendar_events", GetCalendarEventsHandler(fc)))
+	)
+	ce.Meta = uiMeta("ui://polar-flow/calendar.html")
+	s.AddTool(ce, withLogging("get_calendar_events", GetCalendarEventsHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("list_training_sessions",
+	lts := mcpgo.NewTool("list_training_sessions",
 		mcpgo.WithDescription(
 			"List completed (already-performed) Polar Flow training sessions in a date range, "+
 				"with each session's numeric id, sport, start time, distance, and duration. "+
@@ -341,9 +361,11 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Start date, ISO 8601 YYYY-MM-DD (default: today - 30 days).")),
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today).")),
-	), withLogging("list_training_sessions", ListTrainingSessionsHandler(fc)))
+	)
+	lts.Meta = uiMeta("ui://polar-flow/sessions.html")
+	s.AddTool(lts, withLogging("list_training_sessions", ListTrainingSessionsHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("get_training_session_summary",
+	gss := mcpgo.NewTool("get_training_session_summary",
 		mcpgo.WithDescription(
 			"Return the summary view of one completed training session by id: totals such as "+
 				"duration, distance, average/max HR, calories, and sport. Use "+
@@ -351,7 +373,9 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		),
 		mcpgo.WithNumber("session_id", mcpgo.Required(),
 			mcpgo.Description("Numeric session id from list_training_sessions.")),
-	), withLogging("get_training_session_summary", GetTrainingSessionSummaryHandler(fc)))
+	)
+	gss.Meta = uiMeta("ui://polar-flow/sessions.html")
+	s.AddTool(gss, withLogging("get_training_session_summary", GetTrainingSessionSummaryHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("create_training_session",
 		mcpgo.WithDescription(
@@ -393,7 +417,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Free-text note for the session (optional).")),
 	), withLogging("create_training_session", CreateTrainingSessionHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("get_training_session_details",
+	gsd := mcpgo.NewTool("get_training_session_details",
 		mcpgo.WithDescription(
 			"Return lap- and sample-level detail for one completed training session: per-lap "+
 				"splits and the time-series samples (HR, speed, etc.) behind the summary. "+
@@ -402,5 +426,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		),
 		mcpgo.WithNumber("session_id", mcpgo.Required(),
 			mcpgo.Description("Numeric session id from list_training_sessions.")),
-	), withLogging("get_training_session_details", GetTrainingSessionDetailsHandler(fc)))
+	)
+	gsd.Meta = uiMeta("ui://polar-flow/sessions.html")
+	s.AddTool(gsd, withLogging("get_training_session_details", GetTrainingSessionDetailsHandler(fc)))
 }
