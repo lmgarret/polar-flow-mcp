@@ -25,6 +25,75 @@ The server logs into Polar Flow once on cold start, persists the session
 cookies to `./polar-cookies.json` (chmod 600), and re-uses them on subsequent
 runs. The password is held in memory only.
 
+## Running with Docker
+
+A pre-built image is published to GHCR on every push to `main`.
+
+### HTTP transport (recommended for persistent servers)
+
+```bash
+docker run -d \
+  -e POLAR_EMAIL=you@example.com \
+  -e POLAR_PASSWORD=yourpassword \
+  -e TRANSPORT=http \
+  -e BIND_ADDRESS=0.0.0.0 \
+  -e COOKIE_JAR_PATH=/data/cookies.json \
+  -v polar-cookies:/data \
+  -p 127.0.0.1:8080:8080 \
+  ghcr.io/lmgarret/polar-flow-mcp:latest
+```
+
+> `BIND_ADDRESS=0.0.0.0` is required — the default `127.0.0.1` is unreachable from outside the container.
+
+Then point your MCP client at `http://127.0.0.1:8080/mcp`.
+
+### stdio transport (Claude Desktop / Claude Code)
+
+Pass `docker run` as the MCP command so Claude spawns the container itself:
+
+```json
+{
+  "mcpServers": {
+    "polar-flow-mcp": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-e", "POLAR_EMAIL=you@example.com",
+        "-e", "POLAR_PASSWORD=yourpassword",
+        "-e", "TRANSPORT=stdio",
+        "-e", "COOKIE_JAR_PATH=/data/cookies.json",
+        "-v", "polar-cookies:/data",
+        "ghcr.io/lmgarret/polar-flow-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+### Docker Compose
+
+```yaml
+services:
+  polar-flow-mcp:
+    image: ghcr.io/lmgarret/polar-flow-mcp:latest
+    environment:
+      POLAR_EMAIL: ${POLAR_EMAIL}
+      POLAR_PASSWORD: ${POLAR_PASSWORD}
+      TRANSPORT: http
+      BIND_ADDRESS: "0.0.0.0"
+      COOKIE_JAR_PATH: /data/cookies.json
+    volumes:
+      - polar-cookies:/data
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
+volumes:
+  polar-cookies:
+```
+
+Set `POLAR_EMAIL` and `POLAR_PASSWORD` in a `.env` file next to the compose file (Compose picks them up automatically).
+
 ## Tools
 
 | Tool | Description |
