@@ -14,7 +14,8 @@ COPY . .
 RUN CGO_ENABLED=0 go build \
     -ldflags="-w -s" \
     -o polar-flow-mcp \
-    ./cmd/polar-flow-mcp
+    ./cmd/polar-flow-mcp && \
+    touch /build/.env.empty
 
 # Stage 2: Minimal final image
 FROM scratch
@@ -27,7 +28,7 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /build/polar-flow-mcp /polar-flow-mcp
 # Seed an empty /.env so bind-mounting a secrets file over it works correctly.
 # Without this Docker creates /.env as a directory in a scratch image.
-COPY --from=builder /dev/null /.env
+COPY --from=builder /build/.env.empty /.env
 
 EXPOSE 8080
 
