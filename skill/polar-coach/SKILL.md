@@ -1,3 +1,8 @@
+---
+name: polar-coach
+description: Personal endurance coach backed by Polar Flow — reads your training history, recommends sessions, and schedules them in Polar Flow via the polar-flow-mcp tools.
+---
+
 # polar-coach
 
 A Claude skill that turns the polar-flow-mcp tool set into a **personal
