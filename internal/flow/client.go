@@ -63,12 +63,17 @@ func New(ctx context.Context, cfg Config) (*Client, error) {
 	}
 	_ = seedJar(jar, persisted)
 
+	tlsTransport, txErr := newBrowserTransport()
+	if txErr != nil {
+		return nil, fmt.Errorf("flow: build TLS transport: %w", txErr)
+	}
 	c := &Client{
 		cfg:    cfg,
 		logger: cfg.Logger,
 		httpClient: &http.Client{
-			Timeout: cfg.HTTPTimeout,
-			Jar:     jar,
+			Timeout:   cfg.HTTPTimeout,
+			Jar:       jar,
+			Transport: tlsTransport,
 		},
 	}
 
