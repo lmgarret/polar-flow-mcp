@@ -15,8 +15,6 @@ linters:
       min-complexity: 15
     errcheck:
       check-type-assertions: true
-
-issues:
   exclusions:
     rules:
       - path: "_test\\.go"
