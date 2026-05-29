@@ -1,0 +1,38 @@
+# Keep the build context small and free of secrets / local state.
+# The build only needs Go sources + go.mod/go.sum (final image is FROM scratch).
+
+# VCS & CI
+.git
+.github
+.gitignore
+
+# Secrets & runtime state — must never enter the build context
+.env
+.env.*
+*.env
+polar-cookies.json
+*.db
+*.db-shm
+*.db-wal
+
+# Local config & editor
+.mcp.json
+.vscode
+.idea
+*.swp
+
+# Build outputs & generated artifacts
+bin/
+dist/
+site/
+
+# Planning, docs, and skill bundle — not needed to compile the binary
+.planning/
+skill/
+*.md
+docs/
+
+# Container / tooling files
+Dockerfile
+.dockerignore
+Makefile
