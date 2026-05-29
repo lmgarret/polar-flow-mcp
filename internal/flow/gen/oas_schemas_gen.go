@@ -9661,8 +9661,8 @@ type TrainingSessionSummary struct {
 	ID int64 `json:"id"`
 	// Duration in **milliseconds**.
 	Duration int `json:"duration"`
-	// Distance in metres, or null.
-	Distance OptNilInt `json:"distance"`
+	// Distance in metres, or null. Server returns floats for GPS-tracked sessions.
+	Distance OptNilFloat64 `json:"distance"`
 	// Average HR (bpm). Note the camelCase differs from create's `hrAverage`.
 	HrAvg OptInt `json:"hrAvg"`
 	// Kilocalories. Note the field name differs from create's `kiloCalories`.
@@ -9700,7 +9700,7 @@ func (s *TrainingSessionSummary) GetDuration() int {
 }
 
 // GetDistance returns the value of Distance.
-func (s *TrainingSessionSummary) GetDistance() OptNilInt {
+func (s *TrainingSessionSummary) GetDistance() OptNilFloat64 {
 	return s.Distance
 }
 
@@ -9790,7 +9790,7 @@ func (s *TrainingSessionSummary) SetDuration(val int) {
 }
 
 // SetDistance sets the value of Distance.
-func (s *TrainingSessionSummary) SetDistance(val OptNilInt) {
+func (s *TrainingSessionSummary) SetDistance(val OptNilFloat64) {
 	s.Distance = val
 }
 

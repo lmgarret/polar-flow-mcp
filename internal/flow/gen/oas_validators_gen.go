@@ -3248,6 +3248,24 @@ func (s *TrainingSessionSummary) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.Distance.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "distance",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.SwimmingPoolUnits.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {

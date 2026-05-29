@@ -2198,8 +2198,8 @@ components:
           description: Duration in **milliseconds**.
           example: 1800000
         distance:
-          type: integer
-          description: Distance in metres, or null.
+          type: number
+          description: Distance in metres, or null. Server returns floats for GPS-tracked sessions.
           nullable: true
         hrAvg:
           type: integer
