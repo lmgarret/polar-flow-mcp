@@ -24,6 +24,7 @@ nav:
   - Getting Started: getting-started.md
   - Deployment:
     - Docker Compose: deployment/docker-compose.md
+    - Exposing Securely (OAuth): deployment/exposing-securely.md
   - Usage: usage.md
   - Reference:
     - Environment Variables: reference/env-vars.md

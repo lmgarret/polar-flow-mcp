@@ -76,12 +76,19 @@ Each MCP client points at the appropriate port.
 ## Security defaults
 
 - The compose file publishes port 8080 on **`127.0.0.1` only** by default.
-  This server has no built-in authentication; exposing it on a public
-  interface is a footgun.
-- The server logs a warning at startup if `BIND_ADDRESS` is not localhost.
+  With `OIDC_ISSUER` unset the server has no inbound authentication, so a public
+  bind would be a footgun.
+- The server logs a warning at startup if `BIND_ADDRESS` is not localhost **and**
+  OAuth is disabled.
 
-If you need remote access, put it behind a trusted-network barrier (a
-Tailscale interface, a VPN, or a reverse proxy that handles auth).
+Two ways to reach it remotely:
+
+- **Private/local** — keep it on `127.0.0.1` and reach it over a trusted-network
+  barrier (a Tailscale interface, a VPN, or an SSH tunnel).
+- **Public (Claude.ai web/mobile)** — enable the OAuth Resource Server
+  (`OIDC_ISSUER` + friends) and front it with a TLS reverse proxy. See
+  [Exposing Securely](exposing-securely.md) for the full Caddy + Authelia
+  walkthrough.
 
 ## Image
 

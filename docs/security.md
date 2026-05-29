@@ -50,9 +50,43 @@ isn't protected, and operational practices to follow.
 - **The `.env` file is whatever you make it.** It contains the Polar
   password in plaintext by design. Use restrictive permissions and avoid
   committing it.
-- **The HTTP transport has no auth.** Bind to localhost or put it behind a
-  trusted-network barrier (Tailscale, VPN, reverse proxy with auth). A
-  warning is logged at startup if `BIND_ADDRESS` is non-localhost.
+- **The HTTP transport has no auth *by default*.** With `OIDC_ISSUER` unset,
+  bind to localhost or put it behind a trusted-network barrier (Tailscale, VPN).
+  A warning is logged at startup if `BIND_ADDRESS` is non-localhost and OAuth is
+  off. To expose it publicly, enable the OAuth Resource Server (below).
+
+## Exposing publicly: OAuth Resource Server
+
+To reach the server from **Claude.ai web/mobile**, enable inbound OAuth by
+setting `OIDC_ISSUER` (+ `MCP_RESOURCE` + introspection credentials). The server
+then:
+
+- Serves RFC 9728 protected-resource metadata so clients discover your
+  authorization server (e.g. Authelia).
+- Returns `401` + `WWW-Authenticate` to unauthenticated callers.
+- Validates every Bearer token by **RFC 7662 introspection** on each request.
+
+Introspection (rather than local JWT validation) is deliberate: it works with
+Authelia's default **opaque** tokens and gives **instant revocation** — logging
+out in Authelia invalidates the token on its next use, which matters because a
+valid token can drive your whole Polar account.
+
+The full Caddy + Authelia + Claude.ai walkthrough, including why Authelia
+*forward-auth* cannot be used here, is in
+[Exposing Securely](deployment/exposing-securely.md).
+
+### Recommended controls (each an enforceable env var)
+
+- **`AUTH_ALLOWED_CLIENT_IDS`** — reject tokens not minted for your connector
+  client (RFC 8707 confused-deputy defence). *Recommended.*
+- **`AUTH_ALLOWED_SUBJECTS`** / **`AUTH_ALLOWED_GROUPS`** — restrict to your
+  identity so other users on your IdP can't drive your Polar account. Or lock the
+  connector client to you with an Authelia authorization policy.
+- **`AUTH_ALLOWED_AUDIENCES`** — pin the token audience to your `MCP_RESOURCE`.
+- **`AUTH_ALLOWED_ORIGINS`** — opt-in DNS-rebinding defence (no-Origin requests
+  are always allowed, so it never breaks Claude's server-to-server calls).
+- Keep Authelia access-token lifetimes short (+ refresh tokens) to bound the
+  exposure of any leaked token.
 
 ## What the server does on every request
 
@@ -96,8 +130,10 @@ leak. Protect `.env` accordingly.
 - Run as a non-root user.
 - Mount the cookie jar on a volume that the host's other users / containers
   can't read.
-- Bind the HTTP transport to `127.0.0.1` and consume via SSH tunnel,
-  Tailscale, or a Unix-socket proxy — not a public reverse proxy.
+- For local/private use, bind the HTTP transport to `127.0.0.1` and consume via
+  SSH tunnel or Tailscale.
+- For public use (Claude.ai), enable the OAuth Resource Server and front it with
+  a TLS reverse proxy — see [Exposing Securely](deployment/exposing-securely.md).
 - Use a Polar account dedicated to MCP use, not your main one.
 
 ## Reporting issues

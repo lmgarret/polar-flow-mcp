@@ -39,6 +39,7 @@ and silent refresh.
 | **Browser-fingerprint TLS + HTTP/2 for the login chain** (`azuretls` Chrome preset) and **for stdlib http.Client API calls** (`utls` Chrome ClientHello over `http2.Transport`) | `flow.polar.com` is behind a CloudFront WAF that inspects JA3/JA4 **and** HTTP/2 framing. Default Go net/http gets `403 X-Cache: Error from cloudfront` on `/flowSso/redirect`. uTLS alone (TLS only) is insufficient. |
 | **3-hop silent refresh on `401 {"error":"NotAuthenticated"}`** | Standard Polar Flow session-rotation path; falls back to full login if `session_id` on `auth.polar.com` has also expired. |
 | **Custom `ht.Client` transport wraps ogen's `gen.Client`** | Lets us inject `X-Requested-With`, the cookie jar, and the 401-retry without touching generated code. |
+| **Optional, provider-agnostic OAuth 2.1 Resource Server** (`internal/auth`, enabled by `OIDC_ISSUER`; off by default) | Lets the server be exposed publicly as a Claude.ai connector. Validates inbound Bearer tokens by **RFC 7662 introspection** (not local JWT) — works with Authelia's default opaque tokens and gives instant revocation. Authelia is the OIDC AS; *forward-auth cannot work* for MCP clients. Claude Code (CLI) forces DCR so it stays on local stdio. Stdlib only — no new deps. See `docs/deployment/exposing-securely.md`. |
 
 ## Tech Stack
 
