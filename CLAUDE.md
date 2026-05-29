@@ -40,6 +40,7 @@ and silent refresh.
 | **3-hop silent refresh on `401 {"error":"NotAuthenticated"}`** | Standard Polar Flow session-rotation path; falls back to full login if `session_id` on `auth.polar.com` has also expired. |
 | **Bind-first / deferred login** (`flow.New` never logs in; `EnsureSession` runs lazily from `transport.Do`, warmed up in a background goroutine) | A full login takes seconds (CloudFront WAF + redirect chain). Blocking startup on it blocks the listener from binding, which races the MCP client's `initialize` and times it out at 60s. Binding first makes the handshake instant. |
 | **Custom `ht.Client` transport wraps ogen's `gen.Client`** | Lets us inject `X-Requested-With`, the cookie jar, and the 401-retry without touching generated code. |
+| **Optional, provider-agnostic OAuth 2.1 Resource Server** (`internal/auth`, enabled by `OIDC_ISSUER`; off by default) | Lets the server be exposed publicly as a Claude.ai connector. Validates inbound Bearer tokens by **RFC 7662 introspection** (not local JWT) — works with Authelia's default opaque tokens and gives instant revocation. Authelia is the OIDC AS; *forward-auth cannot work* for MCP clients. Claude Code (CLI) forces DCR so it stays on local stdio. Stdlib only — no new deps. See `docs/deployment/exposing-securely.md`. |
 
 ## Tech Stack
 

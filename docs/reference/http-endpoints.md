@@ -8,7 +8,8 @@ HTTP endpoints on `BIND_ADDRESS:PORT`.
 | Path | Method | Auth | Purpose |
 |------|--------|------|---------|
 | `/healthz` | GET | none | Liveness probe. Returns `200 ok` if the process is up. |
-| `/mcp`, `/mcp/` | POST + SSE | none | Streamable HTTP MCP endpoint mounted at this path. |
+| `/mcp`, `/mcp/` | POST + SSE | Bearer if OAuth enabled, else none | Streamable HTTP MCP endpoint. When `OIDC_ISSUER` is set, requires a valid `Authorization: Bearer` token (validated by introspection). |
+| `/.well-known/oauth-protected-resource` | GET | none | RFC 9728 protected-resource metadata. **Only mounted when OAuth is enabled.** Advertises the `resource` and `authorization_servers` so clients can discover the issuer. |
 
 ## What's gone
 
@@ -17,18 +18,24 @@ proxy-auth contract (`X-Proxy-Secret` header, `Remote-User` injection) no
 longer exist. The Polar Flow web API uses cookie-based session auth — there
 is no per-user OAuth handshake to host.
 
-## No built-in authentication
+## Authentication
 
-This server expects to be either:
+There are two supported postures:
 
-- Run **locally** (default `BIND_ADDRESS=127.0.0.1`) and consumed by Claude
-  Desktop / Claude Code on the same machine, or
-- Placed **behind a trusted proxy** (e.g. a Tailscale-only listener, a VPN,
-  or a reverse proxy that handles authentication).
+- **Local / trusted-network (default).** With `OIDC_ISSUER` unset, `/mcp` has no
+  built-in auth. Run it on `127.0.0.1` for Claude Code / Claude Desktop on the
+  same machine, or behind a trusted-network barrier (Tailscale, VPN). If
+  `BIND_ADDRESS` is non-localhost **and** OAuth is off, the server logs a warning
+  at startup.
+- **Public, OAuth-protected.** Set `OIDC_ISSUER` (+ `MCP_RESOURCE` +
+  introspection credentials) to turn the server into an OAuth 2.1 Resource
+  Server. Unauthenticated requests get `401` with a `WWW-Authenticate: Bearer
+  resource_metadata="…"` header; valid Bearer tokens are checked by RFC 7662
+  introspection on every call. This is the path for **Claude.ai web/mobile** —
+  see [Exposing Securely](../deployment/exposing-securely.md).
 
-If `BIND_ADDRESS` is anything other than localhost, the server logs a warning
-at startup. Single-user MCP servers are not designed for unprotected
-exposure to the public internet.
+Note: Claude **Code (CLI)** cannot use the public OAuth path (it forces Dynamic
+Client Registration); keep it on the local stdio / `127.0.0.1` transport.
 
 ## Health-check semantics
 
