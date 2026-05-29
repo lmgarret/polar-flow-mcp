@@ -67,3 +67,27 @@ and silent refresh.
 | `get_training_session_details` | Lap / sample detail of one session |
 | `get_progress_summary` | Aggregated training totals over a range |
 | `create_training_session` | Log a manually-entered completed session — writes real data; coach must only call on explicit user request |
+
+## Documenting tools (descriptions & examples)
+
+The vendored OpenAPI spec is the source of truth for tool documentation. When
+you add or change a tool in `internal/mcp` (`mcp.go`), make its description
+and parameter docs rich enough that a caller never needs to read the spec:
+
+- **Source the content from the spec.** `internal/flow/openapi.yaml` carries
+  endpoint descriptions, per-field units/quirks, and worked request examples.
+  `ogen` mirrors every schema `description` as a Go doc comment in
+  `internal/flow/gen/oas_schemas_gen.go` — so the authoritative text already
+  lives in-repo and travels with each regen. Pull from there; don't invent.
+- **Translate to this layer's simplified params.** MCP tools expose a friendlier
+  surface than the wire API (flat `phases`, `distance_m` in metres, `duration_s`
+  in seconds, intensity *labels* → HR zones, split `date`+`time`). Adapt the
+  spec's wire-level notes to these params instead of copying field names verbatim.
+- **Always state units and give an example.** Spell out metres/seconds/bpm/km/h
+  in each parameter description. For any tool with non-trivial inputs (e.g.
+  `create_training_target`, `create_training_session`), embed a concrete worked
+  example in the tool-level description — `mcp-go` v0.50.0 has no per-parameter
+  `examples` schema helper, so examples live in description text.
+- **Encode constraints structurally** where it documents the param: `mcp.Enum`
+  for fixed value sets, `mcp.DefaultString`/`DefaultNumber` for advertised
+  defaults, `min`/`max` on numeric schema fields.

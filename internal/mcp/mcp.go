@@ -62,50 +62,111 @@ func withLogging(name string, h func(context.Context, mcpgo.CallToolRequest) (*m
 }
 
 // RegisterTools registers all Polar Flow MCP tools with the given server.
+//
+// Documentation convention (read before adding or editing a tool):
+// the vendored OpenAPI spec, internal/flow/openapi.yaml, is the source of truth
+// for endpoint behaviour, units, quirks, and worked request examples — and ogen
+// mirrors every schema `description` as a Go doc comment in
+// internal/flow/gen/oas_schemas_gen.go. When writing a tool or parameter
+// description here, lift the relevant detail from those (units, conventions,
+// edge cases) and translate it to this layer's simplified, user-facing
+// parameters (e.g. flat phases, metres, seconds, intensity labels) rather than
+// the raw wire fields. Aim for descriptions rich enough that a caller never has
+// to read the spec: state units explicitly, and give a concrete worked example
+// in the tool description for any tool with non-trivial inputs.
 func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 	s.AddTool(mcpgo.NewTool("get_user_info",
 		mcpgo.WithDescription(
-			"Return identity, country, and basic profile info for the linked Polar Flow account.",
+			"Return identity, country, and basic profile info for the linked Polar Flow "+
+				"account. Returns the account's numeric user id (used internally to scope "+
+				"session queries), email, first/last name, and country. Takes no arguments. "+
+				"Good first call to confirm which account the server is driving.",
 		),
 	), withLogging("get_user_info", GetUserInfoHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("create_training_target",
 		mcpgo.WithDescription(
-			"Create a Polar Flow training target on a scheduled date with optional phases "+
-				"(warmup, repeat intervals, cooldown). Returns the new target's numeric id.",
+			"Create a scheduled Polar Flow training target (a planned workout in the diary). "+
+				"Returns the new target's numeric id.\n\n"+
+				"Two shapes:\n"+
+				"  • No phases  → an open VOLUME target: just a name/date placeholder, no "+
+				"structured goal.\n"+
+				"  • With phases → a PHASED workout built from an ordered list of "+
+				"warmup / repeat / cooldown blocks.\n\n"+
+				"Units: distances are METRES (the Flow UI shows km — 5 km = 5000), durations "+
+				"are SECONDS. Intensity is expressed as HR zones 1–5, either directly "+
+				"(intensity.hr_zone) or via an effort label that maps to a zone "+
+				"(easy→1–2, aerobic→2, tempo→3, threshold→4, vo2max→5).\n\n"+
+				"Example — 10 min warmup, 5×1 km @ threshold with 2 min jog recovery, 10 min cooldown:\n"+
+				"  name: \"5x1km Threshold\", date: \"2026-06-02\", time: \"09:00\", sport_id: 1,\n"+
+				"  phases: [\n"+
+				"    {\"type\": \"warmup\", \"duration_s\": 600},\n"+
+				"    {\"type\": \"repeat\", \"reps\": 5, \"goal\": {\"distance_m\": 1000}, "+
+				"\"intensity\": {\"label\": \"threshold\"}, \"recovery\": {\"duration_s\": 120}},\n"+
+				"    {\"type\": \"cooldown\", \"duration_s\": 600}\n"+
+				"  ]",
 		),
 		mcpgo.WithString("name", mcpgo.Required(),
-			mcpgo.Description("Session name shown in the diary (e.g. \"5x1km Threshold\")")),
+			mcpgo.Description("Display name shown in the diary (e.g. \"5x1km Threshold\").")),
 		mcpgo.WithString("date", mcpgo.Required(),
-			mcpgo.Description("Scheduled date ISO 8601 YYYY-MM-DD (e.g. 2026-05-15)")),
-		mcpgo.WithString("time",
-			mcpgo.Description("Scheduled local time HH:MM (default: 18:00)")),
-		mcpgo.WithNumber("sport_id",
-			mcpgo.Description("Polar sport ID (default 1 = running). See /api/sports/sports.")),
+			mcpgo.Description("Scheduled local date, ISO 8601 YYYY-MM-DD (e.g. 2026-06-02). "+
+				"The server applies the account's timezone.")),
+		mcpgo.WithString("time", mcpgo.DefaultString("18:00"),
+			mcpgo.Description("Scheduled local start time, 24h HH:MM (default: 18:00).")),
+		mcpgo.WithNumber("sport_id", mcpgo.DefaultNumber(1),
+			mcpgo.Description("Polar sport id (default 1 = running). Full list at /api/sports/sports.")),
 		mcpgo.WithString("description",
-			mcpgo.Description("Free-text notes (optional)")),
+			mcpgo.Description("Free-text notes for the workout (optional).")),
 		mcpgo.WithArray("phases",
 			mcpgo.Description(
-				"Ordered phases. Each phase: type=warmup|repeat|cooldown, "+
-					"duration_s (warmup/cooldown), reps (repeat), goal{distance_m|duration_s}, "+
-					"intensity{label or hr_zone}, optional recovery{duration_s}."),
+				"Ordered list of workout phases. Omit for an open VOLUME target. Each phase "+
+					"is one of three types:\n"+
+					"  • warmup / cooldown — needs duration_s (seconds, > 0); run at easy intensity.\n"+
+					"  • repeat — an interval block repeated reps times (reps ≥ 2). Needs goal "+
+					"(distance_m OR duration_s), optional intensity (hr_zone 1–5 or label), and "+
+					"optional recovery (duration_s) inserted between reps.\n"+
+					"Note: structured work is only expressible via repeat (reps must be ≥ 2). For a "+
+					"single continuous effort with no intervals, omit phases and use a VOLUME target."),
 			mcpgo.Items(map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"type":       map[string]any{"type": "string", "enum": []string{"warmup", "repeat", "cooldown"}},
-					"duration_s": map[string]any{"type": "integer"},
-					"reps":       map[string]any{"type": "integer"},
-					"goal": map[string]any{"type": "object", "properties": map[string]any{
-						"distance_m": map[string]any{"type": "number"},
-						"duration_s": map[string]any{"type": "integer"},
-					}},
-					"intensity": map[string]any{"type": "object", "properties": map[string]any{
-						"label":   map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}},
-						"hr_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5},
-					}},
-					"recovery": map[string]any{"type": "object", "properties": map[string]any{
-						"duration_s": map[string]any{"type": "integer"},
-					}},
+					"type": map[string]any{
+						"type":        "string",
+						"enum":        []string{"warmup", "repeat", "cooldown"},
+						"description": "Phase kind.",
+					},
+					"duration_s": map[string]any{
+						"type":        "integer",
+						"description": "Phase length in seconds. Required for warmup/cooldown.",
+					},
+					"reps": map[string]any{
+						"type":        "integer",
+						"description": "Repeat count for a repeat phase (≥ 2).",
+						"minimum":     2,
+					},
+					"goal": map[string]any{
+						"type":        "object",
+						"description": "Per-rep goal for a repeat phase. Set exactly one of distance_m or duration_s.",
+						"properties": map[string]any{
+							"distance_m": map[string]any{"type": "number", "description": "Goal distance in metres (e.g. 1000 = 1 km)."},
+							"duration_s": map[string]any{"type": "integer", "description": "Goal duration in seconds."},
+						},
+					},
+					"intensity": map[string]any{
+						"type":        "object",
+						"description": "Target intensity for the work portion of a repeat. Set hr_zone or label; hr_zone wins if both given. Omit for no zone (open intensity).",
+						"properties": map[string]any{
+							"label":   map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}, "description": "Effort label, mapped to an HR zone."},
+							"hr_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar HR zone 1–5, used as both lower and upper bound."},
+						},
+					},
+					"recovery": map[string]any{
+						"type":        "object",
+						"description": "Optional easy recovery inserted between reps of a repeat phase.",
+						"properties": map[string]any{
+							"duration_s": map[string]any{"type": "integer", "description": "Recovery duration in seconds."},
+						},
+					},
 				},
 				"required": []string{"type"},
 			}),
@@ -114,68 +175,106 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 
 	s.AddTool(mcpgo.NewTool("list_training_targets",
 		mcpgo.WithDescription(
-			"List Polar Flow training targets in a date range. Defaults: today through +30 days.",
+			"List scheduled (future or planned) Polar Flow training targets in a date range, "+
+				"each with its numeric id, title, and start time. Use the ids with "+
+				"get_training_target / update_training_target / delete_training_target. "+
+				"Default range: today through +30 days.",
 		),
 		mcpgo.WithString("from_date",
-			mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today)")),
+			mcpgo.Description("Start date, ISO 8601 YYYY-MM-DD (default: today).")),
 		mcpgo.WithString("to_date",
-			mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today + 30 days)")),
+			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today + 30 days).")),
 	), withLogging("list_training_targets", ListTrainingTargetsHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("delete_training_target",
 		mcpgo.WithDescription(
-			"Delete a Polar Flow training target by its numeric ID.",
+			"Permanently delete a scheduled training target by its numeric id. Irreversible. "+
+				"Use list_training_targets to find the id. No-ops (reports \"no target with id\") "+
+				"if the id does not exist or belongs to another account.",
 		),
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
-			mcpgo.Description("Numeric target ID from create_training_target or list_training_targets")),
+			mcpgo.Description("Numeric target id from create_training_target or list_training_targets.")),
 	), withLogging("delete_training_target", DeleteTrainingTargetHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("get_training_target",
 		mcpgo.WithDescription(
-			"Return the full server-normalized view of a single training target by ID. "+
-				"Use this to inspect a target's structure before editing it.",
+			"Return the full, server-normalized JSON of a single training target by id — "+
+				"name, datetime, and the per-sport exercise targets with their rolled-up "+
+				"phases. Always read with this before update_training_target so you can "+
+				"preserve the existing structure (especially the exerciseTargets ids). "+
+				"Note: on read-back the server fills phase durations (a DISTANCE phase shows "+
+				"duration \"00:00:00\") and rolls each exerciseTarget's duration up from its phases.",
 		),
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
-			mcpgo.Description("Numeric target ID from list_training_targets")),
+			mcpgo.Description("Numeric target id from list_training_targets.")),
 	), withLogging("get_training_target", GetTrainingTargetHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("update_training_target",
 		mcpgo.WithDescription(
-			"Replace an existing training target's content. Full-replace semantics — "+
-				"supply the complete target body (use get_training_target first to read the "+
-				"current state, modify, then update).",
+			"Full-replace edit of an existing training target. The whole target is overwritten "+
+				"by the supplied fields, so always call get_training_target first, modify the "+
+				"result, then send the complete body — anything omitted is cleared.\n\n"+
+				"Same field semantics, units, and phases shape as create_training_target "+
+				"(distances in metres, durations in seconds, intensity as HR zones 1–5). "+
+				"Succeeds with a confirmation; re-read with get_training_target to confirm "+
+				"the change landed.",
 		),
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
-			mcpgo.Description("Numeric ID of the target to update")),
+			mcpgo.Description("Numeric id of the target to update (from list_training_targets).")),
 		mcpgo.WithString("name", mcpgo.Required(),
-			mcpgo.Description("Session name shown in the diary")),
+			mcpgo.Description("Display name shown in the diary.")),
 		mcpgo.WithString("date", mcpgo.Required(),
-			mcpgo.Description("Scheduled date ISO 8601 YYYY-MM-DD")),
-		mcpgo.WithString("time",
-			mcpgo.Description("Scheduled local time HH:MM (default: 18:00)")),
-		mcpgo.WithNumber("sport_id",
-			mcpgo.Description("Polar sport ID (default 1 = running)")),
+			mcpgo.Description("Scheduled local date, ISO 8601 YYYY-MM-DD.")),
+		mcpgo.WithString("time", mcpgo.DefaultString("18:00"),
+			mcpgo.Description("Scheduled local start time, 24h HH:MM (default: 18:00).")),
+		mcpgo.WithNumber("sport_id", mcpgo.DefaultNumber(1),
+			mcpgo.Description("Polar sport id (default 1 = running).")),
 		mcpgo.WithString("description",
-			mcpgo.Description("Free-text notes (optional)")),
+			mcpgo.Description("Free-text notes for the workout (optional).")),
 		mcpgo.WithArray("phases",
-			mcpgo.Description("Same shape as create_training_target.phases"),
+			mcpgo.Description("Ordered workout phases — identical shape to create_training_target.phases "+
+				"(warmup / repeat / cooldown; distances in metres, durations in seconds). "+
+				"Omit to replace with an open VOLUME target."),
 			mcpgo.Items(map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"type":       map[string]any{"type": "string", "enum": []string{"warmup", "repeat", "cooldown"}},
-					"duration_s": map[string]any{"type": "integer"},
-					"reps":       map[string]any{"type": "integer"},
-					"goal": map[string]any{"type": "object", "properties": map[string]any{
-						"distance_m": map[string]any{"type": "number"},
-						"duration_s": map[string]any{"type": "integer"},
-					}},
-					"intensity": map[string]any{"type": "object", "properties": map[string]any{
-						"label":   map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}},
-						"hr_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5},
-					}},
-					"recovery": map[string]any{"type": "object", "properties": map[string]any{
-						"duration_s": map[string]any{"type": "integer"},
-					}},
+					"type": map[string]any{
+						"type":        "string",
+						"enum":        []string{"warmup", "repeat", "cooldown"},
+						"description": "Phase kind.",
+					},
+					"duration_s": map[string]any{
+						"type":        "integer",
+						"description": "Phase length in seconds. Required for warmup/cooldown.",
+					},
+					"reps": map[string]any{
+						"type":        "integer",
+						"description": "Repeat count for a repeat phase (≥ 2).",
+						"minimum":     2,
+					},
+					"goal": map[string]any{
+						"type":        "object",
+						"description": "Per-rep goal for a repeat phase. Set exactly one of distance_m or duration_s.",
+						"properties": map[string]any{
+							"distance_m": map[string]any{"type": "number", "description": "Goal distance in metres (e.g. 1000 = 1 km)."},
+							"duration_s": map[string]any{"type": "integer", "description": "Goal duration in seconds."},
+						},
+					},
+					"intensity": map[string]any{
+						"type":        "object",
+						"description": "Target intensity for the work portion of a repeat. Set hr_zone or label; hr_zone wins if both given.",
+						"properties": map[string]any{
+							"label":   map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}, "description": "Effort label, mapped to an HR zone."},
+							"hr_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar HR zone 1–5, used as both lower and upper bound."},
+						},
+					},
+					"recovery": map[string]any{
+						"type":        "object",
+						"description": "Optional easy recovery inserted between reps of a repeat phase.",
+						"properties": map[string]any{
+							"duration_s": map[string]any{"type": "integer", "description": "Recovery duration in seconds."},
+						},
+					},
 				},
 				"required": []string{"type"},
 			}),
@@ -185,96 +284,123 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 	s.AddTool(mcpgo.NewTool("get_calendar_week_summary",
 		mcpgo.WithDescription(
 			"Return one summary entry per ISO week intersecting [from, to] — the right-hand "+
-				"\"week totals\" strip in the Polar Flow diary. Range capped at 45 days.",
+				"\"week totals\" strip in the Polar Flow diary. Use for weekly volume trends "+
+				"rather than per-session detail. The range must be ≤ 45 days (wider is rejected "+
+				"by the server); from_date must be on or before to_date. "+
+				"Default range: today - 28 days through today.",
 		),
 		mcpgo.WithString("from_date",
-			mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today - 28 days)")),
+			mcpgo.Description("Start date, ISO 8601 YYYY-MM-DD (default: today - 28 days).")),
 		mcpgo.WithString("to_date",
-			mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today)")),
+			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today). Must be within 45 days of from_date.")),
 	), withLogging("get_calendar_week_summary", GetCalendarWeekSummaryHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("get_progress_summary",
 		mcpgo.WithDescription(
-			"Aggregated training totals (sessions, distance, duration, zone time, sport "+
-				"distribution, training-benefit distribution) for the [from, to] range. "+
-				"Good for coaching context: \"how is my training going this month?\"",
+			"Aggregated training totals over [from, to]: session count, total distance "+
+				"(metres) and duration, time-in-HR-zone, per-sport distribution, and "+
+				"training-benefit distribution. The headline tool for coaching context like "+
+				"\"how is my training going this month?\". Accounts with no recorded sessions "+
+				"return zeros rather than an error. Default range: today - 90 days through today.",
 		),
 		mcpgo.WithString("from_date",
-			mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today - 90 days)")),
+			mcpgo.Description("Start date, ISO 8601 YYYY-MM-DD (default: today - 90 days).")),
 		mcpgo.WithString("to_date",
-			mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today)")),
+			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today).")),
 		mcpgo.WithNumber("sport_id",
-			mcpgo.Description("Optional sport ID filter (omit or 0 for all sports)")),
-		mcpgo.WithString("time_frame",
-			mcpgo.Description("Bucket size for per-slice breakdowns: \"6w\", \"3m\", or \"1y\" (default: \"3m\")")),
+			mcpgo.Description("Optional sport id filter; omit or 0 to include all sports.")),
+		mcpgo.WithString("time_frame", mcpgo.DefaultString("3m"), mcpgo.Enum("6w", "3m", "1y"),
+			mcpgo.Description("Bucket size for the per-time-slice breakdowns: \"6w\" (6 weeks), "+
+				"\"3m\" (3 months), or \"1y\" (1 year). Default: \"3m\". Affects only how the "+
+				"breakdown is grouped, not the headline totals.")),
 	), withLogging("get_progress_summary", GetProgressSummaryHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("get_calendar_events",
 		mcpgo.WithDescription(
-			"Return the raw Polar Flow calendar events (training targets, exercises, etc.) in a date range.",
+			"Return raw Polar Flow diary events in a date range — completed sessions, "+
+				"scheduled training targets (type \"TRAININGTARGET\"), and other diary items. "+
+				"Lower-level than list_training_targets / list_training_sessions; reach for "+
+				"those typed tools first and use this when you need the unfiltered calendar. "+
+				"Default range: today through +30 days.",
 		),
 		mcpgo.WithString("from_date",
-			mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today)")),
+			mcpgo.Description("Start date, ISO 8601 YYYY-MM-DD (default: today).")),
 		mcpgo.WithString("to_date",
-			mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today + 30 days)")),
+			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today + 30 days).")),
 	), withLogging("get_calendar_events", GetCalendarEventsHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("list_training_sessions",
 		mcpgo.WithDescription(
-			"List completed Polar Flow training sessions in a date range. Defaults: last 30 days.",
+			"List completed (already-performed) Polar Flow training sessions in a date range, "+
+				"with each session's numeric id, sport, start time, distance, and duration. "+
+				"Pass an id to get_training_session_summary or get_training_session_details "+
+				"for more. For planned/future workouts use list_training_targets instead. "+
+				"Default range: last 30 days.",
 		),
 		mcpgo.WithString("from_date",
-			mcpgo.Description("Start date ISO 8601 YYYY-MM-DD (default: today - 30 days)")),
+			mcpgo.Description("Start date, ISO 8601 YYYY-MM-DD (default: today - 30 days).")),
 		mcpgo.WithString("to_date",
-			mcpgo.Description("End date ISO 8601 YYYY-MM-DD (default: today)")),
+			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today).")),
 	), withLogging("list_training_sessions", ListTrainingSessionsHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("get_training_session_summary",
 		mcpgo.WithDescription(
-			"Return a summary view of a completed training session by its numeric ID.",
+			"Return the summary view of one completed training session by id: totals such as "+
+				"duration, distance, average/max HR, calories, and sport. Use "+
+				"get_training_session_details for lap and sample-level data.",
 		),
 		mcpgo.WithNumber("session_id", mcpgo.Required(),
-			mcpgo.Description("Numeric session ID from list_training_sessions")),
+			mcpgo.Description("Numeric session id from list_training_sessions.")),
 	), withLogging("get_training_session_summary", GetTrainingSessionSummaryHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("create_training_session",
 		mcpgo.WithDescription(
-			"Log a manually-entered completed training session (the \"Manual training result\" "+
-				"form in Polar Flow). WRITES A REAL SESSION — it counts toward weekly volume, "+
-				"progress summaries, and Polar's training-load model. Intended for user-initiated "+
-				"logging of off-watch sessions, NOT for synthesizing test data on a production "+
-				"account. Coach skills should only call this when the user explicitly asks to "+
-				"log a session.",
+			"Log a manually-entered, already-completed training session (the \"Manual "+
+				"training result\" form in Polar Flow).\n\n"+
+				"⚠ WRITES REAL DATA — the session lands in the diary and counts toward weekly "+
+				"volume, progress summaries, and Polar's training-load model. It is NOT for "+
+				"synthesizing test data on a production account. Only call this when the user "+
+				"explicitly asks to log a session; never to fabricate history.\n\n"+
+				"This logs an actual session (past). To plan a future workout, use "+
+				"create_training_target instead.\n\n"+
+				"Units: duration_s in SECONDS, distance_m in METRES, speed_kmh in km/h, "+
+				"hr_avg / hr_max in bpm.\n\n"+
+				"Example — a 30 min, 5 km easy run at avg 142 bpm on 25 May 2026 08:48:\n"+
+				"  name: \"Easy 5km\", date: \"2026-05-25\", time: \"08:48\", duration_s: 1800,\n"+
+				"  distance_m: 5000, hr_avg: 142, sport_id: 1",
 		),
 		mcpgo.WithString("name", mcpgo.Required(),
-			mcpgo.Description("Display name shown in the diary (e.g. \"Easy 5km\")")),
+			mcpgo.Description("Display name shown in the diary (e.g. \"Easy 5km\").")),
 		mcpgo.WithString("date", mcpgo.Required(),
-			mcpgo.Description("Date the session happened, ISO 8601 YYYY-MM-DD")),
-		mcpgo.WithString("time",
-			mcpgo.Description("Local time the session started, HH:MM (default: 18:00)")),
+			mcpgo.Description("Local date the session happened, ISO 8601 YYYY-MM-DD.")),
+		mcpgo.WithString("time", mcpgo.DefaultString("18:00"),
+			mcpgo.Description("Local start time, 24h HH:MM (default: 18:00).")),
 		mcpgo.WithNumber("duration_s", mcpgo.Required(),
-			mcpgo.Description("Duration in seconds")),
-		mcpgo.WithNumber("distance_m",
-			mcpgo.Description("Distance in metres (default: 0)")),
-		mcpgo.WithNumber("kcal",
-			mcpgo.Description("Kilocalories burned (default: 0)")),
+			mcpgo.Description("Elapsed duration in SECONDS (e.g. 1800 = 30 min).")),
+		mcpgo.WithNumber("distance_m", mcpgo.DefaultNumber(0),
+			mcpgo.Description("Distance in METRES (e.g. 5000 = 5 km; default: 0).")),
+		mcpgo.WithNumber("kcal", mcpgo.DefaultNumber(0),
+			mcpgo.Description("Kilocalories burned (default: 0).")),
 		mcpgo.WithNumber("hr_avg",
-			mcpgo.Description("Average heart rate in bpm (omit or 0 for unset)")),
+			mcpgo.Description("Average heart rate in bpm. Omit or 0 to leave unset.")),
 		mcpgo.WithNumber("hr_max",
-			mcpgo.Description("Max heart rate in bpm (omit or 0 for unset)")),
+			mcpgo.Description("Max heart rate in bpm. Omit or 0 to leave unset.")),
 		mcpgo.WithNumber("speed_kmh",
-			mcpgo.Description("Average speed in km/h (omit or 0 for unset)")),
-		mcpgo.WithNumber("sport_id",
-			mcpgo.Description("Polar sport ID (default 1 = running)")),
+			mcpgo.Description("Average speed in km/h. Omit or 0 to leave unset.")),
+		mcpgo.WithNumber("sport_id", mcpgo.DefaultNumber(1),
+			mcpgo.Description("Polar sport id (default 1 = running).")),
 		mcpgo.WithString("note",
-			mcpgo.Description("Free-text note (optional)")),
+			mcpgo.Description("Free-text note for the session (optional).")),
 	), withLogging("create_training_session", CreateTrainingSessionHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("get_training_session_details",
 		mcpgo.WithDescription(
-			"Return the lap- and sample-level details for a completed training session.",
+			"Return lap- and sample-level detail for one completed training session: per-lap "+
+				"splits and the time-series samples (HR, speed, etc.) behind the summary. "+
+				"Heavier than get_training_session_summary — use it when you need splits or "+
+				"the within-session trace, not just totals.",
 		),
 		mcpgo.WithNumber("session_id", mcpgo.Required(),
-			mcpgo.Description("Numeric session ID from list_training_sessions")),
+			mcpgo.Description("Numeric session id from list_training_sessions.")),
 	), withLogging("get_training_session_details", GetTrainingSessionDetailsHandler(fc)))
 }
