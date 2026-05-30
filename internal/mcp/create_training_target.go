@@ -23,7 +23,9 @@ func CreateTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		return mcpgo.NewToolResultText(fmt.Sprintf("Created training target %d (%q at %s).", id, body.Name, body.Datetime)), nil
+		result := mcpgo.NewToolResultText(fmt.Sprintf("Created training target %d (%q at %s).", id, body.Name, body.Datetime))
+		result.StructuredContent = map[string]any{"type": "target_created", "id": id, "name": body.Name, "datetime": body.Datetime}
+		return result, nil
 	}
 }
 

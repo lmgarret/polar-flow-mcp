@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training Targets</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0d0d0d;color:#f0f0f0;font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px}
+body{padding:16px}
+
+.hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
+.hdr-label{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#d9232e}
+.hdr-sub{font-size:.72rem;color:#555}
+
+/* Target list */
+.target-list{display:flex;flex-direction:column;gap:2px}
+.target-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#111;border-radius:6px;border:1px solid #1a1a1a;transition:border-color .15s,background .15s}
+.target-row:hover{background:#161616;border-color:#2a2a2a}
+.target-date{font-size:.72rem;font-variant-numeric:tabular-nums;color:#555;min-width:100px;flex-shrink:0;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.target-name{flex:1;font-size:.85rem;font-weight:600;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.target-id{font-size:.65rem;color:#333;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;flex-shrink:0}
+.red-line{width:3px;height:28px;background:#d9232e;border-radius:2px;flex-shrink:0}
+
+/* Phase table */
+.phase-name{font-size:.95rem;font-weight:700;margin-bottom:3px}
+.phase-meta{font-size:.72rem;color:#555;margin-bottom:14px;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.phases-section{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:8px}
+.phase-row{display:flex;align-items:stretch;gap:0;margin-bottom:6px;border-radius:6px;overflow:hidden}
+.phase-type{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:8px 6px;min-height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:22px}
+.pt-warmup{background:#0d2d42;color:#60a0d0}
+.pt-cooldown{background:#0d2d18;color:#60c060}
+.pt-work{background:#2a0d0d;color:#d9232e}
+.pt-recovery{background:#1a1a0d;color:#d4b420}
+.pt-repeat{background:#1e0d2a;color:#9b59b6}
+.phase-body{flex:1;background:#141414;padding:8px 12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.phase-stat{display:flex;flex-direction:column;gap:1px}
+.ps-val{font-size:.82rem;font-weight:700;font-variant-numeric:tabular-nums;color:#e0e0e0;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.ps-lbl{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#444}
+.repeat-count{font-size:.75rem;font-weight:700;color:#9b59b6;padding:2px 6px;background:#1e0d2a;border-radius:3px;margin-left:auto;flex-shrink:0}
+
+/* Created card */
+.created-card{border:1px solid #2a0d0d;background:#141414;border-radius:8px;padding:16px;border-left:4px solid #d9232e}
+.cc-label{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#d9232e;margin-bottom:8px}
+.cc-name{font-size:1.1rem;font-weight:700;margin-bottom:4px}
+.cc-datetime{font-size:.8rem;color:#555;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;margin-bottom:8px}
+.cc-id{font-size:.7rem;color:#333;font-family:'SF Mono','Fira Code',Consolas,monospace}
+
+.empty-state{color:#444;font-size:.8rem;font-style:italic;padding:16px 0}
+.loading{color:#444;font-size:.8rem;font-style:italic;padding:16px 0}
+.fade-in{animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <span class="hdr-label" id="hdr-label">Training Targets</span>
+  <span class="hdr-sub" id="hdr-sub"></span>
+</div>
+<div id="root" class="loading">Loading…</div>
+
+<script>
+const pending = new Map(); let msgId = 0;
+window.addEventListener("message", e => {
+  const m = e.data; if (!m || m.jsonrpc !== "2.0") return;
+  if (m.id != null && pending.has(m.id)) {
+    const {resolve,reject} = pending.get(m.id); pending.delete(m.id);
+    m.error ? reject(new Error(m.error?.message ?? "RPC error")) : resolve(m.result);
+  } else if (m.method === "ui/notifications/tool-result") render(m.params?.structuredContent);
+});
+function rpc(method, params) {
+  const id = ++msgId;
+  return new Promise((resolve,reject) => { pending.set(id,{resolve,reject}); window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*"); });
+}
+rpc("ui/initialize",{clientInfo:{name:"polar-targets-ui",version:"2.0"},appCapabilities:{}})
+  .then(()=>window.parent.postMessage({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}},"*"));
+
+const esc = s => String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function fmtDateTime(iso) {
+  if (!iso) return "—";
+  const s = String(iso);
+  const date = s.slice(0,10).split("-");
+  const time = s.slice(11,16);
+  const d = `${parseInt(date[2])} ${MONTHS_SHORT[parseInt(date[1])-1]}`;
+  return time ? `${d} · ${time}` : d;
+}
+function fmtDur(v) {
+  if (!v) return "—";
+  const parts = String(v).split(":").map(Number);
+  if (parts.length === 3) {
+    const [h,m,s] = parts;
+    if (h > 0) return `${h}h${m?` ${m}m`:""}`;
+    if (m > 0) return `${m}m${s?` ${s}s`:""}`;
+    return `${s}s`;
+  }
+  const secs = Number(v); const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
+  if (h>0) return `${h}h${m?` ${m}m`:""}`;
+  if (m>0) return `${m}m${s?` ${s}s`:""}`;
+  return `${s}s`;
+}
+function fmtGoal(p) {
+  if (!p) return null;
+  if (p.goal_type === "DISTANCE" || p.distance?.value) {
+    const v = Number(p.distance?.value ?? 0);
+    return v >= 1000 ? (v/1000).toFixed(1)+"km" : v+"m";
+  }
+  if (p.goal_type === "DURATION" || p.duration?.value) return fmtDur(p.duration.value);
+  return null;
+}
+function fmtZone(p) {
+  if (!p) return null;
+  const lo = p.lower_zone?.value, hi = p.upper_zone?.value;
+  if (lo && hi) return `Z${lo}${lo!==hi?`–${hi}`:""}`;
+  if (p.intensity_type && p.intensity_type !== "NONE") return p.intensity_type.replace(/_/g," ").toLowerCase();
+  return null;
+}
+
+function render(sc) {
+  if (!sc) return;
+  const root = document.getElementById("root");
+  const label = document.getElementById("hdr-label");
+  const sub = document.getElementById("hdr-sub");
+
+  if (sc.type === "target_list") {
+    label.textContent = "Training Targets";
+    sub.textContent = `${sc.from} → ${sc.to}`;
+    const targets = sc.targets ?? [];
+    if (!targets.length) { root.innerHTML = `<div class="empty-state">No targets in this period.</div>`; return; }
+    root.innerHTML = `<div class="target-list fade-in">${targets.map(t => `
+      <div class="target-row">
+        <div class="red-line"></div>
+        <div class="target-date">${esc(fmtDateTime(t.start))}</div>
+        <div class="target-name">${esc(t.title || "(unnamed)")}</div>
+        <div class="target-id">#${esc(t.id)}</div>
+      </div>`).join("")}</div>`;
+    return;
+  }
+
+  if (sc.type === "target_detail") {
+    const t = sc.target ?? {};
+    label.textContent = "Target";
+    sub.textContent = `#${sc.id}`;
+    root.innerHTML = `<div class="fade-in">
+      <div class="phase-name">${esc(t.name || "—")}</div>
+      <div class="phase-meta">${esc(t.datetime ?? "")}</div>
+      ${renderPhases(t.exercise_targets ?? [])}
+    </div>`;
+    return;
+  }
+
+  if (sc.type === "target_created") {
+    label.textContent = "Target Created";
+    sub.textContent = "";
+    root.innerHTML = `<div class="created-card fade-in">
+      <div class="cc-label">✓ Scheduled</div>
+      <div class="cc-name">${esc(sc.name)}</div>
+      <div class="cc-datetime">${esc(sc.datetime)}</div>
+      <div class="cc-id">ID ${esc(sc.id)}</div>
+    </div>`;
+    return;
+  }
+}
+
+function renderPhases(exercises) {
+  if (!exercises.length) return `<div class="empty-state">No phase data.</div>`;
+  let out = `<div class="phases-section">Phases</div>`;
+  for (const ex of exercises) {
+    for (const ph of (ex.phases ?? [])) {
+      const ptype = ph.phase_type ?? ph.type ?? "PHASE";
+      if (ptype === "REPEAT") {
+        const work = (ph.phases ?? [])[0];
+        const rec  = (ph.phases ?? [])[1];
+        out += `<div class="phase-row">
+          <div class="phase-type pt-repeat">REP</div>
+          <div class="phase-body">
+            <span class="repeat-count">×${esc(ph.repeat_count)}</span>
+            ${work ? phaseStats(work, "Work") : ""}
+            ${rec  ? phaseStats(rec,  "Rest") : ""}
+          </div>
+        </div>`;
+      } else {
+        const name = ph.name ?? ptype;
+        const isWarm = name.toLowerCase().includes("warm");
+        const isCool = name.toLowerCase().includes("cool");
+        const cls = isWarm ? "pt-warmup" : isCool ? "pt-cooldown" : "pt-work";
+        out += `<div class="phase-row">
+          <div class="phase-type ${cls}">${isWarm?"WARM":isCool?"COOL":"WORK"}</div>
+          <div class="phase-body">${phaseStats(ph, null)}</div>
+        </div>`;
+      }
+    }
+  }
+  return out;
+}
+
+function phaseStats(p, label) {
+  const stats = [];
+  if (label) stats.push({v: label, l: "type"});
+  const goal = fmtGoal(p); if (goal) stats.push({v: goal, l: "goal"});
+  const zone = fmtZone(p); if (zone) stats.push({v: zone, l: "zone"});
+  if (!stats.length) return "";
+  return stats.map(s => `<div class="phase-stat"><div class="ps-val">${esc(s.v)}</div><div class="ps-lbl">${esc(s.l)}</div></div>`).join("");
+}
+</script>
+</body>
+</html>
