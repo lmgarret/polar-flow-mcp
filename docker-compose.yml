@@ -47,7 +47,7 @@ services:
       # https://lmgarret.github.io/polar-flow-mcp/deployment/exposing-securely/
       # OIDC_ISSUER: "https://auth.example.com"
       # MCP_RESOURCE: "https://polar.example.com/mcp"
-      # OIDC_INTROSPECTION_CLIENT_ID: "polar-mcp-rs"
+      # OIDC_INTROSPECTION_CLIENT_ID: "polar-mcp-connector"  # reuse the connector client
       # OIDC_INTROSPECTION_CLIENT_SECRET: "..."   # prefer the /.env secrets file
       # AUTH_ALLOWED_CLIENT_IDS: "polar-mcp-connector"
       # AUTH_ALLOWED_SUBJECTS: ""                  # your IdP sub
