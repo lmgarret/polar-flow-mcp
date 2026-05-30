@@ -9,7 +9,7 @@ import (
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/lm/polar-flow-mcp/internal/flow"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow"
 )
 
 // GetTrainingTargetHandler returns one target by ID.
@@ -27,7 +27,9 @@ func GetTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.CallT
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		body, _ := json.MarshalIndent(t, "", "  ")
-		return mcpgo.NewToolResultText(string(body)), nil
+		result := mcpgo.NewToolResultText(string(body))
+		result.StructuredContent = map[string]any{"type": "target_detail", "id": id, "target": t}
+		return result, nil
 	}
 }
 
@@ -66,7 +68,9 @@ func GetCalendarWeekSummaryHandler(fc *flow.Client) func(context.Context, mcpgo.
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		body, _ := json.MarshalIndent(items, "", "  ")
-		return mcpgo.NewToolResultText(string(body)), nil
+		result := mcpgo.NewToolResultText(string(body))
+		result.StructuredContent = map[string]any{"type": "week_summary", "weeks": items}
+		return result, nil
 	}
 }
 
@@ -85,6 +89,8 @@ func GetProgressSummaryHandler(fc *flow.Client) func(context.Context, mcpgo.Call
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		body, _ := json.MarshalIndent(summary, "", "  ")
-		return mcpgo.NewToolResultText(string(body)), nil
+		result := mcpgo.NewToolResultText(string(body))
+		result.StructuredContent = map[string]any{"type": "progress_summary", "data": summary}
+		return result, nil
 	}
 }

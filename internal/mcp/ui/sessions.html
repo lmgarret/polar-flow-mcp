@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training Sessions</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0d0d0d;color:#f0f0f0;font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px}
+body{padding:16px;display:flex;flex-direction:column;gap:0;min-height:100%}
+
+/* ── Header ── */
+.hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
+.hdr-label{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#d9232e}
+.hdr-range{font-size:.72rem;color:#555;font-variant-numeric:tabular-nums}
+
+/* ── Calendar ── */
+.cal-wrap{flex:0 0 auto}
+.month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.month-btn{background:none;border:none;color:#555;cursor:pointer;font-size:.85rem;padding:4px 8px;border-radius:4px;transition:color .15s,background .15s}
+.month-btn:hover{color:#f0f0f0;background:#1e1e1e}
+.month-btn:disabled{opacity:.2;cursor:default}
+.month-name{font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#f0f0f0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-dow{text-align:center;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#444;padding-bottom:6px}
+.cal-day{position:relative;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;cursor:default;transition:background .15s;user-select:none;min-width:0}
+.cal-day.empty{background:transparent}
+.cal-day.blank{opacity:0;pointer-events:none}
+.cal-day.today .day-num{color:#d9232e;font-weight:700}
+.cal-day.today::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:#d9232e}
+.cal-day.has-session{cursor:pointer}
+.cal-day.has-session:hover{background:#1a1a1a}
+.cal-day.selected{background:#1e0606 !important}
+.cal-day.selected .day-num{color:#ff4455}
+.day-num{font-size:.75rem;font-variant-numeric:tabular-nums;color:#666;line-height:1}
+.session-dot{width:5px;height:5px;border-radius:50%;margin-top:3px;flex-shrink:0}
+.session-dots{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap;justify-content:center;max-width:24px}
+
+/* ── Detail panel ── */
+.detail{margin-top:16px;overflow:hidden;transition:max-height .35s cubic-bezier(.4,0,.2,1),opacity .3s;max-height:0;opacity:0}
+.detail.open{max-height:600px;opacity:1}
+.detail-inner{border-top:1px solid #1e1e1e;padding-top:14px}
+.det-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.det-name{font-size:.95rem;font-weight:700;color:#f0f0f0;letter-spacing:-.01em}
+.det-date{font-size:.72rem;color:#555;font-variant-numeric:tabular-nums}
+.det-close{background:none;border:none;color:#444;cursor:pointer;font-size:1rem;padding:0 4px;transition:color .15s;line-height:1}
+.det-close:hover{color:#f0f0f0}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-bottom:14px}
+.stat-box{background:#141414;border-radius:6px;padding:10px 10px 8px}
+.stat-val{font-size:1.1rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:#f0f0f0;font-family:'SF Mono','Fira Code',Consolas,'Courier New',monospace}
+.stat-lbl{font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#555;margin-top:3px}
+.zones-label{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#444;margin-bottom:8px}
+.zone-bar{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.zb-label{font-size:.65rem;font-weight:700;width:16px;text-align:center;flex-shrink:0}
+.zb-track{flex:1;height:6px;background:#1a1a1a;border-radius:3px;overflow:hidden}
+.zb-fill{height:100%;border-radius:3px;transition:width .4s cubic-bezier(.4,0,.2,1)}
+.zb-time{font-size:.65rem;font-variant-numeric:tabular-nums;color:#555;width:36px;text-align:right;flex-shrink:0;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.z1f{background:#60a0d0}.z2f{background:#60c060}.z3f{background:#d4b420}.z4f{background:#e06020}.z5f{background:#d9232e}
+.zb-label.zc1{color:#60a0d0}.zb-label.zc2{color:#60c060}.zb-label.zc3{color:#d4b420}.zb-label.zc4{color:#e06020}.zb-label.zc5{color:#d9232e}
+
+/* ── Loading / states ── */
+.loading{color:#444;font-size:.8rem;font-style:italic;padding:20px 0}
+.empty-state{color:#444;font-size:.8rem;font-style:italic;padding:12px 0}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid #333;border-top-color:#d9232e;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fade-in{animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Direct summary/details view (non-calendar) ── */
+.summary-header{margin-bottom:14px}
+.summary-name{font-size:1.1rem;font-weight:700;letter-spacing:-.01em}
+.summary-date{font-size:.75rem;color:#555;margin-top:2px;font-variant-numeric:tabular-nums}
+.laps-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.laps-table th{text-align:right;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#444;padding:0 6px 8px;border-bottom:1px solid #1e1e1e}
+.laps-table th:first-child{text-align:left}
+.laps-table td{text-align:right;padding:6px 6px;border-bottom:1px solid #141414;font-variant-numeric:tabular-nums;color:#ccc;font-family:'SF Mono','Fira Code',Consolas,monospace;font-size:.75rem}
+.laps-table td:first-child{text-align:left;color:#555;font-family:inherit}
+.laps-table tr:last-child td{border-bottom:none}
+
+/* ── Session summary inside calendar detail ── */
+.multi-sessions{display:flex;flex-direction:column;gap:10px}
+.session-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#141414;border-radius:6px;cursor:pointer;transition:background .15s;border-left:3px solid transparent}
+.session-item:hover{background:#1a1a1a}
+.session-item.active{border-left-color:#d9232e;background:#1e0606}
+.si-sport{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 5px;border-radius:3px;background:#1e1e1e;flex-shrink:0}
+.si-name{flex:1;font-size:.8rem;font-weight:600;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.si-stats{font-size:.72rem;color:#555;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <span class="hdr-label" id="hdr-label">Training Log</span>
+  <span class="hdr-range" id="hdr-range"></span>
+</div>
+<div class="cal-wrap" id="cal-wrap"></div>
+<div class="detail" id="detail"><div class="detail-inner" id="detail-inner"></div></div>
+
+<script>
+// ── RPC bridge ──────────────────────────────────────────
+const pending = new Map();
+let msgId = 0;
+window.addEventListener("message", e => {
+  const m = e.data;
+  if (!m || m.jsonrpc !== "2.0") return;
+  if (m.id != null && pending.has(m.id)) {
+    const { resolve, reject } = pending.get(m.id);
+    pending.delete(m.id);
+    m.error ? reject(new Error(m.error?.message ?? "RPC error")) : resolve(m.result);
+  } else if (m.method === "ui/notifications/tool-result") {
+    onToolResult(m.params?.structuredContent);
+  }
+});
+function rpc(method, params) {
+  const id = ++msgId;
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject });
+    window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+  });
+}
+rpc("ui/initialize", { clientInfo: { name: "polar-sessions-ui", version: "2.0" }, appCapabilities: {} })
+  .then(() => window.parent.postMessage({ jsonrpc: "2.0", method: "ui/notifications/initialized", params: {} }, "*"));
+
+// ── State ──────────────────────────────────────────────
+let allSessions = [];
+let byDate = {};
+let viewYear = 0, viewMonth = 0;
+let fromDate = null, toDate = null;
+let selectedDate = null;
+let activeSessions = [];
+
+// ── Helpers ────────────────────────────────────────────
+const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function fmtDur(secs) {
+  const s = Math.round(Number(secs) || 0);
+  if (!s) return "—";
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  if (h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+  return `${m}:${String(sec).padStart(2,"0")}`;
+}
+function fmtDist(m) {
+  const v = Number(m) || 0;
+  if (!v) return "—";
+  return v >= 1000 ? (v/1000).toFixed(2)+"km" : v+"m";
+}
+function fmtPace(dist, secs) {
+  if (!dist || !secs || dist < 100) return null;
+  const secPer = (Number(secs) / Number(dist)) * 1000;
+  const m = Math.floor(secPer/60), s = Math.round(secPer%60);
+  return `${m}:${String(s).padStart(2,"0")}/km`;
+}
+function fmtDate(iso) {
+  if (!iso) return "";
+  const d = iso.slice(0,10).split("-");
+  return `${d[2]} ${MONTHS_SHORT[parseInt(d[1])-1]} ${d[0]}`;
+}
+function sessionDate(s) {
+  const raw = s.start_time ?? s.date_time ?? s.start ?? s.datetime ?? "";
+  return String(raw).slice(0,10);
+}
+function sportInfo(s) {
+  const n = (s.sport_name ?? s.sport ?? s.detailed_sport_info?.sport_name ?? "").toLowerCase();
+  const id = Number(s.sport_id ?? s.detailed_sport_info?.sport_id ?? 0);
+  if (n.includes("run") || id===1)  return {color:"#d9232e", label:"RUN"};
+  if (n.includes("cycl")||n.includes("bik")||id===2) return {color:"#ff8c00", label:"RIDE"};
+  if (n.includes("swim")||id===3)   return {color:"#0099cc", label:"SWIM"};
+  if (n.includes("walk")||n.includes("hike"))        return {color:"#90be6d", label:"WALK"};
+  if (n.includes("gym")||n.includes("strength")||n.includes("weight")) return {color:"#f77f00", label:"GYM"};
+  if (n.includes("ski")||n.includes("nordic"))       return {color:"#00b4d8", label:"SKI"};
+  return {color:"#666", label:"SPORT"};
+}
+
+// ── Calendar render ─────────────────────────────────────
+function renderCalendar() {
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+
+  const firstOfMonth = new Date(viewYear, viewMonth, 1);
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const startDow = (firstOfMonth.getDay()+6)%7; // Mon=0
+
+  // Can we go prev/next?
+  const canPrev = fromDate ? (viewYear > fromDate.getFullYear() || (viewYear===fromDate.getFullYear() && viewMonth > fromDate.getMonth())) : true;
+  const canNext = toDate ? (viewYear < toDate.getFullYear() || (viewYear===toDate.getFullYear() && viewMonth < toDate.getMonth())) : true;
+
+  const DOWS = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  let cells = "";
+  for (let i=0; i<startDow; i++) cells += `<div class="cal-day blank"></div>`;
+
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const sessions = byDate[dateStr] ?? [];
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === selectedDate;
+    const hasSessions = sessions.length > 0;
+
+    let cls = "cal-day";
+    if (isToday) cls += " today";
+    if (hasSessions) cls += " has-session";
+    if (isSelected) cls += " selected";
+
+    let dots = "";
+    if (hasSessions) {
+      const shown = sessions.slice(0,3);
+      dots = `<div class="session-dots">${shown.map(s => `<div class="session-dot" style="background:${sportInfo(s).color}"></div>`).join("")}</div>`;
+    }
+
+    const onclick = hasSessions ? `onclick="selectDay('${dateStr}')"` : "";
+    cells += `<div class="${cls}" ${onclick} data-date="${dateStr}">
+      <span class="day-num">${d}</span>
+      ${dots}
+    </div>`;
+  }
+
+  document.getElementById("cal-wrap").innerHTML = `
+    <div class="month-nav">
+      <button class="month-btn" onclick="shiftMonth(-1)" ${canPrev?"":"disabled"}>◄</button>
+      <span class="month-name">${MONTHS[viewMonth]} ${viewYear}</span>
+      <button class="month-btn" onclick="shiftMonth(1)" ${canNext?"":"disabled"}>►</button>
+    </div>
+    <div class="cal-grid">
+      ${DOWS.map(d=>`<div class="cal-dow">${d}</div>`).join("")}
+      ${cells}
+    </div>`;
+}
+
+function shiftMonth(dir) {
+  viewMonth += dir;
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  if (viewMonth < 0)  { viewMonth = 11; viewYear--; }
+  selectedDate = null;
+  closeDetail();
+  renderCalendar();
+}
+
+// ── Session selection ───────────────────────────────────
+function selectDay(dateStr) {
+  if (selectedDate === dateStr) { selectedDate = null; closeDetail(); renderCalendar(); return; }
+  selectedDate = dateStr;
+  activeSessions = byDate[dateStr] ?? [];
+  renderCalendar();
+  if (activeSessions.length === 1) {
+    openDetail();
+    fetchSummary(activeSessions[0]);
+  } else {
+    openDetail();
+    renderSessionList(activeSessions);
+  }
+}
+
+function closeDetail() {
+  const d = document.getElementById("detail");
+  d.classList.remove("open");
+}
+
+function openDetail() {
+  const d = document.getElementById("detail");
+  d.classList.add("open");
+}
+
+function renderSessionList(sessions) {
+  const inner = document.getElementById("detail-inner");
+  const d = fmtDate(selectedDate);
+  inner.innerHTML = `
+    <div class="det-header">
+      <span class="det-name">${esc(d)}</span>
+      <button class="det-close" onclick="selectedDate=null;closeDetail();renderCalendar()">✕</button>
+    </div>
+    <div class="multi-sessions">
+      ${sessions.map((s,i) => {
+        const sp = sportInfo(s);
+        const dur = s.duration ?? s.session_duration_s ?? 0;
+        const dist = s.distance ?? 0;
+        const name = s.name ?? s.training_session_name ?? s.sportName ?? "Session";
+        return `<div class="session-item" id="si-${i}" onclick="fetchSummary(activeSessions[${i}],this)">
+          <span class="si-sport" style="color:${sp.color}">${sp.label}</span>
+          <span class="si-name">${esc(name)}</span>
+          <span class="si-stats">${fmtDur(dur)}${dist ? " · "+fmtDist(dist) : ""}</span>
+        </div>`;
+      }).join("")}
+    </div>
+    <div id="summary-slot" style="margin-top:12px"></div>`;
+}
+
+async function fetchSummary(session, el) {
+  const slot = document.getElementById("summary-slot") ?? document.getElementById("detail-inner");
+  if (el) {
+    document.querySelectorAll(".session-item").forEach(x=>x.classList.remove("active"));
+    el.classList.add("active");
+  }
+  const id = session.id ?? session.exercise_id;
+  if (!id) { slot.innerHTML = `<div class="empty-state">No session ID available.</div>`; return; }
+
+  slot.innerHTML = `<div class="loading"><span class="spinner"></span>Loading…</div>`;
+  openDetail();
+  try {
+    const result = await rpc("tools/call", { name: "get_training_session_summary", arguments: { session_id: Number(id) } });
+    const sc = result?.structuredContent;
+    renderSummaryData(sc?.summary ?? sc?.data ?? sc, slot, session);
+  } catch(err) {
+    slot.innerHTML = `<div class="empty-state">Could not load session: ${esc(err.message)}</div>`;
+  }
+}
+
+function renderSummaryData(s, container, fallbackSession) {
+  if (!s) { container.innerHTML = `<div class="empty-state">No data returned.</div>`; return; }
+  const name = s.name ?? s.training_session_name ?? fallbackSession?.name ?? "Session";
+  const dateStr = sessionDate(s) || selectedDate || "";
+  const dur = s.duration ?? s.session_duration_s ?? fallbackSession?.duration ?? 0;
+  const dist = s.distance ?? fallbackSession?.distance ?? 0;
+  const hrAvg = s.hr_data?.average ?? s.heart_rate?.average ?? s.hr_avg;
+  const hrMax = s.hr_data?.maximum ?? s.heart_rate?.maximum ?? s.hr_max;
+  const kcal = s.calories ?? s.kcal;
+  const pace = fmtPace(dist, dur);
+  const sp = sportInfo(s.detailed_sport_info ?? s ?? {});
+
+  const stats = [
+    {v: fmtDur(dur), l: "Duration"},
+    dist ? {v: fmtDist(dist), l: "Distance"} : null,
+    pace ? {v: pace, l: "Pace"} : null,
+    hrAvg ? {v: hrAvg+" bpm", l: "Avg HR"} : null,
+    hrMax ? {v: hrMax+" bpm", l: "Max HR"} : null,
+    kcal ? {v: String(kcal), l: "kcal"} : null,
+  ].filter(Boolean);
+
+  const zones = s.heart_rate_zones ?? s.hr_zones ?? [];
+  const maxZone = Math.max(...zones.map(z => Number(z.duration_in_seconds ?? z.in_zone ?? 0)), 1);
+  let zonesHTML = "";
+  if (zones.length > 0) {
+    zonesHTML = `<div class="zones-label" style="margin-top:14px">Heart Rate Zones</div>
+      ${zones.map((z,i)=>{
+        const t = Number(z.duration_in_seconds ?? z.in_zone ?? 0);
+        const pct = Math.max(2, Math.round(t/maxZone*100));
+        return `<div class="zone-bar">
+          <span class="zb-label zc${i+1}">Z${i+1}</span>
+          <div class="zb-track"><div class="zb-fill z${i+1}f" style="width:${pct}%"></div></div>
+          <span class="zb-time">${fmtDur(t)}</span>
+        </div>`;
+      }).join("")}`;
+  }
+
+  // Only show header inside summary-slot if we're in the multi-session context
+  const showHeader = !document.querySelector(".det-header");
+  const headerHTML = showHeader ? `
+    <div class="det-header">
+      <div>
+        <div class="det-name" style="border-left:3px solid ${sp.color};padding-left:8px">${esc(name)}</div>
+        ${dateStr ? `<div class="det-date">${fmtDate(dateStr)}</div>` : ""}
+      </div>
+      <button class="det-close" onclick="selectedDate=null;closeDetail();renderCalendar()">✕</button>
+    </div>` : `<div style="font-size:.75rem;font-weight:600;color:#888;margin-bottom:10px;border-left:3px solid ${sp.color};padding-left:8px">${esc(name)}</div>`;
+
+  container.innerHTML = `<div class="fade-in">
+    ${headerHTML}
+    <div class="stats-row">${stats.map(s=>`
+      <div class="stat-box">
+        <div class="stat-val">${esc(s.v)}</div>
+        <div class="stat-lbl">${esc(s.l)}</div>
+      </div>`).join("")}
+    </div>
+    ${zonesHTML}
+  </div>`;
+}
+
+// ── Tool result handler (for direct tool calls) ─────────
+function onToolResult(sc) {
+  if (!sc) return;
+  if (sc.type === "session_list") renderSessionCalendar(sc);
+  else if (sc.type === "session_summary") renderDirectSummary(sc);
+  else if (sc.type === "session_details") renderLaps(sc);
+}
+
+function renderSessionCalendar(sc) {
+  allSessions = sc.sessions ?? [];
+  byDate = {};
+  for (const s of allSessions) {
+    const d = sessionDate(s);
+    if (d) (byDate[d] = byDate[d]??[]).push(s);
+  }
+
+  const label = document.getElementById("hdr-label");
+  const range = document.getElementById("hdr-range");
+  label.textContent = "Training Log";
+  range.textContent = allSessions.length ? `${allSessions.length} sessions` : "";
+
+  fromDate = sc.from ? new Date(sc.from) : null;
+  toDate = sc.to ? new Date(sc.to) : null;
+
+  // Default view: most recent month with sessions, or toDate
+  const mostRecent = allSessions.length > 0
+    ? allSessions.reduce((a,b) => sessionDate(a) > sessionDate(b) ? a : b)
+    : null;
+  const refDate = mostRecent ? new Date(sessionDate(mostRecent)) : (toDate ?? new Date());
+  viewYear = refDate.getFullYear();
+  viewMonth = refDate.getMonth();
+
+  renderCalendar();
+}
+
+function renderDirectSummary(sc) {
+  document.getElementById("cal-wrap").innerHTML = "";
+  const inner = document.getElementById("detail-inner");
+  document.getElementById("hdr-label").textContent = "Session Summary";
+  document.getElementById("hdr-range").textContent = "";
+  openDetail();
+  document.getElementById("detail").style.maxHeight = "none";
+  document.getElementById("detail").style.opacity = "1";
+  renderSummaryData(sc.summary ?? sc.data ?? sc, inner, null);
+}
+
+function renderLaps(sc) {
+  document.getElementById("cal-wrap").innerHTML = "";
+  document.getElementById("hdr-label").textContent = "Lap Details";
+  document.getElementById("hdr-range").textContent = "";
+  openDetail();
+  document.getElementById("detail").style.maxHeight = "none";
+  document.getElementById("detail").style.opacity = "1";
+  const d = sc.details ?? {};
+  const laps = d.laps ?? d.exercise_laps ?? [];
+  if (!laps.length) {
+    document.getElementById("detail-inner").innerHTML = `<div class="empty-state">No lap data available.</div>`;
+    return;
+  }
+  document.getElementById("detail-inner").innerHTML = `
+    <table class="laps-table">
+      <thead><tr><th>Lap</th><th>Time</th><th>Dist</th><th>Avg HR</th><th>Max HR</th></tr></thead>
+      <tbody>${laps.map((l,i)=>`<tr>
+        <td style="color:#555">${i+1}</td>
+        <td>${esc(fmtDur(l.duration??l.duration_s??0))}</td>
+        <td>${esc(fmtDist(l.distance??0))}</td>
+        <td>${esc(l.heart_rate?.average??l.hr_avg??"—")}</td>
+        <td>${esc(l.heart_rate?.maximum??l.hr_max??"—")}</td>
+      </tr>`).join("")}</tbody>
+    </table>`;
+}
+</script>
+</body>
+</html>

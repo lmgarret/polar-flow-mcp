@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lm/polar-flow-mcp/internal/config"
+	"github.com/lmgarret/polar-flow-mcp/internal/config"
 )
 
 // clearConfigEnv clears all environment variables read by config.Load().

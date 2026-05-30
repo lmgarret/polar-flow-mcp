@@ -11,8 +11,8 @@ import (
 	"github.com/go-faster/jx"
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/lm/polar-flow-mcp/internal/flow"
-	"github.com/lm/polar-flow-mcp/internal/flow/gen"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
 
 const isoDate = "2006-01-02"
@@ -25,7 +25,9 @@ func GetUserInfoHandler(fc *flow.Client) func(context.Context, mcpgo.CallToolReq
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		body, _ := json.MarshalIndent(ui, "", "  ")
-		return mcpgo.NewToolResultText(string(body)), nil
+		result := mcpgo.NewToolResultText(string(body))
+		result.StructuredContent = map[string]any{"type": "user_info", "data": ui}
+		return result, nil
 	}
 }
 
@@ -42,8 +44,12 @@ func ListTrainingTargetsHandler(fc *flow.Client) func(context.Context, mcpgo.Cal
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		if len(targets) == 0 {
-			return mcpgo.NewToolResultText(fmt.Sprintf(
-				"No training targets between %s and %s.", from.Format(isoDate), to.Format(isoDate))), nil
+			result := mcpgo.NewToolResultText(fmt.Sprintf(
+				"No training targets between %s and %s.", from.Format(isoDate), to.Format(isoDate)))
+			result.StructuredContent = map[string]any{
+				"type": "target_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "targets": []any{},
+			}
+			return result, nil
 		}
 		var b strings.Builder
 		fmt.Fprintf(&b, "Training targets between %s and %s (%d):\n",
@@ -55,7 +61,11 @@ func ListTrainingTargetsHandler(fc *flow.Client) func(context.Context, mcpgo.Cal
 			}
 			fmt.Fprintf(&b, "- %d: %s (%s)\n", t.ID, title, t.Start)
 		}
-		return mcpgo.NewToolResultText(b.String()), nil
+		result := mcpgo.NewToolResultText(b.String())
+		result.StructuredContent = map[string]any{
+			"type": "target_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "targets": targets,
+		}
+		return result, nil
 	}
 }
 
@@ -89,7 +99,11 @@ func GetCalendarEventsHandler(fc *flow.Client) func(context.Context, mcpgo.CallT
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		body, _ := json.MarshalIndent(events, "", "  ")
-		return mcpgo.NewToolResultText(string(body)), nil
+		result := mcpgo.NewToolResultText(string(body))
+		result.StructuredContent = map[string]any{
+			"type": "calendar_events", "from": from.Format(isoDate), "to": to.Format(isoDate), "events": events,
+		}
+		return result, nil
 	}
 }
 
@@ -111,7 +125,11 @@ func ListTrainingSessionsHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		body, _ := json.MarshalIndent(sessions, "", "  ")
-		return mcpgo.NewToolResultText(string(body)), nil
+		result := mcpgo.NewToolResultText(string(body))
+		result.StructuredContent = map[string]any{
+			"type": "session_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "sessions": sessions,
+		}
+		return result, nil
 	}
 }
 
@@ -130,7 +148,9 @@ func GetTrainingSessionSummaryHandler(fc *flow.Client) func(context.Context, mcp
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		body, _ := json.MarshalIndent(summary, "", "  ")
-		return mcpgo.NewToolResultText(string(body)), nil
+		result := mcpgo.NewToolResultText(string(body))
+		result.StructuredContent = map[string]any{"type": "session_summary", "summary": summary}
+		return result, nil
 	}
 }
 
@@ -149,7 +169,9 @@ func GetTrainingSessionDetailsHandler(fc *flow.Client) func(context.Context, mcp
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		body, _ := json.MarshalIndent(details, "", "  ")
-		return mcpgo.NewToolResultText(string(body)), nil
+		result := mcpgo.NewToolResultText(string(body))
+		result.StructuredContent = map[string]any{"type": "session_details", "details": details}
+		return result, nil
 	}
 }
 

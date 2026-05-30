@@ -1,4 +1,4 @@
-module github.com/lm/polar-flow-mcp
+module github.com/lmgarret/polar-flow-mcp
 
 go 1.26.2
 
@@ -8,12 +8,12 @@ require (
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.2.0
 	github.com/joho/godotenv v1.5.1
-	github.com/mark3labs/mcp-go v0.50.0
+	github.com/mark3labs/mcp-go v0.54.1
 	github.com/ogen-go/ogen v1.20.3
 	github.com/refraction-networking/utls v1.8.2
-	go.opentelemetry.io/otel v1.43.0
-	go.opentelemetry.io/otel/metric v1.43.0
-	go.opentelemetry.io/otel/trace v1.43.0
+	go.opentelemetry.io/otel v1.44.0
+	go.opentelemetry.io/otel/metric v1.44.0
+	go.opentelemetry.io/otel/trace v1.44.0
 	golang.org/x/net v0.52.0
 )
 

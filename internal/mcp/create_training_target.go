@@ -7,8 +7,8 @@ import (
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/lm/polar-flow-mcp/internal/flow"
-	"github.com/lm/polar-flow-mcp/internal/flow/gen"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
 
 // CreateTrainingTargetHandler builds a TrainingTargetCreate from the Claude-
@@ -23,7 +23,9 @@ func CreateTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		return mcpgo.NewToolResultText(fmt.Sprintf("Created training target %d (%q at %s).", id, body.Name, body.Datetime)), nil
+		result := mcpgo.NewToolResultText(fmt.Sprintf("Created training target %d (%q at %s).", id, body.Name, body.Datetime))
+		result.StructuredContent = map[string]any{"type": "target_created", "id": id, "name": body.Name, "datetime": body.Datetime}
+		return result, nil
 	}
 }
 

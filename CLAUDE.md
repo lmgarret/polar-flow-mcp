@@ -19,7 +19,7 @@ and silent refresh.
 
 ## Project Conventions
 
-- Go 1.26, module `github.com/lm/polar-flow-mcp`
+- Go 1.26, module `github.com/lmgarret/polar-flow-mcp`
 - Layout: `cmd/polar-flow-mcp/main.go` + `internal/{config,flow,mcp}/`
 - Logging: `log/slog` (stdlib)
 - Docker: `golang:1.26-alpine` builder → `FROM scratch` final; `CGO_ENABLED=0`,

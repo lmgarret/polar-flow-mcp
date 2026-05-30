@@ -2,6 +2,8 @@ bin/
 /polar-flow-mcp
 .env
 *.db
+.mcp.json
+/site/
 
 # Persisted session secrets — never commit
 polar-cookies.json
@@ -10,3 +12,6 @@ polar-cookies.json
 # SQLite sidecar files (*.db already covered)
 *.db-shm
 *.db-wal
+
+# GSD internal planning artifacts
+.planning/

@@ -19,9 +19,9 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/lm/polar-flow-mcp/internal/config"
-	"github.com/lm/polar-flow-mcp/internal/flow"
-	"github.com/lm/polar-flow-mcp/internal/mcp"
+	"github.com/lmgarret/polar-flow-mcp/internal/config"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow"
+	"github.com/lmgarret/polar-flow-mcp/internal/mcp"
 )
 
 func main() {
@@ -57,8 +57,10 @@ func main() {
 		"polar-flow-mcp",
 		"0.2.0",
 		server.WithToolCapabilities(true),
+		server.WithResourceCapabilities(false, false),
 	)
 	mcp.RegisterTools(mcpServer, flowClient)
+	mcp.RegisterResources(mcpServer)
 
 	switch cfg.Transport {
 	case "stdio":
