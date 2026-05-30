@@ -11,8 +11,8 @@ import (
 	"github.com/go-faster/jx"
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/lm/polar-flow-mcp/internal/flow"
-	"github.com/lm/polar-flow-mcp/internal/flow/gen"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
 
 const isoDate = "2006-01-02"

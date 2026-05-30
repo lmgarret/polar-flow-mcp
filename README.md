@@ -166,6 +166,12 @@ The wrapper:
 - Detects `401 {"error":"NotAuthenticated"}` and runs a 3-hop silent refresh
   before retrying the request once.
 
+## Disclaimer
+
+This project is not affiliated with, endorsed by, or sponsored by Polar Electro Oy. "Polar" and "Polar Flow" are trademarks of their respective owner.
+
+This software drives an unofficial, reverse-engineered web API that is not publicly documented, may change or break without notice, and whose use may be contrary to Polar's Terms of Service. **Use at your own risk.** The author accepts no responsibility for account suspension or any other consequences arising from its use. Use a dedicated test account where possible.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

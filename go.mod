@@ -1,4 +1,4 @@
-module github.com/lm/polar-flow-mcp
+module github.com/lmgarret/polar-flow-mcp
 
 go 1.26.2
 

@@ -14,7 +14,7 @@ import (
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/lm/polar-flow-mcp/internal/flow"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow"
 )
 
 // sensitiveArgKeys holds arg names whose values must not appear in logs.

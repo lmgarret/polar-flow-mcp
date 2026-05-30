@@ -22,7 +22,7 @@ make lint
 make clean
 ```
 
-- `make test` runs `CGO_ENABLED=0 go test -tags=polartest -race -count=1 ./...`
+- `make test` runs `CGO_ENABLED=0 go test -count=1 ./...`
 - `make lint` runs `~/go/bin/golangci-lint run ./...`
 
 ## Workflow

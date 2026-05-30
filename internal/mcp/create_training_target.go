@@ -7,8 +7,8 @@ import (
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/lm/polar-flow-mcp/internal/flow"
-	"github.com/lm/polar-flow-mcp/internal/flow/gen"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
 
 // CreateTrainingTargetHandler builds a TrainingTargetCreate from the Claude-

@@ -19,9 +19,9 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/lm/polar-flow-mcp/internal/config"
-	"github.com/lm/polar-flow-mcp/internal/flow"
-	"github.com/lm/polar-flow-mcp/internal/mcp"
+	"github.com/lmgarret/polar-flow-mcp/internal/config"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow"
+	"github.com/lmgarret/polar-flow-mcp/internal/mcp"
 )
 
 func main() {

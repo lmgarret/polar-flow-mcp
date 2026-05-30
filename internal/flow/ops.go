@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lm/polar-flow-mcp/internal/flow/gen"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
 
 // UserInfo is the trimmed-down identity payload returned by GetUserInfo.

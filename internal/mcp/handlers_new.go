@@ -9,7 +9,7 @@ import (
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/lm/polar-flow-mcp/internal/flow"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow"
 )
 
 // GetTrainingTargetHandler returns one target by ID.

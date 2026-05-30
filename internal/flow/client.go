@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lm/polar-flow-mcp/internal/flow/gen"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
 
 // Config holds the inputs the Flow client needs at construction time.
