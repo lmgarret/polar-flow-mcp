@@ -52,21 +52,23 @@ Claude.ai web/mobile ──HTTPS──► Caddy (TLS) ──► polar-flow-mcp :
 
 ## Identity provider — example: Authelia
 
-You need **two** OIDC clients on Authelia:
-
-1. **The connector client** — what Claude uses to log you in.
-2. **The introspection client** — credentials the MCP server uses to validate
-   tokens at Authelia's introspection endpoint.
+You need **one** OIDC client on Authelia — the connector Claude uses to log you
+in. Because it's a confidential client, the MCP server reuses **its** credentials
+to validate tokens at Authelia's introspection endpoint, so no second client is
+required. (For stricter credential separation you can split introspection into
+its own client — see
+[Optional: a separate introspection client](#optional-a-separate-introspection-client).)
 
 ```yaml
 # authelia configuration.yml
 identity_providers:
   oidc:
     clients:
-      # 1. The client Claude uses (pre-registered; you paste these into Claude.ai).
+      # The client Claude uses (pre-registered; you paste these into Claude.ai).
+      # It doubles as the MCP server's introspection credential.
       - client_id: 'polar-mcp-connector'
         client_name: 'Polar Flow MCP (Claude)'
-        client_secret: '$pbkdf2-sha512$310000$...'   # hashed; keep the plaintext for Claude
+        client_secret: '$pbkdf2-sha512$310000$...'   # hashed; keep the plaintext for Claude + the server
         public: false
         authorization_policy: 'two_factor'            # restrict to YOU (see note)
         require_pkce: true
@@ -78,17 +80,8 @@ identity_providers:
         audience: ['https://polar.example.com/mcp']   # RFC 8707 — stamps the aud claim
         grant_types: ['authorization_code', 'refresh_token']
         response_types: ['code']
-        token_endpoint_auth_method: 'client_secret_post'
-
-      # 2. The Resource Server's introspection credentials.
-      - client_id: 'polar-mcp-rs'
-        client_name: 'Polar Flow MCP (introspection)'
-        client_secret: '$pbkdf2-sha512$310000$...'
-        public: false
-        authorization_policy: 'one_factor'
-        scopes: ['openid']
-        grant_types: ['client_credentials']
-        introspection_endpoint_auth_method: 'client_secret_basic'  # the server uses HTTP Basic
+        token_endpoint_auth_method: 'client_secret_post'           # how Claude authenticates
+        introspection_endpoint_auth_method: 'client_secret_basic'  # how the server authenticates (HTTP Basic)
 ```
 
 !!! tip "Lock the connector client to you"
@@ -106,9 +99,38 @@ identity_providers:
 !!! note "Auth-method mismatch?"
     `token_endpoint_auth_method: 'client_secret_post'` matches how Claude posts
     its credentials. If the login fails with a client-authentication error, try
-    `'client_secret_basic'`. The introspection client must use
-    `introspection_endpoint_auth_method: 'client_secret_basic'` — that's the
+    `'client_secret_basic'`. Whichever client the server introspects with must
+    set `introspection_endpoint_auth_method: 'client_secret_basic'` — that's the
     scheme this server sends.
+
+### Optional: a separate introspection client
+
+Reusing the connector client means one secret does two jobs — Claude's login and
+the server's introspection. The tradeoff is **credential rotation**: that secret
+also lives in the server's environment, and rotating it (say it leaks from the
+host) forces you to re-paste the new value into Claude.ai's connector settings,
+because it's the same secret. Token revocation is unaffected — only secret
+rotation loses its independence.
+
+If you'd rather rotate the server's credential without ever touching the Claude
+connector, register a second confidential client and point the server's
+`OIDC_INTROSPECTION_*` vars at it instead:
+
+```yaml
+      # Optional 2nd client: dedicated introspection credentials for the server.
+      - client_id: 'polar-mcp-rs'
+        client_name: 'Polar Flow MCP (introspection)'
+        client_secret: '$pbkdf2-sha512$310000$...'
+        public: false
+        authorization_policy: 'one_factor'
+        scopes: ['openid']
+        grant_types: ['client_credentials']
+        introspection_endpoint_auth_method: 'client_secret_basic'
+```
+
+Then set `OIDC_INTROSPECTION_CLIENT_ID=polar-mcp-rs` (and its secret) below.
+`AUTH_ALLOWED_CLIENT_IDS` still pins the **connector** (`polar-mcp-connector`) —
+that's the client named in the *token*, not the one doing the introspecting.
 
 Make sure Authelia's discovery + endpoints are publicly reachable over HTTPS:
 `https://auth.example.com/.well-known/openid-configuration` and the
@@ -162,8 +184,8 @@ credentials are missing.
 ```bash
 OIDC_ISSUER=https://auth.example.com
 MCP_RESOURCE=https://polar.example.com/mcp        # MUST match the URL Claude calls, byte for byte
-OIDC_INTROSPECTION_CLIENT_ID=polar-mcp-rs
-OIDC_INTROSPECTION_CLIENT_SECRET=<plaintext secret for polar-mcp-rs>
+OIDC_INTROSPECTION_CLIENT_ID=polar-mcp-connector  # reuse the connector client (or polar-mcp-rs if you split it)
+OIDC_INTROSPECTION_CLIENT_SECRET=<plaintext secret for that client>
 
 # Recommended hardening — each enforced only when set (all ANDed):
 AUTH_ALLOWED_CLIENT_IDS=polar-mcp-connector       # confused-deputy defence (RFC 8707)
