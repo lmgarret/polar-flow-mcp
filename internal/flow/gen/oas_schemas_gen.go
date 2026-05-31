@@ -7181,8 +7181,8 @@ type PhysicalInfoSnapshot struct {
 	FunctionalThresholdPower OptNilInt `json:"functionalThresholdPower"`
 	// Maximum aerobic power (W) at session time; null if unknown.
 	MaximumAerobicPower OptNilInt `json:"maximumAerobicPower"`
-	// Maximum aerobic speed as a pace string (MM:SS); null if unknown.
-	MaximumAerobicSpeed OptNilString `json:"maximumAerobicSpeed"`
+	// Maximum aerobic speed in m/s (a float, e.g. 14.53); null if unknown.
+	MaximumAerobicSpeed OptNilFloat64 `json:"maximumAerobicSpeed"`
 }
 
 // GetMaximumHeartRate returns the value of MaximumHeartRate.
@@ -7206,7 +7206,7 @@ func (s *PhysicalInfoSnapshot) GetMaximumAerobicPower() OptNilInt {
 }
 
 // GetMaximumAerobicSpeed returns the value of MaximumAerobicSpeed.
-func (s *PhysicalInfoSnapshot) GetMaximumAerobicSpeed() OptNilString {
+func (s *PhysicalInfoSnapshot) GetMaximumAerobicSpeed() OptNilFloat64 {
 	return s.MaximumAerobicSpeed
 }
 
@@ -7231,7 +7231,7 @@ func (s *PhysicalInfoSnapshot) SetMaximumAerobicPower(val OptNilInt) {
 }
 
 // SetMaximumAerobicSpeed sets the value of MaximumAerobicSpeed.
-func (s *PhysicalInfoSnapshot) SetMaximumAerobicSpeed(val OptNilString) {
+func (s *PhysicalInfoSnapshot) SetMaximumAerobicSpeed(val OptNilFloat64) {
 	s.MaximumAerobicSpeed = val
 }
 

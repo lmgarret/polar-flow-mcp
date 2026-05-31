@@ -2934,8 +2934,8 @@ components:
           description: Maximum aerobic power (W) at session time; null if unknown.
           nullable: true
         maximumAerobicSpeed:
-          type: string
-          description: Maximum aerobic speed as a pace string (MM:SS); null if unknown.
+          type: number
+          description: Maximum aerobic speed in m/s (a float, e.g. 14.53); null if unknown.
           nullable: true
       example:
         maximumHeartRate: null
