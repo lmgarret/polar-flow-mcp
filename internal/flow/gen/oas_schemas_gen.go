@@ -5644,52 +5644,6 @@ func (o OptProgressViewSummarySportDistributions) Or(d ProgressViewSummarySportD
 	return d
 }
 
-// NewOptSessionDetailsDefaultHrZones returns new OptSessionDetailsDefaultHrZones with value set to v.
-func NewOptSessionDetailsDefaultHrZones(v SessionDetailsDefaultHrZones) OptSessionDetailsDefaultHrZones {
-	return OptSessionDetailsDefaultHrZones{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptSessionDetailsDefaultHrZones is optional SessionDetailsDefaultHrZones.
-type OptSessionDetailsDefaultHrZones struct {
-	Value SessionDetailsDefaultHrZones
-	Set   bool
-}
-
-// IsSet returns true if OptSessionDetailsDefaultHrZones was set.
-func (o OptSessionDetailsDefaultHrZones) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptSessionDetailsDefaultHrZones) Reset() {
-	var v SessionDetailsDefaultHrZones
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptSessionDetailsDefaultHrZones) SetTo(v SessionDetailsDefaultHrZones) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptSessionDetailsDefaultHrZones) Get() (v SessionDetailsDefaultHrZones, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptSessionDetailsDefaultHrZones) Or(d SessionDetailsDefaultHrZones) SessionDetailsDefaultHrZones {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptSessionDetailsErrors returns new OptSessionDetailsErrors with value set to v.
 func NewOptSessionDetailsErrors(v SessionDetailsErrors) OptSessionDetailsErrors {
 	return OptSessionDetailsErrors{
@@ -5868,52 +5822,6 @@ func (o OptSessionDetailsLaps) Get() (v SessionDetailsLaps, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptSessionDetailsLaps) Or(d SessionDetailsLaps) SessionDetailsLaps {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptSessionDetailsPauseTimeData returns new OptSessionDetailsPauseTimeData with value set to v.
-func NewOptSessionDetailsPauseTimeData(v SessionDetailsPauseTimeData) OptSessionDetailsPauseTimeData {
-	return OptSessionDetailsPauseTimeData{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptSessionDetailsPauseTimeData is optional SessionDetailsPauseTimeData.
-type OptSessionDetailsPauseTimeData struct {
-	Value SessionDetailsPauseTimeData
-	Set   bool
-}
-
-// IsSet returns true if OptSessionDetailsPauseTimeData was set.
-func (o OptSessionDetailsPauseTimeData) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptSessionDetailsPauseTimeData) Reset() {
-	var v SessionDetailsPauseTimeData
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptSessionDetailsPauseTimeData) SetTo(v SessionDetailsPauseTimeData) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptSessionDetailsPauseTimeData) Get() (v SessionDetailsPauseTimeData, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptSessionDetailsPauseTimeData) Or(d SessionDetailsPauseTimeData) SessionDetailsPauseTimeData {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -8094,9 +8002,13 @@ type SessionDetails struct {
 	// an object, since ogen does not honour nullable on an empty object schema.
 	PeriodData jx.Raw `json:"periodData"`
 	// Per-exercise swim metrics; empty unless swim sport.
-	SwimDatas      OptSessionDetailsSwimDatas      `json:"swimDatas"`
-	PauseTimeData  OptSessionDetailsPauseTimeData  `json:"pauseTimeData"`
-	DefaultHrZones OptSessionDetailsDefaultHrZones `json:"defaultHrZones"`
+	SwimDatas OptSessionDetailsSwimDatas `json:"swimDatas"`
+	// Per-exercise pause-time arrays, keyed by exerciseId. Left untyped (free-form) because a key's
+	// value may be null (not an array) for some sessions.
+	PauseTimeData jx.Raw `json:"pauseTimeData"`
+	// Per-exercise default HR zone arrays, keyed by exerciseId. Left untyped (free-form) because a key's
+	// value may be null (not an array) for some sessions.
+	DefaultHrZones jx.Raw `json:"defaultHrZones"`
 	// Parsing/quality issues, keyed by exerciseId. Empty when clean.
 	Errors OptSessionDetailsErrors `json:"errors"`
 	// Comparison to a planned training target. Populated only when
@@ -8146,12 +8058,12 @@ func (s *SessionDetails) GetSwimDatas() OptSessionDetailsSwimDatas {
 }
 
 // GetPauseTimeData returns the value of PauseTimeData.
-func (s *SessionDetails) GetPauseTimeData() OptSessionDetailsPauseTimeData {
+func (s *SessionDetails) GetPauseTimeData() jx.Raw {
 	return s.PauseTimeData
 }
 
 // GetDefaultHrZones returns the value of DefaultHrZones.
-func (s *SessionDetails) GetDefaultHrZones() OptSessionDetailsDefaultHrZones {
+func (s *SessionDetails) GetDefaultHrZones() jx.Raw {
 	return s.DefaultHrZones
 }
 
@@ -8206,12 +8118,12 @@ func (s *SessionDetails) SetSwimDatas(val OptSessionDetailsSwimDatas) {
 }
 
 // SetPauseTimeData sets the value of PauseTimeData.
-func (s *SessionDetails) SetPauseTimeData(val OptSessionDetailsPauseTimeData) {
+func (s *SessionDetails) SetPauseTimeData(val jx.Raw) {
 	s.PauseTimeData = val
 }
 
 // SetDefaultHrZones sets the value of DefaultHrZones.
-func (s *SessionDetails) SetDefaultHrZones(val OptSessionDetailsDefaultHrZones) {
+func (s *SessionDetails) SetDefaultHrZones(val jx.Raw) {
 	s.DefaultHrZones = val
 }
 
@@ -8226,17 +8138,6 @@ func (s *SessionDetails) SetExerciseResultTargetData(val OptSessionDetailsExerci
 }
 
 func (*SessionDetails) getTrainingSessionDetailsRes() {}
-
-type SessionDetailsDefaultHrZones map[string][]jx.Raw
-
-func (s *SessionDetailsDefaultHrZones) init() SessionDetailsDefaultHrZones {
-	m := *s
-	if m == nil {
-		m = map[string][]jx.Raw{}
-		*s = m
-	}
-	return m
-}
 
 // Parsing/quality issues, keyed by exerciseId. Empty when clean.
 type SessionDetailsErrors map[string]jx.Raw
@@ -8309,17 +8210,6 @@ func (s *SessionDetailsLapsItem) SetAutomaticLaps(val []jx.Raw) {
 // SetManualLaps sets the value of ManualLaps.
 func (s *SessionDetailsLapsItem) SetManualLaps(val []jx.Raw) {
 	s.ManualLaps = val
-}
-
-type SessionDetailsPauseTimeData map[string][]jx.Raw
-
-func (s *SessionDetailsPauseTimeData) init() SessionDetailsPauseTimeData {
-	m := *s
-	if m == nil {
-		m = map[string][]jx.Raw{}
-		*s = m
-	}
-	return m
 }
 
 // Object keyed by exerciseId, each containing a per-metric
@@ -8801,9 +8691,9 @@ type SessionSummary struct {
 	// ID of the previous session chronologically, or `-1` when none.
 	PreviousTrainingId OptInt64 `json:"previousTrainingId"`
 	UserId             OptInt64 `json:"userId"`
-	// User-selected feeling as a numeric code (e.g. 0). Returned as an integer by the summary endpoint.
-	Feeling OptNilInt    `json:"feeling"`
-	Note    OptNilString `json:"note"`
+	// User-selected feeling as a numeric value (a float, e.g. 0.0); null when unset.
+	Feeling OptNilFloat64 `json:"feeling"`
+	Note    OptNilString  `json:"note"`
 	// Session start latitude; null for manual sessions.
 	Latitude  OptNilFloat64 `json:"latitude"`
 	Longitude OptNilFloat64 `json:"longitude"`
@@ -8877,7 +8767,7 @@ func (s *SessionSummary) GetUserId() OptInt64 {
 }
 
 // GetFeeling returns the value of Feeling.
-func (s *SessionSummary) GetFeeling() OptNilInt {
+func (s *SessionSummary) GetFeeling() OptNilFloat64 {
 	return s.Feeling
 }
 
@@ -9057,7 +8947,7 @@ func (s *SessionSummary) SetUserId(val OptInt64) {
 }
 
 // SetFeeling sets the value of Feeling.
-func (s *SessionSummary) SetFeeling(val OptNilInt) {
+func (s *SessionSummary) SetFeeling(val OptNilFloat64) {
 	s.Feeling = val
 }
 

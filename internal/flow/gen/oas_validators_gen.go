@@ -2514,64 +2514,6 @@ func (s *SessionDetails) Validate() error {
 			Error: err,
 		})
 	}
-	if err := func() error {
-		if value, ok := s.PauseTimeData.Get(); ok {
-			if err := func() error {
-				if err := value.Validate(); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "pauseTimeData",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.DefaultHrZones.Get(); ok {
-			if err := func() error {
-				if err := value.Validate(); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "defaultHrZones",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s SessionDetailsDefaultHrZones) Validate() error {
-	var failures []validate.FieldError
-	for key, elem := range s {
-		if err := func() error {
-			if elem == nil {
-				return errors.New("nil is invalid value")
-			}
-			return nil
-		}(); err != nil {
-			failures = append(failures, validate.FieldError{
-				Name:  key,
-				Error: err,
-			})
-		}
-	}
-
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -2584,28 +2526,6 @@ func (s SessionDetailsExercises) Validate() error {
 		if err := func() error {
 			if err := elem.Validate(); err != nil {
 				return err
-			}
-			return nil
-		}(); err != nil {
-			failures = append(failures, validate.FieldError{
-				Name:  key,
-				Error: err,
-			})
-		}
-	}
-
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s SessionDetailsPauseTimeData) Validate() error {
-	var failures []validate.FieldError
-	for key, elem := range s {
-		if err := func() error {
-			if elem == nil {
-				return errors.New("nil is invalid value")
 			}
 			return nil
 		}(); err != nil {
@@ -2991,6 +2911,24 @@ func (s *SessionSummary) Validate() error {
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.Feeling.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "feeling",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if value, ok := s.Latitude.Get(); ok {
 			if err := func() error {

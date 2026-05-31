@@ -8773,40 +8773,6 @@ func (s *OptProgressViewSummarySportDistributions) UnmarshalJSON(data []byte) er
 	return s.Decode(d)
 }
 
-// Encode encodes SessionDetailsDefaultHrZones as json.
-func (o OptSessionDetailsDefaultHrZones) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes SessionDetailsDefaultHrZones from json.
-func (o *OptSessionDetailsDefaultHrZones) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptSessionDetailsDefaultHrZones to nil")
-	}
-	o.Set = true
-	o.Value = make(SessionDetailsDefaultHrZones)
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptSessionDetailsDefaultHrZones) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptSessionDetailsDefaultHrZones) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes SessionDetailsErrors as json.
 func (o OptSessionDetailsErrors) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -8939,40 +8905,6 @@ func (s OptSessionDetailsLaps) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptSessionDetailsLaps) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes SessionDetailsPauseTimeData as json.
-func (o OptSessionDetailsPauseTimeData) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes SessionDetailsPauseTimeData from json.
-func (o *OptSessionDetailsPauseTimeData) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptSessionDetailsPauseTimeData to nil")
-	}
-	o.Set = true
-	o.Value = make(SessionDetailsPauseTimeData)
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptSessionDetailsPauseTimeData) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptSessionDetailsPauseTimeData) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -12358,15 +12290,15 @@ func (s *SessionDetails) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.PauseTimeData.Set {
+		if len(s.PauseTimeData) != 0 {
 			e.FieldStart("pauseTimeData")
-			s.PauseTimeData.Encode(e)
+			e.Raw(s.PauseTimeData)
 		}
 	}
 	{
-		if s.DefaultHrZones.Set {
+		if len(s.DefaultHrZones) != 0 {
 			e.FieldStart("defaultHrZones")
-			s.DefaultHrZones.Encode(e)
+			e.Raw(s.DefaultHrZones)
 		}
 	}
 	{
@@ -12489,8 +12421,9 @@ func (s *SessionDetails) Decode(d *jx.Decoder) error {
 			}
 		case "pauseTimeData":
 			if err := func() error {
-				s.PauseTimeData.Reset()
-				if err := s.PauseTimeData.Decode(d); err != nil {
+				v, err := d.RawAppend(nil)
+				s.PauseTimeData = jx.Raw(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -12499,8 +12432,9 @@ func (s *SessionDetails) Decode(d *jx.Decoder) error {
 			}
 		case "defaultHrZones":
 			if err := func() error {
-				s.DefaultHrZones.Reset()
-				if err := s.DefaultHrZones.Decode(d); err != nil {
+				v, err := d.RawAppend(nil)
+				s.DefaultHrZones = jx.Raw(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -12547,76 +12481,6 @@ func (s *SessionDetails) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SessionDetails) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s SessionDetailsDefaultHrZones) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields implements json.Marshaler.
-func (s SessionDetailsDefaultHrZones) encodeFields(e *jx.Encoder) {
-	for k, elem := range s {
-		e.FieldStart(k)
-
-		e.ArrStart()
-		for _, elem := range elem {
-			if len(elem) != 0 {
-				e.Raw(elem)
-			}
-		}
-		e.ArrEnd()
-	}
-}
-
-// Decode decodes SessionDetailsDefaultHrZones from json.
-func (s *SessionDetailsDefaultHrZones) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode SessionDetailsDefaultHrZones to nil")
-	}
-	m := s.init()
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		var elem []jx.Raw
-		if err := func() error {
-			elem = make([]jx.Raw, 0)
-			if err := d.Arr(func(d *jx.Decoder) error {
-				var elemElem jx.Raw
-				v, err := d.RawAppend(nil)
-				elemElem = jx.Raw(v)
-				if err != nil {
-					return err
-				}
-				elem = append(elem, elemElem)
-				return nil
-			}); err != nil {
-				return err
-			}
-			return nil
-		}(); err != nil {
-			return errors.Wrapf(err, "decode field %q", k)
-		}
-		m[string(k)] = elem
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode SessionDetailsDefaultHrZones")
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s SessionDetailsDefaultHrZones) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *SessionDetailsDefaultHrZones) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -12951,76 +12815,6 @@ func (s *SessionDetailsLapsItem) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SessionDetailsLapsItem) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s SessionDetailsPauseTimeData) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields implements json.Marshaler.
-func (s SessionDetailsPauseTimeData) encodeFields(e *jx.Encoder) {
-	for k, elem := range s {
-		e.FieldStart(k)
-
-		e.ArrStart()
-		for _, elem := range elem {
-			if len(elem) != 0 {
-				e.Raw(elem)
-			}
-		}
-		e.ArrEnd()
-	}
-}
-
-// Decode decodes SessionDetailsPauseTimeData from json.
-func (s *SessionDetailsPauseTimeData) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode SessionDetailsPauseTimeData to nil")
-	}
-	m := s.init()
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		var elem []jx.Raw
-		if err := func() error {
-			elem = make([]jx.Raw, 0)
-			if err := d.Arr(func(d *jx.Decoder) error {
-				var elemElem jx.Raw
-				v, err := d.RawAppend(nil)
-				elemElem = jx.Raw(v)
-				if err != nil {
-					return err
-				}
-				elem = append(elem, elemElem)
-				return nil
-			}); err != nil {
-				return err
-			}
-			return nil
-		}(); err != nil {
-			return errors.Wrapf(err, "decode field %q", k)
-		}
-		m[string(k)] = elem
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode SessionDetailsPauseTimeData")
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s SessionDetailsPauseTimeData) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *SessionDetailsPauseTimeData) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
