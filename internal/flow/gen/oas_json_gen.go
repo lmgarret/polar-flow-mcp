@@ -1685,15 +1685,15 @@ func (s *CalendarEvent) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.Start.Set {
+		if len(s.Start) != 0 {
 			e.FieldStart("start")
-			s.Start.Encode(e)
+			e.Raw(s.Start)
 		}
 	}
 	{
-		if s.AllDay.Set {
+		if len(s.AllDay) != 0 {
 			e.FieldStart("allDay")
-			s.AllDay.Encode(e)
+			e.Raw(s.AllDay)
 		}
 	}
 	{
@@ -1726,9 +1726,45 @@ func (s *CalendarEvent) encodeFields(e *jx.Encoder) {
 			s.SourceProgramType.Encode(e)
 		}
 	}
+	{
+		if s.IsUserEditable.Set {
+			e.FieldStart("isUserEditable")
+			s.IsUserEditable.Encode(e)
+		}
+	}
+	{
+		if s.IconUrl.Set {
+			e.FieldStart("iconUrl")
+			s.IconUrl.Encode(e)
+		}
+	}
+	{
+		if s.Datetime.Set {
+			e.FieldStart("datetime")
+			s.Datetime.Encode(e)
+		}
+	}
+	{
+		if s.Calories.Set {
+			e.FieldStart("calories")
+			s.Calories.Encode(e)
+		}
+	}
+	{
+		if s.Distance.Set {
+			e.FieldStart("distance")
+			s.Distance.Encode(e)
+		}
+	}
+	{
+		if s.Duration.Set {
+			e.FieldStart("duration")
+			s.Duration.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfCalendarEvent = [11]string{
+var jsonFieldsNameOfCalendarEvent = [17]string{
 	0:  "type",
 	1:  "ListItemId",
 	2:  "title",
@@ -1740,6 +1776,12 @@ var jsonFieldsNameOfCalendarEvent = [11]string{
 	8:  "eventType",
 	9:  "eventId",
 	10: "sourceProgramType",
+	11: "isUserEditable",
+	12: "iconUrl",
+	13: "datetime",
+	14: "calories",
+	15: "distance",
+	16: "duration",
 }
 
 // Decode decodes CalendarEvent from json.
@@ -1792,8 +1834,9 @@ func (s *CalendarEvent) Decode(d *jx.Decoder) error {
 			}
 		case "start":
 			if err := func() error {
-				s.Start.Reset()
-				if err := s.Start.Decode(d); err != nil {
+				v, err := d.RawAppend(nil)
+				s.Start = jx.Raw(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -1802,8 +1845,9 @@ func (s *CalendarEvent) Decode(d *jx.Decoder) error {
 			}
 		case "allDay":
 			if err := func() error {
-				s.AllDay.Reset()
-				if err := s.AllDay.Decode(d); err != nil {
+				v, err := d.RawAppend(nil)
+				s.AllDay = jx.Raw(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -1860,6 +1904,66 @@ func (s *CalendarEvent) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"sourceProgramType\"")
 			}
+		case "isUserEditable":
+			if err := func() error {
+				s.IsUserEditable.Reset()
+				if err := s.IsUserEditable.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"isUserEditable\"")
+			}
+		case "iconUrl":
+			if err := func() error {
+				s.IconUrl.Reset()
+				if err := s.IconUrl.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"iconUrl\"")
+			}
+		case "datetime":
+			if err := func() error {
+				s.Datetime.Reset()
+				if err := s.Datetime.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"datetime\"")
+			}
+		case "calories":
+			if err := func() error {
+				s.Calories.Reset()
+				if err := s.Calories.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"calories\"")
+			}
+		case "distance":
+			if err := func() error {
+				s.Distance.Reset()
+				if err := s.Distance.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"distance\"")
+			}
+		case "duration":
+			if err := func() error {
+				s.Duration.Reset()
+				if err := s.Duration.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"duration\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -1880,46 +1984,6 @@ func (s *CalendarEvent) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CalendarEvent) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes CalendarEventAllDay as json.
-func (s CalendarEventAllDay) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes CalendarEventAllDay from json.
-func (s *CalendarEventAllDay) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CalendarEventAllDay to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch CalendarEventAllDay(v) {
-	case CalendarEventAllDayTrue:
-		*s = CalendarEventAllDayTrue
-	case CalendarEventAllDayFalse:
-		*s = CalendarEventAllDayFalse
-	default:
-		*s = CalendarEventAllDay(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s CalendarEventAllDay) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CalendarEventAllDay) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -5912,6 +5976,255 @@ func (s *GetSummaryDataReqGroup) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *GetTrainingTargetOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *GetTrainingTargetOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("type")
+		s.Type.Encode(e)
+	}
+	{
+		e.FieldStart("name")
+		e.Str(s.Name)
+	}
+	{
+		if s.Description.Set {
+			e.FieldStart("description")
+			s.Description.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("datetime")
+		e.Str(s.Datetime)
+	}
+	{
+		e.FieldStart("exerciseTargets")
+		e.ArrStart()
+		for _, elem := range s.ExerciseTargets {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+	{
+		if s.SourceProgramType.Set {
+			e.FieldStart("sourceProgramType")
+			s.SourceProgramType.Encode(e)
+		}
+	}
+	{
+		if s.IsUserEditable.Set {
+			e.FieldStart("isUserEditable")
+			s.IsUserEditable.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfGetTrainingTargetOK = [7]string{
+	0: "type",
+	1: "name",
+	2: "description",
+	3: "datetime",
+	4: "exerciseTargets",
+	5: "sourceProgramType",
+	6: "isUserEditable",
+}
+
+// Decode decodes GetTrainingTargetOK from json.
+func (s *GetTrainingTargetOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetTrainingTargetOK to nil")
+	}
+	var requiredBitSet [1]uint8
+	s.setDefaults()
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "type":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Type.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"type\"")
+			}
+		case "name":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Name = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"name\"")
+			}
+		case "description":
+			if err := func() error {
+				s.Description.Reset()
+				if err := s.Description.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"description\"")
+			}
+		case "datetime":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Str()
+				s.Datetime = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"datetime\"")
+			}
+		case "exerciseTargets":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				s.ExerciseTargets = make([]ExerciseTarget, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem ExerciseTarget
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.ExerciseTargets = append(s.ExerciseTargets, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"exerciseTargets\"")
+			}
+		case "sourceProgramType":
+			if err := func() error {
+				s.SourceProgramType.Reset()
+				if err := s.SourceProgramType.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sourceProgramType\"")
+			}
+		case "isUserEditable":
+			if err := func() error {
+				s.IsUserEditable.Reset()
+				if err := s.IsUserEditable.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"isUserEditable\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode GetTrainingTargetOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00011011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfGetTrainingTargetOK) {
+					name = jsonFieldsNameOfGetTrainingTargetOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetTrainingTargetOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetTrainingTargetOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetTrainingTargetOKType as json.
+func (s GetTrainingTargetOKType) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes GetTrainingTargetOKType from json.
+func (s *GetTrainingTargetOKType) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetTrainingTargetOKType to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch GetTrainingTargetOKType(v) {
+	case GetTrainingTargetOKTypeVOLUME:
+		*s = GetTrainingTargetOKTypeVOLUME
+	case GetTrainingTargetOKTypeSTEADYRACEPACE:
+		*s = GetTrainingTargetOKTypeSTEADYRACEPACE
+	case GetTrainingTargetOKTypePHASED:
+		*s = GetTrainingTargetOKTypePHASED
+	default:
+		*s = GetTrainingTargetOKType(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s GetTrainingTargetOKType) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetTrainingTargetOKType) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *GpsRoute) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -7373,39 +7686,6 @@ func (s *OptBool) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes CalendarEventAllDay as json.
-func (o OptCalendarEventAllDay) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	e.Str(string(o.Value))
-}
-
-// Decode decodes CalendarEventAllDay from json.
-func (o *OptCalendarEventAllDay) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptCalendarEventAllDay to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptCalendarEventAllDay) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptCalendarEventAllDay) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes ClubModel as json.
 func (o OptClubModel) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -8697,40 +8977,6 @@ func (s *OptSessionDetailsPauseTimeData) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes *SessionDetailsPeriodData as json.
-func (o OptSessionDetailsPeriodData) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes *SessionDetailsPeriodData from json.
-func (o *OptSessionDetailsPeriodData) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptSessionDetailsPeriodData to nil")
-	}
-	o.Set = true
-	o.Value = new(SessionDetailsPeriodData)
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptSessionDetailsPeriodData) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptSessionDetailsPeriodData) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes SessionDetailsSamples as json.
 func (o OptSessionDetailsSamples) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -9184,6 +9430,12 @@ func (s Phase) encodeFields(e *jx.Encoder) {
 		{
 			s := s.PhaseLeaf
 			{
+				if s.ID.Set {
+					e.FieldStart("id")
+					s.ID.Encode(e)
+				}
+			}
+			{
 				e.FieldStart("name")
 				e.Str(s.Name)
 			}
@@ -9240,6 +9492,12 @@ func (s Phase) encodeFields(e *jx.Encoder) {
 					elem.Encode(e)
 				}
 				e.ArrEnd()
+			}
+			{
+				if s.ID.Set {
+					e.FieldStart("id")
+					s.ID.Encode(e)
+				}
 			}
 		}
 	}
@@ -9325,6 +9583,12 @@ func (s *PhaseLeaf) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *PhaseLeaf) encodeFields(e *jx.Encoder) {
 	{
+		if s.ID.Set {
+			e.FieldStart("id")
+			s.ID.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("phaseType")
 		s.PhaseType.Encode(e)
 	}
@@ -9370,16 +9634,17 @@ func (s *PhaseLeaf) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfPhaseLeaf = [9]string{
-	0: "phaseType",
-	1: "name",
-	2: "phaseChangeType",
-	3: "goalType",
-	4: "distance",
-	5: "duration",
-	6: "intensityType",
-	7: "lowerZone",
-	8: "upperZone",
+var jsonFieldsNameOfPhaseLeaf = [10]string{
+	0: "id",
+	1: "phaseType",
+	2: "name",
+	3: "phaseChangeType",
+	4: "goalType",
+	5: "distance",
+	6: "duration",
+	7: "intensityType",
+	8: "lowerZone",
+	9: "upperZone",
 }
 
 // Decode decodes PhaseLeaf from json.
@@ -9391,8 +9656,18 @@ func (s *PhaseLeaf) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
+		case "id":
+			if err := func() error {
+				s.ID.Reset()
+				if err := s.ID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
 		case "phaseType":
-			requiredBitSet[0] |= 1 << 0
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				if err := s.PhaseType.Decode(d); err != nil {
 					return err
@@ -9402,7 +9677,7 @@ func (s *PhaseLeaf) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"phaseType\"")
 			}
 		case "name":
-			requiredBitSet[0] |= 1 << 1
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				v, err := d.Str()
 				s.Name = string(v)
@@ -9414,7 +9689,7 @@ func (s *PhaseLeaf) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"name\"")
 			}
 		case "phaseChangeType":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				if err := s.PhaseChangeType.Decode(d); err != nil {
 					return err
@@ -9424,7 +9699,7 @@ func (s *PhaseLeaf) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"phaseChangeType\"")
 			}
 		case "goalType":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				if err := s.GoalType.Decode(d); err != nil {
 					return err
@@ -9454,7 +9729,7 @@ func (s *PhaseLeaf) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"duration\"")
 			}
 		case "intensityType":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				if err := s.IntensityType.Decode(d); err != nil {
 					return err
@@ -9493,7 +9768,7 @@ func (s *PhaseLeaf) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
-		0b01001111,
+		0b10011110,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
@@ -9727,12 +10002,19 @@ func (s *PhaseRepeat) encodeFields(e *jx.Encoder) {
 		}
 		e.ArrEnd()
 	}
+	{
+		if s.ID.Set {
+			e.FieldStart("id")
+			s.ID.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfPhaseRepeat = [3]string{
+var jsonFieldsNameOfPhaseRepeat = [4]string{
 	0: "phaseType",
 	1: "repeatCount",
 	2: "phases",
+	3: "id",
 }
 
 // Decode decodes PhaseRepeat from json.
@@ -9783,6 +10065,16 @@ func (s *PhaseRepeat) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"phases\"")
+			}
+		case "id":
+			if err := func() error {
+				s.ID.Reset()
+				if err := s.ID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
 			}
 		default:
 			return d.Skip()
@@ -11756,15 +12048,15 @@ func (s *SampleBlock) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *SampleBlock) encodeFields(e *jx.Encoder) {
 	{
-		if len(s.CADENCE) != 0 {
-			e.FieldStart("CADENCE")
-			e.Raw(s.CADENCE)
+		if len(s.HEARTRATE) != 0 {
+			e.FieldStart("HEART_RATE")
+			e.Raw(s.HEARTRATE)
 		}
 	}
 	{
-		if len(s.LEFTPEDALCRANKBASEDPOSITIVEFORCE) != 0 {
-			e.FieldStart("LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE")
-			e.Raw(s.LEFTPEDALCRANKBASEDPOSITIVEFORCE)
+		if len(s.SPEED) != 0 {
+			e.FieldStart("SPEED")
+			e.Raw(s.SPEED)
 		}
 	}
 	{
@@ -11774,15 +12066,39 @@ func (s *SampleBlock) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if len(s.BODYTEMPERATURE) != 0 {
-			e.FieldStart("BODY_TEMPERATURE")
-			e.Raw(s.BODYTEMPERATURE)
+		if len(s.CADENCE) != 0 {
+			e.FieldStart("CADENCE")
+			e.Raw(s.CADENCE)
+		}
+	}
+	{
+		if len(s.ALTITUDE) != 0 {
+			e.FieldStart("ALTITUDE")
+			e.Raw(s.ALTITUDE)
 		}
 	}
 	{
 		if len(s.POWER) != 0 {
 			e.FieldStart("POWER")
 			e.Raw(s.POWER)
+		}
+	}
+	{
+		if len(s.POWERBALANCE) != 0 {
+			e.FieldStart("POWER_BALANCE")
+			e.Raw(s.POWERBALANCE)
+		}
+	}
+	{
+		if len(s.LEFTPEDALCRANKBASEDPOSITIVEFORCE) != 0 {
+			e.FieldStart("LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE")
+			e.Raw(s.LEFTPEDALCRANKBASEDPOSITIVEFORCE)
+		}
+	}
+	{
+		if len(s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE) != 0 {
+			e.FieldStart("RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE")
+			e.Raw(s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE)
 		}
 	}
 	{
@@ -11798,50 +12114,26 @@ func (s *SampleBlock) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if len(s.ALTITUDE) != 0 {
-			e.FieldStart("ALTITUDE")
-			e.Raw(s.ALTITUDE)
-		}
-	}
-	{
-		if len(s.POWERBALANCE) != 0 {
-			e.FieldStart("POWER_BALANCE")
-			e.Raw(s.POWERBALANCE)
-		}
-	}
-	{
-		if len(s.SPEED) != 0 {
-			e.FieldStart("SPEED")
-			e.Raw(s.SPEED)
-		}
-	}
-	{
-		if len(s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE) != 0 {
-			e.FieldStart("RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE")
-			e.Raw(s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE)
-		}
-	}
-	{
-		if len(s.HEARTRATE) != 0 {
-			e.FieldStart("HEART_RATE")
-			e.Raw(s.HEARTRATE)
+		if len(s.BODYTEMPERATURE) != 0 {
+			e.FieldStart("BODY_TEMPERATURE")
+			e.Raw(s.BODYTEMPERATURE)
 		}
 	}
 }
 
 var jsonFieldsNameOfSampleBlock = [12]string{
-	0:  "CADENCE",
-	1:  "LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE",
+	0:  "HEART_RATE",
+	1:  "SPEED",
 	2:  "DISTANCE",
-	3:  "BODY_TEMPERATURE",
-	4:  "POWER",
-	5:  "STRIDE_LENGTH",
-	6:  "TEMPERATURE",
-	7:  "ALTITUDE",
-	8:  "POWER_BALANCE",
-	9:  "SPEED",
-	10: "RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE",
-	11: "HEART_RATE",
+	3:  "CADENCE",
+	4:  "ALTITUDE",
+	5:  "POWER",
+	6:  "POWER_BALANCE",
+	7:  "LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE",
+	8:  "RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE",
+	9:  "STRIDE_LENGTH",
+	10: "TEMPERATURE",
+	11: "BODY_TEMPERATURE",
 }
 
 // Decode decodes SampleBlock from json.
@@ -11852,27 +12144,27 @@ func (s *SampleBlock) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "CADENCE":
+		case "HEART_RATE":
 			if err := func() error {
 				v, err := d.RawAppend(nil)
-				s.CADENCE = jx.Raw(v)
+				s.HEARTRATE = jx.Raw(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"CADENCE\"")
+				return errors.Wrap(err, "decode field \"HEART_RATE\"")
 			}
-		case "LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE":
+		case "SPEED":
 			if err := func() error {
 				v, err := d.RawAppend(nil)
-				s.LEFTPEDALCRANKBASEDPOSITIVEFORCE = jx.Raw(v)
+				s.SPEED = jx.Raw(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE\"")
+				return errors.Wrap(err, "decode field \"SPEED\"")
 			}
 		case "DISTANCE":
 			if err := func() error {
@@ -11885,16 +12177,27 @@ func (s *SampleBlock) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"DISTANCE\"")
 			}
-		case "BODY_TEMPERATURE":
+		case "CADENCE":
 			if err := func() error {
 				v, err := d.RawAppend(nil)
-				s.BODYTEMPERATURE = jx.Raw(v)
+				s.CADENCE = jx.Raw(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"BODY_TEMPERATURE\"")
+				return errors.Wrap(err, "decode field \"CADENCE\"")
+			}
+		case "ALTITUDE":
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				s.ALTITUDE = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"ALTITUDE\"")
 			}
 		case "POWER":
 			if err := func() error {
@@ -11906,6 +12209,39 @@ func (s *SampleBlock) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"POWER\"")
+			}
+		case "POWER_BALANCE":
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				s.POWERBALANCE = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"POWER_BALANCE\"")
+			}
+		case "LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE":
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				s.LEFTPEDALCRANKBASEDPOSITIVEFORCE = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE\"")
+			}
+		case "RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE":
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE\"")
 			}
 		case "STRIDE_LENGTH":
 			if err := func() error {
@@ -11929,60 +12265,16 @@ func (s *SampleBlock) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"TEMPERATURE\"")
 			}
-		case "ALTITUDE":
+		case "BODY_TEMPERATURE":
 			if err := func() error {
 				v, err := d.RawAppend(nil)
-				s.ALTITUDE = jx.Raw(v)
+				s.BODYTEMPERATURE = jx.Raw(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"ALTITUDE\"")
-			}
-		case "POWER_BALANCE":
-			if err := func() error {
-				v, err := d.RawAppend(nil)
-				s.POWERBALANCE = jx.Raw(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"POWER_BALANCE\"")
-			}
-		case "SPEED":
-			if err := func() error {
-				v, err := d.RawAppend(nil)
-				s.SPEED = jx.Raw(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"SPEED\"")
-			}
-		case "RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE":
-			if err := func() error {
-				v, err := d.RawAppend(nil)
-				s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE = jx.Raw(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE\"")
-			}
-		case "HEART_RATE":
-			if err := func() error {
-				v, err := d.RawAppend(nil)
-				s.HEARTRATE = jx.Raw(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"HEART_RATE\"")
+				return errors.Wrap(err, "decode field \"BODY_TEMPERATURE\"")
 			}
 		default:
 			return d.Skip()
@@ -12054,9 +12346,9 @@ func (s *SessionDetails) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.PeriodData.Set {
+		if len(s.PeriodData) != 0 {
 			e.FieldStart("periodData")
-			s.PeriodData.Encode(e)
+			e.Raw(s.PeriodData)
 		}
 	}
 	{
@@ -12176,8 +12468,9 @@ func (s *SessionDetails) Decode(d *jx.Decoder) error {
 			}
 		case "periodData":
 			if err := func() error {
-				s.PeriodData.Reset()
-				if err := s.PeriodData.Decode(d); err != nil {
+				v, err := d.RawAppend(nil)
+				s.PeriodData = jx.Raw(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -12728,50 +13021,6 @@ func (s SessionDetailsPauseTimeData) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SessionDetailsPauseTimeData) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *SessionDetailsPeriodData) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *SessionDetailsPeriodData) encodeFields(e *jx.Encoder) {
-}
-
-var jsonFieldsNameOfSessionDetailsPeriodData = [0]string{}
-
-// Decode decodes SessionDetailsPeriodData from json.
-func (s *SessionDetailsPeriodData) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode SessionDetailsPeriodData to nil")
-	}
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		default:
-			return d.Skip()
-		}
-	}); err != nil {
-		return errors.Wrap(err, "decode SessionDetailsPeriodData")
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *SessionDetailsPeriodData) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *SessionDetailsPeriodData) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -16680,6 +16929,119 @@ func (s TrainingTargetCreateType) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *TrainingTargetCreateType) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *Unauthorized) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *Unauthorized) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("error")
+		e.Str(s.Error)
+	}
+	{
+		if s.Redirect.Set {
+			e.FieldStart("redirect")
+			s.Redirect.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfUnauthorized = [2]string{
+	0: "error",
+	1: "redirect",
+}
+
+// Decode decodes Unauthorized from json.
+func (s *Unauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode Unauthorized to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "error":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Error = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"error\"")
+			}
+		case "redirect":
+			if err := func() error {
+				s.Redirect.Reset()
+				if err := s.Redirect.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"redirect\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode Unauthorized")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfUnauthorized) {
+					name = jsonFieldsNameOfUnauthorized[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *Unauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *Unauthorized) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

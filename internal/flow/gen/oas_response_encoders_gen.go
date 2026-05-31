@@ -21,8 +21,15 @@ func encodeAddRouteToFavoritesResponse(response AddRouteToFavoritesRes, w http.R
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -88,8 +95,15 @@ func encodeCreateFavoriteResponse(response CreateFavoriteRes, w http.ResponseWri
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -113,8 +127,15 @@ func encodeCreateTrainingSessionResponse(response CreateTrainingSessionRes, w ht
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -154,8 +175,15 @@ func encodeCreateTrainingTargetResponse(response CreateTrainingTargetRes, w http
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -180,8 +208,15 @@ func encodeDeleteFavoriteResponse(response DeleteFavoriteRes, w http.ResponseWri
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -205,8 +240,15 @@ func encodeDeleteTrainingSessionResponse(response DeleteTrainingSessionRes, w ht
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -230,8 +272,15 @@ func encodeDeleteTrainingTargetResponse(response DeleteTrainingTargetRes, w http
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -262,8 +311,15 @@ func encodeGetActivityTimelineResponse(response GetActivityTimelineRes, w http.R
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -294,8 +350,15 @@ func encodeGetActivityTimelineFourResponse(response GetActivityTimelineFourRes, 
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -320,8 +383,15 @@ func encodeGetCalendarEventsResponse(response GetCalendarEventsRes, w http.Respo
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -361,8 +431,15 @@ func encodeGetCalendarWeekSummaryResponse(response GetCalendarWeekSummaryRes, w 
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -387,8 +464,15 @@ func encodeGetCurrentUserResponse(response GetCurrentUserRes, w http.ResponseWri
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -413,8 +497,15 @@ func encodeGetFavoriteResponse(response GetFavoriteRes, w http.ResponseWriter, s
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -445,8 +536,15 @@ func encodeGetFavoriteExerciseTargetResponse(response GetFavoriteExerciseTargetR
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -483,8 +581,15 @@ func encodeGetFeaturesAvailableResponse(response GetFeaturesAvailableRes, w http
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -509,8 +614,15 @@ func encodeGetProgressViewSummaryResponse(response GetProgressViewSummaryRes, w 
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -599,8 +711,15 @@ func encodeGetSummaryDataResponse(response GetSummaryDataRes, w http.ResponseWri
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -625,8 +744,15 @@ func encodeGetTrainingSessionDetailsResponse(response GetTrainingSessionDetailsR
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -657,8 +783,15 @@ func encodeGetTrainingSessionSummaryResponse(response GetTrainingSessionSummaryR
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -675,7 +808,7 @@ func encodeGetTrainingSessionSummaryResponse(response GetTrainingSessionSummaryR
 
 func encodeGetTrainingTargetResponse(response GetTrainingTargetRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
-	case *TrainingTargetCreate:
+	case *GetTrainingTargetOK:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
 		span.SetStatus(codes.Ok, http.StatusText(200))
@@ -689,8 +822,15 @@ func encodeGetTrainingTargetResponse(response GetTrainingTargetRes, w http.Respo
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -714,8 +854,15 @@ func encodeImportRouteResponse(response ImportRouteRes, w http.ResponseWriter, s
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -740,8 +887,15 @@ func encodeListDeviceFavoritesResponse(response ListDeviceFavoritesRes, w http.R
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -766,8 +920,15 @@ func encodeListFavoritesResponse(response ListFavoritesRes, w http.ResponseWrite
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -792,8 +953,15 @@ func encodeListFavoritesSimpleResponse(response ListFavoritesSimpleRes, w http.R
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -818,8 +986,15 @@ func encodeListTrainingSessionsResponse(response ListTrainingSessionsRes, w http
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -869,8 +1044,15 @@ func encodeUpdateFavoriteResponse(response UpdateFavoriteRes, w http.ResponseWri
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -907,8 +1089,15 @@ func encodeUpdateTrainingTargetResponse(response UpdateTrainingTargetRes, w http
 		return nil
 
 	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 

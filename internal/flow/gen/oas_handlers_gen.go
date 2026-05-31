@@ -890,7 +890,33 @@ func (s *Server) handleCreateTrainingSessionRequest(args [0]string, argsEscaped 
 
 // handleCreateTrainingTargetRequest handles createTrainingTarget operation.
 //
-// Create a training target.
+// Create a planned workout (training target). The `type` field selects the
+// shape:
+// - **VOLUME** — one metric only: set exactly one of `duration` / `distance` /
+// `calories` on the single exerciseTarget; leave `phases` empty (`[]`).
+// - **STEADY_RACE_PACE** — a time-trial: set both `duration` and `distance`
+// (pace is implicit); `phases` empty.
+// - **PHASED** — a structured workout: populate `exerciseTargets[].phases`.
+// ### Modelling phases (PHASED)
+// A phase is either a **PhaseLeaf** (`phaseType: "PHASE"`) or a **PhaseRepeat**
+// (`phaseType: "REPEAT"`) that loops nested leaves. Guidance below is verified
+// against the live API (probe captures in `captures/post-bodies/probe-*.json`):
+// - **Steady / continuous block** → use a single bare PhaseLeaf directly in
+// `phases` (see the `steadyBlock` example). Do **not** wrap it in a REPEAT.
+// - **Intervals** → use a REPEAT with `repeatCount` ≥ 2 (see `phasedRepeat`).
+// - **`repeatCount`**: the **server accepts 1** but silently unwraps a
+// single-rep REPEAT into a plain PHASE on read-back, so it is pointless — the
+// Flow UI enforces a minimum of 2. Prefer a bare PhaseLeaf for one block.
+// - **Recovery is optional**: a REPEAT may hold just one work phase with no
+// trailing rest leaf (verified — the server rolls the nested duration into
+// the exerciseTarget's top-level `duration`). To add recovery between reps,
+// append a second leaf (typically `intensityType: "NONE"`).
+// - **`duration`** uses strict `"HH:MM:SS"`; `"00:00:00"` is accepted but
+// meaningless. Set on a leaf iff `goalType: "DURATION"`; set `distance`
+// (metres) iff `goalType: "DISTANCE"`.
+// - **Multi-sport**: pass multiple `exerciseTargets` entries (see `multisport`);
+// the server assigns each a sequential read-only `index`.
+// Writes require the `X-Requested-With: XMLHttpRequest` header (CSRF defense).
 //
 // POST /api/trainingtarget
 func (s *Server) handleCreateTrainingTargetRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -1479,7 +1505,13 @@ func (s *Server) handleDeleteTrainingSessionRequest(args [1]string, argsEscaped 
 
 // handleDeleteTrainingTargetRequest handles deleteTrainingTarget operation.
 //
-// Delete a training target.
+// Delete a planned training target by id.
+// ⚠ Note the **inconsistent path prefix**: this endpoint lives under
+// `/training/target/{id}`, NOT `/api/trainingtarget/{id}` (which is used for
+// create/read/update). There is **no trailing slash** (unlike session delete,
+// `DELETE /api/training/deleteTrainingSession/{id}/`, which requires one).
+// Returns 200 with an empty body. Idempotent in practice — deleting an
+// already-gone id still returns 200.
 //
 // DELETE /training/target/{id}
 func (s *Server) handleDeleteTrainingTargetRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -2647,7 +2679,11 @@ func (s *Server) handleGetCurrentUserRequest(args [0]string, argsEscaped bool, w
 
 // handleGetFavoriteRequest handles getFavorite operation.
 //
-// Get a single favorite.
+// Read one favorite (training-target template) by `favoriteId`. Returns the
+// create-shape body plus a server-assigned `exerciseTargets[].id` and `index`.
+// For **ROUTE** favorites this returns only the thin metadata shell (no GPS
+// geometry) — fetch the waypoints from
+// `GET /api/favorites/exerciseTarget/{exerciseTargetId}` instead.
 //
 // GET /api/favoritetarget/{id}
 func (s *Server) handleGetFavoriteRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -5287,7 +5323,13 @@ func (s *Server) handleListFavoritesSimpleRequest(args [0]string, argsEscaped bo
 
 // handleListTrainingSessionsRequest handles listTrainingSessions operation.
 //
-// List training sessions by date range.
+// Return completed training sessions for a user within an inclusive date
+// range. Despite being a read, it is a **POST** with a JSON body.
+// Each row's `duration` is in **milliseconds** (1800000 = 30 min) and
+// `sportName` is the user-locale display string (e.g. `"Course à pied"`),
+// unlike the favorites endpoints which return the uppercase sport enum. Use a
+// row's `id` to fetch full analysis via
+// `GET /api/training/analysis/{id}/summary` and `/details`.
 //
 // POST /api/training/history
 func (s *Server) handleListTrainingSessionsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

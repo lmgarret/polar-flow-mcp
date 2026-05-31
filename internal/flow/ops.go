@@ -110,16 +110,16 @@ func extractTargetID(body []byte) (int64, error) {
 
 // GetTrainingTarget returns the server-normalized view of a target by id.
 // Returns ErrTargetNotFound on 404.
-func (c *Client) GetTrainingTarget(ctx context.Context, id int64) (*gen.TrainingTargetCreate, error) {
+func (c *Client) GetTrainingTarget(ctx context.Context, id int64) (*gen.GetTrainingTargetOK, error) {
 	if id <= 0 {
 		return nil, fmt.Errorf("flow: get training target: id must be > 0")
 	}
-	res, err := c.API.GetTrainingTarget(ctx, gen.GetTrainingTargetParams{ID: int(id)})
+	res, err := c.API.GetTrainingTarget(ctx, gen.GetTrainingTargetParams{ID: id})
 	if err != nil {
 		return nil, fmt.Errorf("flow: get training target: %w", err)
 	}
 	switch v := res.(type) {
-	case *gen.TrainingTargetCreate:
+	case *gen.GetTrainingTargetOK:
 		return v, nil
 	case *gen.GetTrainingTargetNotFound:
 		return nil, ErrTargetNotFound
@@ -139,7 +139,7 @@ func (c *Client) UpdateTrainingTarget(ctx context.Context, id int64, body *gen.T
 	}
 	res, err := c.API.UpdateTrainingTarget(ctx, body, gen.UpdateTrainingTargetParams{
 		XRequestedWith: gen.XRequestedWithXMLHttpRequest,
-		ID:             int(id),
+		ID:             id,
 	})
 	if err != nil {
 		return fmt.Errorf("flow: update training target: %w", err)
@@ -230,7 +230,7 @@ func (c *Client) DeleteTrainingTarget(ctx context.Context, id int64) error {
 	if id <= 0 {
 		return fmt.Errorf("flow: delete training target: id must be > 0")
 	}
-	res, err := c.API.DeleteTrainingTarget(ctx, gen.DeleteTrainingTargetParams{ID: int(id)})
+	res, err := c.API.DeleteTrainingTarget(ctx, gen.DeleteTrainingTargetParams{ID: id})
 	if err != nil {
 		return fmt.Errorf("flow: delete training target: %w", err)
 	}
@@ -277,8 +277,11 @@ func (c *Client) ListTrainingTargets(ctx context.Context, from, to time.Time) ([
 		if v, ok := e.GetTitle().Get(); ok {
 			item.Title = v
 		}
-		if v, ok := e.GetStart().Get(); ok {
-			item.Start = v
+		// start is free-form (some event kinds send a numeric epoch); for
+		// TRAININGTARGET events it is always an ISO 8601 string.
+		var start string
+		if err := json.Unmarshal(e.GetStart(), &start); err == nil {
+			item.Start = start
 		}
 		if v, ok := e.GetURL().Get(); ok {
 			item.URL = v

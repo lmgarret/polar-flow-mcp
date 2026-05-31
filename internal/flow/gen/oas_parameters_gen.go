@@ -637,8 +637,8 @@ func decodeDeleteTrainingSessionParams(args [1]string, argsEscaped bool, r *http
 
 // DeleteTrainingTargetParams is parameters of deleteTrainingTarget operation.
 type DeleteTrainingTargetParams struct {
-	// Training target numeric ID (e.g. 1453744955).
-	ID int
+	// Training target numeric ID (e.g. 1454046259), as returned in the create response body.
+	ID int64
 }
 
 func unpackDeleteTrainingTargetParams(packed middleware.Parameters) (params DeleteTrainingTargetParams) {
@@ -647,7 +647,7 @@ func unpackDeleteTrainingTargetParams(packed middleware.Parameters) (params Dele
 			Name: "id",
 			In:   "path",
 		}
-		params.ID = packed[key].(int)
+		params.ID = packed[key].(int64)
 	}
 	return params
 }
@@ -677,7 +677,7 @@ func decodeDeleteTrainingTargetParams(args [1]string, argsEscaped bool, r *http.
 					return err
 				}
 
-				c, err := conv.ToInt(val)
+				c, err := conv.ToInt64(val)
 				if err != nil {
 					return err
 				}
@@ -1768,8 +1768,8 @@ func decodeGetTrainingSessionSummaryParams(args [1]string, argsEscaped bool, r *
 
 // GetTrainingTargetParams is parameters of getTrainingTarget operation.
 type GetTrainingTargetParams struct {
-	// Training target numeric ID (e.g. 1453744955).
-	ID int
+	// Training target numeric ID (e.g. 1454046259), as returned in the create response body.
+	ID int64
 }
 
 func unpackGetTrainingTargetParams(packed middleware.Parameters) (params GetTrainingTargetParams) {
@@ -1778,7 +1778,7 @@ func unpackGetTrainingTargetParams(packed middleware.Parameters) (params GetTrai
 			Name: "id",
 			In:   "path",
 		}
-		params.ID = packed[key].(int)
+		params.ID = packed[key].(int64)
 	}
 	return params
 }
@@ -1808,7 +1808,7 @@ func decodeGetTrainingTargetParams(args [1]string, argsEscaped bool, r *http.Req
 					return err
 				}
 
-				c, err := conv.ToInt(val)
+				c, err := conv.ToInt64(val)
 				if err != nil {
 					return err
 				}
@@ -2187,8 +2187,8 @@ type UpdateTrainingTargetParams struct {
 	// with an "Unauthorized" HTML body — easy to mistake for an auth
 	// failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
-	// Training target numeric ID (e.g. 1453744955).
-	ID int
+	// Training target numeric ID (e.g. 1454046259), as returned in the create response body.
+	ID int64
 }
 
 func unpackUpdateTrainingTargetParams(packed middleware.Parameters) (params UpdateTrainingTargetParams) {
@@ -2204,7 +2204,7 @@ func unpackUpdateTrainingTargetParams(packed middleware.Parameters) (params Upda
 			Name: "id",
 			In:   "path",
 		}
-		params.ID = packed[key].(int)
+		params.ID = packed[key].(int64)
 	}
 	return params
 }
@@ -2282,7 +2282,7 @@ func decodeUpdateTrainingTargetParams(args [1]string, argsEscaped bool, r *http.
 					return err
 				}
 
-				c, err := conv.ToInt(val)
+				c, err := conv.ToInt64(val)
 				if err != nil {
 					return err
 				}

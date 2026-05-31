@@ -3,6 +3,14 @@
 package gen
 
 // setDefaults set default value of fields.
+func (s *GetTrainingTargetOK) setDefaults() {
+	{
+		val := string("")
+		s.Description.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
 func (s *TrainingSessionCreate) setDefaults() {
 	{
 		val := string("")

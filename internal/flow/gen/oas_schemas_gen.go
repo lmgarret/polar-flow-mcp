@@ -15,7 +15,8 @@ import (
 // Ref: #/components/schemas/ActivityMiniPoint
 type ActivityMiniPoint struct {
 	// Epoch ms.
-	Time  OptInt64   `json:"time"`
+	Time OptInt64 `json:"time"`
+	// Metric value at that instant (units depend on the series).
 	Value OptFloat32 `json:"value"`
 }
 
@@ -722,18 +723,41 @@ type CalendarEvent struct {
 	// Event category, e.g. "TRAININGTARGET", "EXERCISE".
 	Type OptString `json:"type"`
 	// Numeric ID of the underlying entity (use as {id} in /api/trainingtarget/{id}).
-	ListItemId  OptInt    `json:"ListItemId"`
-	Title       OptString `json:"title"`
+	ListItemId OptInt    `json:"ListItemId"`
+	Title      OptString `json:"title"`
+	// Free-text notes on the event; empty string when none.
 	Description OptString `json:"description"`
-	// ISO 8601 UTC datetime.
-	Start  OptString              `json:"start"`
-	AllDay OptCalendarEventAllDay `json:"allDay"`
+	// Event start. Polymorphic by event type: TRAININGTARGET events send an ISO 8601 UTC datetime string,
+	//  while EXERCISE events send a numeric epoch (seconds, e.g. 1779872400). Left untyped (free-form)
+	// to accept either.
+	Start jx.Raw `json:"start"`
+	// Whether the event spans the whole day. Polymorphic: the server sends a boolean (observed live) and
+	// historically a string ("true"/"false") for some event types — left untyped to accept either.
+	AllDay jx.Raw `json:"allDay"`
 	// Relative URL to the target detail page.
-	URL               OptString    `json:"url"`
-	ClassName         OptString    `json:"className"`
-	EventType         OptString    `json:"eventType"`
-	EventId           OptNilInt    `json:"eventId"`
+	URL OptString `json:"url"`
+	// CSS class used by the Flow calendar to render the event icon.
+	ClassName OptString `json:"className"`
+	// Lower-camel event kind (e.g. `trainingTarget`).
+	EventType OptString `json:"eventType"`
+	// Secondary event id; null for training targets.
+	EventId OptNilInt `json:"eventId"`
+	// Origin program of the event (e.g. `UNKNOWN`); null when not applicable.
 	SourceProgramType OptNilString `json:"sourceProgramType"`
+	// True when the signed-in user may edit/delete the event.
+	IsUserEditable OptBool `json:"isUserEditable"`
+	// Sport/event icon URL.
+	IconUrl OptNilURI `json:"iconUrl"`
+	// Local datetime of the event (no timezone), e.g. `2026-06-02T09:00:00.000`.
+	Datetime OptNilString `json:"datetime"`
+	// Target calories (kcal), or null.
+	Calories OptNilFloat64 `json:"calories"`
+	// Target distance in metres. Present for distance-based targets; null otherwise.
+	Distance OptNilFloat64 `json:"distance"`
+	// Target duration in **milliseconds**. Present for duration-based targets (and 0 for a zero-duration
+	// phase); **omitted entirely** for distance-goal targets that carry no rolled-up duration (verified
+	// via capture 20-calendar-events.json).
+	Duration OptNilInt `json:"duration"`
 }
 
 // GetType returns the value of Type.
@@ -757,12 +781,12 @@ func (s *CalendarEvent) GetDescription() OptString {
 }
 
 // GetStart returns the value of Start.
-func (s *CalendarEvent) GetStart() OptString {
+func (s *CalendarEvent) GetStart() jx.Raw {
 	return s.Start
 }
 
 // GetAllDay returns the value of AllDay.
-func (s *CalendarEvent) GetAllDay() OptCalendarEventAllDay {
+func (s *CalendarEvent) GetAllDay() jx.Raw {
 	return s.AllDay
 }
 
@@ -791,6 +815,36 @@ func (s *CalendarEvent) GetSourceProgramType() OptNilString {
 	return s.SourceProgramType
 }
 
+// GetIsUserEditable returns the value of IsUserEditable.
+func (s *CalendarEvent) GetIsUserEditable() OptBool {
+	return s.IsUserEditable
+}
+
+// GetIconUrl returns the value of IconUrl.
+func (s *CalendarEvent) GetIconUrl() OptNilURI {
+	return s.IconUrl
+}
+
+// GetDatetime returns the value of Datetime.
+func (s *CalendarEvent) GetDatetime() OptNilString {
+	return s.Datetime
+}
+
+// GetCalories returns the value of Calories.
+func (s *CalendarEvent) GetCalories() OptNilFloat64 {
+	return s.Calories
+}
+
+// GetDistance returns the value of Distance.
+func (s *CalendarEvent) GetDistance() OptNilFloat64 {
+	return s.Distance
+}
+
+// GetDuration returns the value of Duration.
+func (s *CalendarEvent) GetDuration() OptNilInt {
+	return s.Duration
+}
+
 // SetType sets the value of Type.
 func (s *CalendarEvent) SetType(val OptString) {
 	s.Type = val
@@ -812,12 +866,12 @@ func (s *CalendarEvent) SetDescription(val OptString) {
 }
 
 // SetStart sets the value of Start.
-func (s *CalendarEvent) SetStart(val OptString) {
+func (s *CalendarEvent) SetStart(val jx.Raw) {
 	s.Start = val
 }
 
 // SetAllDay sets the value of AllDay.
-func (s *CalendarEvent) SetAllDay(val OptCalendarEventAllDay) {
+func (s *CalendarEvent) SetAllDay(val jx.Raw) {
 	s.AllDay = val
 }
 
@@ -846,45 +900,34 @@ func (s *CalendarEvent) SetSourceProgramType(val OptNilString) {
 	s.SourceProgramType = val
 }
 
-type CalendarEventAllDay string
-
-const (
-	CalendarEventAllDayTrue  CalendarEventAllDay = "true"
-	CalendarEventAllDayFalse CalendarEventAllDay = "false"
-)
-
-// AllValues returns all CalendarEventAllDay values.
-func (CalendarEventAllDay) AllValues() []CalendarEventAllDay {
-	return []CalendarEventAllDay{
-		CalendarEventAllDayTrue,
-		CalendarEventAllDayFalse,
-	}
+// SetIsUserEditable sets the value of IsUserEditable.
+func (s *CalendarEvent) SetIsUserEditable(val OptBool) {
+	s.IsUserEditable = val
 }
 
-// MarshalText implements encoding.TextMarshaler.
-func (s CalendarEventAllDay) MarshalText() ([]byte, error) {
-	switch s {
-	case CalendarEventAllDayTrue:
-		return []byte(s), nil
-	case CalendarEventAllDayFalse:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
+// SetIconUrl sets the value of IconUrl.
+func (s *CalendarEvent) SetIconUrl(val OptNilURI) {
+	s.IconUrl = val
 }
 
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *CalendarEventAllDay) UnmarshalText(data []byte) error {
-	switch CalendarEventAllDay(data) {
-	case CalendarEventAllDayTrue:
-		*s = CalendarEventAllDayTrue
-		return nil
-	case CalendarEventAllDayFalse:
-		*s = CalendarEventAllDayFalse
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
+// SetDatetime sets the value of Datetime.
+func (s *CalendarEvent) SetDatetime(val OptNilString) {
+	s.Datetime = val
+}
+
+// SetCalories sets the value of Calories.
+func (s *CalendarEvent) SetCalories(val OptNilFloat64) {
+	s.Calories = val
+}
+
+// SetDistance sets the value of Distance.
+func (s *CalendarEvent) SetDistance(val OptNilFloat64) {
+	s.Distance = val
+}
+
+// SetDuration sets the value of Duration.
+func (s *CalendarEvent) SetDuration(val OptNilInt) {
+	s.Duration = val
 }
 
 // ChangeFavoriteSportBadRequest is response for ChangeFavoriteSport operation.
@@ -954,24 +997,41 @@ func (s *ChangeFavoriteSportReq) SetExerciseTargetId(val int64) {
 	s.ExerciseTargetId = val
 }
 
-// Group-class gamification metadata. All-false / nulls for solo sessions.
+// Group-class (Polar Club) gamification metadata attached to a training session.
+// All-false / nulls / zeros for solo sessions (verified via capture
+// 22-analysis-summary.json on a non-club account).
 // Ref: #/components/schemas/ClubModel
 type ClubModel struct {
-	ClubTrainingSession OptBool      `json:"clubTrainingSession"`
-	SessionName         OptNilString `json:"sessionName"`
-	SportName           OptNilString `json:"sportName"`
-	InstructorName      OptNilString `json:"instructorName"`
-	ClubName            OptNilString `json:"clubName"`
-	ClubAddress         OptNilString `json:"clubAddress"`
-	CooldownChampion    OptBool      `json:"cooldownChampion"`
-	ZoneMate            OptBool      `json:"zoneMate"`
-	RangeRuler          OptBool      `json:"rangeRuler"`
-	ZoneMaster          OptBool      `json:"zoneMaster"`
-	PhaseMaster         OptBool      `json:"phaseMaster"`
-	InZone              OptInt       `json:"inZone"`
-	OrganisationId      OptNilInt64  `json:"organisationId"`
-	StartTime           OptNilString `json:"startTime"`
-	Duration            OptInt       `json:"duration"`
+	// True if this session was part of a Polar Club class.
+	ClubTrainingSession OptBool `json:"clubTrainingSession"`
+	// Club class name; null for solo sessions.
+	SessionName OptNilString `json:"sessionName"`
+	// Club class sport name; null for solo sessions.
+	SportName OptNilString `json:"sportName"`
+	// Class instructor's name; null when not a club session.
+	InstructorName OptNilString `json:"instructorName"`
+	// Club name; null when not a club session.
+	ClubName OptNilString `json:"clubName"`
+	// Club venue address; null when not a club session.
+	ClubAddress OptNilString `json:"clubAddress"`
+	// Gamification badge — best cool-down in the class.
+	CooldownChampion OptBool `json:"cooldownChampion"`
+	// Gamification badge — stayed in the target zone alongside peers.
+	ZoneMate OptBool `json:"zoneMate"`
+	// Gamification badge — widest effective HR range.
+	RangeRuler OptBool `json:"rangeRuler"`
+	// Gamification badge — most time in the top zone.
+	ZoneMaster OptBool `json:"zoneMaster"`
+	// Gamification badge — best phase adherence.
+	PhaseMaster OptBool `json:"phaseMaster"`
+	// Time spent in the class target zone (seconds); 0 for solo sessions.
+	InZone OptInt `json:"inZone"`
+	// Owning organisation id; null for solo sessions.
+	OrganisationId OptNilInt64 `json:"organisationId"`
+	// Class start time; null for solo sessions.
+	StartTime OptNilString `json:"startTime"`
+	// Class duration (seconds); 0 for solo sessions.
+	Duration OptInt `json:"duration"`
 }
 
 // GetClubTrainingSession returns the value of ClubTrainingSession.
@@ -1173,10 +1233,14 @@ type CurrentUserResponse struct {
 	LocalizationInfo LocalizationInfo `json:"localizationInfo"`
 	PhysicalInfo     PhysicalInfo     `json:"physicalInfo"`
 	// Per-sport profile configurations. Empty `[]` for the test account
-	// — shape TBD.
-	SportProfiles       []jx.Raw `json:"sportProfiles"`
-	ApplicationRoles    []jx.Raw `json:"applicationRoles"`
-	Capabilities        []jx.Raw `json:"capabilities"`
+	// — element shape TBD (no device-synced sport profiles to observe).
+	SportProfiles []jx.Raw `json:"sportProfiles"`
+	// Granted application roles (e.g. Coach). Empty `[]` for a plain free account; element shape TBD.
+	ApplicationRoles []jx.Raw `json:"applicationRoles"`
+	// Account-level feature capabilities. Empty `[]` on the free test account; element shape TBD. (See
+	// GET /api/features-available for per-feature flags.).
+	Capabilities []jx.Raw `json:"capabilities"`
+	// Capabilities derived from paired Polar products. Empty `[]` with no device; element shape TBD.
 	ProductCapabilities []jx.Raw `json:"productCapabilities"`
 }
 
@@ -1388,9 +1452,13 @@ func (s *ExerciseTarget) SetID(val OptNilFloat64) {
 // existing `id`) fields to each exerciseTarget vs the create shape.
 // Ref: #/components/schemas/Favorite
 type Favorite struct {
-	Type            FavoriteType                  `json:"type"`
-	Name            string                        `json:"name"`
-	Description     OptString                     `json:"description"`
+	// Favorite kind (same set as a training target; no datetime).
+	Type FavoriteType `json:"type"`
+	// Favorite display name.
+	Name string `json:"name"`
+	// Free-text notes; empty string when not set.
+	Description OptString `json:"description"`
+	// One block per exercise (multi-sport favorites have several).
 	ExerciseTargets []FavoriteExerciseTargetsItem `json:"exerciseTargets"`
 }
 
@@ -1441,10 +1509,14 @@ func (*Favorite) getFavoriteRes() {}
 // date-less template.
 // Ref: #/components/schemas/FavoriteCreate
 type FavoriteCreate struct {
-	Type            FavoriteCreateType `json:"type"`
-	Name            string             `json:"name"`
-	Description     OptString          `json:"description"`
-	ExerciseTargets []ExerciseTarget   `json:"exerciseTargets"`
+	// Favorite kind — see TrainingTargetCreate.type for the per-value field rules.
+	Type FavoriteCreateType `json:"type"`
+	// Favorite display name (required).
+	Name string `json:"name"`
+	// Free-text notes; send empty string when none.
+	Description OptString `json:"description"`
+	// One block per exercise; send `id: null` on each (server assigns).
+	ExerciseTargets []ExerciseTarget `json:"exerciseTargets"`
 }
 
 // GetType returns the value of Type.
@@ -1487,6 +1559,7 @@ func (s *FavoriteCreate) SetExerciseTargets(val []ExerciseTarget) {
 	s.ExerciseTargets = val
 }
 
+// Favorite kind — see TrainingTargetCreate.type for the per-value field rules.
 type FavoriteCreateType string
 
 const (
@@ -1540,19 +1613,22 @@ func (s *FavoriteCreateType) UnmarshalText(data []byte) error {
 // uploaded GPS waypoints.
 // Ref: #/components/schemas/FavoriteExerciseTarget
 type FavoriteExerciseTarget struct {
-	// ExerciseTargetId.
-	ID   OptInt64                      `json:"id"`
+	// ExerciseTargetId (the inner id — pass THIS, not favoriteId, in the URL).
+	ID OptInt64 `json:"id"`
+	// Favorite kind. `ROUTE` carries GPS geometry in `gpsRoute`.
 	Type OptFavoriteExerciseTargetType `json:"type"`
-	// Metres.
+	// Total distance in metres, or null.
 	Distance OptNilFloat64 `json:"distance"`
-	// HH:MM:SS or null.
-	Duration     OptNilString `json:"duration"`
-	KiloCalories OptNilInt    `json:"kiloCalories"`
+	// HH:MM:SS or null. Null for ROUTE favorites.
+	Duration OptNilString `json:"duration"`
+	// Target kcal, or null.
+	KiloCalories OptNilInt `json:"kiloCalories"`
 	// Position in a multi-target sequence (null for single targets).
 	Index OptNilInt `json:"index"`
 	// Observed null even after edits — TBD.
 	Modified OptNilString `json:"modified"`
-	Created  OptNilString `json:"created"`
+	// Creation timestamp; observed null in captures — TBD.
+	Created OptNilString `json:"created"`
 	// Populated for Strava-segment favorites.
 	SegmentId OptNilInt `json:"segmentId"`
 	// Populated for Strava/Komoot-imported routes. Shape TBD.
@@ -1698,6 +1774,7 @@ func (s *FavoriteExerciseTarget) SetGpsRoute(val OptNilGpsRoute) {
 
 func (*FavoriteExerciseTarget) getFavoriteExerciseTargetRes() {}
 
+// Favorite kind. `ROUTE` carries GPS geometry in `gpsRoute`.
 type FavoriteExerciseTargetType string
 
 const (
@@ -1853,26 +1930,38 @@ type FavoriteListing struct {
 	// Inner exercise-target id (distinct from favoriteId).
 	ExerciseTargetId OptInt64 `json:"exerciseTargetId"`
 	// UPPERCASE sport enum (e.g. `"RUNNING"`), NOT the locale-resolved
-	// display string. Map to localized name via /api/sports/sports.
-	SportName OptString `json:"sportName"`
-	SportId   OptInt    `json:"sportId"`
+	// display string. Map to localized name via /api/sports/sports. Null for
+	// ROUTE favorites (sport-agnostic).
+	SportName OptNilString `json:"sportName"`
+	// Numeric sport id. Null for ROUTE favorites.
+	SportId OptNilInt `json:"sportId"`
 	// Favorite kind. `ROUTE` is only present for entries created via
 	// `POST /api/favorites/trainingTargets/importRoute`.
-	Type                OptFavoriteListingType `json:"type"`
-	FavoriteName        OptString              `json:"favoriteName"`
-	FavoriteDescription OptString              `json:"favoriteDescription"`
+	Type OptFavoriteListingType `json:"type"`
+	// User-given favorite name.
+	FavoriteName OptString `json:"favoriteName"`
+	// Free-text notes. Empty string for training targets; null for ROUTE favorites.
+	FavoriteDescription OptNilString `json:"favoriteDescription"`
 	// Duration in **milliseconds** (or null). NB: differs from
 	// FavoriteSimple where duration is `HH:MM:SS` string.
 	Duration OptNilInt `json:"duration"`
 	// Metres, or null.
-	Distance                OptNilFloat64 `json:"distance"`
-	Calories                OptNilInt     `json:"calories"`
-	SegmentId               OptNilInt     `json:"segmentId"`
-	SegmentType             OptNilString  `json:"segmentType"`
-	RouteSource             OptNilString  `json:"routeSource"`
-	ExternalRouteIdentifier OptNilString  `json:"externalRouteIdentifier"`
-	SupportedDevices        []jx.Raw      `json:"supportedDevices"`
-	SupportedDeviceIds      []int         `json:"supportedDeviceIds"`
+	Distance OptNilFloat64 `json:"distance"`
+	// Target kcal, or null.
+	Calories OptNilInt `json:"calories"`
+	// Strava segment id; populated only for Strava-segment favorites.
+	SegmentId OptNilInt `json:"segmentId"`
+	// Strava segment type; null for non-segment favorites.
+	SegmentType OptNilString `json:"segmentType"`
+	// Origin of a ROUTE favorite. `"FLOW_FILE_IMPORT"` for GPX/TCX uploads; null for non-route favorites.
+	//  Strava/Komoot route imports use other values (TBD).
+	RouteSource OptNilString `json:"routeSource"`
+	// Polar's internal UUID for an imported route; null for non-routes.
+	ExternalRouteIdentifier OptNilString `json:"externalRouteIdentifier"`
+	// Devices that can use this favorite. Empty until a device is paired; element shape TBD.
+	SupportedDevices []jx.Raw `json:"supportedDevices"`
+	// Ids of the supported devices.
+	SupportedDeviceIds []int `json:"supportedDeviceIds"`
 }
 
 // GetFavoriteId returns the value of FavoriteId.
@@ -1886,12 +1975,12 @@ func (s *FavoriteListing) GetExerciseTargetId() OptInt64 {
 }
 
 // GetSportName returns the value of SportName.
-func (s *FavoriteListing) GetSportName() OptString {
+func (s *FavoriteListing) GetSportName() OptNilString {
 	return s.SportName
 }
 
 // GetSportId returns the value of SportId.
-func (s *FavoriteListing) GetSportId() OptInt {
+func (s *FavoriteListing) GetSportId() OptNilInt {
 	return s.SportId
 }
 
@@ -1906,7 +1995,7 @@ func (s *FavoriteListing) GetFavoriteName() OptString {
 }
 
 // GetFavoriteDescription returns the value of FavoriteDescription.
-func (s *FavoriteListing) GetFavoriteDescription() OptString {
+func (s *FavoriteListing) GetFavoriteDescription() OptNilString {
 	return s.FavoriteDescription
 }
 
@@ -1966,12 +2055,12 @@ func (s *FavoriteListing) SetExerciseTargetId(val OptInt64) {
 }
 
 // SetSportName sets the value of SportName.
-func (s *FavoriteListing) SetSportName(val OptString) {
+func (s *FavoriteListing) SetSportName(val OptNilString) {
 	s.SportName = val
 }
 
 // SetSportId sets the value of SportId.
-func (s *FavoriteListing) SetSportId(val OptInt) {
+func (s *FavoriteListing) SetSportId(val OptNilInt) {
 	s.SportId = val
 }
 
@@ -1986,7 +2075,7 @@ func (s *FavoriteListing) SetFavoriteName(val OptString) {
 }
 
 // SetFavoriteDescription sets the value of FavoriteDescription.
-func (s *FavoriteListing) SetFavoriteDescription(val OptString) {
+func (s *FavoriteListing) SetFavoriteDescription(val OptNilString) {
 	s.FavoriteDescription = val
 }
 
@@ -2366,6 +2455,7 @@ func (s *FavoriteSimpleSportDefaultSpeedViewSetting) UnmarshalText(data []byte) 
 	}
 }
 
+// Favorite kind (same set as a training target; no datetime).
 type FavoriteType string
 
 const (
@@ -2417,10 +2507,13 @@ func (s *FavoriteType) UnmarshalText(data []byte) error {
 // Response body of GET /api/favorites.
 // Ref: #/components/schemas/FavoritesListing
 type FavoritesListing struct {
+	// True if the server hit an error assembling the listing; normally false.
 	HasErrors bool `json:"hasErrors"`
-	// Third-party integration link status (booleans).
+	// Per-provider third-party integration link status. `true` means the user has connected that service
+	// to Flow (enables route/segment import from it).
 	LinkedServices FavoritesListingLinkedServices `json:"linkedServices"`
-	Targets        []FavoriteListing              `json:"targets"`
+	// All favorites (training-target templates and ROUTE favorites).
+	Targets []FavoriteListing `json:"targets"`
 }
 
 // GetHasErrors returns the value of HasErrors.
@@ -2455,12 +2548,18 @@ func (s *FavoritesListing) SetTargets(val []FavoriteListing) {
 
 func (*FavoritesListing) listFavoritesRes() {}
 
-// Third-party integration link status (booleans).
+// Per-provider third-party integration link status. `true` means the user has connected that service
+// to Flow (enables route/segment import from it).
 type FavoritesListingLinkedServices struct {
-	Strava        OptBool `json:"strava"`
-	Komoot        OptBool `json:"komoot"`
-	Nike          OptBool `json:"nike"`
-	Myfitnesspal  OptBool `json:"myfitnesspal"`
+	// Strava account linked.
+	Strava OptBool `json:"strava"`
+	// Komoot account linked.
+	Komoot OptBool `json:"komoot"`
+	// Nike account linked.
+	Nike OptBool `json:"nike"`
+	// MyFitnessPal account linked.
+	Myfitnesspal OptBool `json:"myfitnesspal"`
+	// TrainingPeaks account linked.
 	Trainingpeaks OptBool `json:"trainingpeaks"`
 }
 
@@ -2899,6 +2998,164 @@ type GetTrainingTargetNotFound struct{}
 
 func (*GetTrainingTargetNotFound) getTrainingTargetRes() {}
 
+// Merged schema.
+type GetTrainingTargetOK struct {
+	// Target category, drives which `exerciseTargets[i]` fields are populated.
+	// - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` /
+	// `calories` is non-null; `phases` is `[]`.
+	// - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are
+	// populated; pace is implicit (UI lets user enter any 2 of 3).
+	// - "PHASED" — multi-phase workout. `phases` is populated; volume fields
+	// on the exerciseTarget are null (each phase carries its own).
+	// All three values verified from captured POST bodies (2026-05-25).
+	Type GetTrainingTargetOKType `json:"type"`
+	// Display name shown in the diary.
+	Name string `json:"name"`
+	// Free-text notes. Empty string when not provided (not null).
+	Description OptString `json:"description"`
+	// Local date-time of the planned workout, ISO 8601 without timezone offset
+	// (e.g. "2026-05-24T10:00"). The server applies the user's timezone setting.
+	Datetime string `json:"datetime"`
+	// One entry per exercise block. Most targets have exactly one;
+	// multi-sport workouts (e.g. duathlon: run then bike) pass multiple
+	// entries — verified via capture 13-multisport.json. On read-back, the
+	// server assigns each entry a sequential `index` (0, 1, …) to preserve
+	// ordering.
+	ExerciseTargets []ExerciseTarget `json:"exerciseTargets"`
+	// Origin program of the target (e.g. `UNKNOWN`).
+	SourceProgramType OptString `json:"sourceProgramType"`
+	// True when the signed-in user may edit/delete this target.
+	IsUserEditable OptBool `json:"isUserEditable"`
+}
+
+// GetType returns the value of Type.
+func (s *GetTrainingTargetOK) GetType() GetTrainingTargetOKType {
+	return s.Type
+}
+
+// GetName returns the value of Name.
+func (s *GetTrainingTargetOK) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *GetTrainingTargetOK) GetDescription() OptString {
+	return s.Description
+}
+
+// GetDatetime returns the value of Datetime.
+func (s *GetTrainingTargetOK) GetDatetime() string {
+	return s.Datetime
+}
+
+// GetExerciseTargets returns the value of ExerciseTargets.
+func (s *GetTrainingTargetOK) GetExerciseTargets() []ExerciseTarget {
+	return s.ExerciseTargets
+}
+
+// GetSourceProgramType returns the value of SourceProgramType.
+func (s *GetTrainingTargetOK) GetSourceProgramType() OptString {
+	return s.SourceProgramType
+}
+
+// GetIsUserEditable returns the value of IsUserEditable.
+func (s *GetTrainingTargetOK) GetIsUserEditable() OptBool {
+	return s.IsUserEditable
+}
+
+// SetType sets the value of Type.
+func (s *GetTrainingTargetOK) SetType(val GetTrainingTargetOKType) {
+	s.Type = val
+}
+
+// SetName sets the value of Name.
+func (s *GetTrainingTargetOK) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *GetTrainingTargetOK) SetDescription(val OptString) {
+	s.Description = val
+}
+
+// SetDatetime sets the value of Datetime.
+func (s *GetTrainingTargetOK) SetDatetime(val string) {
+	s.Datetime = val
+}
+
+// SetExerciseTargets sets the value of ExerciseTargets.
+func (s *GetTrainingTargetOK) SetExerciseTargets(val []ExerciseTarget) {
+	s.ExerciseTargets = val
+}
+
+// SetSourceProgramType sets the value of SourceProgramType.
+func (s *GetTrainingTargetOK) SetSourceProgramType(val OptString) {
+	s.SourceProgramType = val
+}
+
+// SetIsUserEditable sets the value of IsUserEditable.
+func (s *GetTrainingTargetOK) SetIsUserEditable(val OptBool) {
+	s.IsUserEditable = val
+}
+
+func (*GetTrainingTargetOK) getTrainingTargetRes() {}
+
+// Target category, drives which `exerciseTargets[i]` fields are populated.
+// - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` /
+// `calories` is non-null; `phases` is `[]`.
+// - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are
+// populated; pace is implicit (UI lets user enter any 2 of 3).
+// - "PHASED" — multi-phase workout. `phases` is populated; volume fields
+// on the exerciseTarget are null (each phase carries its own).
+// All three values verified from captured POST bodies (2026-05-25).
+type GetTrainingTargetOKType string
+
+const (
+	GetTrainingTargetOKTypeVOLUME         GetTrainingTargetOKType = "VOLUME"
+	GetTrainingTargetOKTypeSTEADYRACEPACE GetTrainingTargetOKType = "STEADY_RACE_PACE"
+	GetTrainingTargetOKTypePHASED         GetTrainingTargetOKType = "PHASED"
+)
+
+// AllValues returns all GetTrainingTargetOKType values.
+func (GetTrainingTargetOKType) AllValues() []GetTrainingTargetOKType {
+	return []GetTrainingTargetOKType{
+		GetTrainingTargetOKTypeVOLUME,
+		GetTrainingTargetOKTypeSTEADYRACEPACE,
+		GetTrainingTargetOKTypePHASED,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s GetTrainingTargetOKType) MarshalText() ([]byte, error) {
+	switch s {
+	case GetTrainingTargetOKTypeVOLUME:
+		return []byte(s), nil
+	case GetTrainingTargetOKTypeSTEADYRACEPACE:
+		return []byte(s), nil
+	case GetTrainingTargetOKTypePHASED:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *GetTrainingTargetOKType) UnmarshalText(data []byte) error {
+	switch GetTrainingTargetOKType(data) {
+	case GetTrainingTargetOKTypeVOLUME:
+		*s = GetTrainingTargetOKTypeVOLUME
+		return nil
+	case GetTrainingTargetOKTypeSTEADYRACEPACE:
+		*s = GetTrainingTargetOKTypeSTEADYRACEPACE
+		return nil
+	case GetTrainingTargetOKTypePHASED:
+		*s = GetTrainingTargetOKTypePHASED
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Full route geometry. Returned by
 // `GET /api/favorites/exerciseTarget/{exerciseTargetId}` for ROUTE
 // favorites.
@@ -2906,15 +3163,20 @@ func (*GetTrainingTargetNotFound) getTrainingTargetRes() {}
 type GpsRoute struct {
 	// Internal route id — observed null in responses; Polar tracks
 	// routes by their parent exerciseTargetId.
-	ID            OptNilInt       `json:"id"`
-	User          OptGpsRouteUser `json:"user"`
-	Name          OptString       `json:"name"`
-	ParentRouteId OptNilInt       `json:"parentRouteId"`
-	Order         OptNilInt       `json:"order"`
+	ID OptNilInt `json:"id"`
+	// Owner reference.
+	User OptGpsRouteUser `json:"user"`
+	// Route name (from the imported file's metadata).
+	Name OptString `json:"name"`
+	// Parent route id for derived routes; null for top-level imports.
+	ParentRouteId OptNilInt `json:"parentRouteId"`
+	// Ordering hint; observed null.
+	Order OptNilInt `json:"order"`
 	// Total length, metres.
-	Distance   float64    `json:"distance"`
-	StartPoint Waypoint   `json:"startPoint"`
-	Waypoints  []Waypoint `json:"waypoints"`
+	Distance   float64  `json:"distance"`
+	StartPoint Waypoint `json:"startPoint"`
+	// Ordered track points. The server synthesizes `time` as a 1000ms sequence index.
+	Waypoints []Waypoint `json:"waypoints"`
 }
 
 // GetID returns the value of ID.
@@ -2997,7 +3259,9 @@ func (s *GpsRoute) SetWaypoints(val []Waypoint) {
 	s.Waypoints = val
 }
 
+// Owner reference.
 type GpsRouteUser struct {
+	// Owning user's numeric id.
 	ID int64 `json:"id"`
 }
 
@@ -3041,8 +3305,8 @@ type ListTrainingSessionsOKApplicationJSON []TrainingSessionSummary
 func (*ListTrainingSessionsOKApplicationJSON) listTrainingSessionsRes() {}
 
 type ListTrainingSessionsReq struct {
-	// Numeric user ID. Presumably obtained from
-	// `GET /api/account/users/current/user` (TODO: verify).
+	// Numeric user ID — the `user.id` from
+	// `GET /api/account/users/current/user` (verified 2026-05-29).
 	UserId int `json:"userId"`
 	// Inclusive start date `YYYY-MM-DD`.
 	FromDate string `json:"fromDate"`
@@ -3080,17 +3344,27 @@ func (s *ListTrainingSessionsReq) SetToDate(val string) {
 	s.ToDate = val
 }
 
+// The signed-in user's locale and display-formatting preferences, returned under `localizationInfo`
+// in `GET /api/account/users/current/user`. These drive how the Flow UI renders dates, times and
+// units — they do not change the wire format of API payloads (which use fixed formats regardless).
+// Captured 2026-05-29 (capture 17-current-user.json).
 // Ref: #/components/schemas/LocalizationInfo
 type LocalizationInfo struct {
-	FirstDayOfWeek      OptLocalizationInfoFirstDayOfWeek      `json:"firstDayOfWeek"`
-	MeasurementUnit     OptLocalizationInfoMeasurementUnit     `json:"measurementUnit"`
-	DateFormat          OptLocalizationInfoDateFormat          `json:"dateFormat"`
-	DateSeparator       OptLocalizationInfoDateSeparator       `json:"dateSeparator"`
-	TimeFormat          OptLocalizationInfoTimeFormat          `json:"timeFormat"`
+	// First day shown in calendar/week views.
+	FirstDayOfWeek OptLocalizationInfoFirstDayOfWeek `json:"firstDayOfWeek"`
+	// Unit system for displayed distances/weights (display only — API stays metric).
+	MeasurementUnit OptLocalizationInfoMeasurementUnit `json:"measurementUnit"`
+	// Field ordering for rendered dates.
+	DateFormat OptLocalizationInfoDateFormat `json:"dateFormat"`
+	// Separator character between date fields (`-`, `/`, `.`).
+	DateSeparator OptLocalizationInfoDateSeparator `json:"dateSeparator"`
+	// 24-hour vs 12-hour clock display.
+	TimeFormat OptLocalizationInfoTimeFormat `json:"timeFormat"`
+	// Separator between hours and minutes (`:` or `.`).
 	TimeFormatSeparator OptLocalizationInfoTimeFormatSeparator `json:"timeFormatSeparator"`
 	// UTC offset, e.g. `"-02:00"` or `"+02:00"`.
 	TimeZone OptString `json:"timeZone"`
-	// UI language (ISO 639-1).
+	// UI language (ISO 639-1). Drives localized strings such as sport names.
 	FlowLanguage OptString `json:"flowLanguage"`
 	// Browser locale at registration (ISO 639-1).
 	UserAgentLanguage OptString `json:"userAgentLanguage"`
@@ -3186,6 +3460,7 @@ func (s *LocalizationInfo) SetUserAgentLanguage(val OptString) {
 	s.UserAgentLanguage = val
 }
 
+// Field ordering for rendered dates.
 type LocalizationInfoDateFormat string
 
 const (
@@ -3234,6 +3509,7 @@ func (s *LocalizationInfoDateFormat) UnmarshalText(data []byte) error {
 	}
 }
 
+// Separator character between date fields (`-`, `/`, `.`).
 type LocalizationInfoDateSeparator string
 
 const (
@@ -3282,6 +3558,7 @@ func (s *LocalizationInfoDateSeparator) UnmarshalText(data []byte) error {
 	}
 }
 
+// First day shown in calendar/week views.
 type LocalizationInfoFirstDayOfWeek string
 
 const (
@@ -3330,6 +3607,7 @@ func (s *LocalizationInfoFirstDayOfWeek) UnmarshalText(data []byte) error {
 	}
 }
 
+// Unit system for displayed distances/weights (display only — API stays metric).
 type LocalizationInfoMeasurementUnit string
 
 const (
@@ -3371,6 +3649,7 @@ func (s *LocalizationInfoMeasurementUnit) UnmarshalText(data []byte) error {
 	}
 }
 
+// 24-hour vs 12-hour clock display.
 type LocalizationInfoTimeFormat string
 
 const (
@@ -3412,6 +3691,7 @@ func (s *LocalizationInfoTimeFormat) UnmarshalText(data []byte) error {
 	}
 }
 
+// Separator between hours and minutes (`:` or `.`).
 type LocalizationInfoTimeFormatSeparator string
 
 const (
@@ -3905,52 +4185,6 @@ func (o OptBool) Get() (v bool, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptBool) Or(d bool) bool {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptCalendarEventAllDay returns new OptCalendarEventAllDay with value set to v.
-func NewOptCalendarEventAllDay(v CalendarEventAllDay) OptCalendarEventAllDay {
-	return OptCalendarEventAllDay{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptCalendarEventAllDay is optional CalendarEventAllDay.
-type OptCalendarEventAllDay struct {
-	Value CalendarEventAllDay
-	Set   bool
-}
-
-// IsSet returns true if OptCalendarEventAllDay was set.
-func (o OptCalendarEventAllDay) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptCalendarEventAllDay) Reset() {
-	var v CalendarEventAllDay
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptCalendarEventAllDay) SetTo(v CalendarEventAllDay) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptCalendarEventAllDay) Get() (v CalendarEventAllDay, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptCalendarEventAllDay) Or(d CalendarEventAllDay) CalendarEventAllDay {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -5686,52 +5920,6 @@ func (o OptSessionDetailsPauseTimeData) Or(d SessionDetailsPauseTimeData) Sessio
 	return d
 }
 
-// NewOptSessionDetailsPeriodData returns new OptSessionDetailsPeriodData with value set to v.
-func NewOptSessionDetailsPeriodData(v *SessionDetailsPeriodData) OptSessionDetailsPeriodData {
-	return OptSessionDetailsPeriodData{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptSessionDetailsPeriodData is optional *SessionDetailsPeriodData.
-type OptSessionDetailsPeriodData struct {
-	Value *SessionDetailsPeriodData
-	Set   bool
-}
-
-// IsSet returns true if OptSessionDetailsPeriodData was set.
-func (o OptSessionDetailsPeriodData) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptSessionDetailsPeriodData) Reset() {
-	var v *SessionDetailsPeriodData
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptSessionDetailsPeriodData) SetTo(v *SessionDetailsPeriodData) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptSessionDetailsPeriodData) Get() (v *SessionDetailsPeriodData, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptSessionDetailsPeriodData) Or(d *SessionDetailsPeriodData) *SessionDetailsPeriodData {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptSessionDetailsSamples returns new OptSessionDetailsSamples with value set to v.
 func NewOptSessionDetailsSamples(v SessionDetailsSamples) OptSessionDetailsSamples {
 	return OptSessionDetailsSamples{
@@ -6401,9 +6589,15 @@ func NewPhaseRepeatPhase(v PhaseRepeat) Phase {
 	return s
 }
 
-// A leaf training phase (no nested phases).
+// A leaf training phase (no nested phases). A single PhaseLeaf placed directly in `exerciseTargets[].
+// phases` is the idiomatic way to model a **continuous steady block** (e.g. a 45-min Z2 run) — no
+// REPEAT wrapper is needed (verified via probe-C-steady-hrz.json). For repeated intervals, wrap
+// leaves in a PhaseRepeat instead.
 // Ref: #/components/schemas/PhaseLeaf
 type PhaseLeaf struct {
+	// Phase id assigned by the server; present on read responses (`GET /api/trainingtarget/{id}`). Send
+	// nothing on create.
+	ID OptNilFloat64 `json:"id"`
 	// Constant `"PHASE"` discriminator for leaf phases.
 	PhaseType PhaseLeafPhaseType `json:"phaseType"`
 	// Phase name. Required when `intensityType` is not HEART_RATE_ZONES
@@ -6417,18 +6611,27 @@ type PhaseLeaf struct {
 	GoalType PhaseLeafGoalType `json:"goalType"`
 	// Phase distance in **metres** (not km). Non-null iff `goalType=DISTANCE`.
 	Distance OptNilFloat64 `json:"distance"`
-	// Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the
-	// UI validator). Non-null iff `goalType=DURATION`.
+	// Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the UI validator).
+	// Non-null iff `goalType=DURATION`. A zero value `"00:00:00"` is accepted by the server and
+	// preserved on read-back (verified via probe-B-zero-duration.json) — though it has no practical
+	// training meaning.
 	Duration OptNilString `json:"duration"`
 	// Intensity metric for the phase. All four values verified from captures.
 	// Toggling off "Utiliser les zones d'entraînement" in the UI sets this to
 	// "NONE" and nulls both zones. POWER_ZONES requires a power-capable sport
 	// (e.g. CYCLING, sportId 2) — verified via capture 11-phased-power.json.
 	IntensityType PhaseLeafIntensityType `json:"intensityType"`
-	// Lower zone bound (1–5) when `intensityType != NONE`; otherwise null.
+	// Lower zone bound (1–5) when `intensityType != NONE`; otherwise null. NONE-intensity phases (e.g.
+	// warmup/cooldown) return `0` rather than null.
 	LowerZone OptNilFloat64 `json:"lowerZone"`
-	// Upper zone bound (1–5) when `intensityType != NONE`; otherwise null.
+	// Upper zone bound (1–5) when `intensityType != NONE`; otherwise null. NONE-intensity phases (e.g.
+	// warmup/cooldown) return `0` rather than null.
 	UpperZone OptNilFloat64 `json:"upperZone"`
+}
+
+// GetID returns the value of ID.
+func (s *PhaseLeaf) GetID() OptNilFloat64 {
+	return s.ID
 }
 
 // GetPhaseType returns the value of PhaseType.
@@ -6474,6 +6677,11 @@ func (s *PhaseLeaf) GetLowerZone() OptNilFloat64 {
 // GetUpperZone returns the value of UpperZone.
 func (s *PhaseLeaf) GetUpperZone() OptNilFloat64 {
 	return s.UpperZone
+}
+
+// SetID sets the value of ID.
+func (s *PhaseLeaf) SetID(val OptNilFloat64) {
+	s.ID = val
 }
 
 // SetPhaseType sets the value of PhaseType.
@@ -6700,19 +6908,33 @@ func (s *PhaseLeafPhaseType) UnmarshalText(data []byte) error {
 	}
 }
 
-// A repeat-group phase that loops a nested list of PHASE objects `repeatCount` times.
-// The UI labels this "+ Répéter les phases". Verified via capture 12-phased-repeat.json
-// — server stores and returns it faithfully and rolls the inner duration into the
-// exerciseTarget's top-level `duration` (e.g. 3 × `"00:01:00"` → `"00:03:00"`).
+// A repeat-group phase that loops a nested list of PHASE leaves `repeatCount` times. Used for
+// interval blocks (e.g. "4 × 3 min hard"). The UI labels it "+ Répéter les phases".
+// **Recovery is optional.** A REPEAT may contain a single work phase with no trailing recovery leaf
+// — the server accepts it (verified via probe probe-D-no-recovery.json: a `repeatCount:4` group
+// with one work phase returned 201 and rolled its nested duration into the exerciseTarget's
+// top-level `duration`, 4 × `"00:03:00"` → `"00:12:00"`). To add recovery between reps, append a
+// second PHASE leaf (typically `intensityType:"NONE"`) inside `phases`.
+// **To model a single continuous block, do NOT use a REPEAT with `repeatCount:1`** — use a bare
+// `PhaseLeaf` directly in `exerciseTargets[].phases` instead (see PhaseLeaf example). A
+// `repeatCount:1` REPEAT is accepted but the server silently unwraps it into a plain PHASE leaf on
+// read-back (verified via probe-A-repeatcount1.json).
 // Nesting is supported by the schema but rejected by the UI beyond depth 1.
 // Ref: #/components/schemas/PhaseRepeat
 type PhaseRepeat struct {
 	// Constant `"REPEAT"` discriminator for repeat groups.
 	PhaseType PhaseRepeatPhaseType `json:"phaseType"`
-	// Number of times the nested phases are repeated. UI minimum is 2.
+	// Number of times the nested phases are repeated. The **wire API accepts 1** and normalizes a
+	// single-rep group to a bare PHASE on read-back (probe probe-A-repeatcount1.json). The **UI**
+	// enforces a minimum of 2 — but that is a client-only constraint, not a server rule. Use ≥ 2 for
+	// real intervals; for a single block prefer a bare PhaseLeaf (no REPEAT wrapper).
 	RepeatCount int `json:"repeatCount"`
-	// Nested PHASE objects looped `repeatCount` times.
+	// Nested PHASE leaves looped `repeatCount` times. One leaf = a recovery-less interval; two leaves
+	// (work + rest) = a classic interval with recovery.
 	Phases []PhaseLeaf `json:"phases"`
+	// Phase id assigned by the server. Absent on REPEAT groups in observed read-backs (only the nested
+	// leaves carry ids); send nothing on create.
+	ID OptNilFloat64 `json:"id"`
 }
 
 // GetPhaseType returns the value of PhaseType.
@@ -6730,6 +6952,11 @@ func (s *PhaseRepeat) GetPhases() []PhaseLeaf {
 	return s.Phases
 }
 
+// GetID returns the value of ID.
+func (s *PhaseRepeat) GetID() OptNilFloat64 {
+	return s.ID
+}
+
 // SetPhaseType sets the value of PhaseType.
 func (s *PhaseRepeat) SetPhaseType(val PhaseRepeatPhaseType) {
 	s.PhaseType = val
@@ -6743,6 +6970,11 @@ func (s *PhaseRepeat) SetRepeatCount(val int) {
 // SetPhases sets the value of Phases.
 func (s *PhaseRepeat) SetPhases(val []PhaseLeaf) {
 	s.Phases = val
+}
+
+// SetID sets the value of ID.
+func (s *PhaseRepeat) SetID(val OptNilFloat64) {
+	s.ID = val
 }
 
 // Constant `"REPEAT"` discriminator for repeat groups.
@@ -7033,11 +7265,15 @@ func (s *PhysicalInfoSex) UnmarshalText(data []byte) error {
 // sessions reflect the user's state at the time.
 // Ref: #/components/schemas/PhysicalInfoSnapshot
 type PhysicalInfoSnapshot struct {
-	MaximumHeartRate         OptNilInt     `json:"maximumHeartRate"`
-	Weight                   OptNilFloat64 `json:"weight"`
-	FunctionalThresholdPower OptNilInt     `json:"functionalThresholdPower"`
-	MaximumAerobicPower      OptNilInt     `json:"maximumAerobicPower"`
-	// Pace string (MM:SS), TBD.
+	// Max HR (bpm) at session time; null if unknown.
+	MaximumHeartRate OptNilInt `json:"maximumHeartRate"`
+	// Body weight (kg) at session time; null if unknown.
+	Weight OptNilFloat64 `json:"weight"`
+	// Cycling FTP (W) at session time; null if unknown.
+	FunctionalThresholdPower OptNilInt `json:"functionalThresholdPower"`
+	// Maximum aerobic power (W) at session time; null if unknown.
+	MaximumAerobicPower OptNilInt `json:"maximumAerobicPower"`
+	// Maximum aerobic speed as a pace string (MM:SS); null if unknown.
 	MaximumAerobicSpeed OptNilString `json:"maximumAerobicSpeed"`
 }
 
@@ -7658,34 +7894,47 @@ func (s *RoutePoint) SetDistance(val float64) {
 	s.Distance = val
 }
 
-// Per-exercise time-series samples. Each key is a recorded metric;
-// each value is `null` until a device populates it. Populated value
-// shape not yet captured — likely an array of numbers or an object
-// `{samplingRate, values:[]}`. TODO with a device-uploaded session.
+// Per-exercise time-series samples, one entry per recorded metric. Each value is
+// `null` until a device populates it (a manually-entered session has every metric
+// null — verified via capture 23-analysis-details.json). The populated value shape
+// is not yet captured — likely an array of numbers or an object
+// `{samplingRate, values:[]}`. TODO: confirm with a device-uploaded session.
 // Ref: #/components/schemas/SampleBlock
 type SampleBlock struct {
-	CADENCE                           jx.Raw `json:"CADENCE"`
-	LEFTPEDALCRANKBASEDPOSITIVEFORCE  jx.Raw `json:"LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE"`
-	DISTANCE                          jx.Raw `json:"DISTANCE"`
-	BODYTEMPERATURE                   jx.Raw `json:"BODY_TEMPERATURE"`
-	POWER                             jx.Raw `json:"POWER"`
-	STRIDELENGTH                      jx.Raw `json:"STRIDE_LENGTH"`
-	TEMPERATURE                       jx.Raw `json:"TEMPERATURE"`
-	ALTITUDE                          jx.Raw `json:"ALTITUDE"`
-	POWERBALANCE                      jx.Raw `json:"POWER_BALANCE"`
-	SPEED                             jx.Raw `json:"SPEED"`
+	// Heart-rate samples (bpm), or null.
+	HEARTRATE jx.Raw `json:"HEART_RATE"`
+	// Speed samples, or null.
+	SPEED jx.Raw `json:"SPEED"`
+	// Cumulative distance samples, or null.
+	DISTANCE jx.Raw `json:"DISTANCE"`
+	// Cadence samples (rpm/spm), or null.
+	CADENCE jx.Raw `json:"CADENCE"`
+	// Altitude samples (m), or null.
+	ALTITUDE jx.Raw `json:"ALTITUDE"`
+	// Power samples (W), or null.
+	POWER jx.Raw `json:"POWER"`
+	// Left/right power balance samples, or null.
+	POWERBALANCE jx.Raw `json:"POWER_BALANCE"`
+	// Left-pedal crank force samples, or null.
+	LEFTPEDALCRANKBASEDPOSITIVEFORCE jx.Raw `json:"LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE"`
+	// Right-pedal crank force samples, or null.
 	RIGHTPEDALCRANKBASEDPOSITIVEFORCE jx.Raw `json:"RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE"`
-	HEARTRATE                         jx.Raw `json:"HEART_RATE"`
+	// Stride-length samples (m), or null.
+	STRIDELENGTH jx.Raw `json:"STRIDE_LENGTH"`
+	// Ambient temperature samples (°C), or null.
+	TEMPERATURE jx.Raw `json:"TEMPERATURE"`
+	// Body temperature samples (°C), or null.
+	BODYTEMPERATURE jx.Raw `json:"BODY_TEMPERATURE"`
 }
 
-// GetCADENCE returns the value of CADENCE.
-func (s *SampleBlock) GetCADENCE() jx.Raw {
-	return s.CADENCE
+// GetHEARTRATE returns the value of HEARTRATE.
+func (s *SampleBlock) GetHEARTRATE() jx.Raw {
+	return s.HEARTRATE
 }
 
-// GetLEFTPEDALCRANKBASEDPOSITIVEFORCE returns the value of LEFTPEDALCRANKBASEDPOSITIVEFORCE.
-func (s *SampleBlock) GetLEFTPEDALCRANKBASEDPOSITIVEFORCE() jx.Raw {
-	return s.LEFTPEDALCRANKBASEDPOSITIVEFORCE
+// GetSPEED returns the value of SPEED.
+func (s *SampleBlock) GetSPEED() jx.Raw {
+	return s.SPEED
 }
 
 // GetDISTANCE returns the value of DISTANCE.
@@ -7693,14 +7942,34 @@ func (s *SampleBlock) GetDISTANCE() jx.Raw {
 	return s.DISTANCE
 }
 
-// GetBODYTEMPERATURE returns the value of BODYTEMPERATURE.
-func (s *SampleBlock) GetBODYTEMPERATURE() jx.Raw {
-	return s.BODYTEMPERATURE
+// GetCADENCE returns the value of CADENCE.
+func (s *SampleBlock) GetCADENCE() jx.Raw {
+	return s.CADENCE
+}
+
+// GetALTITUDE returns the value of ALTITUDE.
+func (s *SampleBlock) GetALTITUDE() jx.Raw {
+	return s.ALTITUDE
 }
 
 // GetPOWER returns the value of POWER.
 func (s *SampleBlock) GetPOWER() jx.Raw {
 	return s.POWER
+}
+
+// GetPOWERBALANCE returns the value of POWERBALANCE.
+func (s *SampleBlock) GetPOWERBALANCE() jx.Raw {
+	return s.POWERBALANCE
+}
+
+// GetLEFTPEDALCRANKBASEDPOSITIVEFORCE returns the value of LEFTPEDALCRANKBASEDPOSITIVEFORCE.
+func (s *SampleBlock) GetLEFTPEDALCRANKBASEDPOSITIVEFORCE() jx.Raw {
+	return s.LEFTPEDALCRANKBASEDPOSITIVEFORCE
+}
+
+// GetRIGHTPEDALCRANKBASEDPOSITIVEFORCE returns the value of RIGHTPEDALCRANKBASEDPOSITIVEFORCE.
+func (s *SampleBlock) GetRIGHTPEDALCRANKBASEDPOSITIVEFORCE() jx.Raw {
+	return s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE
 }
 
 // GetSTRIDELENGTH returns the value of STRIDELENGTH.
@@ -7713,39 +7982,19 @@ func (s *SampleBlock) GetTEMPERATURE() jx.Raw {
 	return s.TEMPERATURE
 }
 
-// GetALTITUDE returns the value of ALTITUDE.
-func (s *SampleBlock) GetALTITUDE() jx.Raw {
-	return s.ALTITUDE
+// GetBODYTEMPERATURE returns the value of BODYTEMPERATURE.
+func (s *SampleBlock) GetBODYTEMPERATURE() jx.Raw {
+	return s.BODYTEMPERATURE
 }
 
-// GetPOWERBALANCE returns the value of POWERBALANCE.
-func (s *SampleBlock) GetPOWERBALANCE() jx.Raw {
-	return s.POWERBALANCE
+// SetHEARTRATE sets the value of HEARTRATE.
+func (s *SampleBlock) SetHEARTRATE(val jx.Raw) {
+	s.HEARTRATE = val
 }
 
-// GetSPEED returns the value of SPEED.
-func (s *SampleBlock) GetSPEED() jx.Raw {
-	return s.SPEED
-}
-
-// GetRIGHTPEDALCRANKBASEDPOSITIVEFORCE returns the value of RIGHTPEDALCRANKBASEDPOSITIVEFORCE.
-func (s *SampleBlock) GetRIGHTPEDALCRANKBASEDPOSITIVEFORCE() jx.Raw {
-	return s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE
-}
-
-// GetHEARTRATE returns the value of HEARTRATE.
-func (s *SampleBlock) GetHEARTRATE() jx.Raw {
-	return s.HEARTRATE
-}
-
-// SetCADENCE sets the value of CADENCE.
-func (s *SampleBlock) SetCADENCE(val jx.Raw) {
-	s.CADENCE = val
-}
-
-// SetLEFTPEDALCRANKBASEDPOSITIVEFORCE sets the value of LEFTPEDALCRANKBASEDPOSITIVEFORCE.
-func (s *SampleBlock) SetLEFTPEDALCRANKBASEDPOSITIVEFORCE(val jx.Raw) {
-	s.LEFTPEDALCRANKBASEDPOSITIVEFORCE = val
+// SetSPEED sets the value of SPEED.
+func (s *SampleBlock) SetSPEED(val jx.Raw) {
+	s.SPEED = val
 }
 
 // SetDISTANCE sets the value of DISTANCE.
@@ -7753,14 +8002,34 @@ func (s *SampleBlock) SetDISTANCE(val jx.Raw) {
 	s.DISTANCE = val
 }
 
-// SetBODYTEMPERATURE sets the value of BODYTEMPERATURE.
-func (s *SampleBlock) SetBODYTEMPERATURE(val jx.Raw) {
-	s.BODYTEMPERATURE = val
+// SetCADENCE sets the value of CADENCE.
+func (s *SampleBlock) SetCADENCE(val jx.Raw) {
+	s.CADENCE = val
+}
+
+// SetALTITUDE sets the value of ALTITUDE.
+func (s *SampleBlock) SetALTITUDE(val jx.Raw) {
+	s.ALTITUDE = val
 }
 
 // SetPOWER sets the value of POWER.
 func (s *SampleBlock) SetPOWER(val jx.Raw) {
 	s.POWER = val
+}
+
+// SetPOWERBALANCE sets the value of POWERBALANCE.
+func (s *SampleBlock) SetPOWERBALANCE(val jx.Raw) {
+	s.POWERBALANCE = val
+}
+
+// SetLEFTPEDALCRANKBASEDPOSITIVEFORCE sets the value of LEFTPEDALCRANKBASEDPOSITIVEFORCE.
+func (s *SampleBlock) SetLEFTPEDALCRANKBASEDPOSITIVEFORCE(val jx.Raw) {
+	s.LEFTPEDALCRANKBASEDPOSITIVEFORCE = val
+}
+
+// SetRIGHTPEDALCRANKBASEDPOSITIVEFORCE sets the value of RIGHTPEDALCRANKBASEDPOSITIVEFORCE.
+func (s *SampleBlock) SetRIGHTPEDALCRANKBASEDPOSITIVEFORCE(val jx.Raw) {
+	s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE = val
 }
 
 // SetSTRIDELENGTH sets the value of STRIDELENGTH.
@@ -7773,29 +8042,9 @@ func (s *SampleBlock) SetTEMPERATURE(val jx.Raw) {
 	s.TEMPERATURE = val
 }
 
-// SetALTITUDE sets the value of ALTITUDE.
-func (s *SampleBlock) SetALTITUDE(val jx.Raw) {
-	s.ALTITUDE = val
-}
-
-// SetPOWERBALANCE sets the value of POWERBALANCE.
-func (s *SampleBlock) SetPOWERBALANCE(val jx.Raw) {
-	s.POWERBALANCE = val
-}
-
-// SetSPEED sets the value of SPEED.
-func (s *SampleBlock) SetSPEED(val jx.Raw) {
-	s.SPEED = val
-}
-
-// SetRIGHTPEDALCRANKBASEDPOSITIVEFORCE sets the value of RIGHTPEDALCRANKBASEDPOSITIVEFORCE.
-func (s *SampleBlock) SetRIGHTPEDALCRANKBASEDPOSITIVEFORCE(val jx.Raw) {
-	s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE = val
-}
-
-// SetHEARTRATE sets the value of HEARTRATE.
-func (s *SampleBlock) SetHEARTRATE(val jx.Raw) {
-	s.HEARTRATE = val
+// SetBODYTEMPERATURE sets the value of BODYTEMPERATURE.
+func (s *SampleBlock) SetBODYTEMPERATURE(val jx.Raw) {
+	s.BODYTEMPERATURE = val
 }
 
 type SessionCookie struct {
@@ -7828,7 +8077,9 @@ func (s *SessionCookie) SetRoles(val []string) {
 // `samples[*][METRIC]` are null.
 // Ref: #/components/schemas/SessionDetails
 type SessionDetails struct {
-	ID             OptInt64                   `json:"id"`
+	// Training session id (matches the `{id}` in the path).
+	ID OptInt64 `json:"id"`
+	// UUID of associated period data; null when none.
 	PeriodDataUuid OptNilString               `json:"periodDataUuid"`
 	Exercises      OptSessionDetailsExercises `json:"exercises"`
 	// Object keyed by exerciseId, each containing a per-metric
@@ -7837,9 +8088,11 @@ type SessionDetails struct {
 	// Time-in-zone distributions, keyed by exerciseId. Empty
 	// object for manual sessions; populated by device upload.
 	// Shape when populated TBD.
-	Zones      OptSessionDetailsZones      `json:"zones"`
-	Laps       OptSessionDetailsLaps       `json:"laps"`
-	PeriodData OptSessionDetailsPeriodData `json:"periodData"`
+	Zones OptSessionDetailsZones `json:"zones"`
+	Laps  OptSessionDetailsLaps  `json:"laps"`
+	// Opaque per-period payload; null when absent. Left untyped (free-form) so it accepts both null and
+	// an object, since ogen does not honour nullable on an empty object schema.
+	PeriodData jx.Raw `json:"periodData"`
 	// Per-exercise swim metrics; empty unless swim sport.
 	SwimDatas      OptSessionDetailsSwimDatas      `json:"swimDatas"`
 	PauseTimeData  OptSessionDetailsPauseTimeData  `json:"pauseTimeData"`
@@ -7883,7 +8136,7 @@ func (s *SessionDetails) GetLaps() OptSessionDetailsLaps {
 }
 
 // GetPeriodData returns the value of PeriodData.
-func (s *SessionDetails) GetPeriodData() OptSessionDetailsPeriodData {
+func (s *SessionDetails) GetPeriodData() jx.Raw {
 	return s.PeriodData
 }
 
@@ -7943,7 +8196,7 @@ func (s *SessionDetails) SetLaps(val OptSessionDetailsLaps) {
 }
 
 // SetPeriodData sets the value of PeriodData.
-func (s *SessionDetails) SetPeriodData(val OptSessionDetailsPeriodData) {
+func (s *SessionDetails) SetPeriodData(val jx.Raw) {
 	s.PeriodData = val
 }
 
@@ -8069,8 +8322,6 @@ func (s *SessionDetailsPauseTimeData) init() SessionDetailsPauseTimeData {
 	return m
 }
 
-type SessionDetailsPeriodData struct{}
-
 // Object keyed by exerciseId, each containing a per-metric
 // sample block. All metrics null for manual sessions.
 type SessionDetailsSamples map[string]SampleBlock
@@ -8140,8 +8391,9 @@ type SessionExercise struct {
 	FatPercentage     OptNilFloat64 `json:"fatPercentage"`
 	CarboPercentage   OptNilFloat64 `json:"carboPercentage"`
 	ProteinPercentage OptNilFloat64 `json:"proteinPercentage"`
-	RecoveryTime      OptNilInt     `json:"recoveryTime"`
-	TrainingLoad      OptNilFloat64 `json:"trainingLoad"`
+	// Returned as a string by the /details endpoint (type is `string|null`).
+	RecoveryTime OptNilString  `json:"recoveryTime"`
+	TrainingLoad OptNilFloat64 `json:"trainingLoad"`
 	// Localisation key for a human-readable load description.
 	TrainingLoadDescriptionKey OptNilString  `json:"trainingLoadDescriptionKey"`
 	Latitude                   OptNilFloat64 `json:"latitude"`
@@ -8221,7 +8473,7 @@ func (s *SessionExercise) GetProteinPercentage() OptNilFloat64 {
 }
 
 // GetRecoveryTime returns the value of RecoveryTime.
-func (s *SessionExercise) GetRecoveryTime() OptNilInt {
+func (s *SessionExercise) GetRecoveryTime() OptNilString {
 	return s.RecoveryTime
 }
 
@@ -8351,7 +8603,7 @@ func (s *SessionExercise) SetProteinPercentage(val OptNilFloat64) {
 }
 
 // SetRecoveryTime sets the value of RecoveryTime.
-func (s *SessionExercise) SetRecoveryTime(val OptNilInt) {
+func (s *SessionExercise) SetRecoveryTime(val OptNilString) {
 	s.RecoveryTime = val
 }
 
@@ -8549,8 +8801,8 @@ type SessionSummary struct {
 	// ID of the previous session chronologically, or `-1` when none.
 	PreviousTrainingId OptInt64 `json:"previousTrainingId"`
 	UserId             OptInt64 `json:"userId"`
-	// User-selected feeling. Enum values TBD.
-	Feeling OptNilString `json:"feeling"`
+	// User-selected feeling as a numeric code (e.g. 0). Returned as an integer by the summary endpoint.
+	Feeling OptNilInt    `json:"feeling"`
 	Note    OptNilString `json:"note"`
 	// Session start latitude; null for manual sessions.
 	Latitude  OptNilFloat64 `json:"latitude"`
@@ -8625,7 +8877,7 @@ func (s *SessionSummary) GetUserId() OptInt64 {
 }
 
 // GetFeeling returns the value of Feeling.
-func (s *SessionSummary) GetFeeling() OptNilString {
+func (s *SessionSummary) GetFeeling() OptNilInt {
 	return s.Feeling
 }
 
@@ -8805,7 +9057,7 @@ func (s *SessionSummary) SetUserId(val OptInt64) {
 }
 
 // SetFeeling sets the value of Feeling.
-func (s *SessionSummary) SetFeeling(val OptNilString) {
+func (s *SessionSummary) SetFeeling(val OptNilInt) {
 	s.Feeling = val
 }
 
@@ -9672,21 +9924,29 @@ type TrainingSessionSummary struct {
 	Note OptString `json:"note"`
 	// Localised sport name (depends on user locale).
 	SportName OptString `json:"sportName"`
-	SportId   int       `json:"sportId"`
+	// Numeric sport id (map via /api/sports/sports).
+	SportId int `json:"sportId"`
 	// Session start time, format `YYYY-MM-DD HH:MM:SS.fff` (space separator,
 	// no timezone — note: differs from create's ISO 8601 with offset).
 	StartDate string `json:"startDate"`
 	// Recovery time. Unit TODO (likely seconds).
 	RecoveryTime OptInt `json:"recoveryTime"`
-	IconUrl      OptURI `json:"iconUrl"`
-	// Pre-rendered HTML for the UI (not for programmatic consumption).
-	TrainingLoadHtml    OptString                                  `json:"trainingLoadHtml"`
-	HasTrainingTarget   OptBool                                    `json:"hasTrainingTarget"`
-	SwimmingSport       OptBool                                    `json:"swimmingSport"`
-	SwimmingPoolUnits   OptTrainingSessionSummarySwimmingPoolUnits `json:"swimmingPoolUnits"`
-	TrainingLoadProHtml OptString                                  `json:"trainingLoadProHtml"`
-	PeriodDataUuid      OptNilString                               `json:"periodDataUuid"`
-	IsTest              OptBool                                    `json:"isTest"`
+	// Sport icon URL.
+	IconUrl OptURI `json:"iconUrl"`
+	// Pre-rendered HTML for the UI (not for programmatic consumption). Empty for manual sessions.
+	TrainingLoadHtml OptString `json:"trainingLoadHtml"`
+	// True if the session was recorded against a planned training target.
+	HasTrainingTarget OptBool `json:"hasTrainingTarget"`
+	// True for swimming sports (enables pool-specific fields).
+	SwimmingSport OptBool `json:"swimmingSport"`
+	// Pool length unit for swimming sessions.
+	SwimmingPoolUnits OptTrainingSessionSummarySwimmingPoolUnits `json:"swimmingPoolUnits"`
+	// Pre-rendered Training Load Pro HTML (premium). Empty on free accounts.
+	TrainingLoadProHtml OptString `json:"trainingLoadProHtml"`
+	// UUID linking to period data; null when none.
+	PeriodDataUuid OptNilString `json:"periodDataUuid"`
+	// True for fitness-test sessions.
+	IsTest OptBool `json:"isTest"`
 }
 
 // GetID returns the value of ID.
@@ -9869,6 +10129,7 @@ func (s *TrainingSessionSummary) SetIsTest(val OptBool) {
 	s.IsTest = val
 }
 
+// Pool length unit for swimming sessions.
 type TrainingSessionSummarySwimmingPoolUnits string
 
 const (
@@ -9980,8 +10241,6 @@ func (s *TrainingTargetCreate) SetExerciseTargets(val []ExerciseTarget) {
 	s.ExerciseTargets = val
 }
 
-func (*TrainingTargetCreate) getTrainingTargetRes() {}
-
 // Target category, drives which `exerciseTargets[i]` fields are populated.
 // - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` /
 // `calories` is non-null; `phases` is `[]`.
@@ -10038,8 +10297,32 @@ func (s *TrainingTargetCreateType) UnmarshalText(data []byte) error {
 	}
 }
 
-// Ref: #/components/responses/Unauthorized
-type Unauthorized struct{}
+type Unauthorized struct {
+	// Error code, e.g. `NotAuthenticated`.
+	Error string `json:"error"`
+	// Path the web app should redirect to (the login page).
+	Redirect OptString `json:"redirect"`
+}
+
+// GetError returns the value of Error.
+func (s *Unauthorized) GetError() string {
+	return s.Error
+}
+
+// GetRedirect returns the value of Redirect.
+func (s *Unauthorized) GetRedirect() OptString {
+	return s.Redirect
+}
+
+// SetError sets the value of Error.
+func (s *Unauthorized) SetError(val string) {
+	s.Error = val
+}
+
+// SetRedirect sets the value of Redirect.
+func (s *Unauthorized) SetRedirect(val OptString) {
+	s.Redirect = val
+}
 
 func (*Unauthorized) addRouteToFavoritesRes()       {}
 func (*Unauthorized) createFavoriteRes()            {}
@@ -10084,15 +10367,22 @@ type UpdateTrainingTargetOK struct{}
 
 func (*UpdateTrainingTargetOK) updateTrainingTargetRes() {}
 
+// Core identity block for the signed-in user, returned under `user` in `GET
+// /api/account/users/current/user`. Holds login, display name, numeric id and country — not
+// fitness data (see PhysicalInfo for that).
 // Ref: #/components/schemas/UserIdentity
 type UserIdentity struct {
 	// The email address used for login.
-	UserName  string       `json:"userName"`
-	FirstName OptString    `json:"firstName"`
-	LastName  OptString    `json:"lastName"`
-	NickName  OptNilString `json:"nickName"`
+	UserName string `json:"userName"`
+	// Given name as entered in the profile.
+	FirstName OptString `json:"firstName"`
+	// Family name as entered in the profile.
+	LastName OptString `json:"lastName"`
+	// Optional display nickname; null when unset.
+	NickName OptNilString `json:"nickName"`
 	// Numeric user ID. Use as `userId` in POST /api/training/history.
-	ID         int64     `json:"id"`
+	ID int64 `json:"id"`
+	// Profile photo URL; null when no photo has been uploaded.
 	PictureUrl OptNilURI `json:"pictureUrl"`
 	// ISO 3166-1 alpha-2 country code.
 	Country OptString `json:"country"`
@@ -10191,9 +10481,12 @@ func (*ValidationError) updateTrainingTargetRes() {}
 // ordering, not for actual elapsed time).
 // Ref: #/components/schemas/Waypoint
 type Waypoint struct {
-	Latitude  float64    `json:"latitude"`
-	Longitude float64    `json:"longitude"`
-	Altitude  OptFloat64 `json:"altitude"`
+	// WGS84 latitude, degrees.
+	Latitude float64 `json:"latitude"`
+	// WGS84 longitude, degrees.
+	Longitude float64 `json:"longitude"`
+	// Elevation in metres above sea level.
+	Altitude OptFloat64 `json:"altitude"`
 	// Sequence index in milliseconds (0, 1000, 2000, …). NOT actual
 	// elapsed time, since the original GPX usually has no
 	// timestamps.

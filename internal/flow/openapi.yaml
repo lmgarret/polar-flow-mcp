@@ -40,6 +40,22 @@ paths:
   /api/trainingtarget:
     post:
       summary: Create a training target
+      description: "Create a planned workout (training target). The `type` field selects the\nshape:\n\n- **VOLUME** — one\
+        \ metric only: set exactly one of `duration` / `distance` /\n  `calories` on the single exerciseTarget; leave `phases`\
+        \ empty (`[]`).\n- **STEADY_RACE_PACE** — a time-trial: set both `duration` and `distance`\n  (pace is implicit);\
+        \ `phases` empty.\n- **PHASED** — a structured workout: populate `exerciseTargets[].phases`.\n\n### Modelling phases\
+        \ (PHASED)\n\nA phase is either a **PhaseLeaf** (`phaseType: \"PHASE\"`) or a **PhaseRepeat**\n(`phaseType: \"REPEAT\"\
+        `) that loops nested leaves. Guidance below is verified\nagainst the live API (probe captures in `captures/post-bodies/probe-*.json`):\n\
+        \n- **Steady / continuous block** → use a single bare PhaseLeaf directly in\n  `phases` (see the `steadyBlock` example).\
+        \ Do **not** wrap it in a REPEAT.\n- **Intervals** → use a REPEAT with `repeatCount` ≥ 2 (see `phasedRepeat`).\n-\
+        \ **`repeatCount`**: the **server accepts 1** but silently unwraps a\n  single-rep REPEAT into a plain PHASE on read-back,\
+        \ so it is pointless — the\n  Flow UI enforces a minimum of 2. Prefer a bare PhaseLeaf for one block.\n- **Recovery\
+        \ is optional**: a REPEAT may hold just one work phase with no\n  trailing rest leaf (verified — the server rolls\
+        \ the nested duration into\n  the exerciseTarget's top-level `duration`). To add recovery between reps,\n  append\
+        \ a second leaf (typically `intensityType: \"NONE\"`).\n- **`duration`** uses strict `\"HH:MM:SS\"`; `\"00:00:00\"\
+        ` is accepted but\n  meaningless. Set on a leaf iff `goalType: \"DURATION\"`; set `distance`\n  (metres) iff `goalType:\
+        \ \"DISTANCE\"`.\n- **Multi-sport**: pass multiple `exerciseTargets` entries (see `multisport`);\n  the server assigns\
+        \ each a sequential read-only `index`.\n\nWrites require the `X-Requested-With: XMLHttpRequest` header (CSRF defense).\n"
       operationId: createTrainingTarget
       tags:
       - training-targets
@@ -163,6 +179,150 @@ paths:
                       intensityType: NONE
                       lowerZone: null
                       upperZone: null
+              steadyBlock:
+                summary: PHASED — single continuous Z2 block (steady). One bare PhaseLeaf, no REPEAT wrapper. Verified via
+                  probe-C-steady-hrz.json (201).
+                value:
+                  type: PHASED
+                  name: 45 min Z2
+                  description: ''
+                  datetime: 2026-06-10T09:00
+                  exerciseTargets:
+                  - sportId: 1
+                    distance: null
+                    calories: null
+                    duration: null
+                    id: null
+                    phases:
+                    - phaseType: PHASE
+                      name: Z2 steady
+                      phaseChangeType: AUTOMATIC
+                      goalType: DURATION
+                      distance: null
+                      duration: 00:45:00
+                      intensityType: HEART_RATE_ZONES
+                      lowerZone: 2
+                      upperZone: 2
+              phasedRepeat:
+                summary: 'PHASED — interval block: REPEAT (4×) work + recovery. repeatCount ≥ 2.'
+                value:
+                  type: PHASED
+                  name: 4x3min intervals
+                  description: ''
+                  datetime: 2026-06-23T09:00
+                  exerciseTargets:
+                  - sportId: 1
+                    distance: null
+                    calories: null
+                    duration: null
+                    id: null
+                    phases:
+                    - phaseType: REPEAT
+                      repeatCount: 4
+                      phases:
+                      - phaseType: PHASE
+                        name: work
+                        phaseChangeType: AUTOMATIC
+                        goalType: DURATION
+                        distance: null
+                        duration: 00:03:00
+                        intensityType: HEART_RATE_ZONES
+                        lowerZone: 4
+                        upperZone: 5
+                      - phaseType: PHASE
+                        name: recovery
+                        phaseChangeType: AUTOMATIC
+                        goalType: DURATION
+                        distance: null
+                        duration: 00:02:00
+                        intensityType: NONE
+                        lowerZone: null
+                        upperZone: null
+              phasedManual:
+                summary: PHASED — phaseChangeType MANUAL (advance on user button press). From capture 10-phased-manual.json.
+                value:
+                  type: PHASED
+                  name: manual-advance phase
+                  description: ''
+                  datetime: 2026-06-05T09:00
+                  exerciseTargets:
+                  - sportId: 1
+                    distance: null
+                    calories: null
+                    duration: null
+                    id: null
+                    phases:
+                    - phaseType: PHASE
+                      name: warmup
+                      phaseChangeType: MANUAL
+                      goalType: DURATION
+                      distance: null
+                      duration: 00:10:00
+                      intensityType: HEART_RATE_ZONES
+                      lowerZone: 1
+                      upperZone: 2
+              phasedPower:
+                summary: PHASED — POWER_ZONES on a power-capable sport (cycling, sportId 2). From capture 11-phased-power.json.
+                value:
+                  type: PHASED
+                  name: power intervals
+                  description: ''
+                  datetime: 2026-06-06T09:00
+                  exerciseTargets:
+                  - sportId: 2
+                    distance: null
+                    calories: null
+                    duration: null
+                    id: null
+                    phases:
+                    - phaseType: PHASE
+                      name: threshold
+                      phaseChangeType: AUTOMATIC
+                      goalType: DURATION
+                      distance: null
+                      duration: 00:20:00
+                      intensityType: POWER_ZONES
+                      lowerZone: 3
+                      upperZone: 4
+              multisport:
+                summary: Multi-sport — two exerciseTargets (run then bike). Server assigns a sequential `index` per entry.
+                  From capture 13-multisport.json.
+                value:
+                  type: PHASED
+                  name: brick session
+                  description: ''
+                  datetime: 2026-06-07T09:00
+                  exerciseTargets:
+                  - sportId: 1
+                    distance: null
+                    calories: null
+                    duration: null
+                    id: null
+                    phases:
+                    - phaseType: PHASE
+                      name: run
+                      phaseChangeType: AUTOMATIC
+                      goalType: DURATION
+                      distance: null
+                      duration: 00:30:00
+                      intensityType: HEART_RATE_ZONES
+                      lowerZone: 2
+                      upperZone: 3
+                  - sportId: 2
+                    distance: null
+                    calories: null
+                    duration: null
+                    id: null
+                    phases:
+                    - phaseType: PHASE
+                      name: bike
+                      phaseChangeType: AUTOMATIC
+                      goalType: DURATION
+                      distance: null
+                      duration: 00:45:00
+                      intensityType: POWER_ZONES
+                      lowerZone: 2
+                      upperZone: 3
       responses:
         '201':
           description: 'Created successfully. Response body is the new training-target id
@@ -220,7 +380,74 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TrainingTargetCreate'
+                allOf:
+                - $ref: '#/components/schemas/TrainingTargetCreate'
+                - type: object
+                  description: Extra read-only fields the server adds on read-back.
+                  properties:
+                    sourceProgramType:
+                      type: string
+                      description: Origin program of the target (e.g. `UNKNOWN`).
+                      example: UNKNOWN
+                    isUserEditable:
+                      type: boolean
+                      description: True when the signed-in user may edit/delete this target.
+              examples:
+                steadyBlock:
+                  summary: Single-phase steady block read-back (from probe-C-steady-hrz.json)
+                  value:
+                    datetime: 2026-06-10T09:00
+                    sourceProgramType: UNKNOWN
+                    isUserEditable: true
+                    name: probe-c-steady
+                    exerciseTargets:
+                    - id: 1530890858
+                      duration: 00:45:00
+                      distance: null
+                      calories: null
+                      index: 0
+                      sportId: 1
+                      phases:
+                      - id: 2912772577
+                        lowerZone: 2
+                        upperZone: 2
+                        intensityType: HEART_RATE_ZONES
+                        phaseChangeType: AUTOMATIC
+                        goalType: DURATION
+                        duration: 00:45:00
+                        name: Z2 steady
+                        phaseType: PHASE
+                    description: ''
+                    type: PHASED
+                intervalRolledUp:
+                  summary: REPEAT block read-back — top-level duration is rolled up (4 × 00:03:00 → 00:12:00). From probe-D-no-recovery.json.
+                  value:
+                    datetime: 2026-06-10T12:00
+                    sourceProgramType: UNKNOWN
+                    isUserEditable: true
+                    name: probe-d-norecovery
+                    exerciseTargets:
+                    - id: 1530890861
+                      duration: 00:12:00
+                      distance: null
+                      calories: null
+                      index: 0
+                      sportId: 1
+                      phases:
+                      - repeatCount: 4
+                        phaseType: REPEAT
+                        phases:
+                        - id: 2912772580
+                          lowerZone: 4
+                          upperZone: 5
+                          intensityType: HEART_RATE_ZONES
+                          phaseChangeType: AUTOMATIC
+                          goalType: DURATION
+                          duration: 00:03:00
+                          name: work
+                          phaseType: PHASE
+                    description: ''
+                    type: PHASED
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -272,6 +499,23 @@ paths:
   /training/target/{id}:
     delete:
       summary: Delete a training target
+      description: 'Delete a planned training target by id.
+
+
+        ⚠ Note the **inconsistent path prefix**: this endpoint lives under
+
+        `/training/target/{id}`, NOT `/api/trainingtarget/{id}` (which is used for
+
+        create/read/update). There is **no trailing slash** (unlike session delete,
+
+        `DELETE /api/training/deleteTrainingSession/{id}/`, which requires one).
+
+
+        Returns 200 with an empty body. Idempotent in practice — deleting an
+
+        already-gone id still returns 200.
+
+        '
       operationId: deleteTrainingTarget
       tags:
       - training-targets
@@ -413,6 +657,22 @@ paths:
   /api/training/history:
     post:
       summary: List training sessions by date range
+      description: 'Return completed training sessions for a user within an inclusive date
+
+        range. Despite being a read, it is a **POST** with a JSON body.
+
+
+        Each row''s `duration` is in **milliseconds** (1800000 = 30 min) and
+
+        `sportName` is the user-locale display string (e.g. `"Course à pied"`),
+
+        unlike the favorites endpoints which return the uppercase sport enum. Use a
+
+        row''s `id` to fetch full analysis via
+
+        `GET /api/training/analysis/{id}/summary` and `/details`.
+
+        '
       operationId: listTrainingSessions
       tags:
       - training-sessions
@@ -431,12 +691,12 @@ paths:
               properties:
                 userId:
                   type: integer
-                  description: 'Numeric user ID. Presumably obtained from
+                  description: 'Numeric user ID — the `user.id` from
 
-                    `GET /api/account/users/current/user` (TODO: verify).
+                    `GET /api/account/users/current/user` (verified 2026-05-29).
 
                     '
-                  example: 64421052
+                  example: 11111111
                 fromDate:
                   type: string
                   description: Inclusive start date `YYYY-MM-DD`.
@@ -454,6 +714,25 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TrainingSessionSummary'
+              example:
+              - id: 8349588454
+                duration: 1800000
+                distance: null
+                hrAvg: 0
+                calories: 350
+                note: doc seed
+                sportName: Course à pied
+                sportId: 1
+                startDate: '2026-05-28 08:00:00.000'
+                recoveryTime: 0
+                iconUrl: https://platform.cdn.polar.com/ecosystem/sport/icon/808d0882e97375e68844ec6c5417ea33-2024-04-16_06_01_39
+                trainingLoadHtml: ''
+                hasTrainingTarget: false
+                swimmingSport: false
+                swimmingPoolUnits: METERS
+                trainingLoadProHtml: ''
+                periodDataUuid: null
+                isTest: false
         '401':
           $ref: '#/components/responses/Unauthorized'
   /api/training/analysis/{id}/summary:
@@ -710,6 +989,18 @@ paths:
   /api/favoritetarget/{id}:
     get:
       summary: Get a single favorite
+      description: 'Read one favorite (training-target template) by `favoriteId`. Returns the
+
+        create-shape body plus a server-assigned `exerciseTargets[].id` and `index`.
+
+
+        For **ROUTE** favorites this returns only the thin metadata shell (no GPS
+
+        geometry) — fetch the waypoints from
+
+        `GET /api/favorites/exerciseTarget/{exerciseTargetId}` instead.
+
+        '
       operationId: getFavorite
       tags:
       - favorites
@@ -1561,6 +1852,7 @@ components:
         enum:
         - XMLHttpRequest
         default: XMLHttpRequest
+        example: XMLHttpRequest
       description: 'CSRF defense on /api/* write operations. Play''s CSRF filter is
 
         configured to whitelist requests carrying this header (browsers
@@ -1578,7 +1870,9 @@ components:
       required: true
       schema:
         type: integer
-      description: Training target numeric ID (e.g. 1453744955)
+        format: int64
+        example: 1454046259
+      description: Training target numeric ID (e.g. 1454046259), as returned in the create response body.
     TrainingSessionId:
       name: id
       in: path
@@ -1604,7 +1898,11 @@ components:
   schemas:
     PhaseLeaf:
       type: object
-      description: A leaf training phase (no nested phases).
+      description: 'A leaf training phase (no nested phases). A single PhaseLeaf placed directly in `exerciseTargets[].phases`
+        is the idiomatic way to model a **continuous steady block** (e.g. a 45-min Z2 run) — no REPEAT wrapper is needed (verified
+        via probe-C-steady-hrz.json). For repeated intervals, wrap leaves in a PhaseRepeat instead.
+
+        '
       required:
       - phaseType
       - name
@@ -1612,6 +1910,15 @@ components:
       - goalType
       - intensityType
       properties:
+        id:
+          type: number
+          readOnly: true
+          description: 'Phase id assigned by the server; present on read responses (`GET /api/trainingtarget/{id}`). Send
+            nothing on create.
+
+            '
+          example: 2912772577
+          nullable: true
         phaseType:
           type: string
           enum:
@@ -1649,12 +1956,12 @@ components:
           nullable: true
         duration:
           type: string
-          description: 'Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the
-
-            UI validator). Non-null iff `goalType=DURATION`.
+          description: 'Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the UI validator). Non-null
+            iff `goalType=DURATION`. A zero value `"00:00:00"` is accepted by the server and preserved on read-back (verified
+            via probe-B-zero-duration.json) — though it has no practical training meaning.
 
             '
-          example: 00:10:00
+          example: 00:45:00
           nullable: true
         intensityType:
           type: string
@@ -1674,25 +1981,44 @@ components:
             '
         lowerZone:
           type: number
-          minimum: 1
+          minimum: 0
           maximum: 5
-          description: Lower zone bound (1–5) when `intensityType != NONE`; otherwise null.
+          description: Lower zone bound (1–5) when `intensityType != NONE`; otherwise null. NONE-intensity phases (e.g. warmup/cooldown)
+            return `0` rather than null.
           nullable: true
         upperZone:
           type: number
-          minimum: 1
+          minimum: 0
           maximum: 5
-          description: Upper zone bound (1–5) when `intensityType != NONE`; otherwise null.
+          description: Upper zone bound (1–5) when `intensityType != NONE`; otherwise null. NONE-intensity phases (e.g. warmup/cooldown)
+            return `0` rather than null.
           nullable: true
+      example:
+        phaseType: PHASE
+        name: Z2 steady
+        phaseChangeType: AUTOMATIC
+        goalType: DURATION
+        distance: null
+        duration: 00:45:00
+        intensityType: HEART_RATE_ZONES
+        lowerZone: 2
+        upperZone: 2
     PhaseRepeat:
       type: object
-      description: 'A repeat-group phase that loops a nested list of PHASE objects `repeatCount` times.
+      description: 'A repeat-group phase that loops a nested list of PHASE leaves `repeatCount` times. Used for interval blocks
+        (e.g. "4 × 3 min hard"). The UI labels it "+ Répéter les phases".
 
-        The UI labels this "+ Répéter les phases". Verified via capture 12-phased-repeat.json
 
-        — server stores and returns it faithfully and rolls the inner duration into the
+        **Recovery is optional.** A REPEAT may contain a single work phase with no trailing recovery leaf — the server accepts
+        it (verified via probe probe-D-no-recovery.json: a `repeatCount:4` group with one work phase returned 201 and rolled
+        its nested duration into the exerciseTarget''s top-level `duration`, 4 × `"00:03:00"` → `"00:12:00"`). To add recovery
+        between reps, append a second PHASE leaf (typically `intensityType:"NONE"`) inside `phases`.
 
-        exerciseTarget''s top-level `duration` (e.g. 3 × `"00:01:00"` → `"00:03:00"`).
+
+        **To model a single continuous block, do NOT use a REPEAT with `repeatCount:1`** — use a bare `PhaseLeaf` directly
+        in `exerciseTargets[].phases` instead (see PhaseLeaf example). A `repeatCount:1` REPEAT is accepted but the server
+        silently unwraps it into a plain PHASE leaf on read-back (verified via probe-A-repeatcount1.json).
+
 
         Nesting is supported by the schema but rejected by the UI beyond depth 1.
 
@@ -1709,14 +2035,53 @@ components:
           description: Constant `"REPEAT"` discriminator for repeat groups.
         repeatCount:
           type: integer
-          minimum: 2
-          description: Number of times the nested phases are repeated. UI minimum is 2.
-          example: 3
+          minimum: 1
+          description: 'Number of times the nested phases are repeated. The **wire API accepts 1** and normalizes a single-rep
+            group to a bare PHASE on read-back (probe probe-A-repeatcount1.json). The **UI** enforces a minimum of 2 — but
+            that is a client-only constraint, not a server rule. Use ≥ 2 for real intervals; for a single block prefer a bare
+            PhaseLeaf (no REPEAT wrapper).
+
+            '
+          example: 4
         phases:
           type: array
-          description: Nested PHASE objects looped `repeatCount` times.
+          minItems: 1
+          description: 'Nested PHASE leaves looped `repeatCount` times. One leaf = a recovery-less interval; two leaves (work
+            + rest) = a classic interval with recovery.
+
+            '
           items:
             $ref: '#/components/schemas/PhaseLeaf'
+        id:
+          type: number
+          readOnly: true
+          description: 'Phase id assigned by the server. Absent on REPEAT groups in observed read-backs (only the nested leaves
+            carry ids); send nothing on create.
+
+            '
+          nullable: true
+      example:
+        phaseType: REPEAT
+        repeatCount: 4
+        phases:
+        - phaseType: PHASE
+          name: work
+          phaseChangeType: AUTOMATIC
+          goalType: DURATION
+          distance: null
+          duration: 00:03:00
+          intensityType: HEART_RATE_ZONES
+          lowerZone: 4
+          upperZone: 5
+        - phaseType: PHASE
+          name: recovery
+          phaseChangeType: AUTOMATIC
+          goalType: DURATION
+          distance: null
+          duration: 00:02:00
+          intensityType: NONE
+          lowerZone: null
+          upperZone: null
     Phase:
       oneOf:
       - $ref: '#/components/schemas/PhaseLeaf'
@@ -1739,6 +2104,16 @@ components:
         with a `repeatCount` integer.
 
         '
+      example:
+        phaseType: PHASE
+        name: Z2 steady
+        phaseChangeType: AUTOMATIC
+        goalType: DURATION
+        distance: null
+        duration: 00:45:00
+        intensityType: HEART_RATE_ZONES
+        lowerZone: 2
+        upperZone: 2
     ExerciseTarget:
       type: object
       description: A single exercise block within a training target
@@ -1870,31 +2245,81 @@ components:
           example: 60 min easy run
         description:
           type: string
+          description: Free-text notes on the event; empty string when none.
         start:
-          type: string
-          description: ISO 8601 UTC datetime
+          description: 'Event start. Polymorphic by event type: TRAININGTARGET events send an ISO 8601 UTC datetime string,
+            while EXERCISE events send a numeric epoch (seconds, e.g. 1779872400). Left untyped (free-form) to accept either.'
           example: '2026-05-24T10:00:00.000Z'
         allDay:
-          type: string
-          enum:
-          - 'true'
-          - 'false'
+          description: 'Whether the event spans the whole day. Polymorphic: the server sends a boolean (observed live) and
+            historically a string ("true"/"false") for some event types — left untyped to accept either.'
         url:
           type: string
           description: Relative URL to the target detail page
           example: /target/1453744955
         className:
           type: string
+          description: CSS class used by the Flow calendar to render the event icon.
           example: training-target-icon
         eventType:
           type: string
+          description: Lower-camel event kind (e.g. `trainingTarget`).
           example: trainingTarget
         eventId:
           type: integer
+          description: Secondary event id; null for training targets.
           nullable: true
         sourceProgramType:
           type: string
+          description: Origin program of the event (e.g. `UNKNOWN`); null when not applicable.
           nullable: true
+        isUserEditable:
+          type: boolean
+          description: True when the signed-in user may edit/delete the event.
+        iconUrl:
+          type: string
+          format: uri
+          description: Sport/event icon URL.
+          nullable: true
+        datetime:
+          type: string
+          description: Local datetime of the event (no timezone), e.g. `2026-06-02T09:00:00.000`.
+          example: '2026-06-02T09:00:00.000'
+          nullable: true
+        calories:
+          type: number
+          description: Target calories (kcal), or null.
+          nullable: true
+        distance:
+          type: number
+          description: Target distance in metres. Present for distance-based targets; null otherwise.
+          nullable: true
+        duration:
+          type: integer
+          description: 'Target duration in **milliseconds**. Present for duration-based targets (and 0 for a zero-duration
+            phase); **omitted entirely** for distance-goal targets that carry no rolled-up duration (verified via capture
+            20-calendar-events.json).
+
+            '
+          nullable: true
+      example:
+        type: TRAININGTARGET
+        ListItemId: 1453775725
+        title: explore-phased
+        description: ''
+        start: '2026-06-02T09:00:00.000Z'
+        allDay: 'false'
+        url: /target/1453775725
+        className: training-target-icon
+        eventType: trainingTarget
+        eventId: null
+        sourceProgramType: UNKNOWN
+        isUserEditable: true
+        iconUrl: https://platform.cdn.polar.com/ecosystem/sport/icon/808d0882e97375e68844ec6c5417ea33-2024-04-16_06_01_39
+        datetime: '2026-06-02T09:00:00.000'
+        calories: null
+        distance: 5000
+        duration: 600000
     SportsMap:
       type: object
       description: 'Map of numeric sport ID (as string key) to Polar sport name constant.
@@ -2220,6 +2645,7 @@ components:
           example: Course à pied
         sportId:
           type: integer
+          description: Numeric sport id (map via /api/sports/sports).
           example: 1
         startDate:
           type: string
@@ -2235,24 +2661,31 @@ components:
         iconUrl:
           type: string
           format: uri
+          description: Sport icon URL.
         trainingLoadHtml:
           type: string
-          description: Pre-rendered HTML for the UI (not for programmatic consumption).
+          description: Pre-rendered HTML for the UI (not for programmatic consumption). Empty for manual sessions.
         hasTrainingTarget:
           type: boolean
+          description: True if the session was recorded against a planned training target.
         swimmingSport:
           type: boolean
+          description: True for swimming sports (enables pool-specific fields).
         swimmingPoolUnits:
           type: string
           enum:
           - METERS
+          description: Pool length unit for swimming sessions.
         trainingLoadProHtml:
           type: string
+          description: Pre-rendered Training Load Pro HTML (premium). Empty on free accounts.
         periodDataUuid:
           type: string
+          description: UUID linking to period data; null when none.
           nullable: true
         isTest:
           type: boolean
+          description: True for fitness-test sessions.
     SessionExercise:
       type: object
       description: 'One exercise within a session (a session can have several if
@@ -2297,7 +2730,8 @@ components:
           type: number
           nullable: true
         recoveryTime:
-          type: integer
+          type: string
+          description: Returned as a string by the /details endpoint (type is `string|null`).
           nullable: true
         trainingLoad:
           type: number
@@ -2375,50 +2809,106 @@ components:
           type: number
           description: Cycling IF.
           nullable: true
+      example:
+        id: 8379162593
+        sport:
+          id: 1
+        startTime: '2026-05-28T08:00:00'
+        stopTime: '2026-05-28T08:30:00'
+        duration: PT30M
+        distance: 5000
+        calories: 350
+        recoveryTime: null
+        trainingLoad: null
+        trainingStatistic:
+          HEART_RATE:
+            max: 0
+            avg: 0
+            min: null
+        sportParent: RUNNING
+        defaultSpeedViewSettings: PACE
+        sprintCount: null
+        trainingStressScore: null
+        intensityFactor: null
     ClubModel:
       type: object
-      description: 'Group-class gamification metadata. All-false / nulls for solo sessions.
+      description: 'Group-class (Polar Club) gamification metadata attached to a training session.
+
+        All-false / nulls / zeros for solo sessions (verified via capture
+
+        22-analysis-summary.json on a non-club account).
 
         '
       properties:
         clubTrainingSession:
           type: boolean
+          description: True if this session was part of a Polar Club class.
         sessionName:
           type: string
+          description: Club class name; null for solo sessions.
           nullable: true
         sportName:
           type: string
+          description: Club class sport name; null for solo sessions.
           nullable: true
         instructorName:
           type: string
+          description: Class instructor's name; null when not a club session.
           nullable: true
         clubName:
           type: string
+          description: Club name; null when not a club session.
           nullable: true
         clubAddress:
           type: string
+          description: Club venue address; null when not a club session.
           nullable: true
         cooldownChampion:
           type: boolean
+          description: Gamification badge — best cool-down in the class.
         zoneMate:
           type: boolean
+          description: Gamification badge — stayed in the target zone alongside peers.
         rangeRuler:
           type: boolean
+          description: Gamification badge — widest effective HR range.
         zoneMaster:
           type: boolean
+          description: Gamification badge — most time in the top zone.
         phaseMaster:
           type: boolean
+          description: Gamification badge — best phase adherence.
         inZone:
           type: integer
+          description: Time spent in the class target zone (seconds); 0 for solo sessions.
         organisationId:
           type: integer
           format: int64
+          description: Owning organisation id; null for solo sessions.
           nullable: true
         startTime:
           type: string
+          description: Class start time; null for solo sessions.
           nullable: true
         duration:
           type: integer
+          description: Class duration (seconds); 0 for solo sessions.
+      example:
+        clubTrainingSession: false
+        sessionName: null
+        sportName: null
+        instructorName: null
+        clubName: null
+        clubAddress: null
+        cooldownChampion: false
+        zoneMate: false
+        rangeRuler: false
+        zoneMaster: false
+        phaseMaster: false
+        inZone: 0
+        organisationId: null
+        startTime: null
+        duration: 0
     PhysicalInfoSnapshot:
       type: object
       description: 'Physical settings frozen at session creation time, so historic
@@ -2429,20 +2919,30 @@ components:
       properties:
         maximumHeartRate:
           type: integer
+          description: Max HR (bpm) at session time; null if unknown.
           nullable: true
         weight:
           type: number
+          description: Body weight (kg) at session time; null if unknown.
           nullable: true
         functionalThresholdPower:
           type: integer
+          description: Cycling FTP (W) at session time; null if unknown.
           nullable: true
         maximumAerobicPower:
           type: integer
+          description: Maximum aerobic power (W) at session time; null if unknown.
           nullable: true
         maximumAerobicSpeed:
           type: string
-          description: Pace string (MM:SS), TBD
+          description: Maximum aerobic speed as a pace string (MM:SS); null if unknown.
           nullable: true
+      example:
+        maximumHeartRate: null
+        weight: null
+        functionalThresholdPower: null
+        maximumAerobicPower: null
+        maximumAerobicSpeed: null
     SessionSummary:
       type: object
       description: 'Response of GET /api/training/analysis/{id}/summary. Field-name and
@@ -2468,8 +2968,8 @@ components:
           type: integer
           format: int64
         feeling:
-          type: string
-          description: User-selected feeling. Enum values TBD.
+          type: integer
+          description: User-selected feeling as a numeric code (e.g. 0). Returned as an integer by the summary endpoint.
           nullable: true
         note:
           type: string
@@ -2608,42 +3108,132 @@ components:
         trimmed:
           type: boolean
           description: True if the user manually trimmed the session.
+      example:
+        id: 8349588454
+        nextTrainingId: -1
+        previousTrainingId: 8348897323
+        userId: 11111111
+        feeling: null
+        note: doc seed
+        latitude: null
+        longitude: null
+        startDate: '2026-05-28T08:00:00'
+        stopTime: '2026-05-28T08:30:00'
+        duration: PT30M
+        distance: null
+        kiloCalories: 350
+        trainingLoad: null
+        trainingBenefit: null
+        hrMax: 0
+        hrAverage: 0
+        timezoneOffset: null
+        trainingLoadPro: null
+        exercises:
+          '8379162593':
+            id: 8379162593
+            sport:
+              id: 1
+            startTime: '2026-05-28T08:00:00'
+            stopTime: '2026-05-28T08:30:00'
+            duration: PT30M
+            distance: 5000
+            calories: 350
+            trainingStatistic:
+              HEART_RATE:
+                max: 0
+                avg: 0
+                min: null
+            sportParent: RUNNING
+            defaultSpeedViewSettings: PACE
+        periodDataUuid: null
+        deviceName: ''
+        trainingSessionName: doc-session
+        trainingUserInfo:
+          firstname: Alex
+          lastname: Doe
+          pictureUrl: https://flow.polar.com/static/13.318.0/images/profile-image-small.png
+          city: null
+          countryCode: null
+        clubModel:
+          clubTrainingSession: false
+          inZone: 0
+          duration: 0
+        teamTrainingSessionType: null
+        coachNotes: []
+        hasUserCoach: false
+        sportId: null
+        startTrigger: null
+        physicalInformationSnapshot:
+          maximumHeartRate: null
+          weight: null
+          functionalThresholdPower: null
+          maximumAerobicPower: null
+          maximumAerobicSpeed: null
+        hasRRsamples: false
+        trimmed: false
     SampleBlock:
       type: object
-      description: 'Per-exercise time-series samples. Each key is a recorded metric;
+      description: 'Per-exercise time-series samples, one entry per recorded metric. Each value is
 
-        each value is `null` until a device populates it. Populated value
+        `null` until a device populates it (a manually-entered session has every metric
 
-        shape not yet captured — likely an array of numbers or an object
+        null — verified via capture 23-analysis-details.json). The populated value shape
 
-        `{samplingRate, values:[]}`. TODO with a device-uploaded session.
+        is not yet captured — likely an array of numbers or an object
+
+        `{samplingRate, values:[]}`. TODO: confirm with a device-uploaded session.
 
         '
       properties:
-        CADENCE:
-          nullable: true
-        LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE:
-          nullable: true
-        DISTANCE:
-          nullable: true
-        BODY_TEMPERATURE:
-          nullable: true
-        POWER:
-          nullable: true
-        STRIDE_LENGTH:
-          nullable: true
-        TEMPERATURE:
-          nullable: true
-        ALTITUDE:
-          nullable: true
-        POWER_BALANCE:
+        HEART_RATE:
+          description: Heart-rate samples (bpm), or null.
           nullable: true
         SPEED:
+          description: Speed samples, or null.
+          nullable: true
+        DISTANCE:
+          description: Cumulative distance samples, or null.
+          nullable: true
+        CADENCE:
+          description: Cadence samples (rpm/spm), or null.
+          nullable: true
+        ALTITUDE:
+          description: Altitude samples (m), or null.
+          nullable: true
+        POWER:
+          description: Power samples (W), or null.
+          nullable: true
+        POWER_BALANCE:
+          description: Left/right power balance samples, or null.
+          nullable: true
+        LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE:
+          description: Left-pedal crank force samples, or null.
           nullable: true
         RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE:
+          description: Right-pedal crank force samples, or null.
           nullable: true
-        HEART_RATE:
+        STRIDE_LENGTH:
+          description: Stride-length samples (m), or null.
           nullable: true
+        TEMPERATURE:
+          description: Ambient temperature samples (°C), or null.
+          nullable: true
+        BODY_TEMPERATURE:
+          description: Body temperature samples (°C), or null.
+          nullable: true
+      example:
+        HEART_RATE: null
+        TEMPERATURE: null
+        CADENCE: null
+        RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE: null
+        STRIDE_LENGTH: null
+        ALTITUDE: null
+        SPEED: null
+        BODY_TEMPERATURE: null
+        POWER: null
+        DISTANCE: null
+        POWER_BALANCE: null
+        LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE: null
     SessionDetails:
       type: object
       description: 'Response of GET /api/training/analysis/{id}/details. Time-series
@@ -2657,8 +3247,11 @@ components:
         id:
           type: integer
           format: int64
+          description: Training session id (matches the `{id}` in the path).
+          example: 8349588454
         periodDataUuid:
           type: string
+          description: UUID of associated period data; null when none.
           nullable: true
         exercises:
           type: object
@@ -2697,8 +3290,8 @@ components:
                 type: array
                 items: {}
         periodData:
-          type: object
-          nullable: true
+          description: Opaque per-period payload; null when absent. Left untyped (free-form) so it accepts both null and an
+            object, since ogen does not honour nullable on an empty object schema.
         swimDatas:
           type: object
           description: Per-exercise swim metrics; empty unless swim sport.
@@ -2729,6 +3322,48 @@ components:
 
             '
           additionalProperties: true
+      example:
+        id: 8349588454
+        periodDataUuid: null
+        exercises:
+          '8379162593':
+            id: 8379162593
+            sport:
+              id: 1
+            startTime: '2026-05-28T08:00:00'
+            stopTime: '2026-05-28T08:30:00'
+            duration: PT30M
+            distance: 5000
+            calories: 350
+            trainingStatistic:
+              HEART_RATE:
+                max: 0
+                avg: 0
+                min: null
+            sportParent: RUNNING
+            defaultSpeedViewSettings: PACE
+        samples:
+          '8379162593':
+            HEART_RATE: null
+            SPEED: null
+            CADENCE: null
+            ALTITUDE: null
+            POWER: null
+            DISTANCE: null
+        zones:
+          '8379162593': {}
+        laps:
+          '8379162593':
+            automaticLaps: []
+            manualLaps: []
+        periodData: null
+        swimDatas: {}
+        pauseTimeData:
+          '8379162593': []
+        defaultHrZones:
+          '8379162593': []
+        errors: {}
+        exerciseResultTargetData: {}
     RoutePoint:
       type: object
       description: One trackpoint of a route.
@@ -2754,6 +3389,11 @@ components:
             (haversine on lat/lon). The first point is `0`.
 
             '
+      example:
+        latitude: 48.8576
+        longitude: 2.3532
+        altitude: 36
+        distance: 133.10381572631718
     RouteImport:
       type: object
       description: 'Request body for POST /api/favorites/trainingTargets/importRoute.
@@ -2789,6 +3429,19 @@ components:
             cumulative `distance`.
 
             '
+      example:
+        route:
+        - latitude: 48.8566
+          longitude: 2.3522
+          altitude: 35
+          distance: 0
+        - latitude: 48.8576
+          longitude: 2.3532
+          altitude: 36
+          distance: 133.10381572631718
+        sport: null
+        name: doc-route
+        distance: 532.4104430899847
     Waypoint:
       type: object
       description: 'Read-back waypoint shape. Field names differ from the upload
@@ -2809,10 +3462,13 @@ components:
       properties:
         latitude:
           type: number
+          description: WGS84 latitude, degrees.
         longitude:
           type: number
+          description: WGS84 longitude, degrees.
         altitude:
           type: number
+          description: Elevation in metres above sea level.
         time:
           type: integer
           description: 'Sequence index in milliseconds (0, 1000, 2000, …). NOT actual
@@ -2822,6 +3478,11 @@ components:
             timestamps.
 
             '
+      example:
+        longitude: 2.3532
+        latitude: 48.8576
+        altitude: 36
+        time: 1000
     GpsRoute:
       type: object
       description: 'Full route geometry. Returned by
@@ -2846,19 +3507,24 @@ components:
           nullable: true
         user:
           type: object
+          description: Owner reference.
           required:
           - id
           properties:
             id:
               type: integer
               format: int64
+              description: Owning user's numeric id.
         name:
           type: string
+          description: Route name (from the imported file's metadata).
         parentRouteId:
           type: integer
+          description: Parent route id for derived routes; null for top-level imports.
           nullable: true
         order:
           type: integer
+          description: Ordering hint; observed null.
           nullable: true
         distance:
           type: number
@@ -2867,8 +3533,31 @@ components:
           $ref: '#/components/schemas/Waypoint'
         waypoints:
           type: array
+          description: Ordered track points. The server synthesizes `time` as a 1000ms sequence index.
           items:
             $ref: '#/components/schemas/Waypoint'
+      example:
+        id: null
+        user:
+          id: 11111111
+        startPoint:
+          longitude: 2.3522
+          latitude: 48.8566
+          altitude: 35
+          time: 0
+        name: doc-route
+        order: null
+        parentRouteId: null
+        waypoints:
+        - longitude: 2.3522
+          latitude: 48.8566
+          altitude: 35
+          time: 0
+        - longitude: 2.3532
+          latitude: 48.8576
+          altitude: 36
+          time: 1000
+        distance: 532.4104430899847
     FavoriteExerciseTarget:
       type: object
       description: 'Response of GET /api/favorites/exerciseTarget/{exerciseTargetId}.
@@ -2882,7 +3571,8 @@ components:
         id:
           type: integer
           format: int64
-          description: exerciseTargetId
+          description: exerciseTargetId (the inner id — pass THIS, not favoriteId, in the URL).
+          example: 1530890883
         type:
           type: string
           enum:
@@ -2890,16 +3580,18 @@ components:
           - STEADY_RACE_PACE
           - PHASED
           - ROUTE
+          description: Favorite kind. `ROUTE` carries GPS geometry in `gpsRoute`.
         distance:
           type: number
-          description: Metres
+          description: Total distance in metres, or null.
           nullable: true
         duration:
           type: string
-          description: HH:MM:SS or null
+          description: HH:MM:SS or null. Null for ROUTE favorites.
           nullable: true
         kiloCalories:
           type: integer
+          description: Target kcal, or null.
           nullable: true
         index:
           type: integer
@@ -2911,6 +3603,7 @@ components:
           nullable: true
         created:
           type: string
+          description: Creation timestamp; observed null in captures — TBD.
           nullable: true
         segmentId:
           type: integer
@@ -2934,6 +3627,41 @@ components:
           - $ref: '#/components/schemas/GpsRoute'
           - type: 'null'
           description: GPS geometry. Present (non-null) for ROUTE type.
+      example:
+        distance: 532.4104430899847
+        duration: null
+        id: 1530890883
+        index: null
+        kiloCalories: null
+        modified: null
+        created: null
+        type: ROUTE
+        routeServiceRoute: null
+        segmentId: null
+        gpsRoute:
+          id: null
+          user:
+            id: 11111111
+          startPoint:
+            longitude: 2.3522
+            latitude: 48.8566
+            altitude: 35
+            time: 0
+          name: doc-route
+          order: null
+          parentRouteId: null
+          waypoints:
+          - longitude: 2.3522
+            latitude: 48.8566
+            altitude: 35
+            time: 0
+          - longitude: 2.3532
+            latitude: 48.8576
+            altitude: 36
+            time: 1000
+          distance: 532.4104430899847
+        favoritePhases: []
+        sport: null
     FavoriteCreate:
       type: object
       description: 'Request body for POST /api/favoritetarget. Identical to
@@ -2954,14 +3682,29 @@ components:
           - VOLUME
           - STEADY_RACE_PACE
           - PHASED
+          description: Favorite kind — see TrainingTargetCreate.type for the per-value field rules.
         name:
           type: string
+          description: Favorite display name (required).
         description:
           type: string
+          description: Free-text notes; send empty string when none.
         exerciseTargets:
           type: array
+          description: 'One block per exercise; send `id: null` on each (server assigns).'
           items:
             $ref: '#/components/schemas/ExerciseTarget'
+      example:
+        type: VOLUME
+        name: doc-fav-distance
+        description: seed for capture
+        exerciseTargets:
+        - sportId: 1
+          distance: 5000
+          calories: null
+          duration: null
+          phases: []
+          id: null
     Favorite:
       type: object
       description: 'Response body of GET /api/favoritetarget/{id} and request body of
@@ -2982,12 +3725,16 @@ components:
           - VOLUME
           - STEADY_RACE_PACE
           - PHASED
+          description: Favorite kind (same set as a training target; no datetime).
         name:
           type: string
+          description: Favorite display name.
         description:
           type: string
+          description: Free-text notes; empty string when not set.
         exerciseTargets:
           type: array
+          description: One block per exercise (multi-sport favorites have several).
           items:
             allOf:
             - $ref: '#/components/schemas/ExerciseTarget'
@@ -2996,6 +3743,18 @@ components:
                 index:
                   type: integer
                   description: Position within the exerciseTargets array.
+      example:
+        name: doc-fav-distance
+        description: seed for capture
+        type: VOLUME
+        exerciseTargets:
+        - id: 1530890882
+          duration: null
+          distance: 5000
+          calories: null
+          index: 0
+          sportId: 1
+          phases: []
     FavoriteListing:
       type: object
       description: 'One element of `GET /api/favorites.targets[]`. Uses a different
@@ -3018,11 +3777,16 @@ components:
           type: string
           description: 'UPPERCASE sport enum (e.g. `"RUNNING"`), NOT the locale-resolved
 
-            display string. Map to localized name via /api/sports/sports.
+            display string. Map to localized name via /api/sports/sports. Null for
+
+            ROUTE favorites (sport-agnostic).
 
             '
+          nullable: true
         sportId:
           type: integer
+          description: Numeric sport id. Null for ROUTE favorites.
+          nullable: true
         type:
           type: string
           enum:
@@ -3037,8 +3801,11 @@ components:
             '
         favoriteName:
           type: string
+          description: User-given favorite name.
         favoriteDescription:
           type: string
+          description: Free-text notes. Empty string for training targets; null for ROUTE favorites.
+          nullable: true
         duration:
           type: integer
           description: 'Duration in **milliseconds** (or null). NB: differs from
@@ -3053,26 +3820,54 @@ components:
           nullable: true
         calories:
           type: integer
+          description: Target kcal, or null.
           nullable: true
         segmentId:
           type: integer
+          description: Strava segment id; populated only for Strava-segment favorites.
           nullable: true
         segmentType:
           type: string
+          description: Strava segment type; null for non-segment favorites.
           nullable: true
         routeSource:
           type: string
+          description: 'Origin of a ROUTE favorite. `"FLOW_FILE_IMPORT"` for GPX/TCX uploads; null for non-route favorites.
+            Strava/Komoot route imports use other values (TBD).
+
+            '
+          example: FLOW_FILE_IMPORT
           nullable: true
         externalRouteIdentifier:
           type: string
+          description: Polar's internal UUID for an imported route; null for non-routes.
           nullable: true
         supportedDevices:
           type: array
           items: {}
+          description: Devices that can use this favorite. Empty until a device is paired; element shape TBD.
         supportedDeviceIds:
           type: array
           items:
             type: integer
+          description: Ids of the supported devices.
+      example:
+        exerciseTargetId: 1530890882
+        favoriteId: 81424996
+        sportName: RUNNING
+        sportId: 1
+        type: VOLUME
+        segmentId: null
+        favoriteName: doc-fav-distance
+        favoriteDescription: seed for capture
+        duration: null
+        calories: null
+        distance: 5000
+        supportedDevices: []
+        supportedDeviceIds: []
+        routeSource: null
+        externalRouteIdentifier: null
+        segmentType: null
     FavoritesListing:
       type: object
       description: Response body of GET /api/favorites.
@@ -3083,24 +3878,76 @@ components:
       properties:
         hasErrors:
           type: boolean
+          description: True if the server hit an error assembling the listing; normally false.
+          example: false
         linkedServices:
           type: object
-          description: Third-party integration link status (booleans).
+          description: 'Per-provider third-party integration link status. `true` means the user has connected that service
+            to Flow (enables route/segment import from it).
+
+            '
           properties:
             strava:
               type: boolean
+              description: Strava account linked.
             komoot:
               type: boolean
+              description: Komoot account linked.
             nike:
               type: boolean
+              description: Nike account linked.
             myfitnesspal:
               type: boolean
+              description: MyFitnessPal account linked.
             trainingpeaks:
               type: boolean
+              description: TrainingPeaks account linked.
         targets:
           type: array
+          description: All favorites (training-target templates and ROUTE favorites).
           items:
             $ref: '#/components/schemas/FavoriteListing'
+      example:
+        hasErrors: false
+        linkedServices:
+          myfitnesspal: false
+          trainingpeaks: false
+          nike: false
+          komoot: false
+          strava: false
+        targets:
+        - exerciseTargetId: 1530890882
+          favoriteId: 81424996
+          sportName: RUNNING
+          sportId: 1
+          type: VOLUME
+          segmentId: null
+          favoriteName: doc-fav-distance
+          favoriteDescription: seed for capture
+          duration: null
+          calories: null
+          distance: 5000
+          supportedDevices: []
+          supportedDeviceIds: []
+          routeSource: null
+          externalRouteIdentifier: null
+          segmentType: null
+        - exerciseTargetId: 1530890883
+          favoriteId: 81424997
+          sportName: null
+          sportId: null
+          type: ROUTE
+          segmentId: null
+          favoriteName: doc-route
+          favoriteDescription: null
+          duration: null
+          calories: null
+          distance: 532.4104430899847
+          supportedDevices: []
+          supportedDeviceIds: []
+          routeSource: FLOW_FILE_IMPORT
+          externalRouteIdentifier: 3d0cd881-a910-4205-860e-9d016d05d268
+          segmentType: null
     FavoriteSimple:
       type: object
       description: 'Response element of GET /api/favorites/favoriteTargetsJson.
@@ -3182,8 +4029,32 @@ components:
             correct editor URL is `/target/favorite/{favoriteId}`.
 
             '
+      example:
+        id: 81424996
+        name: doc-fav-distance
+        sport:
+          id: 1
+          name: RUNNING
+          localizedName: null
+          defaultSpeedViewSetting: PACE
+          sportType: SINGLE_SPORT
+          iconUrl: null
+          powerZonesRelevant: true
+          tapActive: true
+        iconUrl: https://platform.cdn.polar.com/ecosystem/sport/icon/808d0882e97375e68844ec6c5417ea33-2024-04-16_06_01_39
+        description: seed for capture
+        date: ''
+        time: ''
+        distance: '5.0'
+        duration: ''
+        kiloCalories: ''
+        url: /target/81424996
     UserIdentity:
       type: object
+      description: 'Core identity block for the signed-in user, returned under `user` in `GET /api/account/users/current/user`.
+        Holds login, display name, numeric id and country — not fitness data (see PhysicalInfo for that).
+
+        '
       required:
       - userName
       - id
@@ -3192,20 +4063,28 @@ components:
           type: string
           format: email
           description: The email address used for login.
+          example: athlete@example.com
         firstName:
           type: string
+          description: Given name as entered in the profile.
+          example: Alex
         lastName:
           type: string
+          description: Family name as entered in the profile.
+          example: Doe
         nickName:
           type: string
+          description: Optional display nickname; null when unset.
           nullable: true
         id:
           type: integer
           format: int64
           description: Numeric user ID. Use as `userId` in POST /api/training/history.
+          example: 11111111
         pictureUrl:
           type: string
           format: uri
+          description: Profile photo URL; null when no photo has been uploaded.
           nullable: true
         country:
           type: string
@@ -3213,6 +4092,11 @@ components:
           example: FR
     LocalizationInfo:
       type: object
+      description: 'The signed-in user''s locale and display-formatting preferences, returned under `localizationInfo` in
+        `GET /api/account/users/current/user`. These drive how the Flow UI renders dates, times and units — they do not change
+        the wire format of API payloads (which use fixed formats regardless). Captured 2026-05-29 (capture 17-current-user.json).
+
+        '
       properties:
         firstDayOfWeek:
           type: string
@@ -3220,42 +4104,57 @@ components:
           - MONDAY
           - SUNDAY
           - SATURDAY
+          description: First day shown in calendar/week views.
+          example: MONDAY
         measurementUnit:
           type: string
           enum:
           - METRIC
           - IMPERIAL
+          description: Unit system for displayed distances/weights (display only — API stays metric).
+          example: METRIC
         dateFormat:
           type: string
           enum:
           - DAY_MONTH_YEAR
           - MONTH_DAY_YEAR
           - YEAR_MONTH_DAY
+          description: Field ordering for rendered dates.
+          example: DAY_MONTH_YEAR
         dateSeparator:
           type: string
           enum:
           - HYPHEN
           - SLASH
           - DOT
+          description: Separator character between date fields (`-`, `/`, `.`).
+          example: HYPHEN
         timeFormat:
           type: string
           enum:
           - TIMEFORMAT_24
           - TIMEFORMAT_12
+          description: 24-hour vs 12-hour clock display.
+          example: TIMEFORMAT_24
         timeFormatSeparator:
           type: string
           enum:
           - COLON
           - PERIOD
+          description: Separator between hours and minutes (`:` or `.`).
+          example: COLON
         timeZone:
           type: string
           description: UTC offset, e.g. `"-02:00"` or `"+02:00"`.
+          example: -02:00
         flowLanguage:
           type: string
-          description: UI language (ISO 639-1).
+          description: UI language (ISO 639-1). Drives localized strings such as sport names.
+          example: fr
         userAgentLanguage:
           type: string
           description: Browser locale at registration (ISO 639-1).
+          example: en
     PhysicalInfo:
       type: object
       description: 'Fitness/health parameters used to derive zones and training
@@ -3276,9 +4175,9 @@ components:
           maxItems: 3
           description: '[year, month, day] — NOT ISO date.'
           example:
-          - 1995
-          - 11
-          - 2
+          - 1990
+          - 1
+          - 1
         sex:
           type: string
           enum:
@@ -3367,18 +4266,62 @@ components:
           items: {}
           description: 'Per-sport profile configurations. Empty `[]` for the test account
 
-            — shape TBD.
+            — element shape TBD (no device-synced sport profiles to observe).
 
             '
         applicationRoles:
           type: array
           items: {}
+          description: 'Granted application roles (e.g. Coach). Empty `[]` for a plain free account; element shape TBD.
+
+            '
         capabilities:
           type: array
           items: {}
+          description: 'Account-level feature capabilities. Empty `[]` on the free test account; element shape TBD. (See GET
+            /api/features-available for per-feature flags.)
+
+            '
         productCapabilities:
           type: array
           items: {}
+          description: 'Capabilities derived from paired Polar products. Empty `[]` with no device; element shape TBD.
+
+            '
+      example:
+        user:
+          userName: athlete@example.com
+          firstName: Alex
+          lastName: Doe
+          nickName: null
+          id: 11111111
+          pictureUrl: null
+          country: FR
+        localizationInfo:
+          firstDayOfWeek: MONDAY
+          measurementUnit: METRIC
+          dateFormat: DAY_MONTH_YEAR
+          dateSeparator: HYPHEN
+          timeFormat: TIMEFORMAT_24
+          timeFormatSeparator: COLON
+          timeZone: -02:00
+          flowLanguage: fr
+          userAgentLanguage: en
+        physicalInfo:
+          birthday:
+          - 1990
+          - 1
+          - 1
+          sex: MALE
+          trainingBackground: REGULAR
+          weight: 70
+          height: 175
+          functionalThresholdPower: 200
+          maximumAerobicPower: 350
+        sportProfiles: []
+        applicationRoles: []
+        capabilities: []
+        productCapabilities: []
     ActivityMiniPoint:
       type: object
       description: A single `{time, value}` mini-chart data point.
@@ -3390,6 +4333,10 @@ components:
         value:
           type: number
           format: float
+          description: Metric value at that instant (units depend on the series).
+      example:
+        time: 1779580800000
+        value: 0
     ActivityTimelineDay:
       type: object
       description: 'Daily activity rollup with timeline samples. On an account with no
@@ -3584,6 +4531,74 @@ components:
               type: string
             sleepAvgReportUrl:
               type: string
+      example:
+        dataPanelData:
+          dailyActivityGoal: 0
+          activeTime: 0
+          distanceFromSteps: 0
+          stepCount: 0
+          kiloCalories: 0
+          sleepDuration: 0
+          inactivityAlertCount: 0
+          sleepPlus: false
+        activityGraphData:
+          lastSync: null
+          activityTimelineSamples: []
+          activityTimelineIcons: []
+          activityZoneLimits:
+          - 0
+          - 3.465179681777954
+          - 6.930359363555908
+          - 10.395539045333862
+          - 14.727013647556305
+          - 19.924783170223236
+          - 30.3203222155571
+          heartRateTimelineSamples: []
+          heartRateSummary:
+            dayMinimum: 0
+            dayMinimumDateTime: null
+            dayMaximum: 0
+            dayMaximumDateTime: null
+            nightMinimum: 0
+            nightMinimumDateTime: null
+          highSessionTimelineList: []
+          trainingTimelineList: []
+        activityScoreData:
+          sleepDuration: 0
+          sedentaryDuration: 0
+          lightDuration: 0
+          moderateDuration: 0
+          vigorousDuration: 0
+        activityBenefitFeedbackData:
+          mvpa: NONE
+          sitting: NONE
+          improves: []
+          promotes: []
+          aids: []
+        miniGraphData:
+          sampleDate: 1779580800000
+          data:
+            date: 1779580800000
+            sleepPlus: false
+            calories:
+              time: 1779580800000
+              value: 0
+            dailyGoal:
+              time: 1779580800000
+              value: 0
+            distance:
+              time: 1779580800000
+              value: 0
+            sleepAverage:
+              time: 1779580800000
+              value: 0
+            nightLowHr:
+              time: 1779580800000
+              value: 0
+          calorieReportUrl: /training/report/activity/time/week/day/20260518/20260524?barChart=activityGoalCompletion&lineCharts=activityCalories
+          dailyGoalReportUrl: /training/report/activity/time/week/day/20260518/20260524?barChart=activityGoalCompletion&lineCharts=inactivityAlertCount
+          distanceReportUrl: /training/report/activity/time/week/day/20260518/20260524?barChart=activityDistance&lineCharts=activitySteps
+          sleepAvgReportUrl: /training/report/activity/time/week/day/20260518/20260524?barChart=sleep&lineCharts=
     ActivityTimelineByDate:
       type: object
       description: 'Map of `YYYY-MM-DD` → `ActivityTimelineDay`. Returned by both
@@ -3816,6 +4831,12 @@ components:
           format: float
           description: Raw value the percent was computed from (seconds, count, or metres depending on which metric list this
             is in).
+      example:
+        sportName: Course à pied
+        distributionPercent: 100
+        nameForChart: Course à pied
+        percentForChart: 100
+        valueForChart: 0
     StandardDuration:
       type: object
       description: 'Polar''s Joda/JSR-310-style serialized duration. Carries the wall-clock
@@ -3857,6 +4878,12 @@ components:
           type: integer
           format: int64
           description: Canonical total duration in milliseconds.
+      example:
+        standardDays: 0
+        standardHours: 0
+        standardMinutes: 30
+        standardSeconds: 0
+        millis: 1800000
     ProgressViewSummary:
       type: object
       description: 'Aggregated training totals over a date range. Returned by both
@@ -3976,6 +5003,70 @@ components:
           type: number
           format: float
           description: Cumulative descent in metres.
+      example:
+        sportDistributions:
+          duration:
+          - sportName: Aucune donnée relative au sport
+            distributionPercent: 100
+            nameForChart: Aucune donnée relative au sport
+            percentForChart: 100
+            valueForChart: 0
+          sessions:
+          - sportName: Aucune donnée relative au sport
+            distributionPercent: 100
+            nameForChart: Aucune donnée relative au sport
+            percentForChart: 100
+            valueForChart: 0
+          distance:
+          - sportName: Aucune donnée relative au sport
+            distributionPercent: 100
+            nameForChart: Aucune donnée relative au sport
+            percentForChart: 100
+            valueForChart: 0
+        trainingBenefitDistributionList:
+        - trainingBenefit: NONE
+          distributionPercent: 100
+          trainingBenefitTotal: 0
+          nameForChart: NONE
+          percentForChart: 100
+        totalHeartRateZoneList: []
+        totalFitFatZonesList: []
+        totalPowerZoneList: []
+        totalSpeedZoneList: []
+        totalTrainingSessionCount: 0
+        totalDistance: 0
+        totalDuration:
+          standardDays: 0
+          standardHours: 0
+          standardMinutes: 0
+          standardSeconds: 0
+          millis: 0
+        totalCalories: 0
+        totalAscent: 0
+        totalDescent: 0
   responses:
     Unauthorized:
-      description: Session cookie missing or expired
+      description: 'Session cookie missing or expired. The body is a small JSON object with an `error` code and a `redirect`
+        target (verified 2026-05-29 against `GET /api/account/users/current/user` with no valid session).
+
+
+        ⚠ Distinct failure mode: an `/api/*` **write** sent without the `X-Requested-With: XMLHttpRequest` header is rejected
+        by Play''s CSRF filter with **403** and an HTML `Unauthorized` body — not this JSON 401. Don''t conflate the two.
+
+        '
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                description: Error code, e.g. `NotAuthenticated`.
+              redirect:
+                type: string
+                description: Path the web app should redirect to (the login page).
+            required:
+            - error
+          example:
+            error: NotAuthenticated
+            redirect: /

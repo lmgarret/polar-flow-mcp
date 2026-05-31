@@ -362,10 +362,10 @@ func (s *CalendarEvent) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
-		if value, ok := s.AllDay.Get(); ok {
+		if value, ok := s.Calories.Get(); ok {
 			if err := func() error {
-				if err := value.Validate(); err != nil {
-					return err
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
 				}
 				return nil
 			}(); err != nil {
@@ -375,7 +375,25 @@ func (s *CalendarEvent) Validate() error {
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "allDay",
+			Name:  "calories",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Distance.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "distance",
 			Error: err,
 		})
 	}
@@ -383,17 +401,6 @@ func (s *CalendarEvent) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
-}
-
-func (s CalendarEventAllDay) Validate() error {
-	switch s {
-	case "true":
-		return nil
-	case "false":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
 }
 
 func (s *CurrentUserResponse) Validate() error {
@@ -1103,6 +1110,78 @@ func (s GetSleepReportOKApplicationJSON) Validate() error {
 	return nil
 }
 
+func (s *GetTrainingTargetOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Type.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "type",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.ExerciseTargets == nil {
+			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    1,
+			MinLengthSet: true,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.ExerciseTargets)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.ExerciseTargets {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "exerciseTargets",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s GetTrainingTargetOKType) Validate() error {
+	switch s {
+	case "VOLUME":
+		return nil
+	case "STEADY_RACE_PACE":
+		return nil
+	case "PHASED":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s *GpsRoute) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -1454,6 +1533,24 @@ func (s *PhaseLeaf) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.ID.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "id",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if err := s.PhaseType.Validate(); err != nil {
 			return err
 		}
@@ -1520,7 +1617,7 @@ func (s *PhaseLeaf) Validate() error {
 			if err := func() error {
 				if err := (validate.Float{
 					MinSet:        true,
-					Min:           1,
+					Min:           0,
 					MaxSet:        true,
 					Max:           5,
 					MinExclusive:  false,
@@ -1548,7 +1645,7 @@ func (s *PhaseLeaf) Validate() error {
 			if err := func() error {
 				if err := (validate.Float{
 					MinSet:        true,
-					Min:           1,
+					Min:           0,
 					MaxSet:        true,
 					Max:           5,
 					MinExclusive:  false,
@@ -1643,7 +1740,7 @@ func (s *PhaseRepeat) Validate() error {
 	if err := func() error {
 		if err := (validate.Int{
 			MinSet:        true,
-			Min:           2,
+			Min:           1,
 			MaxSet:        false,
 			Max:           0,
 			MinExclusive:  false,
@@ -1664,6 +1761,14 @@ func (s *PhaseRepeat) Validate() error {
 	if err := func() error {
 		if s.Phases == nil {
 			return errors.New("nil is invalid value")
+		}
+		if err := (validate.Array{
+			MinLength:    1,
+			MinLengthSet: true,
+			MaxLength:    0,
+			MaxLengthSet: false,
+		}).ValidateLength(len(s.Phases)); err != nil {
+			return errors.Wrap(err, "array")
 		}
 		var failures []validate.FieldError
 		for i, elem := range s.Phases {
@@ -1686,6 +1791,24 @@ func (s *PhaseRepeat) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "phases",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ID.Get(); ok {
+			if err := func() error {
+				if err := (validate.Float{}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "id",
 			Error: err,
 		})
 	}
