@@ -13921,9 +13921,9 @@ func (s *SessionSummary) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.TrainingLoadPro.Set {
+		if len(s.TrainingLoadPro) != 0 {
 			e.FieldStart("trainingLoadPro")
-			s.TrainingLoadPro.Encode(e)
+			e.Raw(s.TrainingLoadPro)
 		}
 	}
 	{
@@ -14277,8 +14277,9 @@ func (s *SessionSummary) Decode(d *jx.Decoder) error {
 			}
 		case "trainingLoadPro":
 			if err := func() error {
-				s.TrainingLoadPro.Reset()
-				if err := s.TrainingLoadPro.Decode(d); err != nil {
+				v, err := d.RawAppend(nil)
+				s.TrainingLoadPro = jx.Raw(v)
+				if err != nil {
 					return err
 				}
 				return nil

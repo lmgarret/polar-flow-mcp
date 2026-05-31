@@ -3038,9 +3038,8 @@ components:
           description: Minutes from UTC; null for manual sessions.
           nullable: true
         trainingLoadPro:
-          type: number
-          description: Premium-tier variant; null on free accounts.
-          nullable: true
+          description: Premium-tier training load. Null on free accounts, but a populated object on premium accounts — left
+            untyped (free-form) to accept either.
         exercises:
           type: object
           description: 'Object **keyed by exerciseId** (not an array). Usually a

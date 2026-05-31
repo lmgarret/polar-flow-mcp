@@ -8720,8 +8720,9 @@ type SessionSummary struct {
 	HrAverage         OptNilInt     `json:"hrAverage"`
 	// Minutes from UTC; null for manual sessions.
 	TimezoneOffset OptNilInt `json:"timezoneOffset"`
-	// Premium-tier variant; null on free accounts.
-	TrainingLoadPro OptNilFloat64 `json:"trainingLoadPro"`
+	// Premium-tier training load. Null on free accounts, but a populated object on premium accounts —
+	// left untyped (free-form) to accept either.
+	TrainingLoadPro jx.Raw `json:"trainingLoadPro"`
 	// Object **keyed by exerciseId** (not an array). Usually a
 	// single entry; multi-sport sessions have multiple.
 	Exercises      OptSessionSummaryExercises `json:"exercises"`
@@ -8852,7 +8853,7 @@ func (s *SessionSummary) GetTimezoneOffset() OptNilInt {
 }
 
 // GetTrainingLoadPro returns the value of TrainingLoadPro.
-func (s *SessionSummary) GetTrainingLoadPro() OptNilFloat64 {
+func (s *SessionSummary) GetTrainingLoadPro() jx.Raw {
 	return s.TrainingLoadPro
 }
 
@@ -9032,7 +9033,7 @@ func (s *SessionSummary) SetTimezoneOffset(val OptNilInt) {
 }
 
 // SetTrainingLoadPro sets the value of TrainingLoadPro.
-func (s *SessionSummary) SetTrainingLoadPro(val OptNilFloat64) {
+func (s *SessionSummary) SetTrainingLoadPro(val jx.Raw) {
 	s.TrainingLoadPro = val
 }
 

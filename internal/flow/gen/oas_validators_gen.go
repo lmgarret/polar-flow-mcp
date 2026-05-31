@@ -3056,24 +3056,6 @@ func (s *SessionSummary) Validate() error {
 		})
 	}
 	if err := func() error {
-		if value, ok := s.TrainingLoadPro.Get(); ok {
-			if err := func() error {
-				if err := (validate.Float{}).Validate(float64(value)); err != nil {
-					return errors.Wrap(err, "float")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "trainingLoadPro",
-			Error: err,
-		})
-	}
-	if err := func() error {
 		if value, ok := s.Exercises.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
