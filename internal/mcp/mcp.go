@@ -339,6 +339,9 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"scheduled training targets (type \"TRAININGTARGET\"), and other diary items. "+
 				"Lower-level than list_training_targets / list_training_sessions; reach for "+
 				"those typed tools first and use this when you need the unfiltered calendar. "+
+				"Note: fields are polymorphic by event type — `start` is an ISO 8601 string "+
+				"for TRAININGTARGET events but a numeric epoch (seconds) for EXERCISE events, "+
+				"and `allDay` may be a boolean or a string. "+
 				"Default range: today through +30 days.",
 		),
 		mcpgo.WithString("from_date",
