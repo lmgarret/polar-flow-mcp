@@ -3146,7 +3146,7 @@ func (s *SleepNight) Validate() error {
 	if err := func() error {
 		if value, ok := s.SleepScore.Get(); ok {
 			if err := func() error {
-				if err := (validate.Int{
+				if err := (validate.Float{
 					MinSet:        true,
 					Min:           0,
 					MaxSet:        true,
@@ -3154,10 +3154,10 @@ func (s *SleepNight) Validate() error {
 					MinExclusive:  false,
 					MaxExclusive:  false,
 					MultipleOfSet: false,
-					MultipleOf:    0,
+					MultipleOf:    nil,
 					Pattern:       nil,
-				}).Validate(int64(value)); err != nil {
-					return errors.Wrap(err, "int")
+				}).Validate(float64(value)); err != nil {
+					return errors.Wrap(err, "float")
 				}
 				return nil
 			}(); err != nil {

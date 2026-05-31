@@ -297,13 +297,16 @@ func (s *ActivityTimelineDayActivityGraphData) SetTrainingTimelineList(val []jx.
 type ActivityTimelineDayActivityGraphDataHeartRateSummary struct {
 	// Lowest HR during waking hours.
 	DayMinimum OptInt `json:"dayMinimum"`
-	// ISO timestamp of `dayMinimum`. Null when no data.
-	DayMinimumDateTime OptNilString `json:"dayMinimumDateTime"`
-	DayMaximum         OptInt       `json:"dayMaximum"`
-	DayMaximumDateTime OptNilString `json:"dayMaximumDateTime"`
+	// Timestamp of `dayMinimum`; null when no data. Free-form — observed as a numeric epoch (and null),
+	//  not always an ISO string.
+	DayMinimumDateTime jx.Raw `json:"dayMinimumDateTime"`
+	DayMaximum         OptInt `json:"dayMaximum"`
+	// Timestamp of `dayMaximum`; null when no data. Free-form (numeric epoch or null).
+	DayMaximumDateTime jx.Raw `json:"dayMaximumDateTime"`
 	// Lowest HR during sleep.
-	NightMinimum         OptInt       `json:"nightMinimum"`
-	NightMinimumDateTime OptNilString `json:"nightMinimumDateTime"`
+	NightMinimum OptInt `json:"nightMinimum"`
+	// Timestamp of `nightMinimum`; null when no data. Free-form (numeric epoch or null).
+	NightMinimumDateTime jx.Raw `json:"nightMinimumDateTime"`
 }
 
 // GetDayMinimum returns the value of DayMinimum.
@@ -312,7 +315,7 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) GetDayMinimum() O
 }
 
 // GetDayMinimumDateTime returns the value of DayMinimumDateTime.
-func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) GetDayMinimumDateTime() OptNilString {
+func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) GetDayMinimumDateTime() jx.Raw {
 	return s.DayMinimumDateTime
 }
 
@@ -322,7 +325,7 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) GetDayMaximum() O
 }
 
 // GetDayMaximumDateTime returns the value of DayMaximumDateTime.
-func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) GetDayMaximumDateTime() OptNilString {
+func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) GetDayMaximumDateTime() jx.Raw {
 	return s.DayMaximumDateTime
 }
 
@@ -332,7 +335,7 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) GetNightMinimum()
 }
 
 // GetNightMinimumDateTime returns the value of NightMinimumDateTime.
-func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) GetNightMinimumDateTime() OptNilString {
+func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) GetNightMinimumDateTime() jx.Raw {
 	return s.NightMinimumDateTime
 }
 
@@ -342,7 +345,7 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) SetDayMinimum(val
 }
 
 // SetDayMinimumDateTime sets the value of DayMinimumDateTime.
-func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) SetDayMinimumDateTime(val OptNilString) {
+func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) SetDayMinimumDateTime(val jx.Raw) {
 	s.DayMinimumDateTime = val
 }
 
@@ -352,7 +355,7 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) SetDayMaximum(val
 }
 
 // SetDayMaximumDateTime sets the value of DayMaximumDateTime.
-func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) SetDayMaximumDateTime(val OptNilString) {
+func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) SetDayMaximumDateTime(val jx.Raw) {
 	s.DayMaximumDateTime = val
 }
 
@@ -362,7 +365,7 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) SetNightMinimum(v
 }
 
 // SetNightMinimumDateTime sets the value of NightMinimumDateTime.
-func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) SetNightMinimumDateTime(val OptNilString) {
+func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) SetNightMinimumDateTime(val jx.Raw) {
 	s.NightMinimumDateTime = val
 }
 
@@ -9207,18 +9210,20 @@ type SleepNight struct {
 	SleepStartOffset int `json:"sleepStartOffset"`
 	// Offset in seconds added to `sleepEndTime` (wake-up offset).
 	SleepEndOffset int `json:"sleepEndOffset"`
-	// Overall sleep score 0–100. The JS bundle treats `0` as "no score"
-	// (excluded from averages). Polar's marketing calls this "Sleep Score".
-	SleepScore OptInt `json:"sleepScore"`
+	// Overall sleep score 0–100 (a float, e.g. 72.5762). The JS bundle treats
+	// `0` as "no score" (excluded from averages). Polar calls this "Sleep Score".
+	SleepScore OptFloat64 `json:"sleepScore"`
+	// Bucketed class of `continuityIndex` (integer); null when no data.
+	ContinuityClass OptNilInt `json:"continuityClass"`
 	// Count of detected sleep cycles. Used in the summary table.
 	SleepCycles OptNilInt `json:"sleepCycles"`
 	// Sleep continuity rating, 1–5. The UI renders it as `"<n>/5"`. Polar
 	// calls this "Sleep continuity". # TODO: verify exact bounds / precision.
 	ContinuityIndex OptNilFloat64 `json:"continuityIndex"`
-	// User-provided sleep rating (a "how well did I sleep?" star/number).
-	// Indexes into a localised label table in the UI. # TODO: enum once
-	// observed.
-	SleepRating OptNilInt `json:"sleepRating"`
+	// User-provided sleep rating as a string enum (e.g.
+	// "SLEPT_NEITHER_BAD_NOR_WELL"); null when unset. Maps to a localised
+	// label in the UI.
+	SleepRating OptNilString `json:"sleepRating"`
 	// Time-series of sleep-state transitions detected by the device.
 	// Element shape inferred from JS:
 	// `{sleepWakeState: 1|2|3|4|…, offsetFromStart: <seconds>, longInterruption?: boolean}`.
@@ -9261,8 +9266,13 @@ func (s *SleepNight) GetSleepEndOffset() int {
 }
 
 // GetSleepScore returns the value of SleepScore.
-func (s *SleepNight) GetSleepScore() OptInt {
+func (s *SleepNight) GetSleepScore() OptFloat64 {
 	return s.SleepScore
+}
+
+// GetContinuityClass returns the value of ContinuityClass.
+func (s *SleepNight) GetContinuityClass() OptNilInt {
+	return s.ContinuityClass
 }
 
 // GetSleepCycles returns the value of SleepCycles.
@@ -9276,7 +9286,7 @@ func (s *SleepNight) GetContinuityIndex() OptNilFloat64 {
 }
 
 // GetSleepRating returns the value of SleepRating.
-func (s *SleepNight) GetSleepRating() OptNilInt {
+func (s *SleepNight) GetSleepRating() OptNilString {
 	return s.SleepRating
 }
 
@@ -9316,8 +9326,13 @@ func (s *SleepNight) SetSleepEndOffset(val int) {
 }
 
 // SetSleepScore sets the value of SleepScore.
-func (s *SleepNight) SetSleepScore(val OptInt) {
+func (s *SleepNight) SetSleepScore(val OptFloat64) {
 	s.SleepScore = val
+}
+
+// SetContinuityClass sets the value of ContinuityClass.
+func (s *SleepNight) SetContinuityClass(val OptNilInt) {
+	s.ContinuityClass = val
 }
 
 // SetSleepCycles sets the value of SleepCycles.
@@ -9331,7 +9346,7 @@ func (s *SleepNight) SetContinuityIndex(val OptNilFloat64) {
 }
 
 // SetSleepRating sets the value of SleepRating.
-func (s *SleepNight) SetSleepRating(val OptNilInt) {
+func (s *SleepNight) SetSleepRating(val OptNilString) {
 	s.SleepRating = val
 }
 

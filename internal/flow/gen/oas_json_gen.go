@@ -734,9 +734,9 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) encodeFields(e *j
 		}
 	}
 	{
-		if s.DayMinimumDateTime.Set {
+		if len(s.DayMinimumDateTime) != 0 {
 			e.FieldStart("dayMinimumDateTime")
-			s.DayMinimumDateTime.Encode(e)
+			e.Raw(s.DayMinimumDateTime)
 		}
 	}
 	{
@@ -746,9 +746,9 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) encodeFields(e *j
 		}
 	}
 	{
-		if s.DayMaximumDateTime.Set {
+		if len(s.DayMaximumDateTime) != 0 {
 			e.FieldStart("dayMaximumDateTime")
-			s.DayMaximumDateTime.Encode(e)
+			e.Raw(s.DayMaximumDateTime)
 		}
 	}
 	{
@@ -758,9 +758,9 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) encodeFields(e *j
 		}
 	}
 	{
-		if s.NightMinimumDateTime.Set {
+		if len(s.NightMinimumDateTime) != 0 {
 			e.FieldStart("nightMinimumDateTime")
-			s.NightMinimumDateTime.Encode(e)
+			e.Raw(s.NightMinimumDateTime)
 		}
 	}
 }
@@ -794,8 +794,9 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) Decode(d *jx.Deco
 			}
 		case "dayMinimumDateTime":
 			if err := func() error {
-				s.DayMinimumDateTime.Reset()
-				if err := s.DayMinimumDateTime.Decode(d); err != nil {
+				v, err := d.RawAppend(nil)
+				s.DayMinimumDateTime = jx.Raw(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -814,8 +815,9 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) Decode(d *jx.Deco
 			}
 		case "dayMaximumDateTime":
 			if err := func() error {
-				s.DayMaximumDateTime.Reset()
-				if err := s.DayMaximumDateTime.Decode(d); err != nil {
+				v, err := d.RawAppend(nil)
+				s.DayMaximumDateTime = jx.Raw(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -834,8 +836,9 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) Decode(d *jx.Deco
 			}
 		case "nightMinimumDateTime":
 			if err := func() error {
-				s.NightMinimumDateTime.Reset()
-				if err := s.NightMinimumDateTime.Decode(d); err != nil {
+				v, err := d.RawAppend(nil)
+				s.NightMinimumDateTime = jx.Raw(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -14680,6 +14683,12 @@ func (s *SleepNight) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.ContinuityClass.Set {
+			e.FieldStart("continuityClass")
+			s.ContinuityClass.Encode(e)
+		}
+	}
+	{
 		if s.SleepCycles.Set {
 			e.FieldStart("sleepCycles")
 			s.SleepCycles.Encode(e)
@@ -14715,18 +14724,19 @@ func (s *SleepNight) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSleepNight = [11]string{
+var jsonFieldsNameOfSleepNight = [12]string{
 	0:  "date",
 	1:  "sleepStartTime",
 	2:  "sleepEndTime",
 	3:  "sleepStartOffset",
 	4:  "sleepEndOffset",
 	5:  "sleepScore",
-	6:  "sleepCycles",
-	7:  "continuityIndex",
-	8:  "sleepRating",
-	9:  "sleepWakeStates",
-	10: "stages",
+	6:  "continuityClass",
+	7:  "sleepCycles",
+	8:  "continuityIndex",
+	9:  "sleepRating",
+	10: "sleepWakeStates",
+	11: "stages",
 }
 
 // Decode decodes SleepNight from json.
@@ -14807,6 +14817,16 @@ func (s *SleepNight) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"sleepScore\"")
+			}
+		case "continuityClass":
+			if err := func() error {
+				s.ContinuityClass.Reset()
+				if err := s.ContinuityClass.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"continuityClass\"")
 			}
 		case "sleepCycles":
 			if err := func() error {

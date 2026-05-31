@@ -4424,20 +4424,17 @@ components:
                   type: integer
                   description: Lowest HR during waking hours.
                 dayMinimumDateTime:
-                  type: string
-                  description: ISO timestamp of `dayMinimum`. Null when no data.
-                  nullable: true
+                  description: Timestamp of `dayMinimum`; null when no data. Free-form — observed as a numeric epoch (and
+                    null), not always an ISO string.
                 dayMaximum:
                   type: integer
                 dayMaximumDateTime:
-                  type: string
-                  nullable: true
+                  description: Timestamp of `dayMaximum`; null when no data. Free-form (numeric epoch or null).
                 nightMinimum:
                   type: integer
                   description: Lowest HR during sleep.
                 nightMinimumDateTime:
-                  type: string
-                  nullable: true
+                  description: Timestamp of `nightMinimum`; null when no data. Free-form (numeric epoch or null).
             highSessionTimelineList:
               type: array
               items: {}
@@ -4684,14 +4681,18 @@ components:
           type: integer
           description: Offset in seconds added to `sleepEndTime` (wake-up offset).
         sleepScore:
-          type: integer
+          type: number
           minimum: 0
           maximum: 100
-          description: 'Overall sleep score 0–100. The JS bundle treats `0` as "no score"
+          description: 'Overall sleep score 0–100 (a float, e.g. 72.5762). The JS bundle treats
 
-            (excluded from averages). Polar''s marketing calls this "Sleep Score".
+            `0` as "no score" (excluded from averages). Polar calls this "Sleep Score".
 
             '
+        continuityClass:
+          type: integer
+          description: Bucketed class of `continuityIndex` (integer); null when no data.
+          nullable: true
         sleepCycles:
           type: integer
           description: Count of detected sleep cycles. Used in the summary table.
@@ -4705,12 +4706,12 @@ components:
             '
           nullable: true
         sleepRating:
-          type: integer
-          description: 'User-provided sleep rating (a "how well did I sleep?" star/number).
+          type: string
+          description: 'User-provided sleep rating as a string enum (e.g.
 
-            Indexes into a localised label table in the UI. # TODO: enum once
+            "SLEPT_NEITHER_BAD_NOR_WELL"); null when unset. Maps to a localised
 
-            observed.
+            label in the UI.
 
             '
           nullable: true
