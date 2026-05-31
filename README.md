@@ -21,9 +21,16 @@ cp .env.example .env
 go run ./cmd/polar-flow-mcp
 ```
 
-The server logs into Polar Flow once on cold start, persists the session
-cookies to `./polar-cookies.json` (chmod 600), and re-uses them on subsequent
-runs. The password is held in memory only.
+The server binds its listener immediately and logs into Polar Flow lazily: on a
+cold start the login runs in a background warm-up (and again on the first request
+if needed), so the MCP handshake is never blocked behind the login round-trip.
+The session cookies are persisted to `./polar-cookies.json` (chmod 600) and
+re-used on subsequent runs. The password is held in memory only.
+
+> If you connect over HTTP (`"type": "http"` in your MCP client config), make
+> sure the server is already running and reachable at the URL before the client
+> connects — start the binary or `docker run` it first. The client expects a
+> live endpoint; it does not launch the process for you.
 
 ## Running with Docker
 
@@ -73,6 +80,25 @@ Pass `docker run` as the MCP command so Claude spawns the container itself:
   }
 }
 ```
+
+Two things are non-negotiable for the stdio spawn, and both must be present:
+
+- **`-i`** on `docker run` — without it the container's stdin is not attached, so
+  the client's JSON-RPC messages never reach the process.
+- **`TRANSPORT=stdio`** — the default is `http`, which makes the server listen on
+  a port and ignore stdin entirely.
+
+Also use `--rm` (not `--name`/`--restart`): the client spawns a fresh container
+per launch, and a leftover named container makes the next launch fail with
+"name already in use".
+
+> **Symptom of getting this wrong:** the client logs `initialize` and then, ~60s
+> later, `Request timed out` / `transport closed`, while the server's own logs
+> show `msg="polar-flow-mcp starting" transport=http`. That mismatch — the client
+> speaking stdio to an HTTP-mode server (or `docker run` missing `-i`) — means the
+> handshake never arrives. Add `-i` and `TRANSPORT=stdio`. The HTTP access log
+> (`msg="http: request" rpc_method=initialize`) only appears when a request
+> actually reaches the HTTP listener, so its absence confirms a stdio/http mixup.
 
 ### Docker Compose (Portainer / persistent server)
 

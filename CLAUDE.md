@@ -38,6 +38,7 @@ and silent refresh.
 | **`X-Requested-With: XMLHttpRequest` on every mutation** (any method ≠ GET, not just `/api/*`) | Play's CSRF filter whitelists this header. Required on `DELETE /training/target/{id}` too — that path sits outside `/api/*`. Without it: `403` with HTML body. Easy footgun. |
 | **Browser-fingerprint TLS + HTTP/2 for the login chain** (`azuretls` Chrome preset) and **for stdlib http.Client API calls** (`utls` Chrome ClientHello over `http2.Transport`) | `flow.polar.com` is behind a CloudFront WAF that inspects JA3/JA4 **and** HTTP/2 framing. Default Go net/http gets `403 X-Cache: Error from cloudfront` on `/flowSso/redirect`. uTLS alone (TLS only) is insufficient. |
 | **3-hop silent refresh on `401 {"error":"NotAuthenticated"}`** | Standard Polar Flow session-rotation path; falls back to full login if `session_id` on `auth.polar.com` has also expired. |
+| **Bind-first / deferred login** (`flow.New` never logs in; `EnsureSession` runs lazily from `transport.Do`, warmed up in a background goroutine) | A full login takes seconds (CloudFront WAF + redirect chain). Blocking startup on it blocks the listener from binding, which races the MCP client's `initialize` and times it out at 60s. Binding first makes the handshake instant. |
 | **Custom `ht.Client` transport wraps ogen's `gen.Client`** | Lets us inject `X-Requested-With`, the cookie jar, and the 401-retry without touching generated code. |
 
 ## Tech Stack

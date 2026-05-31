@@ -76,17 +76,20 @@ func New(ctx context.Context, cfg Config) (*Client, error) {
 		},
 	}
 
-	// Cold start: if we have no FLOW_SESSION at all, run a full login (or fail
-	// closed if credentials aren't supplied).
-	if !c.haveFlowSession() {
-		if cfg.Email == "" || cfg.Password == "" {
-			return nil, ErrNotLinked
-		}
-		c.logger.Info("flow: no cookie jar — running full login")
-		if err := fullLogin(ctx, c.httpClient, cfg.Email, cfg.Password); err != nil {
-			return nil, err
-		}
-		_ = c.persistJar()
+	// Cold start is non-blocking: we do NOT log in here. A full login can take
+	// several seconds (CloudFront WAF + redirect chain), and blocking New blocks
+	// the HTTP listener from binding — which races the MCP client's initialize
+	// handshake and makes it time out. Instead login is deferred to the first
+	// request (EnsureSession, called from transport.Do) and can be warmed up in
+	// the background by the caller. We fail closed here only when there is no way
+	// to ever authenticate: no persisted session AND no credentials.
+	if !c.haveFlowSession() && (cfg.Email == "" || cfg.Password == "") {
+		return nil, ErrNotLinked
+	}
+	if c.haveFlowSession() {
+		c.logger.Info("flow: reusing persisted session from cookie jar")
+	} else {
+		c.logger.Info("flow: no session yet — login deferred to first request")
 	}
 
 	// Build ogen client. Transport handles X-Requested-With + 401 retry.
@@ -100,6 +103,38 @@ func New(ctx context.Context, cfg Config) (*Client, error) {
 	}
 	c.API = api
 	return c, nil
+}
+
+// EnsureSession guarantees the jar holds a FLOW_SESSION cookie, running a full
+// login on a cold start (empty jar). It is safe for concurrent use and for a
+// background warm-up goroutine: the login is serialized under mu and coalesced,
+// so it runs at most once even if several requests race in at startup.
+//
+// Login is deferred to here (rather than done in New) so process startup stays
+// instant and the HTTP listener binds before the MCP client's initialize
+// handshake arrives. The 401-retry path in transport.Do still handles the
+// separate case of an expired session via refresh.
+func (c *Client) EnsureSession(ctx context.Context) error {
+	if c.flowSessionValue() != "" {
+		return nil // fast path: already authenticated, no lock needed.
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.flowSessionValue() != "" {
+		return nil // another goroutine logged in while we waited for the lock.
+	}
+	if c.cfg.Email == "" || c.cfg.Password == "" {
+		return ErrNotLinked
+	}
+	c.logger.Info("flow: no session — running full login")
+	start := time.Now()
+	if err := fullLogin(ctx, c.httpClient, c.cfg.Email, c.cfg.Password); err != nil {
+		return err
+	}
+	c.lastRefresh = time.Now()
+	_ = c.persistJar()
+	c.logger.Info("flow: login complete", "duration_ms", time.Since(start).Milliseconds())
+	return nil
 }
 
 // haveFlowSession returns true if the jar holds a non-empty FLOW_SESSION cookie.
@@ -171,8 +206,32 @@ type transport struct {
 	c *Client
 }
 
+// primeSession ensures a session exists before the first API call, running the
+// deferred cold-start login at most once. ogen's SecuritySource attached an
+// empty FLOW_SESSION when it built this request (we had no session then), so it
+// swaps the fresh value onto req. No-op once authenticated.
+func (t *transport) primeSession(req *http.Request) error {
+	if t.c.flowSessionValue() != "" {
+		return nil
+	}
+	if err := t.c.EnsureSession(req.Context()); err != nil {
+		return err
+	}
+	stripCookie(req, "FLOW_SESSION")
+	if v := t.c.flowSessionValue(); v != "" {
+		req.AddCookie(&http.Cookie{Name: "FLOW_SESSION", Value: v})
+	}
+	return nil
+}
+
 // Do implements ogen-go/ogen/http.Client.
 func (t *transport) Do(req *http.Request) (*http.Response, error) {
+	// Cold start: log in lazily on the first real API call (deferred out of New
+	// so the listener binds instantly).
+	if err := t.primeSession(req); err != nil {
+		return nil, err
+	}
+
 	// Play's CSRF filter requires X-Requested-With on every mutation, not just
 	// /api/* — DELETE /training/target/{id} 403s without it.
 	if req.Method != http.MethodGet {

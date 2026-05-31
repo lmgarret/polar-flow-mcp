@@ -59,10 +59,16 @@ form, because ogen v1.x doesn't accept the 3.1 form. No other semantic changes.
   2. Adds `X-Requested-With: XMLHttpRequest` on every non-GET request (Play's
      CSRF filter requires it on all mutations, including non-`/api/*` paths
      like `DELETE /training/target/{id}`).
-  3. Detects `401 {"error":"NotAuthenticated"}` and triggers a 3-hop silent
+  3. On the **first** request with no session yet, runs the deferred cold-start
+     full login (`EnsureSession`, coalesced under the mutex) and swaps the fresh
+     `FLOW_SESSION` onto the request.
+  4. Detects `401 {"error":"NotAuthenticated"}` and triggers a 3-hop silent
      refresh (see `auth.md`), then retries the request once.
-- The session manager owns the cookie jar file (chmod 600) and runs the
-  cold-start full-login flow when no usable jar exists.
+- The session manager owns the cookie jar file (chmod 600). `New` does **not**
+  log in — it returns immediately so the server's listener can bind without
+  waiting on the login round-trip. The cold-start full login is deferred to the
+  first request (and warmed up in the background by `cmd/polar-flow-mcp`); it
+  runs only when no usable jar exists.
 
 ## CloudFront WAF bypass
 
