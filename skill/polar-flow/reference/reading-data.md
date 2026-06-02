@@ -64,7 +64,8 @@ Typical flow: `list_training_sessions` (today) → grab the id →
 `get_progress_summary` is the headline analytics read. Beyond `from_date` /
 `to_date` it takes:
 
-- `sport_id` — filter to one sport, or omit / `0` for all.
+- `group` — time-bucket granularity for the breakdown, **not** a sport filter:
+  `MONTH` (default, only value verified live), likely also `DAY`/`WEEK`/`YEAR`.
 - `time_frame` — bucket size for the per-time-slice breakdowns: `6w`, `3m`, or
   `1y` (default `3m`). It only changes how the breakdown is grouped, not the
   headline totals.

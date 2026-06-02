@@ -15,6 +15,14 @@ No parameters. Returns the linked account's numeric `id`, `email`,
 `firstName`, `lastName`, `country`. Call once per session to confirm which
 account the server drives.
 
+### `list_sports`
+No parameters. Returns the full Polar sport catalogue as a map of numeric sport
+id → name constant (e.g. `"1": "RUNNING"`, `"2": "CYCLING"`, `"23": "SWIMMING"`).
+These ids are the `sport_id` values for `create_training_target` and
+`create_training_session`. Call this to find the id for any non-running sport.
+The catalogue is a moving snapshot (Polar adds sports), so re-fetch rather than
+hard-coding ids.
+
 ---
 
 ## Planned training targets
@@ -40,7 +48,9 @@ duration up from its phases. **Always call this before `update_training_target`.
 - `name` **req** — diary display name
 - `date` **req** — scheduled local date
 - `time` — start time (default: `18:00`)
-- `sport_id` — Polar sport id (default: `1` = running)
+- `sport_id` — Polar sport id (default: `1` = running). Common: `2` cycling,
+  `23` swimming, `15` strength_training, `11` hiking, `68` triathlon. Call
+  `list_sports` for the full catalogue.
 - `description` — free-text notes
 - `phases` — ordered list of `warmup` / `repeat` / `cooldown` blocks; omit for
   an open VOLUME target. See `reference/training-targets.md`.
@@ -101,7 +111,8 @@ only when the user asks about splits or the within-session trace.
 ### `get_progress_summary`
 - `from_date` — start (default: today − 90 days)
 - `to_date` — end (default: today)
-- `sport_id` — filter to one sport; omit or `0` for all sports
+- `group` — time-bucket granularity (NOT a sport filter): `MONTH` (default,
+  only value verified live), likely also `DAY`/`WEEK`/`YEAR`
 - `time_frame` — breakdown bucket size: `6w`, `3m`, or `1y` (default: `3m`)
 
 Aggregated totals + distributions (session count, distance, duration, HR-zone
@@ -125,5 +136,7 @@ conventions are in `reference/logging-sessions.md`.
 - `hr_avg` — average bpm (omit or `0` = unset)
 - `hr_max` — max bpm (omit or `0` = unset)
 - `speed_kmh` — average km/h (omit or `0` = unset)
-- `sport_id` — Polar sport id (default: `1`)
+- `sport_id` — Polar sport id (default: `1`). Common: `2` cycling, `23` swimming,
+  `15` strength_training, `11` hiking, `68` triathlon. Call `list_sports` for
+  the full catalogue.
 - `note` — free-text note

@@ -36,7 +36,7 @@ This logs the **past**. To schedule a **future** workout, use
 | `hr_avg` | | bpm | Omit or `0` to leave unset. |
 | `hr_max` | | bpm | Omit or `0` to leave unset. |
 | `speed_kmh` | | km/h | Omit or `0` to leave unset. |
-| `sport_id` | | Polar sport id | Default `1` = running. |
+| `sport_id` | | Polar sport id | Default `1` = running; e.g. `2` cycling, `23` swimming. Use `list_sports` for all ids. |
 | `note` | | text | Optional. |
 
 Pass heart-rate values as plain bpm integers; `0` (or omitting) means "not

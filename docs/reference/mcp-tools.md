@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-polar-flow-mcp exposes thirteen tools backed by the
+polar-flow-mcp exposes fourteen tools backed by the
 [ogen](https://github.com/ogen-go/ogen)-generated client in `internal/flow/`.
 All tools act as the single Polar Flow account configured via `POLAR_EMAIL` /
 `POLAR_PASSWORD`.
@@ -22,6 +22,19 @@ Returns the identity of the linked Polar Flow account.
 
 ---
 
+## `list_sports`
+
+Returns the full Polar sport catalogue — the source of valid `sport_id` values.
+
+**Arguments:** none.
+
+**Response:** JSON object mapping numeric sport id (string key) to its name
+constant, e.g. `{"1": "RUNNING", "2": "CYCLING", "23": "SWIMMING", ...}`. The
+catalogue is a moving snapshot (Polar adds sports over time), so re-fetch rather
+than hard-coding ids.
+
+---
+
 ## `create_training_target`
 
 Schedule a training target in Polar Flow.
@@ -31,7 +44,7 @@ Schedule a training target in Polar Flow.
 | `name` | string | yes | Display name (shown in the diary). |
 | `date` | string | yes | ISO 8601 `YYYY-MM-DD`. |
 | `time` | string | no | `HH:MM` (24h). Default `18:00`. |
-| `sport_id` | integer | no | Polar sport ID. Default `1` (running). |
+| `sport_id` | integer | no | Polar sport ID. Default `1` (running); e.g. `2` cycling, `23` swimming. Use `list_sports` for the full mapping. |
 | `description` | string | no | Free-text notes. |
 | `phases` | array | no | See below. Empty/omitted → simple `VOLUME` target. |
 
@@ -165,7 +178,7 @@ the supplied range.
 |----------|------|---------|
 | `from_date` | `YYYY-MM-DD` | today − 90 days |
 | `to_date` | `YYYY-MM-DD` | today |
-| `sport_id` | integer | `0` (all sports) |
+| `group` | string | `MONTH` — time-bucket granularity, **not** a sport filter (likely also `DAY`/`WEEK`/`YEAR`) |
 | `time_frame` | string | `3m` — also accepts `6w`, `1y` |
 
 **Response:** JSON `ProgressViewSummary` object — sport distributions,
@@ -196,7 +209,7 @@ this when the user explicitly asks to log a session.
 | `hr_avg` | integer | no | Average HR (bpm). Omit / `0` for unset. |
 | `hr_max` | integer | no | Max HR (bpm). Omit / `0` for unset. |
 | `speed_kmh` | number | no | Average speed (km/h). Omit / `0` for unset. |
-| `sport_id` | integer | no | Polar sport ID. Default `1` (running). |
+| `sport_id` | integer | no | Polar sport ID. Default `1` (running); e.g. `2` cycling, `23` swimming. Use `list_sports` for the full mapping. |
 | `note` | string | no | Free-text note. |
 
 **Response:** confirmation string. The endpoint returns an empty body — Polar
@@ -249,9 +262,9 @@ user asks about pace splits, HR zone time, or per-lap stats.
   (`YYYY-MM-DDTHH:MM` with no offset). The Polar server applies the user's
   configured timezone. Make sure your test account's timezone matches your
   intent.
-- **Sport IDs.** `sport_id` defaults to `1` (running). For cycling use `2`;
-  for the full mapping query the upstream `/api/sports/sports` endpoint
-  (not exposed as an MCP tool yet — let us know if you want it).
+- **Sport IDs.** `sport_id` defaults to `1` (running). For cycling use `2`,
+  swimming `23`, strength `15`; call the `list_sports` tool for the full
+  id → name mapping.
 - **Failure modes.** On transport failure (network, 5xx) the tool returns
   the underlying error as a tool-result error. The MCP client (Claude) sees
   the error and can decide whether to retry.

@@ -31,6 +31,20 @@ func GetUserInfoHandler(fc *flow.Client) func(context.Context, mcpgo.CallToolReq
 	}
 }
 
+// ListSportsHandler returns the Polar sport-id → name catalogue.
+func ListSportsHandler(fc *flow.Client) func(context.Context, mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+	return func(ctx context.Context, _ mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+		sports, err := fc.ListSports(ctx)
+		if err != nil {
+			return mcpgo.NewToolResultError(err.Error()), nil
+		}
+		body, _ := json.MarshalIndent(sports, "", "  ")
+		result := mcpgo.NewToolResultText(string(body))
+		result.StructuredContent = map[string]any{"type": "sports", "data": sports}
+		return result, nil
+	}
+}
+
 // ListTrainingTargetsHandler lists scheduled training targets in [from, to].
 func ListTrainingTargetsHandler(fc *flow.Client) func(context.Context, mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 	return func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {

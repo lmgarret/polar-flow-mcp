@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-faster/errors"
+	"github.com/google/uuid"
 	"github.com/ogen-go/ogen/conv"
 	"github.com/ogen-go/ogen/middleware"
 	"github.com/ogen-go/ogen/ogenerrors"
@@ -37,6 +38,79 @@ func unpackAddRouteToFavoritesParams(packed middleware.Parameters) (params AddRo
 }
 
 func decodeAddRouteToFavoritesParams(args [0]string, argsEscaped bool, r *http.Request) (params AddRouteToFavoritesParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Set default value for header: X-Requested-With.
+	{
+		val := XRequestedWith("XMLHttpRequest")
+		params.XRequestedWith = val
+	}
+	// Decode header: X-Requested-With.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XRequestedWith = XRequestedWith(c)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.XRequestedWith.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-Requested-With",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// AddSportProfileParams is parameters of addSportProfile operation.
+type AddSportProfileParams struct {
+	// CSRF defense on /api/* write operations. Play's CSRF filter is
+	// configured to whitelist requests carrying this header (browsers
+	// cannot set it on cross-origin form submissions). Without it: 403
+	// with an "Unauthorized" HTML body — easy to mistake for an auth
+	// failure. Must equal `XMLHttpRequest`.
+	XRequestedWith XRequestedWith
+}
+
+func unpackAddSportProfileParams(packed middleware.Parameters) (params AddSportProfileParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-Requested-With",
+			In:   "header",
+		}
+		params.XRequestedWith = packed[key].(XRequestedWith)
+	}
+	return params
+}
+
+func decodeAddSportProfileParams(args [0]string, argsEscaped bool, r *http.Request) (params AddSportProfileParams, _ error) {
 	h := uri.NewHeaderDecoder(r.Header)
 	// Set default value for header: X-Requested-With.
 	{
@@ -502,6 +576,135 @@ func decodeDeleteFavoriteParams(args [1]string, argsEscaped bool, r *http.Reques
 		return params, &ogenerrors.DecodeParamError{
 			Name: "X-Requested-With",
 			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// DeleteSportProfileParams is parameters of deleteSportProfile operation.
+type DeleteSportProfileParams struct {
+	// CSRF defense on /api/* write operations. Play's CSRF filter is
+	// configured to whitelist requests carrying this header (browsers
+	// cannot set it on cross-origin form submissions). Without it: 403
+	// with an "Unauthorized" HTML body — easy to mistake for an auth
+	// failure. Must equal `XMLHttpRequest`.
+	XRequestedWith XRequestedWith
+	// The sport profile's **UUID** (the `id` field from
+	// `GET /api/sports/profiles`, **not** the numeric `sportId`). A non-UUID
+	// value returns `400 Invalid UUID: <value>` (plain text).
+	ID uuid.UUID
+}
+
+func unpackDeleteSportProfileParams(packed middleware.Parameters) (params DeleteSportProfileParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-Requested-With",
+			In:   "header",
+		}
+		params.XRequestedWith = packed[key].(XRequestedWith)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeDeleteSportProfileParams(args [1]string, argsEscaped bool, r *http.Request) (params DeleteSportProfileParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Set default value for header: X-Requested-With.
+	{
+		val := XRequestedWith("XMLHttpRequest")
+		params.XRequestedWith = val
+	}
+	// Decode header: X-Requested-With.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XRequestedWith = XRequestedWith(c)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.XRequestedWith.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-Requested-With",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
 			Err:  err,
 		}
 	}
@@ -1561,6 +1764,74 @@ func decodeGetSleepReportParams(args [0]string, argsEscaped bool, r *http.Reques
 	return params, nil
 }
 
+// GetSportProfileParams is parameters of getSportProfile operation.
+type GetSportProfileParams struct {
+	// The sport profile's **UUID** (the `id` field from
+	// `GET /api/sports/profiles`, **not** the numeric `sportId`). A non-UUID
+	// value returns `400 Invalid UUID: <value>` (plain text).
+	ID uuid.UUID
+}
+
+func unpackGetSportProfileParams(packed middleware.Parameters) (params GetSportProfileParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeGetSportProfileParams(args [1]string, argsEscaped bool, r *http.Request) (params GetSportProfileParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GetSummaryDataParams is parameters of getSummaryData operation.
 type GetSummaryDataParams struct {
 	// CSRF defense on /api/* write operations. Play's CSRF filter is
@@ -1628,6 +1899,372 @@ func decodeGetSummaryDataParams(args [0]string, argsEscaped bool, r *http.Reques
 		return params, &ogenerrors.DecodeParamError{
 			Name: "X-Requested-With",
 			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetTrainingDisplayItemsParams is parameters of getTrainingDisplayItems operation.
+type GetTrainingDisplayItemsParams struct {
+	// CSRF defense on /api/* write operations. Play's CSRF filter is
+	// configured to whitelist requests carrying this header (browsers
+	// cannot set it on cross-origin form submissions). Without it: 403
+	// with an "Unauthorized" HTML body — easy to mistake for an auth
+	// failure. Must equal `XMLHttpRequest`.
+	XRequestedWith XRequestedWith
+	// Polar device/watch model id (e.g. 268).
+	ProductId int
+	// **Numeric** sport-profile id (e.g. 987654321). Note this is a plain
+	// integer — distinct from the UUID-style id used by the separate
+	// `/api/sports/profiles/{id}` resource (the two id systems have not been
+	// reconciled; see `docs/endpoints/sport-profiles.md`).
+	SportProfileId int
+}
+
+func unpackGetTrainingDisplayItemsParams(packed middleware.Parameters) (params GetTrainingDisplayItemsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-Requested-With",
+			In:   "header",
+		}
+		params.XRequestedWith = packed[key].(XRequestedWith)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "productId",
+			In:   "path",
+		}
+		params.ProductId = packed[key].(int)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "sportProfileId",
+			In:   "path",
+		}
+		params.SportProfileId = packed[key].(int)
+	}
+	return params
+}
+
+func decodeGetTrainingDisplayItemsParams(args [2]string, argsEscaped bool, r *http.Request) (params GetTrainingDisplayItemsParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Set default value for header: X-Requested-With.
+	{
+		val := XRequestedWith("XMLHttpRequest")
+		params.XRequestedWith = val
+	}
+	// Decode header: X-Requested-With.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XRequestedWith = XRequestedWith(c)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.XRequestedWith.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-Requested-With",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode path: productId.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "productId",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt(val)
+				if err != nil {
+					return err
+				}
+
+				params.ProductId = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "productId",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: sportProfileId.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "sportProfileId",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt(val)
+				if err != nil {
+					return err
+				}
+
+				params.SportProfileId = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "sportProfileId",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetTrainingDisplayListsParams is parameters of getTrainingDisplayLists operation.
+type GetTrainingDisplayListsParams struct {
+	// CSRF defense on /api/* write operations. Play's CSRF filter is
+	// configured to whitelist requests carrying this header (browsers
+	// cannot set it on cross-origin form submissions). Without it: 403
+	// with an "Unauthorized" HTML body — easy to mistake for an auth
+	// failure. Must equal `XMLHttpRequest`.
+	XRequestedWith XRequestedWith
+	// Polar device/watch model id (e.g. 268).
+	ProductId int
+	// **Numeric** sport-profile id (e.g. 987654321) — see the note on the
+	// sibling `training-display-items` path about the two id systems.
+	SportProfileId int
+}
+
+func unpackGetTrainingDisplayListsParams(packed middleware.Parameters) (params GetTrainingDisplayListsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-Requested-With",
+			In:   "header",
+		}
+		params.XRequestedWith = packed[key].(XRequestedWith)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "productId",
+			In:   "path",
+		}
+		params.ProductId = packed[key].(int)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "sportProfileId",
+			In:   "path",
+		}
+		params.SportProfileId = packed[key].(int)
+	}
+	return params
+}
+
+func decodeGetTrainingDisplayListsParams(args [2]string, argsEscaped bool, r *http.Request) (params GetTrainingDisplayListsParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Set default value for header: X-Requested-With.
+	{
+		val := XRequestedWith("XMLHttpRequest")
+		params.XRequestedWith = val
+	}
+	// Decode header: X-Requested-With.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XRequestedWith = XRequestedWith(c)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.XRequestedWith.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-Requested-With",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode path: productId.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "productId",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt(val)
+				if err != nil {
+					return err
+				}
+
+				params.ProductId = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "productId",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: sportProfileId.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "sportProfileId",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt(val)
+				if err != nil {
+					return err
+				}
+
+				params.SportProfileId = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "sportProfileId",
+			In:   "path",
 			Err:  err,
 		}
 	}
@@ -1905,6 +2542,73 @@ func decodeImportRouteParams(args [0]string, argsEscaped bool, r *http.Request) 
 	return params, nil
 }
 
+// ListSportProfilesParams is parameters of listSportProfiles operation.
+type ListSportProfilesParams struct {
+	// Optional sport filter (same id space as `GET /api/sports/sports`).
+	// Accepted on the empty test account but its filtering effect could not
+	// be confirmed. # TODO: verify against a populated account.
+	SportId OptInt `json:",omitempty,omitzero"`
+}
+
+func unpackListSportProfilesParams(packed middleware.Parameters) (params ListSportProfilesParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "sportId",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.SportId = v.(OptInt)
+		}
+	}
+	return params
+}
+
+func decodeListSportProfilesParams(args [0]string, argsEscaped bool, r *http.Request) (params ListSportProfilesParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: sportId.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "sportId",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotSportIdVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotSportIdVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.SportId.SetTo(paramsDotSportIdVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "sportId",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // ListTrainingSessionsParams is parameters of listTrainingSessions operation.
 type ListTrainingSessionsParams struct {
 	// CSRF defense on /api/* write operations. Play's CSRF filter is
@@ -2000,6 +2704,79 @@ func unpackRenameFavoriteParams(packed middleware.Parameters) (params RenameFavo
 }
 
 func decodeRenameFavoriteParams(args [0]string, argsEscaped bool, r *http.Request) (params RenameFavoriteParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Set default value for header: X-Requested-With.
+	{
+		val := XRequestedWith("XMLHttpRequest")
+		params.XRequestedWith = val
+	}
+	// Decode header: X-Requested-With.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XRequestedWith = XRequestedWith(c)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.XRequestedWith.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-Requested-With",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// SaveSportProfileParams is parameters of saveSportProfile operation.
+type SaveSportProfileParams struct {
+	// CSRF defense on /api/* write operations. Play's CSRF filter is
+	// configured to whitelist requests carrying this header (browsers
+	// cannot set it on cross-origin form submissions). Without it: 403
+	// with an "Unauthorized" HTML body — easy to mistake for an auth
+	// failure. Must equal `XMLHttpRequest`.
+	XRequestedWith XRequestedWith
+}
+
+func unpackSaveSportProfileParams(packed middleware.Parameters) (params SaveSportProfileParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-Requested-With",
+			In:   "header",
+		}
+		params.XRequestedWith = packed[key].(XRequestedWith)
+	}
+	return params
+}
+
+func decodeSaveSportProfileParams(args [0]string, argsEscaped bool, r *http.Request) (params SaveSportProfileParams, _ error) {
 	h := uri.NewHeaderDecoder(r.Header)
 	// Set default value for header: X-Requested-With.
 	{

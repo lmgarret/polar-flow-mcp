@@ -38,7 +38,7 @@ decide *what* training to prescribe.
 If the polar-flow-mcp tools are not in your available tool list, the server
 isn't connected — see `reference/troubleshooting.md` before doing anything else.
 
-## The 13 tools at a glance
+## The 14 tools at a glance
 
 Use the **exact** names below. Reads are safe to call freely; writes change the
 user's diary.
@@ -46,6 +46,7 @@ user's diary.
 | Tool | R/W | One-liner |
 |------|-----|-----------|
 | `get_user_info` | R | Identity + country for the linked account. Call once to confirm setup. |
+| `list_sports` | R | Full Polar sport-id → name catalogue (the `sport_id` values for targets/sessions). |
 | `list_training_targets` | R | Planned workouts in a date range (id, title, time). |
 | `get_training_target` | R | Full normalized body of one target — read before editing. |
 | `create_training_target` | W | Create a planned workout. Returns the new numeric id. |

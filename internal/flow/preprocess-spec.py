@@ -1,7 +1,30 @@
 import yaml, sys
 
+def resolve_property_collisions(obj):
+    """ogen pascal-cases JSON property names, so siblings that differ only by
+    case (e.g. CalendarEvent's `ListItemId` vs `listItemId`) collide on the same
+    Go field name and abort generation. Inject `x-ogen-properties` overrides that
+    give the later members distinct Go names while preserving the JSON keys."""
+    props = obj.get("properties")
+    if not isinstance(props, dict):
+        return
+    groups = {}
+    for key in props:
+        groups.setdefault(key.lower(), []).append(key)
+    overrides = obj.get("x-ogen-properties") or {}
+    for keys in groups.values():
+        if len(keys) < 2:
+            continue
+        for i, key in enumerate(sorted(keys)[1:], start=1):
+            if key not in overrides:
+                overrides[key] = {"name": key[:1].upper() + key[1:] + str(i)}
+    if overrides:
+        obj["x-ogen-properties"] = overrides
+
+
 def walk(obj):
     if isinstance(obj, dict):
+        resolve_property_collisions(obj)
         if "type" in obj and isinstance(obj["type"], list):
             types = obj["type"]
             non_null = [t for t in types if t != "null"]
