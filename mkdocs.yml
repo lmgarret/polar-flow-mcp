@@ -5,7 +5,7 @@ repo_url: https://github.com/lmgarret/polar-flow-mcp
 repo_name: lmgarret/polar-flow-mcp
 
 theme:
-  name: material
+  name: readthedocs
   palette:
     primary: deep orange
     accent: orange
