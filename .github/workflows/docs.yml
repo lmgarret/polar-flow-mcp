@@ -38,3 +38,13 @@ jobs:
       - run: pip install mkdocs-material
 
       - run: mkdocs gh-deploy --force
+      - id: gotifacts-publish
+        uses: lmgarret/gotifacts-publish@v1
+        with:
+          url: ${{ secrets.GOTIFACTS_URL }}
+          api-key: ${{ secrets.GOTIFACTS_API_KEY }}
+          path: ./site        # single .html file, a dir, or a .tar.gz
+          slug: polar-flow-mcp
+          group: docs
+          title: Polar Flow MCP
+      - run: echo "Published to ${{ steps.gotifacts-publish.outputs.url }}"
