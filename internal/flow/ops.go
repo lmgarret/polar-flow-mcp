@@ -5,11 +5,29 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
+
+// formatValidationError renders Polar's 400 body — a map of field name to a list
+// of error codes, e.g. {"time": ["error.trainingTarget.twoTargetsForSameTime"]}
+// — into an actionable one-line message naming the offending field(s). Without
+// this the caller only sees a generic "validation rejected" and cannot tell what
+// to fix.
+func formatValidationError(v *gen.ValidationError) string {
+	if v == nil || len(*v) == 0 {
+		return "validation rejected (no detail in response body)"
+	}
+	parts := make([]string, 0, len(*v))
+	for field, codes := range *v {
+		parts = append(parts, fmt.Sprintf("%s: %s", field, strings.Join(codes, ", ")))
+	}
+	sort.Strings(parts)
+	return "validation rejected — " + strings.Join(parts, "; ")
+}
 
 // UserInfo is the trimmed-down identity payload returned by GetUserInfo.
 type UserInfo struct {
@@ -71,8 +89,7 @@ func (c *Client) CreateTrainingTarget(ctx context.Context, body *gen.TrainingTar
 		}
 		return extractTargetID(raw)
 	case *gen.ValidationError:
-		// ogen has already deserialized; surface the message if any.
-		return 0, fmt.Errorf("flow: create training target: validation rejected")
+		return 0, fmt.Errorf("flow: create training target: %s", formatValidationError(v))
 	case *gen.Unauthorized:
 		return 0, ErrLoginFailed
 	default:
@@ -144,11 +161,11 @@ func (c *Client) UpdateTrainingTarget(ctx context.Context, id int64, body *gen.T
 	if err != nil {
 		return fmt.Errorf("flow: update training target: %w", err)
 	}
-	switch res.(type) {
+	switch v := res.(type) {
 	case *gen.UpdateTrainingTargetOK:
 		return nil
 	case *gen.ValidationError:
-		return fmt.Errorf("flow: update training target: validation rejected")
+		return fmt.Errorf("flow: update training target: %s", formatValidationError(v))
 	case *gen.Unauthorized:
 		return ErrLoginFailed
 	default:

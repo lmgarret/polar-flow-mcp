@@ -244,8 +244,10 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"result, then send the complete body — anything omitted is cleared.\n\n"+
 				"Same field semantics, units, and phases shape as create_training_target "+
 				"(distances in metres, durations in seconds, intensity as HR zones 1–5). "+
-				"Succeeds with a confirmation; re-read with get_training_target to confirm "+
-				"the change landed.",
+				"You do not need to manage server-side ids: the tool reads the live target and "+
+				"carries its exercise-target id over for you, so the edit lands on the existing "+
+				"target rather than colliding with it. Succeeds with a confirmation; re-read "+
+				"with get_training_target to confirm the change landed.",
 		),
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
 			mcpgo.Description("Numeric id of the target to update (from list_training_targets).")),
