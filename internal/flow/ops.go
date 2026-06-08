@@ -189,21 +189,13 @@ func (c *Client) GetCalendarWeekSummary(ctx context.Context, from, to time.Time)
 // duration, zone time, sport distribution, training-benefit distribution) for the
 // supplied [from, to] range. `group` filters to a single sportId (use 0 for all
 // sports). `timeFrame` is the bucket size for breakdowns: "6w", "3m", or "1y".
-func (c *Client) GetProgressViewSummary(ctx context.Context, from, to time.Time, group int, timeFrame string) (*gen.ProgressViewSummary, error) {
+func (c *Client) GetProgressViewSummary(ctx context.Context, from, to time.Time, group, timeFrame string) (*gen.ProgressViewSummary, error) {
 	req := &gen.GetProgressViewSummaryReq{
 		From: formatDayMonthYear(from),
 		To:   formatDayMonthYear(to),
 	}
-	if group > 0 {
-		req.Group.SetTo(gen.GetProgressViewSummaryReqGroup{
-			Type: gen.IntGetProgressViewSummaryReqGroup,
-			Int:  group,
-		})
-	} else {
-		req.Group.SetTo(gen.GetProgressViewSummaryReqGroup{
-			Type:   gen.StringGetProgressViewSummaryReqGroup,
-			String: "all",
-		})
+	if group != "" {
+		req.Group.SetTo(group)
 	}
 	if timeFrame != "" {
 		req.TimeFrame.SetTo(timeFrame)
@@ -395,6 +387,26 @@ func (c *Client) CreateTrainingSession(ctx context.Context, body *gen.TrainingSe
 		return ErrLoginFailed
 	default:
 		return fmt.Errorf("flow: create training session: unexpected response %T", res)
+	}
+}
+
+// ListSports returns the Polar sport catalogue as a map of numeric sport id
+// (string key) to the internal sport-name constant (e.g. "1" → "RUNNING").
+// These ids are the sport_id values used by training targets and sessions.
+func (c *Client) ListSports(ctx context.Context) (gen.SportsMap, error) {
+	res, err := c.API.GetSports(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("flow: get sports: %w", err)
+	}
+	switch v := res.(type) {
+	case *gen.SportsMap:
+		return *v, nil
+	case *gen.GetSportsNotFound:
+		return nil, fmt.Errorf("flow: get sports: not found")
+	case *gen.GetSportsInternalServerError:
+		return nil, fmt.Errorf("flow: get sports: server error")
+	default:
+		return nil, fmt.Errorf("flow: get sports: unexpected response %T", res)
 	}
 }
 

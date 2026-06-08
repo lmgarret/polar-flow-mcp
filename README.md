@@ -144,6 +144,7 @@ The server reads `/.env` on startup via `godotenv` — credentials are in memory
 | Tool | Description |
 |------|-------------|
 | `get_user_info` | Linked Polar account identity + profile basics |
+| `list_sports` | Full Polar sport-id → name catalogue (the `sport_id` values for targets/sessions) |
 | `create_training_target` | Schedule a target (warmup / repeat / cooldown phases) |
 | `list_training_targets` | Targets in a date range |
 | `delete_training_target` | Delete a target by ID |

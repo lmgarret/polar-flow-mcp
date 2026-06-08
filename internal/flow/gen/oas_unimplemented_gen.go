@@ -44,6 +44,23 @@ func (UnimplementedHandler) AddRouteToFavorites(ctx context.Context, req *AddRou
 	return r, ht.ErrNotImplemented
 }
 
+// AddSportProfile implements addSportProfile operation.
+//
+// Creates a new sport profile for the signed-in user from a `sportId`. This
+// is the **real create endpoint** for sport profiles (the `/api/sports/*`
+// family does not expose one). Captured 2026-06-01 from a device-paired
+// account.
+// Body is **form-encoded** (`application/x-www-form-urlencoded`), a single
+// `sportId` field. Requires `X-Requested-With: XMLHttpRequest`.
+// Returns **200** with a `text/plain` body containing JSON: the new
+// profile's id (numeric, as a string), echoed `sportId`, icon, and
+// creation date/time.
+//
+// POST /settings/sports/add
+func (UnimplementedHandler) AddSportProfile(ctx context.Context, req *AddSportProfileReq, params AddSportProfileParams) (r AddSportProfileRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ChangeFavoriteSport implements changeFavoriteSport operation.
 //
 // Updates only the sport assignment of a favorite's exerciseTarget.
@@ -143,6 +160,26 @@ func (UnimplementedHandler) DeleteFavorite(ctx context.Context, params DeleteFav
 	return r, ht.ErrNotImplemented
 }
 
+// DeleteSportProfile implements deleteSportProfile operation.
+//
+// Deletes a sport profile by its UUID. The route **exists** (verified
+// 2026-06-01). Note create/update are not on this `/api/sports/*` resource —
+// they live on the legacy `/settings/sports/{add,save}` controller (numeric
+// ids); whether delete also has a `/settings/sports/*` equivalent is unknown.
+// **Could not reach the success path** on the device-less test account:
+// deleting a non-existent UUID returned `500` with an empty body rather than
+// a clean `404`, so the success status/body for an existing profile is
+// unconfirmed. # TODO: verify against a real profile (expect a 200, by
+// analogy with the other Polar delete endpoints). Note this is a genuinely
+// destructive operation — only exercise it on a throwaway profile.
+// Like other `/api/*` writes this requires the
+// `X-Requested-With: XMLHttpRequest` header.
+//
+// DELETE /api/sports/profiles/{id}
+func (UnimplementedHandler) DeleteSportProfile(ctx context.Context, params DeleteSportProfileParams) (r DeleteSportProfileRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DeleteTrainingSession implements deleteTrainingSession operation.
 //
 // ⚠ The path **must end with a trailing slash** — Polar's app sends
@@ -201,7 +238,10 @@ func (UnimplementedHandler) GetActivityTimelineFour(ctx context.Context, params 
 // GetCalendarEvents implements getCalendarEvents operation.
 //
 // Returns all diary events (training sessions, targets, etc.) for a date range.
-// Training targets appear with `type: "TRAININGTARGET"`.
+// The response is polymorphic by `type`: training targets appear with `type: "TRAININGTARGET"`;
+// fitness-test results appear with `type: "FITNESSDATA"` (different field set — carries
+// calendar-styling colours and `index`/`timestamp`, and uses camelCase `listItemId` instead of
+// `ListItemId`). See `CalendarEvent` for the per-type field notes.
 // Date format: D.M.YYYY (no leading zeros).
 //
 // GET /training/getCalendarEvents
@@ -294,12 +334,14 @@ func (UnimplementedHandler) GetFeaturesAvailable(ctx context.Context, params Get
 // Returns aggregated training totals (sessions, distance, duration,
 // calories, ascent/descent, zone time, sport distribution, training-benefit
 // distribution) for the inclusive `[from, to]` date range.
-// Date format is **`D.M.YYYY`** (e.g. `1.5.2026`), matching the rest of the
-// legacy `/training/*` and `/progress/*` endpoints. ISO 8601
-// (`YYYY-MM-DD`) is rejected by sibling endpoints; this one happens to
-// accept malformed/missing dates without erroring on a zero-session account
-// (it just returns zeros) — strict validation behaviour on populated
-// accounts is TBD.
+// **Date format** here is `DD-MM-YYYY` with **dashes and leading zeros**
+// (observed live: `{"from":"01-06-2026","to":"30-06-2026"}`) — note this
+// differs from the dot-separated `D.M.YYYY` used by
+// `/training/getCalendarWeekSummary` and `/training/getCalendarEvents`.
+// The endpoint is lenient: it accepts malformed/missing dates without
+// erroring on a zero-session account (it just returns zeros), so the
+// dash form is what the UI sends rather than a hard requirement — strict
+// validation behaviour on populated accounts is TBD.
 // The Polar Flow JS bundle has a Coach-vs-free fork that picks
 // `/progress/getSummaryDataAsJson` for Coach users and this URL for
 // regular users — but **both URLs are reachable from a free account** and
@@ -340,6 +382,22 @@ func (UnimplementedHandler) GetSleepReport(ctx context.Context, params GetSleepR
 	return r, ht.ErrNotImplemented
 }
 
+// GetSportProfile implements getSportProfile operation.
+//
+// Returns one sport profile by its UUID.
+// **Not exercised against a real profile.** The test account has no synced
+// sport profiles, so this could not be observed returning `200`. Probing
+// with arbitrary UUIDs returned `400` with a plain-text
+// `Invalid request: Invalid UUID: <value>` body — meaning either the id
+// must match an existing profile, or Polar uses a stricter/custom id
+// encoding than a canonical v4 UUID. # TODO: verify the success shape and the
+// exact id format using an account with a device-synced profile.
+//
+// GET /api/sports/profiles/{id}
+func (UnimplementedHandler) GetSportProfile(ctx context.Context, params GetSportProfileParams) (r GetSportProfileRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetSports implements getSports operation.
 //
 // Returns a flat object mapping numeric sport ID (as string key) to the
@@ -368,6 +426,38 @@ func (UnimplementedHandler) GetSports(ctx context.Context) (r GetSportsRes, _ er
 //
 // POST /progress/getSummaryDataAsJson
 func (UnimplementedHandler) GetSummaryData(ctx context.Context, req *GetSummaryDataReq, params GetSummaryDataParams) (r GetSummaryDataRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetTrainingDisplayItems implements getTrainingDisplayItems operation.
+//
+// Returns the **catalog** of display fields the given device (`productId`)
+// can show for the given sport profile, grouped by category — the palette
+// the watch-screen layout editor offers. The user's actual chosen layout is
+// in `GET /settings/sports/training-display-lists/{productId}/{sportProfileId}`.
+// Served by the legacy `/settings/*` controller (not under `/api/*`).
+// Requires `X-Requested-With: XMLHttpRequest`. Observed to return the
+// product/sport default catalog even from an account that does not own the
+// profile (not strictly owner-scoped).
+//
+// GET /settings/sports/training-display-items/{productId}/{sportProfileId}
+func (UnimplementedHandler) GetTrainingDisplayItems(ctx context.Context, params GetTrainingDisplayItemsParams) (r GetTrainingDisplayItemsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetTrainingDisplayLists implements getTrainingDisplayLists operation.
+//
+// Returns the user's current **watch-screen layout** for this profile: an
+// array of display sets, each holding `displays` (the ordered screens, where
+// each screen is a list of field ids from the catalog).
+// Served by the legacy `/settings/*` controller. Requires
+// `X-Requested-With: XMLHttpRequest`.
+// **Read-only path.** This layout is *saved* via `POST /settings/sports/save`
+// (as a `TrainingDisplays` block), not by writing back here — `PUT`/`POST`
+// to this path return 404 (verified 2026-06-01).
+//
+// GET /settings/sports/training-display-lists/{productId}/{sportProfileId}
+func (UnimplementedHandler) GetTrainingDisplayLists(ctx context.Context, params GetTrainingDisplayListsParams) (r GetTrainingDisplayListsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -455,6 +545,33 @@ func (UnimplementedHandler) ListFavoritesSimple(ctx context.Context) (r ListFavo
 	return r, ht.ErrNotImplemented
 }
 
+// ListSportProfiles implements listSportProfiles operation.
+//
+// Returns the signed-in user's **sport profiles** ("Profils sportifs",
+// reached in the web UI via *Compte → Profils sportifs*, served by the
+// server-rendered `/settings/sports` page).
+// Sport profiles are the per-sport device configuration (training views,
+// auto-lap, zones, sensor/GPS settings). **Create/update is NOT on this
+// `/api/sports/*` resource** (`POST`/`PUT`/`PATCH` here all 404). It lives on
+// the legacy `/settings/sports/*` controller instead:
+// **create = `POST /settings/sports/add`**, **update =
+// `POST /settings/sports/save`** (verified 2026-06-01 from a device-paired
+// account — see `docs/endpoints/sport-profiles.md`).
+// Note those settings endpoints key profiles by a **numeric** id, whereas
+// this `/api/sports/profiles/{id}` resource validates a **UUID** — the two id
+// systems are not yet reconciled.
+// **Empty on a device-less account.** On the free test account this returns
+// `[]`, and `GET /api/account/users/current/user` likewise reports
+// `sportProfiles: []`. A populated element shape could not be captured — see
+// `SportProfile` for the partially-inferred element schema and TODOs.
+// A `sportId` query parameter is accepted but had no visible effect on the
+// empty account (still `[]`).
+//
+// GET /api/sports/profiles
+func (UnimplementedHandler) ListSportProfiles(ctx context.Context, params ListSportProfilesParams) (r ListSportProfilesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListTrainingSessions implements listTrainingSessions operation.
 //
 // Return completed training sessions for a user within an inclusive date
@@ -495,6 +612,25 @@ func (UnimplementedHandler) ListTrainingSessions(ctx context.Context, req *ListT
 //
 // PUT /api/favorites/saveName
 func (UnimplementedHandler) RenameFavorite(ctx context.Context, req *RenameFavoriteReq, params RenameFavoriteParams) (r RenameFavoriteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SaveSportProfile implements saveSportProfile operation.
+//
+// Updates one or more sport profiles' general device settings
+// (`TrainingSettings`) and/or watch-screen layout (`TrainingDisplays`). This
+// is the **update endpoint** that was previously missing — the layout save
+// issued after editing a profile in *Compte → Profils sportifs*. Captured
+// 2026-06-01 from a device-paired account.
+// Body is **JSON** with a `sports` map keyed by profile id; each value is an
+// array of config blocks discriminated by `name` (`TrainingSettings`,
+// `TrainingDisplays`). Requires `X-Requested-With: XMLHttpRequest`.
+// Returns **200** with a `text/plain` body containing a JSON success
+// message reminding the user to sync their device (changes apply on the
+// watch only after the next sync).
+//
+// POST /settings/sports/save
+func (UnimplementedHandler) SaveSportProfile(ctx context.Context, req *SportProfileSaveRequest, params SaveSportProfileParams) (r SaveSportProfileRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

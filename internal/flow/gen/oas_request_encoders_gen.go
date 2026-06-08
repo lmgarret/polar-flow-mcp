@@ -5,9 +5,13 @@ package gen
 import (
 	"bytes"
 	"net/http"
+	"strings"
 
+	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
+	"github.com/ogen-go/ogen/conv"
 	ht "github.com/ogen-go/ogen/http"
+	"github.com/ogen-go/ogen/uri"
 )
 
 func encodeAddRouteToFavoritesRequest(
@@ -21,6 +25,32 @@ func encodeAddRouteToFavoritesRequest(
 	}
 	encoded := e.Bytes()
 	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeAddSportProfileRequest(
+	req *AddSportProfileReq,
+	r *http.Request,
+) error {
+	const contentType = "application/x-www-form-urlencoded"
+	request := req
+
+	q := uri.NewFormEncoder(map[string]string{})
+	{
+		// Encode "sportId" form field.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "sportId",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.IntToString(request.SportId))
+		}); err != nil {
+			return errors.Wrap(err, "encode query")
+		}
+	}
+	encoded := q.Values().Encode()
+	ht.SetBody(r, strings.NewReader(encoded), contentType)
 	return nil
 }
 
@@ -152,6 +182,20 @@ func encodeListTrainingSessionsRequest(
 
 func encodeRenameFavoriteRequest(
 	req *RenameFavoriteReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeSaveSportProfileRequest(
+	req *SportProfileSaveRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

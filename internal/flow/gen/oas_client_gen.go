@@ -56,6 +56,20 @@ type Invoker interface {
 	//
 	// POST /api/favorites/trainingTargets/addExerciseRoute
 	AddRouteToFavorites(ctx context.Context, request *AddRouteToFavoritesReq, params AddRouteToFavoritesParams) (AddRouteToFavoritesRes, error)
+	// AddSportProfile invokes addSportProfile operation.
+	//
+	// Creates a new sport profile for the signed-in user from a `sportId`. This
+	// is the **real create endpoint** for sport profiles (the `/api/sports/*`
+	// family does not expose one). Captured 2026-06-01 from a device-paired
+	// account.
+	// Body is **form-encoded** (`application/x-www-form-urlencoded`), a single
+	// `sportId` field. Requires `X-Requested-With: XMLHttpRequest`.
+	// Returns **200** with a `text/plain` body containing JSON: the new
+	// profile's id (numeric, as a string), echoed `sportId`, icon, and
+	// creation date/time.
+	//
+	// POST /settings/sports/add
+	AddSportProfile(ctx context.Context, request *AddSportProfileReq, params AddSportProfileParams) (AddSportProfileRes, error)
 	// ChangeFavoriteSport invokes changeFavoriteSport operation.
 	//
 	// Updates only the sport assignment of a favorite's exerciseTarget.
@@ -140,6 +154,23 @@ type Invoker interface {
 	//
 	// DELETE /api/favorites/delete/{id}
 	DeleteFavorite(ctx context.Context, params DeleteFavoriteParams) (DeleteFavoriteRes, error)
+	// DeleteSportProfile invokes deleteSportProfile operation.
+	//
+	// Deletes a sport profile by its UUID. The route **exists** (verified
+	// 2026-06-01). Note create/update are not on this `/api/sports/*` resource —
+	// they live on the legacy `/settings/sports/{add,save}` controller (numeric
+	// ids); whether delete also has a `/settings/sports/*` equivalent is unknown.
+	// **Could not reach the success path** on the device-less test account:
+	// deleting a non-existent UUID returned `500` with an empty body rather than
+	// a clean `404`, so the success status/body for an existing profile is
+	// unconfirmed. # TODO: verify against a real profile (expect a 200, by
+	// analogy with the other Polar delete endpoints). Note this is a genuinely
+	// destructive operation — only exercise it on a throwaway profile.
+	// Like other `/api/*` writes this requires the
+	// `X-Requested-With: XMLHttpRequest` header.
+	//
+	// DELETE /api/sports/profiles/{id}
+	DeleteSportProfile(ctx context.Context, params DeleteSportProfileParams) (DeleteSportProfileRes, error)
 	// DeleteTrainingSession invokes deleteTrainingSession operation.
 	//
 	// ⚠ The path **must end with a trailing slash** — Polar's app sends
@@ -186,7 +217,10 @@ type Invoker interface {
 	// GetCalendarEvents invokes getCalendarEvents operation.
 	//
 	// Returns all diary events (training sessions, targets, etc.) for a date range.
-	// Training targets appear with `type: "TRAININGTARGET"`.
+	// The response is polymorphic by `type`: training targets appear with `type: "TRAININGTARGET"`;
+	// fitness-test results appear with `type: "FITNESSDATA"` (different field set — carries
+	// calendar-styling colours and `index`/`timestamp`, and uses camelCase `listItemId` instead of
+	// `ListItemId`). See `CalendarEvent` for the per-type field notes.
 	// Date format: D.M.YYYY (no leading zeros).
 	//
 	// GET /training/getCalendarEvents
@@ -261,12 +295,14 @@ type Invoker interface {
 	// Returns aggregated training totals (sessions, distance, duration,
 	// calories, ascent/descent, zone time, sport distribution, training-benefit
 	// distribution) for the inclusive `[from, to]` date range.
-	// Date format is **`D.M.YYYY`** (e.g. `1.5.2026`), matching the rest of the
-	// legacy `/training/*` and `/progress/*` endpoints. ISO 8601
-	// (`YYYY-MM-DD`) is rejected by sibling endpoints; this one happens to
-	// accept malformed/missing dates without erroring on a zero-session account
-	// (it just returns zeros) — strict validation behaviour on populated
-	// accounts is TBD.
+	// **Date format** here is `DD-MM-YYYY` with **dashes and leading zeros**
+	// (observed live: `{"from":"01-06-2026","to":"30-06-2026"}`) — note this
+	// differs from the dot-separated `D.M.YYYY` used by
+	// `/training/getCalendarWeekSummary` and `/training/getCalendarEvents`.
+	// The endpoint is lenient: it accepts malformed/missing dates without
+	// erroring on a zero-session account (it just returns zeros), so the
+	// dash form is what the UI sends rather than a hard requirement — strict
+	// validation behaviour on populated accounts is TBD.
 	// The Polar Flow JS bundle has a Coach-vs-free fork that picks
 	// `/progress/getSummaryDataAsJson` for Coach users and this URL for
 	// regular users — but **both URLs are reachable from a free account** and
@@ -301,6 +337,19 @@ type Invoker interface {
 	//
 	// GET /api/sleep/report
 	GetSleepReport(ctx context.Context, params GetSleepReportParams) (GetSleepReportRes, error)
+	// GetSportProfile invokes getSportProfile operation.
+	//
+	// Returns one sport profile by its UUID.
+	// **Not exercised against a real profile.** The test account has no synced
+	// sport profiles, so this could not be observed returning `200`. Probing
+	// with arbitrary UUIDs returned `400` with a plain-text
+	// `Invalid request: Invalid UUID: <value>` body — meaning either the id
+	// must match an existing profile, or Polar uses a stricter/custom id
+	// encoding than a canonical v4 UUID. # TODO: verify the success shape and the
+	// exact id format using an account with a device-synced profile.
+	//
+	// GET /api/sports/profiles/{id}
+	GetSportProfile(ctx context.Context, params GetSportProfileParams) (GetSportProfileRes, error)
 	// GetSports invokes getSports operation.
 	//
 	// Returns a flat object mapping numeric sport ID (as string key) to the
@@ -326,6 +375,32 @@ type Invoker interface {
 	//
 	// POST /progress/getSummaryDataAsJson
 	GetSummaryData(ctx context.Context, request *GetSummaryDataReq, params GetSummaryDataParams) (GetSummaryDataRes, error)
+	// GetTrainingDisplayItems invokes getTrainingDisplayItems operation.
+	//
+	// Returns the **catalog** of display fields the given device (`productId`)
+	// can show for the given sport profile, grouped by category — the palette
+	// the watch-screen layout editor offers. The user's actual chosen layout is
+	// in `GET /settings/sports/training-display-lists/{productId}/{sportProfileId}`.
+	// Served by the legacy `/settings/*` controller (not under `/api/*`).
+	// Requires `X-Requested-With: XMLHttpRequest`. Observed to return the
+	// product/sport default catalog even from an account that does not own the
+	// profile (not strictly owner-scoped).
+	//
+	// GET /settings/sports/training-display-items/{productId}/{sportProfileId}
+	GetTrainingDisplayItems(ctx context.Context, params GetTrainingDisplayItemsParams) (GetTrainingDisplayItemsRes, error)
+	// GetTrainingDisplayLists invokes getTrainingDisplayLists operation.
+	//
+	// Returns the user's current **watch-screen layout** for this profile: an
+	// array of display sets, each holding `displays` (the ordered screens, where
+	// each screen is a list of field ids from the catalog).
+	// Served by the legacy `/settings/*` controller. Requires
+	// `X-Requested-With: XMLHttpRequest`.
+	// **Read-only path.** This layout is *saved* via `POST /settings/sports/save`
+	// (as a `TrainingDisplays` block), not by writing back here — `PUT`/`POST`
+	// to this path return 404 (verified 2026-06-01).
+	//
+	// GET /settings/sports/training-display-lists/{productId}/{sportProfileId}
+	GetTrainingDisplayLists(ctx context.Context, params GetTrainingDisplayListsParams) (GetTrainingDisplayListsRes, error)
 	// GetTrainingSessionDetails invokes getTrainingSessionDetails operation.
 	//
 	// Time-series sample data (HR, GPS, power, …), laps, zones, and
@@ -389,6 +464,30 @@ type Invoker interface {
 	//
 	// GET /api/favorites/favoriteTargetsJson
 	ListFavoritesSimple(ctx context.Context) (ListFavoritesSimpleRes, error)
+	// ListSportProfiles invokes listSportProfiles operation.
+	//
+	// Returns the signed-in user's **sport profiles** ("Profils sportifs",
+	// reached in the web UI via *Compte → Profils sportifs*, served by the
+	// server-rendered `/settings/sports` page).
+	// Sport profiles are the per-sport device configuration (training views,
+	// auto-lap, zones, sensor/GPS settings). **Create/update is NOT on this
+	// `/api/sports/*` resource** (`POST`/`PUT`/`PATCH` here all 404). It lives on
+	// the legacy `/settings/sports/*` controller instead:
+	// **create = `POST /settings/sports/add`**, **update =
+	// `POST /settings/sports/save`** (verified 2026-06-01 from a device-paired
+	// account — see `docs/endpoints/sport-profiles.md`).
+	// Note those settings endpoints key profiles by a **numeric** id, whereas
+	// this `/api/sports/profiles/{id}` resource validates a **UUID** — the two id
+	// systems are not yet reconciled.
+	// **Empty on a device-less account.** On the free test account this returns
+	// `[]`, and `GET /api/account/users/current/user` likewise reports
+	// `sportProfiles: []`. A populated element shape could not be captured — see
+	// `SportProfile` for the partially-inferred element schema and TODOs.
+	// A `sportId` query parameter is accepted but had no visible effect on the
+	// empty account (still `[]`).
+	//
+	// GET /api/sports/profiles
+	ListSportProfiles(ctx context.Context, params ListSportProfilesParams) (ListSportProfilesRes, error)
 	// ListTrainingSessions invokes listTrainingSessions operation.
 	//
 	// Return completed training sessions for a user within an inclusive date
@@ -426,6 +525,22 @@ type Invoker interface {
 	//
 	// PUT /api/favorites/saveName
 	RenameFavorite(ctx context.Context, request *RenameFavoriteReq, params RenameFavoriteParams) (RenameFavoriteRes, error)
+	// SaveSportProfile invokes saveSportProfile operation.
+	//
+	// Updates one or more sport profiles' general device settings
+	// (`TrainingSettings`) and/or watch-screen layout (`TrainingDisplays`). This
+	// is the **update endpoint** that was previously missing — the layout save
+	// issued after editing a profile in *Compte → Profils sportifs*. Captured
+	// 2026-06-01 from a device-paired account.
+	// Body is **JSON** with a `sports` map keyed by profile id; each value is an
+	// array of config blocks discriminated by `name` (`TrainingSettings`,
+	// `TrainingDisplays`). Requires `X-Requested-With: XMLHttpRequest`.
+	// Returns **200** with a `text/plain` body containing a JSON success
+	// message reminding the user to sync their device (changes apply on the
+	// watch only after the next sync).
+	//
+	// POST /settings/sports/save
+	SaveSportProfile(ctx context.Context, request *SportProfileSaveRequest, params SaveSportProfileParams) (SaveSportProfileRes, error)
 	// UpdateFavorite invokes updateFavorite operation.
 	//
 	// Full-body update (no PUT/PATCH). Send the same shape as create plus
@@ -636,6 +751,138 @@ func (c *Client) sendAddRouteToFavorites(ctx context.Context, request *AddRouteT
 
 	stage = "DecodeResponse"
 	result, err := decodeAddRouteToFavoritesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// AddSportProfile invokes addSportProfile operation.
+//
+// Creates a new sport profile for the signed-in user from a `sportId`. This
+// is the **real create endpoint** for sport profiles (the `/api/sports/*`
+// family does not expose one). Captured 2026-06-01 from a device-paired
+// account.
+// Body is **form-encoded** (`application/x-www-form-urlencoded`), a single
+// `sportId` field. Requires `X-Requested-With: XMLHttpRequest`.
+// Returns **200** with a `text/plain` body containing JSON: the new
+// profile's id (numeric, as a string), echoed `sportId`, icon, and
+// creation date/time.
+//
+// POST /settings/sports/add
+func (c *Client) AddSportProfile(ctx context.Context, request *AddSportProfileReq, params AddSportProfileParams) (AddSportProfileRes, error) {
+	res, err := c.sendAddSportProfile(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendAddSportProfile(ctx context.Context, request *AddSportProfileReq, params AddSportProfileParams) (res AddSportProfileRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("addSportProfile"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/settings/sports/add"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, AddSportProfileOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/settings/sports/add"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeAddSportProfileRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, AddSportProfileOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeAddSportProfileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -1332,6 +1579,156 @@ func (c *Client) sendDeleteFavorite(ctx context.Context, params DeleteFavoritePa
 	return result, nil
 }
 
+// DeleteSportProfile invokes deleteSportProfile operation.
+//
+// Deletes a sport profile by its UUID. The route **exists** (verified
+// 2026-06-01). Note create/update are not on this `/api/sports/*` resource —
+// they live on the legacy `/settings/sports/{add,save}` controller (numeric
+// ids); whether delete also has a `/settings/sports/*` equivalent is unknown.
+// **Could not reach the success path** on the device-less test account:
+// deleting a non-existent UUID returned `500` with an empty body rather than
+// a clean `404`, so the success status/body for an existing profile is
+// unconfirmed. # TODO: verify against a real profile (expect a 200, by
+// analogy with the other Polar delete endpoints). Note this is a genuinely
+// destructive operation — only exercise it on a throwaway profile.
+// Like other `/api/*` writes this requires the
+// `X-Requested-With: XMLHttpRequest` header.
+//
+// DELETE /api/sports/profiles/{id}
+func (c *Client) DeleteSportProfile(ctx context.Context, params DeleteSportProfileParams) (DeleteSportProfileRes, error) {
+	res, err := c.sendDeleteSportProfile(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteSportProfile(ctx context.Context, params DeleteSportProfileParams) (res DeleteSportProfileRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteSportProfile"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/api/sports/profiles/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteSportProfileOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/api/sports/profiles/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, DeleteSportProfileOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteSportProfileResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DeleteTrainingSession invokes deleteTrainingSession operation.
 //
 // ⚠ The path **must end with a trailing slash** — Polar's app sends
@@ -1903,7 +2300,10 @@ func (c *Client) sendGetActivityTimelineFour(ctx context.Context, params GetActi
 // GetCalendarEvents invokes getCalendarEvents operation.
 //
 // Returns all diary events (training sessions, targets, etc.) for a date range.
-// Training targets appear with `type: "TRAININGTARGET"`.
+// The response is polymorphic by `type`: training targets appear with `type: "TRAININGTARGET"`;
+// fitness-test results appear with `type: "FITNESSDATA"` (different field set — carries
+// calendar-styling colours and `index`/`timestamp`, and uses camelCase `listItemId` instead of
+// `ListItemId`). See `CalendarEvent` for the per-type field notes.
 // Date format: D.M.YYYY (no leading zeros).
 //
 // GET /training/getCalendarEvents
@@ -2687,12 +3087,14 @@ func (c *Client) sendGetFeaturesAvailable(ctx context.Context, params GetFeature
 // Returns aggregated training totals (sessions, distance, duration,
 // calories, ascent/descent, zone time, sport distribution, training-benefit
 // distribution) for the inclusive `[from, to]` date range.
-// Date format is **`D.M.YYYY`** (e.g. `1.5.2026`), matching the rest of the
-// legacy `/training/*` and `/progress/*` endpoints. ISO 8601
-// (`YYYY-MM-DD`) is rejected by sibling endpoints; this one happens to
-// accept malformed/missing dates without erroring on a zero-session account
-// (it just returns zeros) — strict validation behaviour on populated
-// accounts is TBD.
+// **Date format** here is `DD-MM-YYYY` with **dashes and leading zeros**
+// (observed live: `{"from":"01-06-2026","to":"30-06-2026"}`) — note this
+// differs from the dot-separated `D.M.YYYY` used by
+// `/training/getCalendarWeekSummary` and `/training/getCalendarEvents`.
+// The endpoint is lenient: it accepts malformed/missing dates without
+// erroring on a zero-session account (it just returns zeros), so the
+// dash form is what the UI sends rather than a hard requirement — strict
+// validation behaviour on populated accounts is TBD.
 // The Polar Flow JS bundle has a Coach-vs-free fork that picks
 // `/progress/getSummaryDataAsJson` for Coach users and this URL for
 // regular users — but **both URLs are reachable from a free account** and
@@ -2992,6 +3394,138 @@ func (c *Client) sendGetSleepReport(ctx context.Context, params GetSleepReportPa
 	return result, nil
 }
 
+// GetSportProfile invokes getSportProfile operation.
+//
+// Returns one sport profile by its UUID.
+// **Not exercised against a real profile.** The test account has no synced
+// sport profiles, so this could not be observed returning `200`. Probing
+// with arbitrary UUIDs returned `400` with a plain-text
+// `Invalid request: Invalid UUID: <value>` body — meaning either the id
+// must match an existing profile, or Polar uses a stricter/custom id
+// encoding than a canonical v4 UUID. # TODO: verify the success shape and the
+// exact id format using an account with a device-synced profile.
+//
+// GET /api/sports/profiles/{id}
+func (c *Client) GetSportProfile(ctx context.Context, params GetSportProfileParams) (GetSportProfileRes, error) {
+	res, err := c.sendGetSportProfile(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetSportProfile(ctx context.Context, params GetSportProfileParams) (res GetSportProfileRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getSportProfile"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/api/sports/profiles/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSportProfileOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/api/sports/profiles/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, GetSportProfileOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetSportProfileResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetSports invokes getSports operation.
 //
 // Returns a flat object mapping numeric sport ID (as string key) to the
@@ -3196,6 +3730,336 @@ func (c *Client) sendGetSummaryData(ctx context.Context, request *GetSummaryData
 
 	stage = "DecodeResponse"
 	result, err := decodeGetSummaryDataResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetTrainingDisplayItems invokes getTrainingDisplayItems operation.
+//
+// Returns the **catalog** of display fields the given device (`productId`)
+// can show for the given sport profile, grouped by category — the palette
+// the watch-screen layout editor offers. The user's actual chosen layout is
+// in `GET /settings/sports/training-display-lists/{productId}/{sportProfileId}`.
+// Served by the legacy `/settings/*` controller (not under `/api/*`).
+// Requires `X-Requested-With: XMLHttpRequest`. Observed to return the
+// product/sport default catalog even from an account that does not own the
+// profile (not strictly owner-scoped).
+//
+// GET /settings/sports/training-display-items/{productId}/{sportProfileId}
+func (c *Client) GetTrainingDisplayItems(ctx context.Context, params GetTrainingDisplayItemsParams) (GetTrainingDisplayItemsRes, error) {
+	res, err := c.sendGetTrainingDisplayItems(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetTrainingDisplayItems(ctx context.Context, params GetTrainingDisplayItemsParams) (res GetTrainingDisplayItemsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getTrainingDisplayItems"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/settings/sports/training-display-items/{productId}/{sportProfileId}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetTrainingDisplayItemsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [4]string
+	pathParts[0] = "/settings/sports/training-display-items/"
+	{
+		// Encode "productId" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "productId",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.IntToString(params.ProductId))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/"
+	{
+		// Encode "sportProfileId" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "sportProfileId",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.IntToString(params.SportProfileId))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, GetTrainingDisplayItemsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetTrainingDisplayItemsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetTrainingDisplayLists invokes getTrainingDisplayLists operation.
+//
+// Returns the user's current **watch-screen layout** for this profile: an
+// array of display sets, each holding `displays` (the ordered screens, where
+// each screen is a list of field ids from the catalog).
+// Served by the legacy `/settings/*` controller. Requires
+// `X-Requested-With: XMLHttpRequest`.
+// **Read-only path.** This layout is *saved* via `POST /settings/sports/save`
+// (as a `TrainingDisplays` block), not by writing back here — `PUT`/`POST`
+// to this path return 404 (verified 2026-06-01).
+//
+// GET /settings/sports/training-display-lists/{productId}/{sportProfileId}
+func (c *Client) GetTrainingDisplayLists(ctx context.Context, params GetTrainingDisplayListsParams) (GetTrainingDisplayListsRes, error) {
+	res, err := c.sendGetTrainingDisplayLists(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetTrainingDisplayLists(ctx context.Context, params GetTrainingDisplayListsParams) (res GetTrainingDisplayListsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getTrainingDisplayLists"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/settings/sports/training-display-lists/{productId}/{sportProfileId}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetTrainingDisplayListsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [4]string
+	pathParts[0] = "/settings/sports/training-display-lists/"
+	{
+		// Encode "productId" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "productId",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.IntToString(params.ProductId))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/"
+	{
+		// Encode "sportProfileId" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "sportProfileId",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.IntToString(params.SportProfileId))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, GetTrainingDisplayListsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetTrainingDisplayListsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -4046,6 +4910,152 @@ func (c *Client) sendListFavoritesSimple(ctx context.Context) (res ListFavorites
 	return result, nil
 }
 
+// ListSportProfiles invokes listSportProfiles operation.
+//
+// Returns the signed-in user's **sport profiles** ("Profils sportifs",
+// reached in the web UI via *Compte → Profils sportifs*, served by the
+// server-rendered `/settings/sports` page).
+// Sport profiles are the per-sport device configuration (training views,
+// auto-lap, zones, sensor/GPS settings). **Create/update is NOT on this
+// `/api/sports/*` resource** (`POST`/`PUT`/`PATCH` here all 404). It lives on
+// the legacy `/settings/sports/*` controller instead:
+// **create = `POST /settings/sports/add`**, **update =
+// `POST /settings/sports/save`** (verified 2026-06-01 from a device-paired
+// account — see `docs/endpoints/sport-profiles.md`).
+// Note those settings endpoints key profiles by a **numeric** id, whereas
+// this `/api/sports/profiles/{id}` resource validates a **UUID** — the two id
+// systems are not yet reconciled.
+// **Empty on a device-less account.** On the free test account this returns
+// `[]`, and `GET /api/account/users/current/user` likewise reports
+// `sportProfiles: []`. A populated element shape could not be captured — see
+// `SportProfile` for the partially-inferred element schema and TODOs.
+// A `sportId` query parameter is accepted but had no visible effect on the
+// empty account (still `[]`).
+//
+// GET /api/sports/profiles
+func (c *Client) ListSportProfiles(ctx context.Context, params ListSportProfilesParams) (ListSportProfilesRes, error) {
+	res, err := c.sendListSportProfiles(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListSportProfiles(ctx context.Context, params ListSportProfilesParams) (res ListSportProfilesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listSportProfiles"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/api/sports/profiles"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListSportProfilesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/api/sports/profiles"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "sportId" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "sportId",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.SportId.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, ListSportProfilesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListSportProfilesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListTrainingSessions invokes listTrainingSessions operation.
 //
 // Return completed training sessions for a user within an inclusive date
@@ -4312,6 +5322,140 @@ func (c *Client) sendRenameFavorite(ctx context.Context, request *RenameFavorite
 
 	stage = "DecodeResponse"
 	result, err := decodeRenameFavoriteResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// SaveSportProfile invokes saveSportProfile operation.
+//
+// Updates one or more sport profiles' general device settings
+// (`TrainingSettings`) and/or watch-screen layout (`TrainingDisplays`). This
+// is the **update endpoint** that was previously missing — the layout save
+// issued after editing a profile in *Compte → Profils sportifs*. Captured
+// 2026-06-01 from a device-paired account.
+// Body is **JSON** with a `sports` map keyed by profile id; each value is an
+// array of config blocks discriminated by `name` (`TrainingSettings`,
+// `TrainingDisplays`). Requires `X-Requested-With: XMLHttpRequest`.
+// Returns **200** with a `text/plain` body containing a JSON success
+// message reminding the user to sync their device (changes apply on the
+// watch only after the next sync).
+//
+// POST /settings/sports/save
+func (c *Client) SaveSportProfile(ctx context.Context, request *SportProfileSaveRequest, params SaveSportProfileParams) (SaveSportProfileRes, error) {
+	res, err := c.sendSaveSportProfile(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendSaveSportProfile(ctx context.Context, request *SportProfileSaveRequest, params SaveSportProfileParams) (res SaveSportProfileRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("saveSportProfile"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/settings/sports/save"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, SaveSportProfileOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/settings/sports/save"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeSaveSportProfileRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, SaveSportProfileOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeSaveSportProfileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

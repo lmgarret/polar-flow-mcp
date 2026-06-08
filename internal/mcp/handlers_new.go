@@ -82,9 +82,9 @@ func GetProgressSummaryHandler(fc *flow.Client) func(context.Context, mcpgo.Call
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		sportID := req.GetInt("sport_id", 0)
+		group := req.GetString("group", "MONTH")
 		timeFrame := req.GetString("time_frame", "3m")
-		summary, err := fc.GetProgressViewSummary(ctx, from, to, sportID, timeFrame)
+		summary, err := fc.GetProgressViewSummary(ctx, from, to, group, timeFrame)
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}

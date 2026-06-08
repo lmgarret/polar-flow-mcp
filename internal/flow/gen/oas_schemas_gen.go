@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
+	"github.com/google/uuid"
 )
 
 // A single `{time, value}` mini-chart data point.
@@ -720,14 +721,40 @@ func (s *AddRouteToFavoritesReq) SetID(val int64) {
 	s.ID = val
 }
 
-// A diary entry returned by /training/getCalendarEvents.
+type AddSportProfileReq struct {
+	// Sport to create a profile for (id space of `/api/sports/sports`).
+	SportId int `json:"sportId"`
+}
+
+// GetSportId returns the value of SportId.
+func (s *AddSportProfileReq) GetSportId() int {
+	return s.SportId
+}
+
+// SetSportId sets the value of SportId.
+func (s *AddSportProfileReq) SetSportId(val int) {
+	s.SportId = val
+}
+
+// A diary entry returned by /training/getCalendarEvents. The array is polymorphic by `type`:
+// `TRAININGTARGET` (planned workout), `FITNESSDATA` (a fitness-test result), `EXERCISE` (a recorded
+// session), etc. Different `type`s populate different subsets of these properties — e.g. only the
+// `FITNESSDATA` variant carries the calendar-styling fields
+// (`backgroundColor`/`borderColor`/`textColor`) and `index`/`timestamp`, while `TRAININGTARGET`
+// carries the target rollups (`calories`/`distance`/ `duration`). Treat all properties below as
+// optional per event.
 // Ref: #/components/schemas/CalendarEvent
 type CalendarEvent struct {
-	// Event category, e.g. "TRAININGTARGET", "EXERCISE".
+	// Event category, e.g. "TRAININGTARGET", "FITNESSDATA", "EXERCISE".
 	Type OptString `json:"type"`
-	// Numeric ID of the underlying entity (use as {id} in /api/trainingtarget/{id}).
-	ListItemId OptInt    `json:"ListItemId"`
-	Title      OptString `json:"title"`
+	// Numeric ID of the underlying entity (use as {id} in /api/trainingtarget/{id}). **Casing quirk:**
+	// `TRAININGTARGET` events use Pascal-case `ListItemId`, but `FITNESSDATA` events use camel-case
+	// `listItemId` (see below) for the same concept.
+	ListItemId OptInt `json:"ListItemId"`
+	// CamelCase variant of `ListItemId` emitted by `FITNESSDATA` events. Same meaning (entity id); the
+	// inconsistent casing is server-side.
+	ListItemId1 OptInt    `json:"listItemId"`
+	Title       OptString `json:"title"`
 	// Free-text notes on the event; empty string when none.
 	Description OptString `json:"description"`
 	// Event start. Polymorphic by event type: TRAININGTARGET events send an ISO 8601 UTC datetime string,
@@ -761,6 +788,17 @@ type CalendarEvent struct {
 	// phase); **omitted entirely** for distance-goal targets that carry no rolled-up duration (verified
 	// via capture 20-calendar-events.json).
 	Duration OptNilInt `json:"duration"`
+	// Calendar swatch background (hex). Emitted by `FITNESSDATA` events for diary rendering; absent on
+	// `TRAININGTARGET`.
+	BackgroundColor OptString `json:"backgroundColor"`
+	// Calendar swatch border (hex). `FITNESSDATA` only.
+	BorderColor OptString `json:"borderColor"`
+	// Calendar swatch text colour (hex). `FITNESSDATA` only.
+	TextColor OptString `json:"textColor"`
+	// Per-day render ordering index for the diary view. Observed on `FITNESSDATA` events.
+	Index OptInt `json:"index"`
+	// Epoch-milliseconds form of `start`/`datetime`. Observed on `FITNESSDATA` events.
+	Timestamp OptInt `json:"timestamp"`
 }
 
 // GetType returns the value of Type.
@@ -771,6 +809,11 @@ func (s *CalendarEvent) GetType() OptString {
 // GetListItemId returns the value of ListItemId.
 func (s *CalendarEvent) GetListItemId() OptInt {
 	return s.ListItemId
+}
+
+// GetListItemId1 returns the value of ListItemId1.
+func (s *CalendarEvent) GetListItemId1() OptInt {
+	return s.ListItemId1
 }
 
 // GetTitle returns the value of Title.
@@ -848,6 +891,31 @@ func (s *CalendarEvent) GetDuration() OptNilInt {
 	return s.Duration
 }
 
+// GetBackgroundColor returns the value of BackgroundColor.
+func (s *CalendarEvent) GetBackgroundColor() OptString {
+	return s.BackgroundColor
+}
+
+// GetBorderColor returns the value of BorderColor.
+func (s *CalendarEvent) GetBorderColor() OptString {
+	return s.BorderColor
+}
+
+// GetTextColor returns the value of TextColor.
+func (s *CalendarEvent) GetTextColor() OptString {
+	return s.TextColor
+}
+
+// GetIndex returns the value of Index.
+func (s *CalendarEvent) GetIndex() OptInt {
+	return s.Index
+}
+
+// GetTimestamp returns the value of Timestamp.
+func (s *CalendarEvent) GetTimestamp() OptInt {
+	return s.Timestamp
+}
+
 // SetType sets the value of Type.
 func (s *CalendarEvent) SetType(val OptString) {
 	s.Type = val
@@ -856,6 +924,11 @@ func (s *CalendarEvent) SetType(val OptString) {
 // SetListItemId sets the value of ListItemId.
 func (s *CalendarEvent) SetListItemId(val OptInt) {
 	s.ListItemId = val
+}
+
+// SetListItemId1 sets the value of ListItemId1.
+func (s *CalendarEvent) SetListItemId1(val OptInt) {
+	s.ListItemId1 = val
 }
 
 // SetTitle sets the value of Title.
@@ -931,6 +1004,31 @@ func (s *CalendarEvent) SetDistance(val OptNilFloat64) {
 // SetDuration sets the value of Duration.
 func (s *CalendarEvent) SetDuration(val OptNilInt) {
 	s.Duration = val
+}
+
+// SetBackgroundColor sets the value of BackgroundColor.
+func (s *CalendarEvent) SetBackgroundColor(val OptString) {
+	s.BackgroundColor = val
+}
+
+// SetBorderColor sets the value of BorderColor.
+func (s *CalendarEvent) SetBorderColor(val OptString) {
+	s.BorderColor = val
+}
+
+// SetTextColor sets the value of TextColor.
+func (s *CalendarEvent) SetTextColor(val OptString) {
+	s.TextColor = val
+}
+
+// SetIndex sets the value of Index.
+func (s *CalendarEvent) SetIndex(val OptInt) {
+	s.Index = val
+}
+
+// SetTimestamp sets the value of Timestamp.
+func (s *CalendarEvent) SetTimestamp(val OptInt) {
+	s.Timestamp = val
 }
 
 // ChangeFavoriteSportBadRequest is response for ChangeFavoriteSport operation.
@@ -1342,6 +1440,16 @@ func (s *DeleteFavoriteOK) SetSuccess(val string) {
 }
 
 func (*DeleteFavoriteOK) deleteFavoriteRes() {}
+
+// DeleteSportProfileInternalServerError is response for DeleteSportProfile operation.
+type DeleteSportProfileInternalServerError struct{}
+
+func (*DeleteSportProfileInternalServerError) deleteSportProfileRes() {}
+
+// DeleteSportProfileOK is response for DeleteSportProfile operation.
+type DeleteSportProfileOK struct{}
+
+func (*DeleteSportProfileOK) deleteSportProfileRes() {}
 
 // DeleteTrainingSessionNotFound is response for DeleteTrainingSession operation.
 type DeleteTrainingSessionNotFound struct{}
@@ -2724,14 +2832,15 @@ func (s *GetFeaturesAvailableOKItem) SetAvailable(val bool) {
 }
 
 type GetProgressViewSummaryReq struct {
-	// Inclusive start date, `D.M.YYYY` (no leading zeros required).
+	// Inclusive start date, `DD-MM-YYYY` (dashes, leading zeros).
 	From string `json:"from"`
-	// Inclusive end date, `D.M.YYYY`.
+	// Inclusive end date, `DD-MM-YYYY` (dashes, leading zeros).
 	To string `json:"to"`
-	// Optional sport-group filter. JS passes `"all"` for the
-	// "Tous les sports" tab; a numeric sportId filters to that
-	// sport. # TODO: verify scoping with real data.
-	Group OptGetProgressViewSummaryReqGroup `json:"group"`
+	// Time-bucket granularity for the breakdown — **not** a sport
+	// filter (earlier guess was wrong). Observed live value:
+	// `"MONTH"`. Other diary granularities (`DAY`/`WEEK`/`YEAR`)
+	// are likely but unverified. # TODO: confirm full enum.
+	Group OptString `json:"group"`
 	// Bucket size for the per-time-slice breakdowns. JS values
 	// observed: `"6w"`, `"3m"`, `"1y"`. The server accepted
 	// arbitrary strings (including empty / omitted) on the test
@@ -2751,7 +2860,7 @@ func (s *GetProgressViewSummaryReq) GetTo() string {
 }
 
 // GetGroup returns the value of Group.
-func (s *GetProgressViewSummaryReq) GetGroup() OptGetProgressViewSummaryReqGroup {
+func (s *GetProgressViewSummaryReq) GetGroup() OptString {
 	return s.Group
 }
 
@@ -2771,84 +2880,13 @@ func (s *GetProgressViewSummaryReq) SetTo(val string) {
 }
 
 // SetGroup sets the value of Group.
-func (s *GetProgressViewSummaryReq) SetGroup(val OptGetProgressViewSummaryReqGroup) {
+func (s *GetProgressViewSummaryReq) SetGroup(val OptString) {
 	s.Group = val
 }
 
 // SetTimeFrame sets the value of TimeFrame.
 func (s *GetProgressViewSummaryReq) SetTimeFrame(val OptString) {
 	s.TimeFrame = val
-}
-
-// Optional sport-group filter. JS passes `"all"` for the
-// "Tous les sports" tab; a numeric sportId filters to that
-// sport. # TODO: verify scoping with real data.
-// GetProgressViewSummaryReqGroup represents sum type.
-type GetProgressViewSummaryReqGroup struct {
-	Type   GetProgressViewSummaryReqGroupType // switch on this field
-	String string
-	Int    int
-}
-
-// GetProgressViewSummaryReqGroupType is oneOf type of GetProgressViewSummaryReqGroup.
-type GetProgressViewSummaryReqGroupType string
-
-// Possible values for GetProgressViewSummaryReqGroupType.
-const (
-	StringGetProgressViewSummaryReqGroup GetProgressViewSummaryReqGroupType = "string"
-	IntGetProgressViewSummaryReqGroup    GetProgressViewSummaryReqGroupType = "int"
-)
-
-// IsString reports whether GetProgressViewSummaryReqGroup is string.
-func (s GetProgressViewSummaryReqGroup) IsString() bool {
-	return s.Type == StringGetProgressViewSummaryReqGroup
-}
-
-// IsInt reports whether GetProgressViewSummaryReqGroup is int.
-func (s GetProgressViewSummaryReqGroup) IsInt() bool {
-	return s.Type == IntGetProgressViewSummaryReqGroup
-}
-
-// SetString sets GetProgressViewSummaryReqGroup to string.
-func (s *GetProgressViewSummaryReqGroup) SetString(v string) {
-	s.Type = StringGetProgressViewSummaryReqGroup
-	s.String = v
-}
-
-// GetString returns string and true boolean if GetProgressViewSummaryReqGroup is string.
-func (s GetProgressViewSummaryReqGroup) GetString() (v string, ok bool) {
-	if !s.IsString() {
-		return v, false
-	}
-	return s.String, true
-}
-
-// NewStringGetProgressViewSummaryReqGroup returns new GetProgressViewSummaryReqGroup from string.
-func NewStringGetProgressViewSummaryReqGroup(v string) GetProgressViewSummaryReqGroup {
-	var s GetProgressViewSummaryReqGroup
-	s.SetString(v)
-	return s
-}
-
-// SetInt sets GetProgressViewSummaryReqGroup to int.
-func (s *GetProgressViewSummaryReqGroup) SetInt(v int) {
-	s.Type = IntGetProgressViewSummaryReqGroup
-	s.Int = v
-}
-
-// GetInt returns int and true boolean if GetProgressViewSummaryReqGroup is int.
-func (s GetProgressViewSummaryReqGroup) GetInt() (v int, ok bool) {
-	if !s.IsInt() {
-		return v, false
-	}
-	return s.Int, true
-}
-
-// NewIntGetProgressViewSummaryReqGroup returns new GetProgressViewSummaryReqGroup from int.
-func NewIntGetProgressViewSummaryReqGroup(v int) GetProgressViewSummaryReqGroup {
-	var s GetProgressViewSummaryReqGroup
-	s.SetInt(v)
-	return s
 }
 
 // GetSleepReportBadRequest is response for GetSleepReport operation.
@@ -2865,6 +2903,22 @@ type GetSleepReportUnauthorized struct{}
 
 func (*GetSleepReportUnauthorized) getSleepReportRes() {}
 
+type GetSportProfileBadRequest struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetSportProfileBadRequest) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*GetSportProfileBadRequest) getSportProfileRes() {}
+
 // GetSportsInternalServerError is response for GetSports operation.
 type GetSportsInternalServerError struct{}
 
@@ -2876,10 +2930,13 @@ type GetSportsNotFound struct{}
 func (*GetSportsNotFound) getSportsRes() {}
 
 type GetSummaryDataReq struct {
-	From      string                    `json:"from"`
-	To        string                    `json:"to"`
-	Group     OptGetSummaryDataReqGroup `json:"group"`
-	TimeFrame OptString                 `json:"timeFrame"`
+	// Inclusive start, `DD-MM-YYYY` (dashes).
+	From string `json:"from"`
+	// Inclusive end, `DD-MM-YYYY` (dashes).
+	To string `json:"to"`
+	// Time-bucket granularity (e.g. `MONTH`), not a sport filter.
+	Group     OptString `json:"group"`
+	TimeFrame OptString `json:"timeFrame"`
 }
 
 // GetFrom returns the value of From.
@@ -2893,7 +2950,7 @@ func (s *GetSummaryDataReq) GetTo() string {
 }
 
 // GetGroup returns the value of Group.
-func (s *GetSummaryDataReq) GetGroup() OptGetSummaryDataReqGroup {
+func (s *GetSummaryDataReq) GetGroup() OptString {
 	return s.Group
 }
 
@@ -2913,7 +2970,7 @@ func (s *GetSummaryDataReq) SetTo(val string) {
 }
 
 // SetGroup sets the value of Group.
-func (s *GetSummaryDataReq) SetGroup(val OptGetSummaryDataReqGroup) {
+func (s *GetSummaryDataReq) SetGroup(val OptString) {
 	s.Group = val
 }
 
@@ -2922,69 +2979,9 @@ func (s *GetSummaryDataReq) SetTimeFrame(val OptString) {
 	s.TimeFrame = val
 }
 
-// GetSummaryDataReqGroup represents sum type.
-type GetSummaryDataReqGroup struct {
-	Type   GetSummaryDataReqGroupType // switch on this field
-	String string
-	Int    int
-}
+type GetTrainingDisplayListsOKApplicationJSON []TrainingDisplayList
 
-// GetSummaryDataReqGroupType is oneOf type of GetSummaryDataReqGroup.
-type GetSummaryDataReqGroupType string
-
-// Possible values for GetSummaryDataReqGroupType.
-const (
-	StringGetSummaryDataReqGroup GetSummaryDataReqGroupType = "string"
-	IntGetSummaryDataReqGroup    GetSummaryDataReqGroupType = "int"
-)
-
-// IsString reports whether GetSummaryDataReqGroup is string.
-func (s GetSummaryDataReqGroup) IsString() bool { return s.Type == StringGetSummaryDataReqGroup }
-
-// IsInt reports whether GetSummaryDataReqGroup is int.
-func (s GetSummaryDataReqGroup) IsInt() bool { return s.Type == IntGetSummaryDataReqGroup }
-
-// SetString sets GetSummaryDataReqGroup to string.
-func (s *GetSummaryDataReqGroup) SetString(v string) {
-	s.Type = StringGetSummaryDataReqGroup
-	s.String = v
-}
-
-// GetString returns string and true boolean if GetSummaryDataReqGroup is string.
-func (s GetSummaryDataReqGroup) GetString() (v string, ok bool) {
-	if !s.IsString() {
-		return v, false
-	}
-	return s.String, true
-}
-
-// NewStringGetSummaryDataReqGroup returns new GetSummaryDataReqGroup from string.
-func NewStringGetSummaryDataReqGroup(v string) GetSummaryDataReqGroup {
-	var s GetSummaryDataReqGroup
-	s.SetString(v)
-	return s
-}
-
-// SetInt sets GetSummaryDataReqGroup to int.
-func (s *GetSummaryDataReqGroup) SetInt(v int) {
-	s.Type = IntGetSummaryDataReqGroup
-	s.Int = v
-}
-
-// GetInt returns int and true boolean if GetSummaryDataReqGroup is int.
-func (s GetSummaryDataReqGroup) GetInt() (v int, ok bool) {
-	if !s.IsInt() {
-		return v, false
-	}
-	return s.Int, true
-}
-
-// NewIntGetSummaryDataReqGroup returns new GetSummaryDataReqGroup from int.
-func NewIntGetSummaryDataReqGroup(v int) GetSummaryDataReqGroup {
-	var s GetSummaryDataReqGroup
-	s.SetInt(v)
-	return s
-}
+func (*GetTrainingDisplayListsOKApplicationJSON) getTrainingDisplayListsRes() {}
 
 // GetTrainingSessionDetailsNotFound is response for GetTrainingSessionDetails operation.
 type GetTrainingSessionDetailsNotFound struct{}
@@ -3302,6 +3299,10 @@ func (*ListDeviceFavoritesOK) listDeviceFavoritesRes() {}
 type ListFavoritesSimpleOKApplicationJSON []FavoriteSimple
 
 func (*ListFavoritesSimpleOKApplicationJSON) listFavoritesSimpleRes() {}
+
+type ListSportProfilesOKApplicationJSON []SportProfile
+
+func (*ListSportProfilesOKApplicationJSON) listSportProfilesRes() {}
 
 type ListTrainingSessionsOKApplicationJSON []TrainingSessionSummary
 
@@ -4510,98 +4511,6 @@ func (o OptFloat64) Get() (v float64, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptFloat64) Or(d float64) float64 {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptGetProgressViewSummaryReqGroup returns new OptGetProgressViewSummaryReqGroup with value set to v.
-func NewOptGetProgressViewSummaryReqGroup(v GetProgressViewSummaryReqGroup) OptGetProgressViewSummaryReqGroup {
-	return OptGetProgressViewSummaryReqGroup{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptGetProgressViewSummaryReqGroup is optional GetProgressViewSummaryReqGroup.
-type OptGetProgressViewSummaryReqGroup struct {
-	Value GetProgressViewSummaryReqGroup
-	Set   bool
-}
-
-// IsSet returns true if OptGetProgressViewSummaryReqGroup was set.
-func (o OptGetProgressViewSummaryReqGroup) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptGetProgressViewSummaryReqGroup) Reset() {
-	var v GetProgressViewSummaryReqGroup
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptGetProgressViewSummaryReqGroup) SetTo(v GetProgressViewSummaryReqGroup) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptGetProgressViewSummaryReqGroup) Get() (v GetProgressViewSummaryReqGroup, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptGetProgressViewSummaryReqGroup) Or(d GetProgressViewSummaryReqGroup) GetProgressViewSummaryReqGroup {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptGetSummaryDataReqGroup returns new OptGetSummaryDataReqGroup with value set to v.
-func NewOptGetSummaryDataReqGroup(v GetSummaryDataReqGroup) OptGetSummaryDataReqGroup {
-	return OptGetSummaryDataReqGroup{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptGetSummaryDataReqGroup is optional GetSummaryDataReqGroup.
-type OptGetSummaryDataReqGroup struct {
-	Value GetSummaryDataReqGroup
-	Set   bool
-}
-
-// IsSet returns true if OptGetSummaryDataReqGroup was set.
-func (o OptGetSummaryDataReqGroup) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptGetSummaryDataReqGroup) Reset() {
-	var v GetSummaryDataReqGroup
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptGetSummaryDataReqGroup) SetTo(v GetSummaryDataReqGroup) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptGetSummaryDataReqGroup) Get() (v GetSummaryDataReqGroup, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptGetSummaryDataReqGroup) Or(d GetSummaryDataReqGroup) GetSummaryDataReqGroup {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -6245,6 +6154,52 @@ func (o OptSleepNightStages) Or(d SleepNightStages) SleepNightStages {
 	return d
 }
 
+// NewOptSportProfileAddResponseSport returns new OptSportProfileAddResponseSport with value set to v.
+func NewOptSportProfileAddResponseSport(v SportProfileAddResponseSport) OptSportProfileAddResponseSport {
+	return OptSportProfileAddResponseSport{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSportProfileAddResponseSport is optional SportProfileAddResponseSport.
+type OptSportProfileAddResponseSport struct {
+	Value SportProfileAddResponseSport
+	Set   bool
+}
+
+// IsSet returns true if OptSportProfileAddResponseSport was set.
+func (o OptSportProfileAddResponseSport) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSportProfileAddResponseSport) Reset() {
+	var v SportProfileAddResponseSport
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSportProfileAddResponseSport) SetTo(v SportProfileAddResponseSport) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSportProfileAddResponseSport) Get() (v SportProfileAddResponseSport, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSportProfileAddResponseSport) Or(d SportProfileAddResponseSport) SportProfileAddResponseSport {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptStandardDuration returns new OptStandardDuration with value set to v.
 func NewOptStandardDuration(v StandardDuration) OptStandardDuration {
 	return OptStandardDuration{
@@ -6429,6 +6384,52 @@ func (o OptURI) Or(d url.URL) url.URL {
 	return d
 }
 
+// NewOptUUID returns new OptUUID with value set to v.
+func NewOptUUID(v uuid.UUID) OptUUID {
+	return OptUUID{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUUID is optional uuid.UUID.
+type OptUUID struct {
+	Value uuid.UUID
+	Set   bool
+}
+
+// IsSet returns true if OptUUID was set.
+func (o OptUUID) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUUID) Reset() {
+	var v uuid.UUID
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUUID) SetTo(v uuid.UUID) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUUID) Get() (v uuid.UUID, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUUID) Or(d uuid.UUID) uuid.UUID {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // A single phase within a PHASED training target's exerciseTarget.phases array.
 // Verified from captured POST bodies for HEART_RATE_ZONES, SPEED_ZONES, POWER_ZONES,
 // and NONE intensity variants and for both `phaseChangeType` values (AUTOMATIC,
@@ -6511,9 +6512,12 @@ type PhaseLeaf struct {
 	ID OptNilFloat64 `json:"id"`
 	// Constant `"PHASE"` discriminator for leaf phases.
 	PhaseType PhaseLeafPhaseType `json:"phaseType"`
-	// Phase name. Required when `intensityType` is not HEART_RATE_ZONES
-	// (submission fails with "Ce champ est obligatoire." otherwise).
-	// For HR-zone phases an empty string is accepted.
+	// Free-text phase label shown per-phase in the workout breakdown
+	// (e.g. `Warm-up`, `Work`, `Recovery`, `Cool-down` — verified on a live
+	// named-phase target). Independent of `intensityType`: a `NONE`-intensity
+	// phase still carries its own name. Required when `intensityType` is not
+	// HEART_RATE_ZONES (submission fails with "Ce champ est obligatoire."
+	// otherwise). For HR-zone phases an empty string is accepted.
 	Name string `json:"name"`
 	// "AUTOMATIC" — next phase starts automatically when the goal is reached.
 	// "MANUAL" — wait for user input (verified via capture 10-phased-manual.json).
@@ -6532,11 +6536,12 @@ type PhaseLeaf struct {
 	// "NONE" and nulls both zones. POWER_ZONES requires a power-capable sport
 	// (e.g. CYCLING, sportId 2) — verified via capture 11-phased-power.json.
 	IntensityType PhaseLeafIntensityType `json:"intensityType"`
-	// Lower zone bound (1–5) when `intensityType != NONE`; otherwise null. NONE-intensity phases (e.g.
-	// warmup/cooldown) return `0` rather than null.
+	// Lower zone bound (1–5) when `intensityType != NONE`. **Send/read asymmetry:** the create payload
+	// nulls both zones for `NONE` phases, but the server reads them back as `0` (a "no zone" sentinel
+	// — verified on a live named-phase target), not null. Accept both `0` and `null`.
 	LowerZone OptNilFloat64 `json:"lowerZone"`
-	// Upper zone bound (1–5) when `intensityType != NONE`; otherwise null. NONE-intensity phases (e.g.
-	// warmup/cooldown) return `0` rather than null.
+	// Upper zone bound (1–5) when `intensityType != NONE`. Same send/read asymmetry as `lowerZone`:
+	// `NONE` phases read back as `0`, not null.
 	UpperZone OptNilFloat64 `json:"upperZone"`
 }
 
@@ -7957,6 +7962,22 @@ func (s *SampleBlock) SetTEMPERATURE(val jx.Raw) {
 func (s *SampleBlock) SetBODYTEMPERATURE(val jx.Raw) {
 	s.BODYTEMPERATURE = val
 }
+
+type SaveSportProfileOK struct {
+	Success OptString `json:"success"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SaveSportProfileOK) GetSuccess() OptString {
+	return s.Success
+}
+
+// SetSuccess sets the value of Success.
+func (s *SaveSportProfileOK) SetSuccess(val OptString) {
+	s.Success = val
+}
+
+func (*SaveSportProfileOK) saveSportProfileRes() {}
 
 type SessionCookie struct {
 	APIKey string
@@ -9551,6 +9572,314 @@ func (s *SportDistributionEntry) SetValueForChart(val OptFloat32) {
 	s.ValueForChart = val
 }
 
+// A user's **sport profile** ("Profil sportif") — the per-sport configuration
+// a Polar device uses when you start a training session in that sport (training
+// views / watch-screen layout, auto-lap, zones, GPS/sensor settings, etc.).
+// > **Element shape is only partially observed.** This `/api/sports/profiles`
+// > resource returned `[]` on every account tried (incl. a device-paired one),
+// > so a populated element could not be captured here. Note that profiles are
+// > actually created/edited via the legacy `/settings/sports/*` controller
+// > (`POST /settings/sports/add`, `POST /settings/sports/save`) which keys them
+// > by a **numeric** id — this UUID-based resource appears to be separate. The fields below are
+// the ones that could be
+// > justified from the `/settings/sports` page and the watch-display editor
+// > micro-frontend; everything marked `# TODO: verify` awaits a capture from an
+// > account with a paired device. `additionalProperties` is therefore left
+// > open.
+// Ref: #/components/schemas/SportProfile
+type SportProfile struct {
+	// Server-assigned profile identifier. **This is a UUID string**, not the
+	// numeric `sportId`. Used as `{id}` in
+	// `GET /api/sports/profiles/{id}` and `DELETE /api/sports/profiles/{id}`.
+	ID OptUUID `json:"id"`
+	// Numeric sport this profile is for — the same id space as
+	// `GET /api/sports/sports` (e.g. 1 = RUNNING, 2 = CYCLING, 23 = SWIMMING,
+	// 15 = STRENGTH_TRAINING, 68 = TRIATHLON). The `/settings/sports` page
+	// seeds these five as default template cards (each with an **empty**
+	// `profileId` until a device persists one).
+	SportId OptInt `json:"sportId"`
+	// Display name of the profile, localized to the account language on the
+	// default templates (e.g. "Course à pied", "Cyclisme"). On device-created
+	// profiles this is the user-editable profile name. # TODO: verify whether
+	// the API returns the raw constant or the localized label.
+	Name OptString `json:"name"`
+	// Creation timestamp shown on the profile card. Exact wire format
+	// unconfirmed (the UI renders it as `D-M-YYYY HH:mm`). # TODO: verify
+	// (ISO 8601 vs epoch ms).
+	Created         OptString `json:"created"`
+	AdditionalProps SportProfileAdditional
+}
+
+// GetID returns the value of ID.
+func (s *SportProfile) GetID() OptUUID {
+	return s.ID
+}
+
+// GetSportId returns the value of SportId.
+func (s *SportProfile) GetSportId() OptInt {
+	return s.SportId
+}
+
+// GetName returns the value of Name.
+func (s *SportProfile) GetName() OptString {
+	return s.Name
+}
+
+// GetCreated returns the value of Created.
+func (s *SportProfile) GetCreated() OptString {
+	return s.Created
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *SportProfile) GetAdditionalProps() SportProfileAdditional {
+	return s.AdditionalProps
+}
+
+// SetID sets the value of ID.
+func (s *SportProfile) SetID(val OptUUID) {
+	s.ID = val
+}
+
+// SetSportId sets the value of SportId.
+func (s *SportProfile) SetSportId(val OptInt) {
+	s.SportId = val
+}
+
+// SetName sets the value of Name.
+func (s *SportProfile) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetCreated sets the value of Created.
+func (s *SportProfile) SetCreated(val OptString) {
+	s.Created = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *SportProfile) SetAdditionalProps(val SportProfileAdditional) {
+	s.AdditionalProps = val
+}
+
+func (*SportProfile) getSportProfileRes() {}
+
+// Response of `POST /settings/sports/add` — the newly created sport profile's
+// summary. Sent as `text/plain` but the body is JSON. Captured 2026-06-01.
+// Ref: #/components/schemas/SportProfileAddResponse
+type SportProfileAddResponse struct {
+	// Localized success message (account language), e.g. "Profil sport ajouté".
+	Success OptString `json:"success"`
+	// The created profile's summary card data.
+	Sport OptSportProfileAddResponseSport `json:"sport"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SportProfileAddResponse) GetSuccess() OptString {
+	return s.Success
+}
+
+// GetSport returns the value of Sport.
+func (s *SportProfileAddResponse) GetSport() OptSportProfileAddResponseSport {
+	return s.Sport
+}
+
+// SetSuccess sets the value of Success.
+func (s *SportProfileAddResponse) SetSuccess(val OptString) {
+	s.Success = val
+}
+
+// SetSport sets the value of Sport.
+func (s *SportProfileAddResponse) SetSport(val OptSportProfileAddResponseSport) {
+	s.Sport = val
+}
+
+func (*SportProfileAddResponse) addSportProfileRes() {}
+
+// The created profile's summary card data.
+type SportProfileAddResponseSport struct {
+	// New sport-profile id (numeric, returned as a string). Use it as the
+	// map key in `POST /settings/sports/save` and as `sportProfileId` in
+	// the training-display endpoints.
+	ID OptString `json:"id"`
+	// The sport this profile is for (echoes the posted `sportId`).
+	SportId OptString `json:"sportId"`
+	// Sport icon URL.
+	Icon OptURI `json:"icon"`
+	// Creation date as `D-M-YYYY` (account locale).
+	Date OptString `json:"date"`
+	// Creation time as `HH:mm`.
+	Time OptString `json:"time"`
+}
+
+// GetID returns the value of ID.
+func (s *SportProfileAddResponseSport) GetID() OptString {
+	return s.ID
+}
+
+// GetSportId returns the value of SportId.
+func (s *SportProfileAddResponseSport) GetSportId() OptString {
+	return s.SportId
+}
+
+// GetIcon returns the value of Icon.
+func (s *SportProfileAddResponseSport) GetIcon() OptURI {
+	return s.Icon
+}
+
+// GetDate returns the value of Date.
+func (s *SportProfileAddResponseSport) GetDate() OptString {
+	return s.Date
+}
+
+// GetTime returns the value of Time.
+func (s *SportProfileAddResponseSport) GetTime() OptString {
+	return s.Time
+}
+
+// SetID sets the value of ID.
+func (s *SportProfileAddResponseSport) SetID(val OptString) {
+	s.ID = val
+}
+
+// SetSportId sets the value of SportId.
+func (s *SportProfileAddResponseSport) SetSportId(val OptString) {
+	s.SportId = val
+}
+
+// SetIcon sets the value of Icon.
+func (s *SportProfileAddResponseSport) SetIcon(val OptURI) {
+	s.Icon = val
+}
+
+// SetDate sets the value of Date.
+func (s *SportProfileAddResponseSport) SetDate(val OptString) {
+	s.Date = val
+}
+
+// SetTime sets the value of Time.
+func (s *SportProfileAddResponseSport) SetTime(val OptString) {
+	s.Time = val
+}
+
+type SportProfileAdditional map[string]jx.Raw
+
+func (s *SportProfileAdditional) init() SportProfileAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Body for `POST /settings/sports/save` — updates one or more sport profiles'
+// settings and watch-screen layout in a single call. Captured 2026-06-01 from
+// a device-paired account.
+// Ref: #/components/schemas/SportProfileSaveRequest
+type SportProfileSaveRequest struct {
+	// Map keyed by **sport-profile id** (the numeric id, as a string — the
+	// same id returned by `POST /settings/sports/add` and used as
+	// `sportProfileId` in the training-display endpoints). Each value is an
+	// array of configuration **blocks**, discriminated by `name`. The observed
+	// save sent two blocks: `TrainingSettings` and `TrainingDisplays`. Only the
+	// blocks you include are updated.
+	Sports SportProfileSaveRequestSports `json:"sports"`
+}
+
+// GetSports returns the value of Sports.
+func (s *SportProfileSaveRequest) GetSports() SportProfileSaveRequestSports {
+	return s.Sports
+}
+
+// SetSports sets the value of Sports.
+func (s *SportProfileSaveRequest) SetSports(val SportProfileSaveRequestSports) {
+	s.Sports = val
+}
+
+// Map keyed by **sport-profile id** (the numeric id, as a string — the
+// same id returned by `POST /settings/sports/add` and used as
+// `sportProfileId` in the training-display endpoints). Each value is an
+// array of configuration **blocks**, discriminated by `name`. The observed
+// save sent two blocks: `TrainingSettings` and `TrainingDisplays`. Only the
+// blocks you include are updated.
+type SportProfileSaveRequestSports map[string][]SportProfileSaveRequestSportsItemItem
+
+func (s *SportProfileSaveRequestSports) init() SportProfileSaveRequestSports {
+	m := *s
+	if m == nil {
+		m = map[string][]SportProfileSaveRequestSportsItemItem{}
+		*s = m
+	}
+	return m
+}
+
+// SportProfileSaveRequestSportsItemItem represents sum type.
+type SportProfileSaveRequestSportsItemItem struct {
+	Type                  SportProfileSaveRequestSportsItemItemType // switch on this field
+	TrainingSettingsBlock TrainingSettingsBlock
+	TrainingDisplaysBlock TrainingDisplaysBlock
+}
+
+// SportProfileSaveRequestSportsItemItemType is oneOf type of SportProfileSaveRequestSportsItemItem.
+type SportProfileSaveRequestSportsItemItemType string
+
+// Possible values for SportProfileSaveRequestSportsItemItemType.
+const (
+	TrainingSettingsBlockSportProfileSaveRequestSportsItemItem SportProfileSaveRequestSportsItemItemType = "TrainingSettingsBlock"
+	TrainingDisplaysBlockSportProfileSaveRequestSportsItemItem SportProfileSaveRequestSportsItemItemType = "TrainingDisplaysBlock"
+)
+
+// IsTrainingSettingsBlock reports whether SportProfileSaveRequestSportsItemItem is TrainingSettingsBlock.
+func (s SportProfileSaveRequestSportsItemItem) IsTrainingSettingsBlock() bool {
+	return s.Type == TrainingSettingsBlockSportProfileSaveRequestSportsItemItem
+}
+
+// IsTrainingDisplaysBlock reports whether SportProfileSaveRequestSportsItemItem is TrainingDisplaysBlock.
+func (s SportProfileSaveRequestSportsItemItem) IsTrainingDisplaysBlock() bool {
+	return s.Type == TrainingDisplaysBlockSportProfileSaveRequestSportsItemItem
+}
+
+// SetTrainingSettingsBlock sets SportProfileSaveRequestSportsItemItem to TrainingSettingsBlock.
+func (s *SportProfileSaveRequestSportsItemItem) SetTrainingSettingsBlock(v TrainingSettingsBlock) {
+	s.Type = TrainingSettingsBlockSportProfileSaveRequestSportsItemItem
+	s.TrainingSettingsBlock = v
+}
+
+// GetTrainingSettingsBlock returns TrainingSettingsBlock and true boolean if SportProfileSaveRequestSportsItemItem is TrainingSettingsBlock.
+func (s SportProfileSaveRequestSportsItemItem) GetTrainingSettingsBlock() (v TrainingSettingsBlock, ok bool) {
+	if !s.IsTrainingSettingsBlock() {
+		return v, false
+	}
+	return s.TrainingSettingsBlock, true
+}
+
+// NewTrainingSettingsBlockSportProfileSaveRequestSportsItemItem returns new SportProfileSaveRequestSportsItemItem from TrainingSettingsBlock.
+func NewTrainingSettingsBlockSportProfileSaveRequestSportsItemItem(v TrainingSettingsBlock) SportProfileSaveRequestSportsItemItem {
+	var s SportProfileSaveRequestSportsItemItem
+	s.SetTrainingSettingsBlock(v)
+	return s
+}
+
+// SetTrainingDisplaysBlock sets SportProfileSaveRequestSportsItemItem to TrainingDisplaysBlock.
+func (s *SportProfileSaveRequestSportsItemItem) SetTrainingDisplaysBlock(v TrainingDisplaysBlock) {
+	s.Type = TrainingDisplaysBlockSportProfileSaveRequestSportsItemItem
+	s.TrainingDisplaysBlock = v
+}
+
+// GetTrainingDisplaysBlock returns TrainingDisplaysBlock and true boolean if SportProfileSaveRequestSportsItemItem is TrainingDisplaysBlock.
+func (s SportProfileSaveRequestSportsItemItem) GetTrainingDisplaysBlock() (v TrainingDisplaysBlock, ok bool) {
+	if !s.IsTrainingDisplaysBlock() {
+		return v, false
+	}
+	return s.TrainingDisplaysBlock, true
+}
+
+// NewTrainingDisplaysBlockSportProfileSaveRequestSportsItemItem returns new SportProfileSaveRequestSportsItemItem from TrainingDisplaysBlock.
+func NewTrainingDisplaysBlockSportProfileSaveRequestSportsItemItem(v TrainingDisplaysBlock) SportProfileSaveRequestSportsItemItem {
+	var s SportProfileSaveRequestSportsItemItem
+	s.SetTrainingDisplaysBlock(v)
+	return s
+}
+
 // Map of numeric sport ID (as string key) to Polar sport name constant.
 // Full inventory captured 2026-05-25 from GET /api/sports/sports:
 // **165 sports**, IDs sparse (some retired numbers — gaps at 21, 26,
@@ -9640,6 +9969,242 @@ func (s *StandardDuration) SetStandardSeconds(val int) {
 // SetMillis sets the value of Millis.
 func (s *StandardDuration) SetMillis(val int64) {
 	s.Millis = val
+}
+
+// Catalog of **available training-display fields** a given Polar device
+// (`productId`) can show on screen for a given sport profile, grouped by
+// category. This is the *palette* the watch-screen layout editor draws from;
+// the user's chosen layout is returned separately by
+// `GET /settings/sports/training-display-lists/{productId}/{sportProfileId}`
+// (each configured screen is a list of these item `id`s).
+// Captured 2026-06-01 from a device-paired account (productId 268, running
+// profile). The exact item set varies by `productId`/`sportId`.
+// Ref: #/components/schemas/TrainingDisplayCatalog
+type TrainingDisplayCatalog struct {
+	// The Polar device/watch model id this catalog is for.
+	ProductId OptInt `json:"productId"`
+	// Sport this profile is for (same id space as `/api/sports/sports`; 1 = RUNNING).
+	SportId OptInt `json:"sportId"`
+	// Field categories, each holding its selectable display items.
+	Data []TrainingDisplayCatalogDataItem `json:"data"`
+}
+
+// GetProductId returns the value of ProductId.
+func (s *TrainingDisplayCatalog) GetProductId() OptInt {
+	return s.ProductId
+}
+
+// GetSportId returns the value of SportId.
+func (s *TrainingDisplayCatalog) GetSportId() OptInt {
+	return s.SportId
+}
+
+// GetData returns the value of Data.
+func (s *TrainingDisplayCatalog) GetData() []TrainingDisplayCatalogDataItem {
+	return s.Data
+}
+
+// SetProductId sets the value of ProductId.
+func (s *TrainingDisplayCatalog) SetProductId(val OptInt) {
+	s.ProductId = val
+}
+
+// SetSportId sets the value of SportId.
+func (s *TrainingDisplayCatalog) SetSportId(val OptInt) {
+	s.SportId = val
+}
+
+// SetData sets the value of Data.
+func (s *TrainingDisplayCatalog) SetData(val []TrainingDisplayCatalogDataItem) {
+	s.Data = val
+}
+
+func (*TrainingDisplayCatalog) getTrainingDisplayItemsRes() {}
+
+type TrainingDisplayCatalogDataItem struct {
+	// Category grouping. Observed values: `POWER`, `HR`, `TIME`,
+	// `SPEED`, `CAD_STRIDE`, `DIST`, `FULLSCREEN`, `BARO_GPS`.
+	// `FULLSCREEN` items are whole-screen views (graphs, map, watch
+	// face); the others are data fields that can be combined on one
+	// screen.
+	CategoryKey OptString `json:"categoryKey"`
+	// Selectable display fields in this category.
+	Items []TrainingDisplayCatalogDataItemItemsItem `json:"items"`
+}
+
+// GetCategoryKey returns the value of CategoryKey.
+func (s *TrainingDisplayCatalogDataItem) GetCategoryKey() OptString {
+	return s.CategoryKey
+}
+
+// GetItems returns the value of Items.
+func (s *TrainingDisplayCatalogDataItem) GetItems() []TrainingDisplayCatalogDataItemItemsItem {
+	return s.Items
+}
+
+// SetCategoryKey sets the value of CategoryKey.
+func (s *TrainingDisplayCatalogDataItem) SetCategoryKey(val OptString) {
+	s.CategoryKey = val
+}
+
+// SetItems sets the value of Items.
+func (s *TrainingDisplayCatalogDataItem) SetItems(val []TrainingDisplayCatalogDataItemItemsItem) {
+	s.Items = val
+}
+
+type TrainingDisplayCatalogDataItemItemsItem struct {
+	// Numeric field id. **These ids are what populate the
+	// `displays` arrays** in the training-display-lists response.
+	ID OptInt `json:"id"`
+	// Stable enum name for the field (e.g. `CURRENT_HEART_RATE`).
+	Key OptString `json:"key"`
+}
+
+// GetID returns the value of ID.
+func (s *TrainingDisplayCatalogDataItemItemsItem) GetID() OptInt {
+	return s.ID
+}
+
+// GetKey returns the value of Key.
+func (s *TrainingDisplayCatalogDataItemItemsItem) GetKey() OptString {
+	return s.Key
+}
+
+// SetID sets the value of ID.
+func (s *TrainingDisplayCatalogDataItemItemsItem) SetID(val OptInt) {
+	s.ID = val
+}
+
+// SetKey sets the value of Key.
+func (s *TrainingDisplayCatalogDataItemItemsItem) SetKey(val OptString) {
+	s.Key = val
+}
+
+// One configured set of **training-display screens** for a sport profile on a
+// given device — i.e. the watch-screen layout the user sees during a session.
+// Returned (wrapped in an array) by
+// `GET /settings/sports/training-display-lists/{productId}/{sportProfileId}`.
+// Ref: #/components/schemas/TrainingDisplayList
+type TrainingDisplayList struct {
+	// Ordered list of **screens**. Each screen is an array of display-field
+	// `id`s drawn from the catalog
+	// (`GET /settings/sports/training-display-items/{productId}/{sportProfileId}`).
+	// A multi-field screen combines several data fields (e.g.
+	// `[32, 37, 41, 3]` = zone pointer + distance + speed/pace + stopwatch);
+	// a single-element screen is usually a `FULLSCREEN` view (e.g. `[115]` =
+	// power graph). Field count per screen is constrained by the device. #
+	// TODO: verify max fields per screen and max screen count per device.
+	Displays [][]int `json:"displays"`
+	// Display-list name. Observed constant `TrainingDisplays`.
+	Name OptString `json:"name"`
+	// The Polar device/watch model id.
+	ProductId OptInt `json:"productId"`
+}
+
+// GetDisplays returns the value of Displays.
+func (s *TrainingDisplayList) GetDisplays() [][]int {
+	return s.Displays
+}
+
+// GetName returns the value of Name.
+func (s *TrainingDisplayList) GetName() OptString {
+	return s.Name
+}
+
+// GetProductId returns the value of ProductId.
+func (s *TrainingDisplayList) GetProductId() OptInt {
+	return s.ProductId
+}
+
+// SetDisplays sets the value of Displays.
+func (s *TrainingDisplayList) SetDisplays(val [][]int) {
+	s.Displays = val
+}
+
+// SetName sets the value of Name.
+func (s *TrainingDisplayList) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetProductId sets the value of ProductId.
+func (s *TrainingDisplayList) SetProductId(val OptInt) {
+	s.ProductId = val
+}
+
+// Watch-screen layout for this profile on a given device. Same shape as a
+// `TrainingDisplayList` element (see that schema): `displays` is the
+// ordered list of screens, each an array of field ids from the
+// training-display-items catalog.
+// Ref: #/components/schemas/TrainingDisplaysBlock
+type TrainingDisplaysBlock struct {
+	Name TrainingDisplaysBlockName `json:"name"`
+	// Polar device/watch model id.
+	ProductId int     `json:"productId"`
+	Displays  [][]int `json:"displays"`
+}
+
+// GetName returns the value of Name.
+func (s *TrainingDisplaysBlock) GetName() TrainingDisplaysBlockName {
+	return s.Name
+}
+
+// GetProductId returns the value of ProductId.
+func (s *TrainingDisplaysBlock) GetProductId() int {
+	return s.ProductId
+}
+
+// GetDisplays returns the value of Displays.
+func (s *TrainingDisplaysBlock) GetDisplays() [][]int {
+	return s.Displays
+}
+
+// SetName sets the value of Name.
+func (s *TrainingDisplaysBlock) SetName(val TrainingDisplaysBlockName) {
+	s.Name = val
+}
+
+// SetProductId sets the value of ProductId.
+func (s *TrainingDisplaysBlock) SetProductId(val int) {
+	s.ProductId = val
+}
+
+// SetDisplays sets the value of Displays.
+func (s *TrainingDisplaysBlock) SetDisplays(val [][]int) {
+	s.Displays = val
+}
+
+type TrainingDisplaysBlockName string
+
+const (
+	TrainingDisplaysBlockNameTrainingDisplays TrainingDisplaysBlockName = "TrainingDisplays"
+)
+
+// AllValues returns all TrainingDisplaysBlockName values.
+func (TrainingDisplaysBlockName) AllValues() []TrainingDisplaysBlockName {
+	return []TrainingDisplaysBlockName{
+		TrainingDisplaysBlockNameTrainingDisplays,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TrainingDisplaysBlockName) MarshalText() ([]byte, error) {
+	switch s {
+	case TrainingDisplaysBlockNameTrainingDisplays:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TrainingDisplaysBlockName) UnmarshalText(data []byte) error {
+	switch TrainingDisplaysBlockName(data) {
+	case TrainingDisplaysBlockNameTrainingDisplays:
+		*s = TrainingDisplaysBlockNameTrainingDisplays
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Payload for manual session entry via POST /api/training/create.
@@ -10070,6 +10635,98 @@ func (s *TrainingSessionSummarySwimmingPoolUnits) UnmarshalText(data []byte) err
 	}
 }
 
+// General per-profile device settings.
+// Ref: #/components/schemas/TrainingSettingsBlock
+type TrainingSettingsBlock struct {
+	Name TrainingSettingsBlockName `json:"name"`
+	// List of `{name, value}` setting pairs. Observed names/values
+	// (non-exhaustive — other settings appear in the `/settings/sports/edit`
+	// form; # TODO: enumerate full set + allowed values):
+	// - `autoLapType`: `LOCATION` (also likely `OFF`/`DISTANCE`/`DURATION`)
+	// - `volume`: `LOUD` (also likely `OFF`/`SOFT`)
+	// - `trainingReminderType`: `OFF`.
+	Settings []TrainingSettingsBlockSettingsItem `json:"settings"`
+}
+
+// GetName returns the value of Name.
+func (s *TrainingSettingsBlock) GetName() TrainingSettingsBlockName {
+	return s.Name
+}
+
+// GetSettings returns the value of Settings.
+func (s *TrainingSettingsBlock) GetSettings() []TrainingSettingsBlockSettingsItem {
+	return s.Settings
+}
+
+// SetName sets the value of Name.
+func (s *TrainingSettingsBlock) SetName(val TrainingSettingsBlockName) {
+	s.Name = val
+}
+
+// SetSettings sets the value of Settings.
+func (s *TrainingSettingsBlock) SetSettings(val []TrainingSettingsBlockSettingsItem) {
+	s.Settings = val
+}
+
+type TrainingSettingsBlockName string
+
+const (
+	TrainingSettingsBlockNameTrainingSettings TrainingSettingsBlockName = "TrainingSettings"
+)
+
+// AllValues returns all TrainingSettingsBlockName values.
+func (TrainingSettingsBlockName) AllValues() []TrainingSettingsBlockName {
+	return []TrainingSettingsBlockName{
+		TrainingSettingsBlockNameTrainingSettings,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TrainingSettingsBlockName) MarshalText() ([]byte, error) {
+	switch s {
+	case TrainingSettingsBlockNameTrainingSettings:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TrainingSettingsBlockName) UnmarshalText(data []byte) error {
+	switch TrainingSettingsBlockName(data) {
+	case TrainingSettingsBlockNameTrainingSettings:
+		*s = TrainingSettingsBlockNameTrainingSettings
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type TrainingSettingsBlockSettingsItem struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// GetName returns the value of Name.
+func (s *TrainingSettingsBlockSettingsItem) GetName() string {
+	return s.Name
+}
+
+// GetValue returns the value of Value.
+func (s *TrainingSettingsBlockSettingsItem) GetValue() string {
+	return s.Value
+}
+
+// SetName sets the value of Name.
+func (s *TrainingSettingsBlockSettingsItem) SetName(val string) {
+	s.Name = val
+}
+
+// SetValue sets the value of Value.
+func (s *TrainingSettingsBlockSettingsItem) SetValue(val string) {
+	s.Value = val
+}
+
 // Payload to create a new training target.
 // Ref: #/components/schemas/TrainingTargetCreate
 type TrainingTargetCreate struct {
@@ -10231,10 +10888,12 @@ func (s *Unauthorized) SetRedirect(val OptString) {
 }
 
 func (*Unauthorized) addRouteToFavoritesRes()       {}
+func (*Unauthorized) addSportProfileRes()           {}
 func (*Unauthorized) createFavoriteRes()            {}
 func (*Unauthorized) createTrainingSessionRes()     {}
 func (*Unauthorized) createTrainingTargetRes()      {}
 func (*Unauthorized) deleteFavoriteRes()            {}
+func (*Unauthorized) deleteSportProfileRes()        {}
 func (*Unauthorized) deleteTrainingSessionRes()     {}
 func (*Unauthorized) deleteTrainingTargetRes()      {}
 func (*Unauthorized) getActivityTimelineFourRes()   {}
@@ -10246,7 +10905,10 @@ func (*Unauthorized) getFavoriteExerciseTargetRes() {}
 func (*Unauthorized) getFavoriteRes()               {}
 func (*Unauthorized) getFeaturesAvailableRes()      {}
 func (*Unauthorized) getProgressViewSummaryRes()    {}
+func (*Unauthorized) getSportProfileRes()           {}
 func (*Unauthorized) getSummaryDataRes()            {}
+func (*Unauthorized) getTrainingDisplayItemsRes()   {}
+func (*Unauthorized) getTrainingDisplayListsRes()   {}
 func (*Unauthorized) getTrainingSessionDetailsRes() {}
 func (*Unauthorized) getTrainingSessionSummaryRes() {}
 func (*Unauthorized) getTrainingTargetRes()         {}
@@ -10254,7 +10916,9 @@ func (*Unauthorized) importRouteRes()               {}
 func (*Unauthorized) listDeviceFavoritesRes()       {}
 func (*Unauthorized) listFavoritesRes()             {}
 func (*Unauthorized) listFavoritesSimpleRes()       {}
+func (*Unauthorized) listSportProfilesRes()         {}
 func (*Unauthorized) listTrainingSessionsRes()      {}
+func (*Unauthorized) saveSportProfileRes()          {}
 func (*Unauthorized) updateFavoriteRes()            {}
 func (*Unauthorized) updateTrainingTargetRes()      {}
 

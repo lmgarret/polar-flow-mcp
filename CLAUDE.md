@@ -56,6 +56,7 @@ and silent refresh.
 | Tool | Description |
 |------|-------------|
 | `get_user_info` | Identity + country + profile basics |
+| `list_sports` | Full Polar sport-id → name catalogue (the `sport_id` values for targets/sessions) |
 | `create_training_target` | Create a scheduled target (warmup / repeat / cooldown) |
 | `list_training_targets` | Targets in a date range (filtered from calendar) |
 | `delete_training_target` | Delete a target by ID |

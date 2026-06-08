@@ -92,6 +92,18 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 	t.Meta = uiMeta("ui://polar-flow/user.html")
 	s.AddTool(t, withLogging("get_user_info", GetUserInfoHandler(fc)))
 
+	s.AddTool(mcpgo.NewTool("list_sports",
+		mcpgo.WithDescription(
+			"Return the full Polar sport catalogue as a map of numeric sport id to its "+
+				"name constant (e.g. \"1\": \"RUNNING\", \"2\": \"CYCLING\", \"23\": \"SWIMMING\"). "+
+				"These ids are the sport_id values accepted by create_training_target and "+
+				"create_training_session. Call this to discover the id for any non-running "+
+				"sport before creating a workout. Takes no arguments. The catalogue is a "+
+				"moving snapshot — Polar adds sports over time, so re-fetch rather than "+
+				"hard-coding ids.",
+		),
+	), withLogging("list_sports", ListSportsHandler(fc)))
+
 	ct := mcpgo.NewTool("create_training_target",
 		mcpgo.WithDescription(
 			"Create a scheduled Polar Flow training target (a planned workout in the diary). "+
@@ -122,7 +134,9 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithString("time", mcpgo.DefaultString("18:00"),
 			mcpgo.Description("Scheduled local start time, 24h HH:MM (default: 18:00).")),
 		mcpgo.WithNumber("sport_id", mcpgo.DefaultNumber(1),
-			mcpgo.Description("Polar sport id (default 1 = running). Full list at /api/sports/sports.")),
+			mcpgo.Description("Polar sport id (default 1 = running). Common ids: 2=cycling, "+
+				"23=swimming, 15=strength_training, 11=hiking, 68=triathlon. "+
+				"Call list_sports for the full id→name catalogue.")),
 		mcpgo.WithString("description",
 			mcpgo.Description("Free-text notes for the workout (optional).")),
 		mcpgo.WithArray("phases",
@@ -242,7 +256,9 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithString("time", mcpgo.DefaultString("18:00"),
 			mcpgo.Description("Scheduled local start time, 24h HH:MM (default: 18:00).")),
 		mcpgo.WithNumber("sport_id", mcpgo.DefaultNumber(1),
-			mcpgo.Description("Polar sport id (default 1 = running).")),
+			mcpgo.Description("Polar sport id (default 1 = running). Common ids: 2=cycling, "+
+				"23=swimming, 15=strength_training, 11=hiking, 68=triathlon. "+
+				"Call list_sports for the full id→name catalogue.")),
 		mcpgo.WithString("description",
 			mcpgo.Description("Free-text notes for the workout (optional).")),
 		mcpgo.WithArray("phases",
@@ -323,8 +339,10 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Start date, ISO 8601 YYYY-MM-DD (default: today - 90 days).")),
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today).")),
-		mcpgo.WithNumber("sport_id",
-			mcpgo.Description("Optional sport id filter; omit or 0 to include all sports.")),
+		mcpgo.WithString("group", mcpgo.DefaultString("MONTH"),
+			mcpgo.Description("Time-bucket granularity for the breakdown (NOT a sport filter): "+
+				"\"MONTH\" (default; the only value verified live), likely also \"DAY\", \"WEEK\", "+
+				"\"YEAR\". Affects how the per-time-slice breakdown is bucketed, not the headline totals.")),
 		mcpgo.WithString("time_frame", mcpgo.DefaultString("3m"), mcpgo.Enum("6w", "3m", "1y"),
 			mcpgo.Description("Bucket size for the per-time-slice breakdowns: \"6w\" (6 weeks), "+
 				"\"3m\" (3 months), or \"1y\" (1 year). Default: \"3m\". Affects only how the "+
@@ -415,7 +433,9 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithNumber("speed_kmh",
 			mcpgo.Description("Average speed in km/h. Omit or 0 to leave unset.")),
 		mcpgo.WithNumber("sport_id", mcpgo.DefaultNumber(1),
-			mcpgo.Description("Polar sport id (default 1 = running).")),
+			mcpgo.Description("Polar sport id (default 1 = running). Common ids: 2=cycling, "+
+				"23=swimming, 15=strength_training, 11=hiking, 68=triathlon. "+
+				"Call list_sports for the full id→name catalogue.")),
 		mcpgo.WithString("note",
 			mcpgo.Description("Free-text note for the session (optional).")),
 	), withLogging("create_training_session", CreateTrainingSessionHandler(fc)))

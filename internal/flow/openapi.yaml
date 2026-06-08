@@ -36,6 +36,8 @@ tags:
   description: Sleep nights (lives on sleep-api.flow.polar.com subdomain)
 - name: progress
   description: Aggregated progress / report totals (weekly, monthly, yearly)
+- name: sport-profiles
+  description: Per-sport device configuration ("Profils sportifs"); device-synced, read/delete only on the web API
 paths:
   /api/trainingtarget:
     post:
@@ -448,6 +450,65 @@ paths:
                           phaseType: PHASE
                     description: ''
                     type: PHASED
+                namedPhases:
+                  summary: 'Custom per-phase names (the "rename phase" feature). Each phase carries a free-text `name` shown
+                    in the workout breakdown; names are independent of `intensityType` (here `NONE`, no training zones). Structure:
+                    a warm-up leaf, a 7× work/recovery REPEAT group, then a cool-down leaf — the top-level `duration` (00:12:30)
+                    is rolled up from all phases.'
+                  value:
+                    datetime: 2026-06-01T08:00
+                    sourceProgramType: UNKNOWN
+                    isUserEditable: true
+                    name: Mobility routine
+                    exerciseTargets:
+                    - id: 1531113664
+                      duration: 00:12:30
+                      distance: null
+                      calories: null
+                      index: 0
+                      sportId: 57
+                      phases:
+                      - id: 2913183561
+                        lowerZone: 0
+                        upperZone: 0
+                        intensityType: NONE
+                        phaseChangeType: AUTOMATIC
+                        goalType: DURATION
+                        duration: 00:01:00
+                        name: Warm-up
+                        phaseType: PHASE
+                      - repeatCount: 7
+                        phaseType: REPEAT
+                        phases:
+                        - id: 2913183562
+                          lowerZone: 0
+                          upperZone: 0
+                          intensityType: NONE
+                          phaseChangeType: AUTOMATIC
+                          goalType: DURATION
+                          duration: 00:01:15
+                          name: Work
+                          phaseType: PHASE
+                        - id: 2913183563
+                          lowerZone: 0
+                          upperZone: 0
+                          intensityType: NONE
+                          phaseChangeType: AUTOMATIC
+                          goalType: DURATION
+                          duration: 00:00:15
+                          name: Recovery
+                          phaseType: PHASE
+                      - id: 2913183564
+                        lowerZone: 0
+                        upperZone: 0
+                        intensityType: NONE
+                        phaseChangeType: AUTOMATIC
+                        goalType: DURATION
+                        duration: 00:01:00
+                        name: Cool-down
+                        phaseType: PHASE
+                    description: ''
+                    type: PHASED
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -531,7 +592,9 @@ paths:
       summary: List calendar events (includes training targets)
       description: 'Returns all diary events (training sessions, targets, etc.) for a date range.
 
-        Training targets appear with `type: "TRAININGTARGET"`.
+        The response is polymorphic by `type`: training targets appear with `type: "TRAININGTARGET"`; fitness-test results
+        appear with `type: "FITNESSDATA"` (different field set — carries calendar-styling colours and `index`/`timestamp`,
+        and uses camelCase `listItemId` instead of `ListItemId`). See `CalendarEvent` for the per-type field notes.
 
         Date format: D.M.YYYY (no leading zeros).
 
@@ -597,6 +660,421 @@ paths:
           description: Not found
         '500':
           description: Server error
+  /api/sports/profiles:
+    get:
+      summary: List the user's sport profiles
+      description: 'Returns the signed-in user''s **sport profiles** ("Profils sportifs",
+
+        reached in the web UI via *Compte → Profils sportifs*, served by the
+
+        server-rendered `/settings/sports` page).
+
+
+        Sport profiles are the per-sport device configuration (training views,
+
+        auto-lap, zones, sensor/GPS settings). **Create/update is NOT on this
+
+        `/api/sports/*` resource** (`POST`/`PUT`/`PATCH` here all 404). It lives on
+
+        the legacy `/settings/sports/*` controller instead:
+
+        **create = `POST /settings/sports/add`**, **update =
+
+        `POST /settings/sports/save`** (verified 2026-06-01 from a device-paired
+
+        account — see `docs/endpoints/sport-profiles.md`).
+
+
+        Note those settings endpoints key profiles by a **numeric** id, whereas
+
+        this `/api/sports/profiles/{id}` resource validates a **UUID** — the two id
+
+        systems are not yet reconciled.
+
+
+        **Empty on a device-less account.** On the free test account this returns
+
+        `[]`, and `GET /api/account/users/current/user` likewise reports
+
+        `sportProfiles: []`. A populated element shape could not be captured — see
+
+        `SportProfile` for the partially-inferred element schema and TODOs.
+
+
+        A `sportId` query parameter is accepted but had no visible effect on the
+
+        empty account (still `[]`).
+
+        '
+      operationId: listSportProfiles
+      tags:
+      - sport-profiles
+      parameters:
+      - name: sportId
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: 'Optional sport filter (same id space as `GET /api/sports/sports`).
+
+          Accepted on the empty test account but its filtering effect could not
+
+          be confirmed. # TODO: verify against a populated account.
+
+          '
+        example: 1
+      responses:
+        '200':
+          description: Array of the user's sport profiles (empty on a device-less account).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SportProfile'
+              examples:
+                empty:
+                  summary: Device-less / free account
+                  value: []
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/sports/profiles/{id}:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: 'The sport profile''s **UUID** (the `id` field from
+
+        `GET /api/sports/profiles`, **not** the numeric `sportId`). A non-UUID
+
+        value returns `400 Invalid UUID: <value>` (plain text).
+
+        '
+      example: 7ae78bae-6ee6-47aa-9128-a2ee5cd0a138
+    get:
+      summary: Read a single sport profile
+      description: 'Returns one sport profile by its UUID.
+
+
+        **Not exercised against a real profile.** The test account has no synced
+
+        sport profiles, so this could not be observed returning `200`. Probing
+
+        with arbitrary UUIDs returned `400` with a plain-text
+
+        `Invalid request: Invalid UUID: <value>` body — meaning either the id
+
+        must match an existing profile, or Polar uses a stricter/custom id
+
+        encoding than a canonical v4 UUID. # TODO: verify the success shape and the
+
+        exact id format using an account with a device-synced profile.
+
+        '
+      operationId: getSportProfile
+      tags:
+      - sport-profiles
+      responses:
+        '200':
+          description: The sport profile (shape not yet captured — see `SportProfile`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SportProfile'
+        '400':
+          description: 'Malformed id. Plain-text body, e.g.
+
+            `Invalid request: Invalid UUID: 1`.
+
+            '
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: 'Invalid request: Invalid UUID: 1'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      summary: Delete a sport profile
+      description: 'Deletes a sport profile by its UUID. The route **exists** (verified
+
+        2026-06-01). Note create/update are not on this `/api/sports/*` resource —
+
+        they live on the legacy `/settings/sports/{add,save}` controller (numeric
+
+        ids); whether delete also has a `/settings/sports/*` equivalent is unknown.
+
+
+        **Could not reach the success path** on the device-less test account:
+
+        deleting a non-existent UUID returned `500` with an empty body rather than
+
+        a clean `404`, so the success status/body for an existing profile is
+
+        unconfirmed. # TODO: verify against a real profile (expect a 200, by
+
+        analogy with the other Polar delete endpoints). Note this is a genuinely
+
+        destructive operation — only exercise it on a throwaway profile.
+
+
+        Like other `/api/*` writes this requires the
+
+        `X-Requested-With: XMLHttpRequest` header.
+
+        '
+      operationId: deleteSportProfile
+      tags:
+      - sport-profiles
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      responses:
+        '200':
+          description: Profile deleted (status inferred — not captured against a real profile).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: 'Returned (empty body) when the id does not resolve to a profile on
+
+            this account — observed in place of a clean 404 while probing.
+
+            '
+  /settings/sports/add:
+    post:
+      summary: Add (create) a sport profile
+      description: 'Creates a new sport profile for the signed-in user from a `sportId`. This
+
+        is the **real create endpoint** for sport profiles (the `/api/sports/*`
+
+        family does not expose one). Captured 2026-06-01 from a device-paired
+
+        account.
+
+
+        Body is **form-encoded** (`application/x-www-form-urlencoded`), a single
+
+        `sportId` field. Requires `X-Requested-With: XMLHttpRequest`.
+
+
+        Returns **200** with a `text/plain` body containing JSON: the new
+
+        profile''s id (numeric, as a string), echoed `sportId`, icon, and
+
+        creation date/time.
+
+        '
+      operationId: addSportProfile
+      tags:
+      - sport-profiles
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - sportId
+              properties:
+                sportId:
+                  type: integer
+                  description: Sport to create a profile for (id space of `/api/sports/sports`).
+                  example: 115
+            example:
+              sportId: 115
+      responses:
+        '200':
+          description: Profile created. `text/plain` body containing JSON.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SportProfileAddResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /settings/sports/save:
+    post:
+      summary: Save (update) sport-profile settings and watch-screen layout
+      description: 'Updates one or more sport profiles'' general device settings
+
+        (`TrainingSettings`) and/or watch-screen layout (`TrainingDisplays`). This
+
+        is the **update endpoint** that was previously missing — the layout save
+
+        issued after editing a profile in *Compte → Profils sportifs*. Captured
+
+        2026-06-01 from a device-paired account.
+
+
+        Body is **JSON** with a `sports` map keyed by profile id; each value is an
+
+        array of config blocks discriminated by `name` (`TrainingSettings`,
+
+        `TrainingDisplays`). Requires `X-Requested-With: XMLHttpRequest`.
+
+
+        Returns **200** with a `text/plain` body containing a JSON success
+
+        message reminding the user to sync their device (changes apply on the
+
+        watch only after the next sync).
+
+        '
+      operationId: saveSportProfile
+      tags:
+      - sport-profiles
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SportProfileSaveRequest'
+      responses:
+        '200':
+          description: Saved. `text/plain` body containing a JSON success message.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: string
+                    example: Modifications enregistrées, pensez à synchroniser votre dispositif.
+              example:
+                success: Modifications enregistrées, pensez à synchroniser votre dispositif.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /settings/sports/training-display-items/{productId}/{sportProfileId}:
+    parameters:
+    - name: productId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Polar device/watch model id (e.g. 268).
+      example: 268
+    - name: sportProfileId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: '**Numeric** sport-profile id (e.g. 987654321). Note this is a plain
+
+        integer — distinct from the UUID-style id used by the separate
+
+        `/api/sports/profiles/{id}` resource (the two id systems have not been
+
+        reconciled; see `docs/endpoints/sport-profiles.md`).
+
+        '
+      example: 987654321
+    get:
+      summary: List available training-display fields for a device + sport profile
+      description: 'Returns the **catalog** of display fields the given device (`productId`)
+
+        can show for the given sport profile, grouped by category — the palette
+
+        the watch-screen layout editor offers. The user''s actual chosen layout is
+
+        in `GET /settings/sports/training-display-lists/{productId}/{sportProfileId}`.
+
+
+        Served by the legacy `/settings/*` controller (not under `/api/*`).
+
+        Requires `X-Requested-With: XMLHttpRequest`. Observed to return the
+
+        product/sport default catalog even from an account that does not own the
+
+        profile (not strictly owner-scoped).
+
+        '
+      operationId: getTrainingDisplayItems
+      tags:
+      - sport-profiles
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      responses:
+        '200':
+          description: Display-field catalog grouped by category.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingDisplayCatalog'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /settings/sports/training-display-lists/{productId}/{sportProfileId}:
+    parameters:
+    - name: productId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Polar device/watch model id (e.g. 268).
+      example: 268
+    - name: sportProfileId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: '**Numeric** sport-profile id (e.g. 987654321) — see the note on the
+
+        sibling `training-display-items` path about the two id systems.
+
+        '
+      example: 987654321
+    get:
+      summary: Read the configured training-display screens for a device + sport profile
+      description: 'Returns the user''s current **watch-screen layout** for this profile: an
+
+        array of display sets, each holding `displays` (the ordered screens, where
+
+        each screen is a list of field ids from the catalog).
+
+
+        Served by the legacy `/settings/*` controller. Requires
+
+        `X-Requested-With: XMLHttpRequest`.
+
+
+        **Read-only path.** This layout is *saved* via `POST /settings/sports/save`
+
+        (as a `TrainingDisplays` block), not by writing back here — `PUT`/`POST`
+
+        to this path return 404 (verified 2026-06-01).
+
+        '
+      operationId: getTrainingDisplayLists
+      tags:
+      - sport-profiles
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      responses:
+        '200':
+          description: The configured training-display screen sets.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrainingDisplayList'
+              example:
+              - displays:
+                - - 32
+                  - 37
+                  - 41
+                  - 3
+                - - 115
+                - - 121
+                - - 123
+                name: TrainingDisplays
+                productId: 268
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/training/create:
     post:
       summary: Create a training session (manual entry)
@@ -1620,17 +2098,21 @@ paths:
         distribution) for the inclusive `[from, to]` date range.
 
 
-        Date format is **`D.M.YYYY`** (e.g. `1.5.2026`), matching the rest of the
+        **Date format** here is `DD-MM-YYYY` with **dashes and leading zeros**
 
-        legacy `/training/*` and `/progress/*` endpoints. ISO 8601
+        (observed live: `{"from":"01-06-2026","to":"30-06-2026"}`) — note this
 
-        (`YYYY-MM-DD`) is rejected by sibling endpoints; this one happens to
+        differs from the dot-separated `D.M.YYYY` used by
 
-        accept malformed/missing dates without erroring on a zero-session account
+        `/training/getCalendarWeekSummary` and `/training/getCalendarEvents`.
 
-        (it just returns zeros) — strict validation behaviour on populated
+        The endpoint is lenient: it accepts malformed/missing dates without
 
-        accounts is TBD.
+        erroring on a zero-session account (it just returns zeros), so the
+
+        dash form is what the UI sends rather than a hard requirement — strict
+
+        validation behaviour on populated accounts is TBD.
 
 
         The Polar Flow JS bundle has a Coach-vs-free fork that picks
@@ -1659,24 +2141,24 @@ paths:
               properties:
                 from:
                   type: string
-                  description: Inclusive start date, `D.M.YYYY` (no leading zeros required).
-                  example: 1.5.2026
+                  description: Inclusive start date, `DD-MM-YYYY` (dashes, leading zeros).
+                  example: 01-06-2026
                 to:
                   type: string
-                  description: Inclusive end date, `D.M.YYYY`.
-                  example: 31.5.2026
+                  description: Inclusive end date, `DD-MM-YYYY` (dashes, leading zeros).
+                  example: 30-06-2026
                 group:
-                  description: 'Optional sport-group filter. JS passes `"all"` for the
+                  type: string
+                  description: 'Time-bucket granularity for the breakdown — **not** a sport
 
-                    "Tous les sports" tab; a numeric sportId filters to that
+                    filter (earlier guess was wrong). Observed live value:
 
-                    sport. # TODO: verify scoping with real data.
+                    `"MONTH"`. Other diary granularities (`DAY`/`WEEK`/`YEAR`)
+
+                    are likely but unverified. # TODO: confirm full enum.
 
                     '
-                  oneOf:
-                  - type: string
-                  - type: integer
-                  example: all
+                  example: MONTH
                 timeFrame:
                   type: string
                   description: 'Bucket size for the per-time-slice breakdowns. JS values
@@ -1692,11 +2174,12 @@ paths:
                     '
                   example: 6w
             examples:
-              monthAllSports:
+              monthBucket:
+                summary: Live-observed body from the diary report view.
                 value:
-                  from: 1.5.2026
-                  to: 31.5.2026
-                  group: all
+                  from: 01-06-2026
+                  to: 30-06-2026
+                  group: MONTH
                   timeFrame: 6w
       responses:
         '200':
@@ -1732,14 +2215,16 @@ paths:
               properties:
                 from:
                   type: string
-                  example: 1.5.2026
+                  description: Inclusive start, `DD-MM-YYYY` (dashes).
+                  example: 01-06-2026
                 to:
                   type: string
-                  example: 31.5.2026
+                  description: Inclusive end, `DD-MM-YYYY` (dashes).
+                  example: 30-06-2026
                 group:
-                  oneOf:
-                  - type: string
-                  - type: integer
+                  type: string
+                  description: Time-bucket granularity (e.g. `MONTH`), not a sport filter.
+                  example: MONTH
                 timeFrame:
                   type: string
                   example: 6w
@@ -1926,13 +2411,20 @@ components:
           description: Constant `"PHASE"` discriminator for leaf phases.
         name:
           type: string
-          description: 'Phase name. Required when `intensityType` is not HEART_RATE_ZONES
+          description: 'Free-text phase label shown per-phase in the workout breakdown
 
-            (submission fails with "Ce champ est obligatoire." otherwise).
+            (e.g. `Warm-up`, `Work`, `Recovery`, `Cool-down` — verified on a live
 
-            For HR-zone phases an empty string is accepted.
+            named-phase target). Independent of `intensityType`: a `NONE`-intensity
+
+            phase still carries its own name. Required when `intensityType` is not
+
+            HEART_RATE_ZONES (submission fails with "Ce champ est obligatoire."
+
+            otherwise). For HR-zone phases an empty string is accepted.
 
             '
+          example: Work
         phaseChangeType:
           type: string
           enum:
@@ -1983,15 +2475,20 @@ components:
           type: number
           minimum: 0
           maximum: 5
-          description: Lower zone bound (1–5) when `intensityType != NONE`; otherwise null. NONE-intensity phases (e.g. warmup/cooldown)
-            return `0` rather than null.
+          description: 'Lower zone bound (1–5) when `intensityType != NONE`. **Send/read asymmetry:** the create payload nulls
+            both zones for `NONE` phases, but the server reads them back as `0` (a "no zone" sentinel — verified on a live
+            named-phase target), not null. Accept both `0` and `null`.
+
+            '
           nullable: true
         upperZone:
           type: number
           minimum: 0
           maximum: 5
-          description: Upper zone bound (1–5) when `intensityType != NONE`; otherwise null. NONE-intensity phases (e.g. warmup/cooldown)
-            return `0` rather than null.
+          description: 'Upper zone bound (1–5) when `intensityType != NONE`. Same send/read asymmetry as `lowerZone`: `NONE`
+            phases read back as `0`, not null.
+
+            '
           nullable: true
       example:
         phaseType: PHASE
@@ -2230,16 +2727,29 @@ components:
         - error.trainingTarget.twoTargetsForSameTime
     CalendarEvent:
       type: object
-      description: A diary entry returned by /training/getCalendarEvents
+      description: 'A diary entry returned by /training/getCalendarEvents. The array is polymorphic by `type`: `TRAININGTARGET`
+        (planned workout), `FITNESSDATA` (a fitness-test result), `EXERCISE` (a recorded session), etc. Different `type`s
+        populate different subsets of these properties — e.g. only the `FITNESSDATA` variant carries the calendar-styling
+        fields (`backgroundColor`/`borderColor`/`textColor`) and `index`/`timestamp`, while `TRAININGTARGET` carries the target
+        rollups (`calories`/`distance`/ `duration`). Treat all properties below as optional per event.
+
+        '
       properties:
         type:
           type: string
-          description: Event category, e.g. "TRAININGTARGET", "EXERCISE"
+          description: Event category, e.g. "TRAININGTARGET", "FITNESSDATA", "EXERCISE"
           example: TRAININGTARGET
         ListItemId:
           type: integer
-          description: Numeric ID of the underlying entity (use as {id} in /api/trainingtarget/{id})
+          description: Numeric ID of the underlying entity (use as {id} in /api/trainingtarget/{id}). **Casing quirk:** `TRAININGTARGET`
+            events use Pascal-case `ListItemId`, but `FITNESSDATA` events use camel-case `listItemId` (see below) for the
+            same concept.
           example: 1453744955
+        listItemId:
+          type: integer
+          description: camelCase variant of `ListItemId` emitted by `FITNESSDATA` events. Same meaning (entity id); the inconsistent
+            casing is server-side.
+          example: 87794279
         title:
           type: string
           example: 60 min easy run
@@ -2302,6 +2812,32 @@ components:
 
             '
           nullable: true
+        backgroundColor:
+          type: string
+          description: 'Calendar swatch background (hex). Emitted by `FITNESSDATA` events for diary rendering; absent on `TRAININGTARGET`.
+
+            '
+          example: '#E0F2F7'
+        borderColor:
+          type: string
+          description: Calendar swatch border (hex). `FITNESSDATA` only.
+          example: '#A9D0F5'
+        textColor:
+          type: string
+          description: Calendar swatch text colour (hex). `FITNESSDATA` only.
+          example: '#000'
+        index:
+          type: integer
+          description: 'Per-day render ordering index for the diary view. Observed on `FITNESSDATA` events.
+
+            '
+          example: 47
+        timestamp:
+          type: integer
+          description: 'Epoch-milliseconds form of `start`/`datetime`. Observed on `FITNESSDATA` events.
+
+            '
+          example: 1780299813000
       example:
         type: TRAININGTARGET
         ListItemId: 1453775725
@@ -2320,6 +2856,9 @@ components:
         calories: null
         distance: 5000
         duration: 600000
+      x-ogen-properties:
+        listItemId:
+          name: ListItemId1
     SportsMap:
       type: object
       description: 'Map of numeric sport ID (as string key) to Polar sport name constant.
@@ -2503,6 +3042,518 @@ components:
         '203': RUCKING
         '204': CALISTHENICS
         '205': SKIERG
+    SportProfile:
+      type: object
+      description: 'A user''s **sport profile** ("Profil sportif") — the per-sport configuration
+
+        a Polar device uses when you start a training session in that sport (training
+
+        views / watch-screen layout, auto-lap, zones, GPS/sensor settings, etc.).
+
+
+        > **Element shape is only partially observed.** This `/api/sports/profiles`
+
+        > resource returned `[]` on every account tried (incl. a device-paired one),
+
+        > so a populated element could not be captured here. Note that profiles are
+
+        > actually created/edited via the legacy `/settings/sports/*` controller
+
+        > (`POST /settings/sports/add`, `POST /settings/sports/save`) which keys them
+
+        > by a **numeric** id — this UUID-based resource appears to be separate. The fields below are the ones that could
+        be
+
+        > justified from the `/settings/sports` page and the watch-display editor
+
+        > micro-frontend; everything marked `# TODO: verify` awaits a capture from an
+
+        > account with a paired device. `additionalProperties` is therefore left
+
+        > open.
+
+        '
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: 'Server-assigned profile identifier. **This is a UUID string**, not the
+
+            numeric `sportId`. Used as `{id}` in
+
+            `GET /api/sports/profiles/{id}` and `DELETE /api/sports/profiles/{id}`.
+
+            '
+          example: 7ae78bae-6ee6-47aa-9128-a2ee5cd0a138
+        sportId:
+          type: integer
+          description: 'Numeric sport this profile is for — the same id space as
+
+            `GET /api/sports/sports` (e.g. 1 = RUNNING, 2 = CYCLING, 23 = SWIMMING,
+
+            15 = STRENGTH_TRAINING, 68 = TRIATHLON). The `/settings/sports` page
+
+            seeds these five as default template cards (each with an **empty**
+
+            `profileId` until a device persists one).
+
+            '
+          example: 1
+        name:
+          type: string
+          description: 'Display name of the profile, localized to the account language on the
+
+            default templates (e.g. "Course à pied", "Cyclisme"). On device-created
+
+            profiles this is the user-editable profile name. # TODO: verify whether
+
+            the API returns the raw constant or the localized label.
+
+            '
+          example: Course à pied
+        created:
+          type: string
+          description: 'Creation timestamp shown on the profile card. Exact wire format
+
+            unconfirmed (the UI renders it as `D-M-YYYY HH:mm`). # TODO: verify
+
+            (ISO 8601 vs epoch ms).
+
+            '
+    SportProfileAddResponse:
+      type: object
+      description: 'Response of `POST /settings/sports/add` — the newly created sport profile''s
+
+        summary. Sent as `text/plain` but the body is JSON. Captured 2026-06-01.
+
+        '
+      properties:
+        success:
+          type: string
+          description: Localized success message (account language), e.g. "Profil sport ajouté".
+          example: Profil sport ajouté
+        sport:
+          type: object
+          description: The created profile's summary card data.
+          properties:
+            id:
+              type: string
+              description: 'New sport-profile id (numeric, returned as a string). Use it as the
+
+                map key in `POST /settings/sports/save` and as `sportProfileId` in
+
+                the training-display endpoints.
+
+                '
+              example: '987654321'
+            sportId:
+              type: string
+              description: The sport this profile is for (echoes the posted `sportId`).
+              example: '115'
+            icon:
+              type: string
+              format: uri
+              description: Sport icon URL.
+            date:
+              type: string
+              description: Creation date as `D-M-YYYY` (account locale).
+              example: 1-6-2026
+            time:
+              type: string
+              description: Creation time as `HH:mm`.
+              example: '19:50'
+      example:
+        success: Profil sport ajouté
+        sport:
+          id: '987654321'
+          sportId: '115'
+          icon: https://platform.cdn.polar.com/ecosystem/sport/icon/da3071ff2b4d598b6ce0f213bff4e4cd-2024-04-16_06_01_42
+          date: 1-6-2026
+          time: '19:50'
+    TrainingSettingsBlock:
+      type: object
+      description: General per-profile device settings.
+      required:
+      - name
+      - settings
+      properties:
+        name:
+          type: string
+          enum:
+          - TrainingSettings
+        settings:
+          type: array
+          description: 'List of `{name, value}` setting pairs. Observed names/values
+
+            (non-exhaustive — other settings appear in the `/settings/sports/edit`
+
+            form; # TODO: enumerate full set + allowed values):
+
+            - `autoLapType`: `LOCATION` (also likely `OFF`/`DISTANCE`/`DURATION`)
+
+            - `volume`: `LOUD` (also likely `OFF`/`SOFT`)
+
+            - `trainingReminderType`: `OFF`
+
+            '
+          items:
+            type: object
+            required:
+            - name
+            - value
+            properties:
+              name:
+                type: string
+                example: autoLapType
+              value:
+                type: string
+                example: LOCATION
+    TrainingDisplaysBlock:
+      type: object
+      description: 'Watch-screen layout for this profile on a given device. Same shape as a
+
+        `TrainingDisplayList` element (see that schema): `displays` is the
+
+        ordered list of screens, each an array of field ids from the
+
+        training-display-items catalog.
+
+        '
+      required:
+      - name
+      - productId
+      - displays
+      properties:
+        name:
+          type: string
+          enum:
+          - TrainingDisplays
+        productId:
+          type: integer
+          description: Polar device/watch model id.
+          example: 268
+        displays:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+          example:
+          - - 32
+            - 3
+            - 27
+          - - 108
+    SportProfileSaveRequest:
+      type: object
+      description: 'Body for `POST /settings/sports/save` — updates one or more sport profiles''
+
+        settings and watch-screen layout in a single call. Captured 2026-06-01 from
+
+        a device-paired account.
+
+        '
+      required:
+      - sports
+      properties:
+        sports:
+          type: object
+          description: 'Map keyed by **sport-profile id** (the numeric id, as a string — the
+
+            same id returned by `POST /settings/sports/add` and used as
+
+            `sportProfileId` in the training-display endpoints). Each value is an
+
+            array of configuration **blocks**, discriminated by `name`. The observed
+
+            save sent two blocks: `TrainingSettings` and `TrainingDisplays`. Only the
+
+            blocks you include are updated.
+
+            '
+          additionalProperties:
+            type: array
+            items:
+              oneOf:
+              - $ref: '#/components/schemas/TrainingSettingsBlock'
+              - $ref: '#/components/schemas/TrainingDisplaysBlock'
+            example:
+            - name: TrainingSettings
+              settings:
+              - name: autoLapType
+                value: LOCATION
+              - name: volume
+                value: LOUD
+              - name: trainingReminderType
+                value: 'OFF'
+            - name: TrainingDisplays
+              productId: 268
+              displays:
+              - - 32
+                - 3
+                - 27
+              - - 108
+      example:
+        sports:
+          '987654321':
+          - name: TrainingSettings
+            settings:
+            - name: autoLapType
+              value: LOCATION
+            - name: volume
+              value: LOUD
+            - name: trainingReminderType
+              value: 'OFF'
+          - name: TrainingDisplays
+            productId: 268
+            displays:
+            - - 32
+              - 3
+              - 27
+            - - 108
+      $defs:
+        TrainingSettingsBlock:
+          type: object
+          description: General per-profile device settings.
+          required:
+          - name
+          - settings
+          properties:
+            name:
+              type: string
+              enum:
+              - TrainingSettings
+            settings:
+              type: array
+              description: 'List of `{name, value}` setting pairs. Observed names/values
+
+                (non-exhaustive — other settings appear in the `/settings/sports/edit`
+
+                form; # TODO: enumerate full set + allowed values):
+
+                - `autoLapType`: `LOCATION` (also likely `OFF`/`DISTANCE`/`DURATION`)
+
+                - `volume`: `LOUD` (also likely `OFF`/`SOFT`)
+
+                - `trainingReminderType`: `OFF`
+
+                '
+              items:
+                type: object
+                required:
+                - name
+                - value
+                properties:
+                  name:
+                    type: string
+                    example: autoLapType
+                  value:
+                    type: string
+                    example: LOCATION
+        TrainingDisplaysBlock:
+          type: object
+          description: 'Watch-screen layout for this profile on a given device. Same shape as a
+
+            `TrainingDisplayList` element (see that schema): `displays` is the
+
+            ordered list of screens, each an array of field ids from the
+
+            training-display-items catalog.
+
+            '
+          required:
+          - name
+          - productId
+          - displays
+          properties:
+            name:
+              type: string
+              enum:
+              - TrainingDisplays
+            productId:
+              type: integer
+              description: Polar device/watch model id.
+              example: 268
+            displays:
+              type: array
+              items:
+                type: array
+                items:
+                  type: integer
+              example:
+              - - 32
+                - 3
+                - 27
+              - - 108
+    TrainingDisplayCatalog:
+      type: object
+      description: 'Catalog of **available training-display fields** a given Polar device
+
+        (`productId`) can show on screen for a given sport profile, grouped by
+
+        category. This is the *palette* the watch-screen layout editor draws from;
+
+        the user''s chosen layout is returned separately by
+
+        `GET /settings/sports/training-display-lists/{productId}/{sportProfileId}`
+
+        (each configured screen is a list of these item `id`s).
+
+
+        Captured 2026-06-01 from a device-paired account (productId 268, running
+
+        profile). The exact item set varies by `productId`/`sportId`.
+
+        '
+      properties:
+        productId:
+          type: integer
+          description: The Polar device/watch model id this catalog is for.
+          example: 268
+        sportId:
+          type: integer
+          description: Sport this profile is for (same id space as `/api/sports/sports`; 1 = RUNNING).
+          example: 1
+        data:
+          type: array
+          description: Field categories, each holding its selectable display items.
+          items:
+            type: object
+            properties:
+              categoryKey:
+                type: string
+                description: 'Category grouping. Observed values: `POWER`, `HR`, `TIME`,
+
+                  `SPEED`, `CAD_STRIDE`, `DIST`, `FULLSCREEN`, `BARO_GPS`.
+
+                  `FULLSCREEN` items are whole-screen views (graphs, map, watch
+
+                  face); the others are data fields that can be combined on one
+
+                  screen.
+
+                  '
+                example: HR
+              items:
+                type: array
+                description: Selectable display fields in this category.
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: 'Numeric field id. **These ids are what populate the
+
+                        `displays` arrays** in the training-display-lists response.
+
+                        '
+                      example: 20
+                    key:
+                      type: string
+                      description: Stable enum name for the field (e.g. `CURRENT_HEART_RATE`).
+                      example: CURRENT_HEART_RATE
+      example:
+        productId: 268
+        sportId: 1
+        data:
+        - categoryKey: HR
+          items:
+          - id: 20
+            key: CURRENT_HEART_RATE
+          - id: 21
+            key: AVERAGE_HEART_RATE
+          - id: 22
+            key: MAXIMUM_HEART_RATE
+          - id: 32
+            key: ZONE_POINTER
+          - id: 27
+            key: CALORIES
+        - categoryKey: SPEED
+          items:
+          - id: 41
+            key: SPEED_OR_PACE
+          - id: 42
+            key: SPEED_OR_PACE_AVERAGE
+        - categoryKey: DIST
+          items:
+          - id: 37
+            key: DISTANCE
+        - categoryKey: TIME
+          items:
+          - id: 3
+            key: STOPWATCH
+        - categoryKey: FULLSCREEN
+          items:
+          - id: 115
+            key: POWER_GRAPH
+          - id: 121
+            key: HILL_SPLITTER
+          - id: 123
+            key: GEOGRAPHIC_MAP
+    TrainingDisplayList:
+      type: object
+      description: 'One configured set of **training-display screens** for a sport profile on a
+
+        given device — i.e. the watch-screen layout the user sees during a session.
+
+        Returned (wrapped in an array) by
+
+        `GET /settings/sports/training-display-lists/{productId}/{sportProfileId}`.
+
+        '
+      properties:
+        displays:
+          type: array
+          description: 'Ordered list of **screens**. Each screen is an array of display-field
+
+            `id`s drawn from the catalog
+
+            (`GET /settings/sports/training-display-items/{productId}/{sportProfileId}`).
+
+            A multi-field screen combines several data fields (e.g.
+
+            `[32, 37, 41, 3]` = zone pointer + distance + speed/pace + stopwatch);
+
+            a single-element screen is usually a `FULLSCREEN` view (e.g. `[115]` =
+
+            power graph). Field count per screen is constrained by the device. #
+
+            TODO: verify max fields per screen and max screen count per device.
+
+            '
+          items:
+            type: array
+            items:
+              type: integer
+            description: One screen — an ordered list of display-field ids.
+          example:
+          - - 32
+            - 37
+            - 41
+            - 3
+          - - 115
+          - - 121
+          - - 123
+        name:
+          type: string
+          description: Display-list name. Observed constant `TrainingDisplays`.
+          example: TrainingDisplays
+        productId:
+          type: integer
+          description: The Polar device/watch model id.
+          example: 268
+      example:
+        displays:
+        - - 32
+          - 37
+          - 41
+          - 3
+        - - 115
+        - - 121
+        - - 123
+        name: TrainingDisplays
+        productId: 268
     TrainingSessionCreate:
       type: object
       description: 'Payload for manual session entry via POST /api/training/create.

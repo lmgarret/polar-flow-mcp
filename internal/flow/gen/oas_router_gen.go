@@ -11,52 +11,67 @@ import (
 )
 
 var (
-	rn11AllowedHeaders = map[string]string{
+	rn13AllowedHeaders = map[string]string{
 		"DELETE": "X-Requested-With",
 	}
-	rn53AllowedHeaders = map[string]string{
+	rn68AllowedHeaders = map[string]string{
 		"PUT": "Content-Type,X-Requested-With",
 	}
-	rn3AllowedHeaders = map[string]string{
+	rn5AllowedHeaders = map[string]string{
 		"PUT": "Content-Type,X-Requested-With",
 	}
 	rn1AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
 	}
-	rn47AllowedHeaders = map[string]string{
+	rn61AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
-	}
-	rn5AllowedHeaders = map[string]string{
-		"POST": "Content-Type,X-Requested-With",
-	}
-	rn28AllowedHeaders = map[string]string{
-		"POST": "Content-Type,X-Requested-With",
-	}
-	rn34AllowedHeaders = map[string]string{
-		"GET": "X-Requested-With",
 	}
 	rn7AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
 	}
+	rn31AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn38AllowedHeaders = map[string]string{
+		"GET": "X-Requested-With",
+	}
 	rn15AllowedHeaders = map[string]string{
 		"DELETE": "X-Requested-With",
-	}
-	rn51AllowedHeaders = map[string]string{
-		"POST": "Content-Type,X-Requested-With",
 	}
 	rn9AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
 	}
-	rn45AllowedHeaders = map[string]string{
+	rn19AllowedHeaders = map[string]string{
+		"DELETE": "X-Requested-With",
+	}
+	rn66AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
 	}
-	rn33AllowedHeaders = map[string]string{
+	rn11AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
 	}
-	rn38AllowedHeaders = map[string]string{
+	rn59AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
 	}
-	rn24AllowedHeaders = map[string]string{
+	rn36AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn42AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn3AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn69AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Requested-With",
+	}
+	rn47AllowedHeaders = map[string]string{
+		"GET": "X-Requested-With",
+	}
+	rn52AllowedHeaders = map[string]string{
+		"GET": "X-Requested-With",
+	}
+	rn27AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
 	}
 )
@@ -91,7 +106,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.notFound(w, r)
 		return
 	}
-	args := [1]string{}
+	args := [2]string{}
 
 	// Static code generated router with unwrapped path search.
 	switch {
@@ -326,7 +341,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										default:
 											s.notAllowed(w, r, notAllowedParams{
 												allowedMethods: "DELETE",
-												allowedHeaders: rn11AllowedHeaders,
+												allowedHeaders: rn13AllowedHeaders,
 												acceptPost:     "",
 												acceptPatch:    "",
 											})
@@ -424,7 +439,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 											default:
 												s.notAllowed(w, r, notAllowedParams{
 													allowedMethods: "PUT",
-													allowedHeaders: rn53AllowedHeaders,
+													allowedHeaders: rn68AllowedHeaders,
 													acceptPost:     "",
 													acceptPatch:    "",
 												})
@@ -449,7 +464,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 											default:
 												s.notAllowed(w, r, notAllowedParams{
 													allowedMethods: "PUT",
-													allowedHeaders: rn3AllowedHeaders,
+													allowedHeaders: rn5AllowedHeaders,
 													acceptPost:     "",
 													acceptPatch:    "",
 												})
@@ -513,7 +528,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 											default:
 												s.notAllowed(w, r, notAllowedParams{
 													allowedMethods: "POST",
-													allowedHeaders: rn47AllowedHeaders,
+													allowedHeaders: rn61AllowedHeaders,
 													acceptPost:     "application/json",
 													acceptPatch:    "",
 												})
@@ -543,7 +558,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn5AllowedHeaders,
+										allowedHeaders: rn7AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -583,7 +598,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "GET,POST",
-											allowedHeaders: rn28AllowedHeaders,
+											allowedHeaders: rn31AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -651,7 +666,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "GET",
-									allowedHeaders: rn34AllowedHeaders,
+									allowedHeaders: rn38AllowedHeaders,
 									acceptPost:     "",
 									acceptPatch:    "",
 								})
@@ -660,29 +675,109 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							return
 						}
 
-					case 'p': // Prefix: "ports/sports"
+					case 'p': // Prefix: "ports/"
 
-						if l := len("ports/sports"); len(elem) >= l && elem[0:l] == "ports/sports" {
+						if l := len("ports/"); len(elem) >= l && elem[0:l] == "ports/" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
 						if len(elem) == 0 {
-							// Leaf node.
-							switch r.Method {
-							case "GET":
-								s.handleGetSportsRequest([0]string{}, elemIsEscaped, w, r)
-							default:
-								s.notAllowed(w, r, notAllowedParams{
-									allowedMethods: "GET",
-									allowedHeaders: nil,
-									acceptPost:     "",
-									acceptPatch:    "",
-								})
+							break
+						}
+						switch elem[0] {
+						case 'p': // Prefix: "profiles"
+
+							if l := len("profiles"); len(elem) >= l && elem[0:l] == "profiles" {
+								elem = elem[l:]
+							} else {
+								break
 							}
 
-							return
+							if len(elem) == 0 {
+								switch r.Method {
+								case "GET":
+									s.handleListSportProfilesRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "GET",
+										allowedHeaders: nil,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+							switch elem[0] {
+							case '/': // Prefix: "/"
+
+								if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+									elem = elem[l:]
+								} else {
+									break
+								}
+
+								// Param: "id"
+								// Leaf parameter, slashes are prohibited
+								idx := strings.IndexByte(elem, '/')
+								if idx >= 0 {
+									break
+								}
+								args[0] = elem
+								elem = ""
+
+								if len(elem) == 0 {
+									// Leaf node.
+									switch r.Method {
+									case "DELETE":
+										s.handleDeleteSportProfileRequest([1]string{
+											args[0],
+										}, elemIsEscaped, w, r)
+									case "GET":
+										s.handleGetSportProfileRequest([1]string{
+											args[0],
+										}, elemIsEscaped, w, r)
+									default:
+										s.notAllowed(w, r, notAllowedParams{
+											allowedMethods: "DELETE,GET",
+											allowedHeaders: rn15AllowedHeaders,
+											acceptPost:     "",
+											acceptPatch:    "",
+										})
+									}
+
+									return
+								}
+
+							}
+
+						case 's': // Prefix: "sports"
+
+							if l := len("sports"); len(elem) >= l && elem[0:l] == "sports" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "GET":
+									s.handleGetSportsRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "GET",
+										allowedHeaders: nil,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
 						}
 
 					}
@@ -818,7 +913,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn7AllowedHeaders,
+										allowedHeaders: rn9AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -866,7 +961,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "DELETE",
-											allowedHeaders: rn15AllowedHeaders,
+											allowedHeaders: rn19AllowedHeaders,
 											acceptPost:     "",
 											acceptPatch:    "",
 										})
@@ -893,7 +988,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn51AllowedHeaders,
+										allowedHeaders: rn66AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -919,7 +1014,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn9AllowedHeaders,
+									allowedHeaders: rn11AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -959,7 +1054,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "GET,POST",
-										allowedHeaders: rn45AllowedHeaders,
+										allowedHeaders: rn59AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -1002,7 +1097,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn33AllowedHeaders,
+								allowedHeaders: rn36AllowedHeaders,
 								acceptPost:     "application/json",
 								acceptPatch:    "",
 							})
@@ -1027,13 +1122,211 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn38AllowedHeaders,
+								allowedHeaders: rn42AllowedHeaders,
 								acceptPost:     "application/json",
 								acceptPatch:    "",
 							})
 						}
 
 						return
+					}
+
+				}
+
+			case 's': // Prefix: "settings/sports/"
+
+				if l := len("settings/sports/"); len(elem) >= l && elem[0:l] == "settings/sports/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 'a': // Prefix: "add"
+
+					if l := len("add"); len(elem) >= l && elem[0:l] == "add" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleAddSportProfileRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, notAllowedParams{
+								allowedMethods: "POST",
+								allowedHeaders: rn3AllowedHeaders,
+								acceptPost:     "application/x-www-form-urlencoded",
+								acceptPatch:    "",
+							})
+						}
+
+						return
+					}
+
+				case 's': // Prefix: "save"
+
+					if l := len("save"); len(elem) >= l && elem[0:l] == "save" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleSaveSportProfileRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, notAllowedParams{
+								allowedMethods: "POST",
+								allowedHeaders: rn69AllowedHeaders,
+								acceptPost:     "application/json",
+								acceptPatch:    "",
+							})
+						}
+
+						return
+					}
+
+				case 't': // Prefix: "training-display-"
+
+					if l := len("training-display-"); len(elem) >= l && elem[0:l] == "training-display-" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case 'i': // Prefix: "items/"
+
+						if l := len("items/"); len(elem) >= l && elem[0:l] == "items/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						// Param: "productId"
+						// Match until "/"
+						idx := strings.IndexByte(elem, '/')
+						if idx < 0 {
+							idx = len(elem)
+						}
+						args[0] = elem[:idx]
+						elem = elem[idx:]
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case '/': // Prefix: "/"
+
+							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							// Param: "sportProfileId"
+							// Leaf parameter, slashes are prohibited
+							idx := strings.IndexByte(elem, '/')
+							if idx >= 0 {
+								break
+							}
+							args[1] = elem
+							elem = ""
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "GET":
+									s.handleGetTrainingDisplayItemsRequest([2]string{
+										args[0],
+										args[1],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "GET",
+										allowedHeaders: rn47AllowedHeaders,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						}
+
+					case 'l': // Prefix: "lists/"
+
+						if l := len("lists/"); len(elem) >= l && elem[0:l] == "lists/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						// Param: "productId"
+						// Match until "/"
+						idx := strings.IndexByte(elem, '/')
+						if idx < 0 {
+							idx = len(elem)
+						}
+						args[0] = elem[:idx]
+						elem = elem[idx:]
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case '/': // Prefix: "/"
+
+							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							// Param: "sportProfileId"
+							// Leaf parameter, slashes are prohibited
+							idx := strings.IndexByte(elem, '/')
+							if idx >= 0 {
+								break
+							}
+							args[1] = elem
+							elem = ""
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "GET":
+									s.handleGetTrainingDisplayListsRequest([2]string{
+										args[0],
+										args[1],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "GET",
+										allowedHeaders: rn52AllowedHeaders,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						}
+
 					}
 
 				}
@@ -1103,7 +1396,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn24AllowedHeaders,
+									allowedHeaders: rn27AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -1167,7 +1460,7 @@ type Route struct {
 	operationGroup string
 	pathPattern    string
 	count          int
-	args           [1]string
+	args           [2]string
 }
 
 // Name returns ogen operation name.
@@ -1799,29 +2092,112 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							}
 						}
 
-					case 'p': // Prefix: "ports/sports"
+					case 'p': // Prefix: "ports/"
 
-						if l := len("ports/sports"); len(elem) >= l && elem[0:l] == "ports/sports" {
+						if l := len("ports/"); len(elem) >= l && elem[0:l] == "ports/" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
 						if len(elem) == 0 {
-							// Leaf node.
-							switch method {
-							case "GET":
-								r.name = GetSportsOperation
-								r.summary = "List all sports with their numeric IDs"
-								r.operationID = "getSports"
-								r.operationGroup = ""
-								r.pathPattern = "/api/sports/sports"
-								r.args = args
-								r.count = 0
-								return r, true
-							default:
-								return
+							break
+						}
+						switch elem[0] {
+						case 'p': // Prefix: "profiles"
+
+							if l := len("profiles"); len(elem) >= l && elem[0:l] == "profiles" {
+								elem = elem[l:]
+							} else {
+								break
 							}
+
+							if len(elem) == 0 {
+								switch method {
+								case "GET":
+									r.name = ListSportProfilesOperation
+									r.summary = "List the user's sport profiles"
+									r.operationID = "listSportProfiles"
+									r.operationGroup = ""
+									r.pathPattern = "/api/sports/profiles"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+							switch elem[0] {
+							case '/': // Prefix: "/"
+
+								if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+									elem = elem[l:]
+								} else {
+									break
+								}
+
+								// Param: "id"
+								// Leaf parameter, slashes are prohibited
+								idx := strings.IndexByte(elem, '/')
+								if idx >= 0 {
+									break
+								}
+								args[0] = elem
+								elem = ""
+
+								if len(elem) == 0 {
+									// Leaf node.
+									switch method {
+									case "DELETE":
+										r.name = DeleteSportProfileOperation
+										r.summary = "Delete a sport profile"
+										r.operationID = "deleteSportProfile"
+										r.operationGroup = ""
+										r.pathPattern = "/api/sports/profiles/{id}"
+										r.args = args
+										r.count = 1
+										return r, true
+									case "GET":
+										r.name = GetSportProfileOperation
+										r.summary = "Read a single sport profile"
+										r.operationID = "getSportProfile"
+										r.operationGroup = ""
+										r.pathPattern = "/api/sports/profiles/{id}"
+										r.args = args
+										r.count = 1
+										return r, true
+									default:
+										return
+									}
+								}
+
+							}
+
+						case 's': // Prefix: "sports"
+
+							if l := len("sports"); len(elem) >= l && elem[0:l] == "sports" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "GET":
+									r.name = GetSportsOperation
+									r.summary = "List all sports with their numeric IDs"
+									r.operationID = "getSports"
+									r.operationGroup = ""
+									r.pathPattern = "/api/sports/sports"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+
 						}
 
 					}
@@ -2170,6 +2546,198 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						default:
 							return
 						}
+					}
+
+				}
+
+			case 's': // Prefix: "settings/sports/"
+
+				if l := len("settings/sports/"); len(elem) >= l && elem[0:l] == "settings/sports/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 'a': // Prefix: "add"
+
+					if l := len("add"); len(elem) >= l && elem[0:l] == "add" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "POST":
+							r.name = AddSportProfileOperation
+							r.summary = "Add (create) a sport profile"
+							r.operationID = "addSportProfile"
+							r.operationGroup = ""
+							r.pathPattern = "/settings/sports/add"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+				case 's': // Prefix: "save"
+
+					if l := len("save"); len(elem) >= l && elem[0:l] == "save" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "POST":
+							r.name = SaveSportProfileOperation
+							r.summary = "Save (update) sport-profile settings and watch-screen layout"
+							r.operationID = "saveSportProfile"
+							r.operationGroup = ""
+							r.pathPattern = "/settings/sports/save"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+				case 't': // Prefix: "training-display-"
+
+					if l := len("training-display-"); len(elem) >= l && elem[0:l] == "training-display-" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case 'i': // Prefix: "items/"
+
+						if l := len("items/"); len(elem) >= l && elem[0:l] == "items/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						// Param: "productId"
+						// Match until "/"
+						idx := strings.IndexByte(elem, '/')
+						if idx < 0 {
+							idx = len(elem)
+						}
+						args[0] = elem[:idx]
+						elem = elem[idx:]
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case '/': // Prefix: "/"
+
+							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							// Param: "sportProfileId"
+							// Leaf parameter, slashes are prohibited
+							idx := strings.IndexByte(elem, '/')
+							if idx >= 0 {
+								break
+							}
+							args[1] = elem
+							elem = ""
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "GET":
+									r.name = GetTrainingDisplayItemsOperation
+									r.summary = "List available training-display fields for a device + sport profile"
+									r.operationID = "getTrainingDisplayItems"
+									r.operationGroup = ""
+									r.pathPattern = "/settings/sports/training-display-items/{productId}/{sportProfileId}"
+									r.args = args
+									r.count = 2
+									return r, true
+								default:
+									return
+								}
+							}
+
+						}
+
+					case 'l': // Prefix: "lists/"
+
+						if l := len("lists/"); len(elem) >= l && elem[0:l] == "lists/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						// Param: "productId"
+						// Match until "/"
+						idx := strings.IndexByte(elem, '/')
+						if idx < 0 {
+							idx = len(elem)
+						}
+						args[0] = elem[:idx]
+						elem = elem[idx:]
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case '/': // Prefix: "/"
+
+							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							// Param: "sportProfileId"
+							// Leaf parameter, slashes are prohibited
+							idx := strings.IndexByte(elem, '/')
+							if idx >= 0 {
+								break
+							}
+							args[1] = elem
+							elem = ""
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "GET":
+									r.name = GetTrainingDisplayListsOperation
+									r.summary = "Read the configured training-display screens for a device + sport profile"
+									r.operationID = "getTrainingDisplayLists"
+									r.operationGroup = ""
+									r.pathPattern = "/settings/sports/training-display-lists/{productId}/{sportProfileId}"
+									r.args = args
+									r.count = 2
+									return r, true
+								default:
+									return
+								}
+							}
+
+						}
+
 					}
 
 				}

@@ -14,7 +14,7 @@ shape right and everything round-trips.
 | `distance_m` | **metres** (the Flow UI shows km) | `5000` = 5 km |
 | `duration_s` | **seconds** | `600` = 10 min |
 | `intensity.hr_zone` | integer 1–5 | `4` |
-| `sport_id` | Polar sport id | `1` = running |
+| `sport_id` | Polar sport id | `1` = running; e.g. `2` cycling, `23` swimming. `list_sports` for all ids |
 
 The tools never accept km, miles, or `HH:MM:SS`. Convert before calling.
 
