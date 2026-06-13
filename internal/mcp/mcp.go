@@ -109,15 +109,17 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			"Create a scheduled Polar Flow training target (a planned workout in the diary). "+
 				"Returns the new target's numeric id.\n\n"+
 				"Two shapes:\n"+
-				"  • No phases  → an open VOLUME target: just a name/date placeholder, no "+
-				"structured goal.\n"+
-				"  • With phases → a PHASED workout built from an ordered list of "+
-				"warmup / repeat / cooldown blocks.\n\n"+
+				"  • VOLUME target (no phases): set duration_s OR distance_m at the top level. "+
+				"This creates a single open-goal block — use for easy/general runs.\n"+
+				"  • PHASED target (with phases): omit duration_s/distance_m and provide an "+
+				"ordered phases list of warmup / repeat / cooldown blocks.\n\n"+
 				"Units: distances are METRES (the Flow UI shows km — 5 km = 5000), durations "+
 				"are SECONDS. Intensity is expressed as HR zones 1–5, either directly "+
 				"(intensity.hr_zone) or via an effort label that maps to a zone "+
 				"(easy→1–2, aerobic→2, tempo→3, threshold→4, vo2max→5).\n\n"+
-				"Example — 10 min warmup, 5×1 km @ threshold with 2 min jog recovery, 10 min cooldown:\n"+
+				"Example A — 35-minute easy run (VOLUME):\n"+
+				"  name: \"Easy 35 min\", date: \"2026-06-14\", duration_s: 2100, sport_id: 1\n\n"+
+				"Example B — 10 min warmup, 5×1 km @ threshold with 2 min jog recovery, 10 min cooldown:\n"+
 				"  name: \"5x1km Threshold\", date: \"2026-06-02\", time: \"09:00\", sport_id: 1,\n"+
 				"  phases: [\n"+
 				"    {\"type\": \"warmup\", \"duration_s\": 600},\n"+
@@ -139,9 +141,15 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"Call list_sports for the full id→name catalogue.")),
 		mcpgo.WithString("description",
 			mcpgo.Description("Free-text notes for the workout (optional).")),
+		mcpgo.WithNumber("duration_s",
+			mcpgo.Description("VOLUME target total duration in seconds (e.g. 2100 = 35 min). "+
+				"Required when phases is omitted and distance_m is not set. Ignored when phases is provided.")),
+		mcpgo.WithNumber("distance_m",
+			mcpgo.Description("VOLUME target total distance in metres (e.g. 10000 = 10 km). "+
+				"Required when phases is omitted and duration_s is not set. Ignored when phases is provided.")),
 		mcpgo.WithArray("phases",
 			mcpgo.Description(
-				"Ordered list of workout phases. Omit for an open VOLUME target. Each phase "+
+				"Ordered list of workout phases. Omit (and set duration_s or distance_m) for a VOLUME target. Each phase "+
 					"is one of three types:\n"+
 					"  • warmup / cooldown — needs duration_s (seconds, > 0); run at easy intensity.\n"+
 					"  • repeat — an interval block repeated reps times (reps ≥ 2). Needs goal "+
@@ -263,10 +271,14 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"Call list_sports for the full id→name catalogue.")),
 		mcpgo.WithString("description",
 			mcpgo.Description("Free-text notes for the workout (optional).")),
+		mcpgo.WithNumber("duration_s",
+			mcpgo.Description("VOLUME target total duration in seconds. Required when replacing with a VOLUME target (no phases) and distance_m is not set.")),
+		mcpgo.WithNumber("distance_m",
+			mcpgo.Description("VOLUME target total distance in metres. Required when replacing with a VOLUME target (no phases) and duration_s is not set.")),
 		mcpgo.WithArray("phases",
 			mcpgo.Description("Ordered workout phases — identical shape to create_training_target.phases "+
 				"(warmup / repeat / cooldown; distances in metres, durations in seconds). "+
-				"Omit to replace with an open VOLUME target."),
+				"Omit (and set duration_s or distance_m) to replace with a VOLUME target."),
 			mcpgo.Items(map[string]any{
 				"type": "object",
 				"properties": map[string]any{

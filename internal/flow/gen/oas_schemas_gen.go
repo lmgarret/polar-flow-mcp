@@ -10387,9 +10387,9 @@ type TrainingSessionSummary struct {
 	// Distance in metres, or null. Server returns floats for GPS-tracked sessions.
 	Distance OptNilFloat64 `json:"distance"`
 	// Average HR (bpm). Note the camelCase differs from create's `hrAverage`.
-	HrAvg OptInt `json:"hrAvg"`
+	HrAvg OptNilInt `json:"hrAvg"`
 	// Kilocalories. Note the field name differs from create's `kiloCalories`.
-	Calories OptInt `json:"calories"`
+	Calories OptNilInt `json:"calories"`
 	// Free-text note. Observed as `" "` (single space) when the form note
 	// was blank — quirk of the create flow.
 	Note OptString `json:"note"`
@@ -10401,7 +10401,7 @@ type TrainingSessionSummary struct {
 	// no timezone — note: differs from create's ISO 8601 with offset).
 	StartDate string `json:"startDate"`
 	// Recovery time. Unit TODO (likely seconds).
-	RecoveryTime OptInt `json:"recoveryTime"`
+	RecoveryTime OptNilInt `json:"recoveryTime"`
 	// Sport icon URL.
 	IconUrl OptURI `json:"iconUrl"`
 	// Pre-rendered HTML for the UI (not for programmatic consumption). Empty for manual sessions.
@@ -10436,12 +10436,12 @@ func (s *TrainingSessionSummary) GetDistance() OptNilFloat64 {
 }
 
 // GetHrAvg returns the value of HrAvg.
-func (s *TrainingSessionSummary) GetHrAvg() OptInt {
+func (s *TrainingSessionSummary) GetHrAvg() OptNilInt {
 	return s.HrAvg
 }
 
 // GetCalories returns the value of Calories.
-func (s *TrainingSessionSummary) GetCalories() OptInt {
+func (s *TrainingSessionSummary) GetCalories() OptNilInt {
 	return s.Calories
 }
 
@@ -10466,7 +10466,7 @@ func (s *TrainingSessionSummary) GetStartDate() string {
 }
 
 // GetRecoveryTime returns the value of RecoveryTime.
-func (s *TrainingSessionSummary) GetRecoveryTime() OptInt {
+func (s *TrainingSessionSummary) GetRecoveryTime() OptNilInt {
 	return s.RecoveryTime
 }
 
@@ -10526,12 +10526,12 @@ func (s *TrainingSessionSummary) SetDistance(val OptNilFloat64) {
 }
 
 // SetHrAvg sets the value of HrAvg.
-func (s *TrainingSessionSummary) SetHrAvg(val OptInt) {
+func (s *TrainingSessionSummary) SetHrAvg(val OptNilInt) {
 	s.HrAvg = val
 }
 
 // SetCalories sets the value of Calories.
-func (s *TrainingSessionSummary) SetCalories(val OptInt) {
+func (s *TrainingSessionSummary) SetCalories(val OptNilInt) {
 	s.Calories = val
 }
 
@@ -10556,7 +10556,7 @@ func (s *TrainingSessionSummary) SetStartDate(val string) {
 }
 
 // SetRecoveryTime sets the value of RecoveryTime.
-func (s *TrainingSessionSummary) SetRecoveryTime(val OptInt) {
+func (s *TrainingSessionSummary) SetRecoveryTime(val OptNilInt) {
 	s.RecoveryTime = val
 }
 
