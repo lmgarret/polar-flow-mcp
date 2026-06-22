@@ -1,206 +1,141 @@
-// Package auth turns the HTTP transport into a provider-agnostic OAuth 2.1
-// Resource Server. Incoming Bearer access tokens on /mcp are validated by
-// RFC 7662 token introspection against the configured OIDC issuer, so the
-// server works with opaque tokens (Authelia's default) and any compliant
-// provider.
+// Package auth turns the HTTP transport into a self-contained OAuth 2.1
+// Authorization Server + Resource Server (the "app-as-AS" model).
+//
+// The server implements Dynamic Client Registration (RFC 7591), so MCP clients
+// — Claude.ai web/mobile and Claude Code — self-register by pasting the URL; no
+// client is created by hand. Browser login on the /authorize step is delegated
+// to a forward-auth proxy (e.g. Authelia in front of Caddy): the proxy
+// authenticates the human and passes their identity in a trusted header, and an
+// email allowlist decides who may consent. The server signs short-lived EdDSA
+// JWT access tokens and validates them locally on /mcp — no database, no
+// introspection round-trip.
 //
 // Nothing here knows about Polar identity: the OAuth flow authenticates the
-// human/agent connecting (against the issuer, e.g. Authelia), while the single
-// Polar account stays fixed in env. The middleware only answers "is this token
-// active, and is it one this server should accept?".
+// human connecting, while the single Polar account stays fixed in env.
 package auth
 
 import (
-	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 )
 
-// Config configures the Resource Server. It mirrors config.OAuthConfig but is
-// kept independent so the auth package does not import config (and vice versa).
+// Config configures the Authorization + Resource Server. It mirrors
+// config.OAuthConfig but is kept independent so the auth package does not import
+// config (and vice versa).
 type Config struct {
-	Issuer                    string
-	Resource                  string
-	IntrospectionClientID     string
-	IntrospectionClientSecret string
+	// Issuer is the public origin and OAuth issuer, e.g.
+	// "https://polar.example.com". Endpoint URLs are derived from it.
+	Issuer string
+	// Resource is the exact public /mcp URL; the access-token audience.
+	Resource string
 
-	AllowedClientIDs []string
-	AllowedAudiences []string
-	AllowedSubjects  []string
-	AllowedGroups    []string
-	AllowedOrigins   []string
+	// AllowedEmails is the case-insensitive allowlist of forward-auth identities
+	// permitted to consent. AllowedGroups, when set, is additionally required.
+	AllowedEmails []string
+	AllowedGroups []string
+	// AllowedOrigins enables the Origin allowlist on /mcp when non-empty.
+	AllowedOrigins []string
 
-	// HTTPClient is used for discovery and introspection. Defaults to a client
-	// with a 10s timeout. This talks to the operator's own issuer, not Polar,
-	// so it needs no browser-fingerprint transport.
-	HTTPClient *http.Client
+	// EmailHeader / GroupsHeader are the forward-auth headers read on /authorize.
+	EmailHeader  string
+	GroupsHeader string
+	// TrustedProxies are the networks whose forward-auth headers are trusted.
+	TrustedProxies []*net.IPNet
+	// ExtraRedirectURIs are accepted at registration beyond the built-in set.
+	ExtraRedirectURIs []string
+
+	// SigningKeyPath is the chmod-600 JSON file holding the EdDSA key.
+	SigningKeyPath string
+	// AccessTTL / RefreshTTL are issued-token lifetimes.
+	AccessTTL  time.Duration
+	RefreshTTL time.Duration
+
 	// Logger defaults to slog.Default().
 	Logger *slog.Logger
 }
 
-// Authenticator validates Bearer tokens and serves protected-resource metadata.
+// Authenticator validates access tokens, serves discovery metadata, and runs
+// the authorization-server endpoints (register / authorize / token).
 type Authenticator struct {
-	cfg    Config
-	client *http.Client
-	log    *slog.Logger
+	cfg Config
+	log *slog.Logger
 
-	mu                    sync.Mutex
-	introspectionEndpoint string
+	priv ed25519.PrivateKey
+	pub  ed25519.PublicKey
+	kid  string
 }
 
-// New builds an Authenticator. It performs no network I/O; discovery happens
-// lazily on the first request (and is cached).
-func New(cfg Config) *Authenticator {
-	client := cfg.HTTPClient
-	if client == nil {
-		client = &http.Client{Timeout: 10 * time.Second}
-	}
+// New builds an Authenticator, loading or creating the EdDSA signing key at
+// cfg.SigningKeyPath (chmod 600). Persisting the key keeps issued tokens valid
+// across restarts.
+func New(cfg Config) (*Authenticator, error) {
 	log := cfg.Logger
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Authenticator{cfg: cfg, client: client, log: log}
-}
-
-// openIDConfiguration is the subset of the OIDC discovery document we need.
-type openIDConfiguration struct {
-	IntrospectionEndpoint string `json:"introspection_endpoint"`
-}
-
-// introspectionResult is the subset of an RFC 7662 introspection response we
-// act on. aud and groups may arrive as a string or an array, so they use a
-// lenient decoder.
-type introspectionResult struct {
-	Active   bool          `json:"active"`
-	ClientID string        `json:"client_id"`
-	Subject  string        `json:"sub"`
-	Audience stringOrSlice `json:"aud"`
-	Groups   stringOrSlice `json:"groups"`
-	Scope    string        `json:"scope"`
-	Username string        `json:"username"`
-}
-
-// discover resolves and caches the issuer's introspection endpoint.
-func (a *Authenticator) discover(ctx context.Context) (string, error) {
-	a.mu.Lock()
-	cached := a.introspectionEndpoint
-	a.mu.Unlock()
-	if cached != "" {
-		return cached, nil
+	if cfg.AccessTTL <= 0 {
+		cfg.AccessTTL = time.Hour
+	}
+	if cfg.RefreshTTL <= 0 {
+		cfg.RefreshTTL = 720 * time.Hour
 	}
 
-	wellKnown := a.cfg.Issuer + "/.well-known/openid-configuration"
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, wellKnown, nil)
+	priv, err := loadOrCreateKey(cfg.SigningKeyPath)
 	if err != nil {
-		return "", fmt.Errorf("build discovery request: %w", err)
+		return nil, fmt.Errorf("oauth signing key: %w", err)
 	}
-	req.Header.Set("Accept", "application/json")
+	pub, _ := priv.Public().(ed25519.PublicKey)
 
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("fetch %s: %w", wellKnown, err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("discovery %s returned %d", wellKnown, resp.StatusCode)
-	}
-
-	var doc openIDConfiguration
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&doc); err != nil {
-		return "", fmt.Errorf("decode discovery document: %w", err)
-	}
-	if doc.IntrospectionEndpoint == "" {
-		return "", fmt.Errorf("issuer %q advertises no introspection_endpoint", a.cfg.Issuer)
-	}
-
-	a.mu.Lock()
-	a.introspectionEndpoint = doc.IntrospectionEndpoint
-	a.mu.Unlock()
-	return doc.IntrospectionEndpoint, nil
+	return &Authenticator{
+		cfg:  cfg,
+		log:  log,
+		priv: priv,
+		pub:  pub,
+		kid:  keyID(pub),
+	}, nil
 }
 
-// introspect validates a token at the issuer. A nil error with active==true
-// means the token is currently valid.
-func (a *Authenticator) introspect(ctx context.Context, token string) (*introspectionResult, error) {
-	endpoint, err := a.discover(ctx)
-	if err != nil {
-		return nil, err
-	}
+// authorizeURL / tokenURL / registerURL derive the endpoint URLs from the issuer.
+func (a *Authenticator) authorizeURL() string { return a.cfg.Issuer + AuthorizePath }
+func (a *Authenticator) tokenURL() string     { return a.cfg.Issuer + TokenPath }
+func (a *Authenticator) registerURL() string  { return a.cfg.Issuer + RegisterPath }
 
-	form := url.Values{}
-	form.Set("token", token)
-	form.Set("token_type_hint", "access_token")
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
-	if err != nil {
-		return nil, fmt.Errorf("build introspection request: %w", err)
+// allowedEmail reports whether email is on the allowlist (case-insensitive).
+func (a *Authenticator) allowedEmail(email string) bool {
+	if email == "" {
+		return false
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Accept", "application/json")
-	req.SetBasicAuth(a.cfg.IntrospectionClientID, a.cfg.IntrospectionClientSecret)
-
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("introspection request: %w", err)
+	for _, e := range a.cfg.AllowedEmails {
+		if strings.EqualFold(e, email) {
+			return true
+		}
 	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("introspection endpoint returned %d", resp.StatusCode)
-	}
-
-	var res introspectionResult
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&res); err != nil {
-		return nil, fmt.Errorf("decode introspection response: %w", err)
-	}
-	return &res, nil
+	return false
 }
 
-// errPinMismatch is returned by checkPins describing which configured pin failed.
-var errPinMismatch = errors.New("token rejected by configured pin")
-
-// checkPins enforces the configured audience/client/subject/group pins. All
-// configured pins must pass (logical AND). A nil error means accepted.
-func (a *Authenticator) checkPins(res *introspectionResult) error {
-	if len(a.cfg.AllowedClientIDs) > 0 && !contains(a.cfg.AllowedClientIDs, res.ClientID) {
-		return fmt.Errorf("%w: client_id %q not allowed", errPinMismatch, res.ClientID)
+// allowedGroups reports whether the caller's groups satisfy the group gate.
+// With no AllowedGroups configured the gate is open.
+func (a *Authenticator) allowedGroups(groups []string) bool {
+	if len(a.cfg.AllowedGroups) == 0 {
+		return true
 	}
-	if len(a.cfg.AllowedAudiences) > 0 && !intersects(a.cfg.AllowedAudiences, res.Audience) {
-		return fmt.Errorf("%w: audience %v not allowed", errPinMismatch, []string(res.Audience))
-	}
-	if len(a.cfg.AllowedSubjects) > 0 && !contains(a.cfg.AllowedSubjects, res.Subject) {
-		return fmt.Errorf("%w: subject %q not allowed", errPinMismatch, res.Subject)
-	}
-	if len(a.cfg.AllowedGroups) > 0 && !intersects(a.cfg.AllowedGroups, res.Groups) {
-		return fmt.Errorf("%w: groups %v not allowed", errPinMismatch, []string(res.Groups))
-	}
-	return nil
+	return intersects(a.cfg.AllowedGroups, groups)
 }
 
-// stringOrSlice decodes a JSON value that may be either a string or an array of
-// strings into a []string. Other types decode to nil rather than erroring.
-type stringOrSlice []string
-
-func (s *stringOrSlice) UnmarshalJSON(b []byte) error {
-	var one string
-	if err := json.Unmarshal(b, &one); err == nil {
-		*s = []string{one}
-		return nil
-	}
-	var many []string
-	if err := json.Unmarshal(b, &many); err == nil {
-		*s = many
-		return nil
-	}
-	*s = nil
-	return nil
+// newJTI returns a 128-bit random token identifier.
+func newJTI() string {
+	var b [16]byte
+	_, _ = rand.Read(b[:])
+	return base64.RawURLEncoding.EncodeToString(b[:])
 }
 
 func contains(set []string, v string) bool {
@@ -215,11 +150,43 @@ func contains(set []string, v string) bool {
 	return false
 }
 
-func intersects(set []string, vals []string) bool {
+func intersects(set, vals []string) bool {
 	for _, v := range vals {
 		if contains(set, v) {
 			return true
 		}
 	}
 	return false
+}
+
+// writeJSON writes v as JSON with the given status and no-store caching.
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+// oauthError writes an RFC 6749 token/registration error response.
+func oauthError(w http.ResponseWriter, status int, code, desc string) {
+	writeJSON(w, status, map[string]string{"error": code, "error_description": desc})
+}
+
+// redirectWithError appends an OAuth error to redirectURI and returns the
+// location. Used only after redirectURI has been validated against the client.
+func redirectWithError(redirectURI, state, code, desc string) string {
+	u, err := url.Parse(redirectURI)
+	if err != nil {
+		return redirectURI
+	}
+	q := u.Query()
+	q.Set("error", code)
+	if desc != "" {
+		q.Set("error_description", desc)
+	}
+	if state != "" {
+		q.Set("state", state)
+	}
+	u.RawQuery = q.Encode()
+	return u.String()
 }

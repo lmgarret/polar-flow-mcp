@@ -105,10 +105,10 @@ Add to `~/.claude/mcp_servers.json` (or per-project `.mcp.json`):
 Run with `TRANSPORT=http` (the default) and point Claude at
 `http://127.0.0.1:8080/mcp`.
 
-To reach it from **Claude.ai web/mobile** over the public internet, enable the
-OAuth Resource Server and front it with a TLS reverse proxy — see
-[Exposing Securely](deployment/exposing-securely.md). (Claude Code stays on the
-local stdio transport above.)
+To reach it from **Claude.ai web/mobile (and Claude Code)** over the public
+internet, set `OAUTH_PUBLIC_URL` to turn the server into its own OAuth 2.1
+Authorization Server, and front it with a TLS reverse proxy — see
+[Exposing Securely](deployment/exposing-securely.md).
 
 ## 5. Try it out
 

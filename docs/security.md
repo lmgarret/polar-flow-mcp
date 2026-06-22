@@ -50,43 +50,47 @@ isn't protected, and operational practices to follow.
 - **The `.env` file is whatever you make it.** It contains the Polar
   password in plaintext by design. Use restrictive permissions and avoid
   committing it.
-- **The HTTP transport has no auth *by default*.** With `OIDC_ISSUER` unset,
+- **The HTTP transport has no auth *by default*.** With `OAUTH_PUBLIC_URL` unset,
   bind to localhost or put it behind a trusted-network barrier (Tailscale, VPN).
   A warning is logged at startup if `BIND_ADDRESS` is non-localhost and OAuth is
-  off. To expose it publicly, enable the OAuth Resource Server (below).
+  off. To expose it publicly, enable the OAuth Authorization Server (below).
 
-## Exposing publicly: OAuth Resource Server
+## Exposing publicly: app-as-Authorization-Server
 
-To reach the server from **Claude.ai web/mobile**, enable inbound OAuth by
-setting `OIDC_ISSUER` (+ `MCP_RESOURCE` + introspection credentials). The server
-then:
+To reach the server from **Claude.ai web/mobile and Claude Code**, enable inbound
+OAuth by setting `OAUTH_PUBLIC_URL` (+ `OAUTH_ALLOWED_EMAIL` +
+`OAUTH_TRUSTED_PROXIES`). The server then *becomes its own OAuth 2.1
+Authorization Server*:
 
-- Serves RFC 9728 protected-resource metadata so clients discover your
-  authorization server (e.g. Authelia).
-- Returns `401` + `WWW-Authenticate` to unauthenticated callers.
-- Validates every Bearer token by **RFC 7662 introspection** on each request.
+- Serves RFC 9728 / RFC 8414 discovery metadata pointing clients back at itself.
+- Implements Dynamic Client Registration (RFC 7591), so Claude self-registers —
+  nothing to pre-create or paste.
+- Delegates browser login on `/mcp/oauth/authorize` to a forward-auth proxy
+  (Authelia), reads the authenticated email from a trusted header, and checks the
+  email allowlist before issuing a PKCE-bound code.
+- Returns `401` + `WWW-Authenticate` to unauthenticated `/mcp` callers and
+  validates every Bearer token **locally** (EdDSA JWT it signed).
 
-Introspection (rather than local JWT validation) is deliberate: it works with
-Authelia's default **opaque** tokens and gives **instant revocation** — logging
-out in Authelia invalidates the token on its next use, which matters because a
-valid token can drive your whole Polar account.
-
-The full Caddy + Authelia + Claude.ai walkthrough, including why Authelia
-*forward-auth* cannot be used here, is in
+The full Caddy + Authelia + Claude.ai walkthrough — including why forward-auth
+goes on `/authorize` only — is in
 [Exposing Securely](deployment/exposing-securely.md).
 
-### Recommended controls (each an enforceable env var)
+### The controls that matter
 
-- **`AUTH_ALLOWED_CLIENT_IDS`** — reject tokens not minted for your connector
-  client (RFC 8707 confused-deputy defence). *Recommended.*
-- **`AUTH_ALLOWED_SUBJECTS`** / **`AUTH_ALLOWED_GROUPS`** — restrict to your
-  identity so other users on your IdP can't drive your Polar account. Or lock the
-  connector client to you with an Authelia authorization policy.
-- **`AUTH_ALLOWED_AUDIENCES`** — pin the token audience to your `MCP_RESOURCE`.
-- **`AUTH_ALLOWED_ORIGINS`** — opt-in DNS-rebinding defence (no-Origin requests
+- **`OAUTH_TRUSTED_PROXIES`** — the linchpin. The forward-auth identity header is
+  honoured only from these peers, so a too-broad value lets a network neighbour
+  spoof an identity. Scope it to your proxy/container network.
+- **`OAUTH_ALLOWED_EMAIL`** — the allowlist of who may consent; checked again on
+  every `/mcp` call and refresh, so removing an email cuts access within the
+  access-token TTL.
+- **Redirect URIs are restricted** to the Claude callbacks + loopback even though
+  registration is open, so a rogue client can't point authorization codes at an
+  attacker URL.
+- **`OAUTH_ALLOWED_ORIGINS`** — opt-in DNS-rebinding defence (no-Origin requests
   are always allowed, so it never breaks Claude's server-to-server calls).
-- Keep Authelia access-token lifetimes short (+ refresh tokens) to bound the
-  exposure of any leaked token.
+- **Revocation** is coarse: short `OAUTH_ACCESS_TTL_MINUTES`, or rotate the
+  signing key (delete `OAUTH_SIGNING_KEY_PATH` + restart) to invalidate every
+  outstanding token at once.
 
 ## What the server does on every request
 
@@ -132,8 +136,8 @@ leak. Protect `.env` accordingly.
   can't read.
 - For local/private use, bind the HTTP transport to `127.0.0.1` and consume via
   SSH tunnel or Tailscale.
-- For public use (Claude.ai), enable the OAuth Resource Server and front it with
-  a TLS reverse proxy — see [Exposing Securely](deployment/exposing-securely.md).
+- For public use (Claude.ai), enable the OAuth Authorization Server and front it
+  with a TLS reverse proxy — see [Exposing Securely](deployment/exposing-securely.md).
 - Use a Polar account dedicated to MCP use, not your main one.
 
 ## Reporting issues

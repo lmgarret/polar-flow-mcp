@@ -7,9 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // Config holds all validated server configuration loaded from environment variables.
@@ -41,56 +44,82 @@ type Config struct {
 	// Defaults to "./polar-cookies.json".
 	CookieJarPath string
 
-	// OAuth holds the optional inbound OAuth 2.1 Resource Server settings.
-	// It is disabled (OAuth.Enabled == false) unless OIDC_ISSUER is set, in
-	// which case the HTTP transport requires a valid Bearer access token on
-	// /mcp. See internal/auth for how these are enforced.
+	// OAuth holds the optional inbound OAuth 2.1 settings. It is disabled
+	// (OAuth.Enabled == false) unless OAUTH_PUBLIC_URL is set, in which case the
+	// server becomes its own OAuth 2.1 Authorization Server: it issues tokens
+	// (delegating browser login to a forward-auth proxy) and requires a valid
+	// Bearer access token on /mcp. See internal/auth for how these are enforced.
 	OAuth OAuthConfig
 }
 
-// OAuthConfig configures the server as a provider-agnostic OAuth 2.1 Resource
-// Server. It is populated from environment variables and validated fail-closed
-// by Load(). The zero value (Enabled == false) means the HTTP transport keeps
-// its historical behaviour: no inbound authentication.
+// OAuthConfig configures the server as a self-contained OAuth 2.1 Authorization
+// Server + Resource Server (the "app-as-AS" model). It is populated from
+// environment variables and validated fail-closed by Load(). The zero value
+// (Enabled == false) means the HTTP transport keeps its historical behaviour:
+// no inbound authentication.
 //
-// Tokens are validated by RFC 7662 introspection against the issuer, so the
-// server works with opaque access tokens (Authelia's default) and any OIDC
-// provider — point Issuer at Authelia today, Keycloak/Cloudflare/Auth0 later.
+// The server implements Dynamic Client Registration (RFC 7591) so MCP clients
+// (Claude.ai web/mobile and Claude Code) self-register — no manually-created
+// client. Browser login on the /authorize step is delegated to a forward-auth
+// proxy (e.g. Authelia in front of Caddy); the proxy authenticates the user and
+// passes their identity in a trusted header. An email allowlist decides who may
+// consent. Access tokens are short-lived EdDSA JWTs the server signs and
+// validates locally — no database.
 type OAuthConfig struct {
-	// Enabled reports whether inbound OAuth is configured (OIDC_ISSUER set).
+	// Enabled reports whether inbound OAuth is configured (OAUTH_PUBLIC_URL set).
 	Enabled bool
 
-	// Issuer is the OIDC issuer base URL (OIDC_ISSUER), e.g.
-	// "https://auth.example.com". Its /.well-known/openid-configuration is
-	// fetched to discover the introspection endpoint, and it is advertised as
-	// the authorization server in the protected-resource metadata.
-	Issuer string
+	// PublicURL is this server's public origin and OAuth issuer
+	// (OAUTH_PUBLIC_URL), e.g. "https://polar.example.com". It is advertised as
+	// the issuer/authorization_server and must match the host Claude connects to.
+	PublicURL string
 
-	// Resource is this server's exact public MCP URL (MCP_RESOURCE), e.g.
-	// "https://polar.example.com/mcp". It MUST byte-match the URL Claude calls
-	// and is published verbatim in the RFC 9728 protected-resource metadata.
+	// Resource is this server's exact public MCP URL, derived as PublicURL+"/mcp".
+	// It is the access-token audience and is published in the RFC 9728
+	// protected-resource metadata.
 	Resource string
 
-	// IntrospectionClientID / IntrospectionClientSecret authenticate this
-	// server (as an OAuth client) to the issuer's introspection endpoint.
-	IntrospectionClientID     string
-	IntrospectionClientSecret string
+	// AllowedEmails is the allowlist of forward-auth identities permitted to
+	// complete the consent step (OAUTH_ALLOWED_EMAIL, comma-separated). This is
+	// the "lock to me" control; matching is case-insensitive.
+	AllowedEmails []string
 
-	// The following pins are each optional and enforced only when non-empty.
-	// They are ANDed: every configured pin must match or the request is 403.
-
-	// AllowedClientIDs restricts accepted tokens to these client_id values
-	// (the connector client Claude was issued). RFC 8707 confused-deputy defence.
-	AllowedClientIDs []string
-	// AllowedAudiences restricts accepted tokens to these aud values.
-	AllowedAudiences []string
-	// AllowedSubjects restricts accepted tokens to these sub values.
-	AllowedSubjects []string
-	// AllowedGroups restricts accepted tokens to these group memberships.
+	// AllowedGroups, when non-empty, additionally requires the forward-auth
+	// groups header to intersect this set (OAUTH_ALLOWED_GROUPS).
 	AllowedGroups []string
-	// AllowedOrigins, when non-empty, enables Origin-header enforcement
+
+	// AllowedOrigins, when non-empty, enables Origin-header enforcement on /mcp
 	// (DNS-rebinding defence). Requests with no Origin are always allowed.
 	AllowedOrigins []string
+
+	// EmailHeader is the forward-auth header carrying the authenticated user's
+	// email (OAUTH_FORWARD_AUTH_EMAIL_HEADER, default "Remote-Email").
+	EmailHeader string
+
+	// GroupsHeader is the forward-auth header carrying the user's groups
+	// (OAUTH_FORWARD_AUTH_GROUPS_HEADER, default "Remote-Groups").
+	GroupsHeader string
+
+	// TrustedProxies is the set of networks whose forward-auth identity headers
+	// are trusted on /authorize (OAUTH_TRUSTED_PROXIES, comma-separated CIDRs or
+	// IPs). Required when enabled: an identity header from any other peer is
+	// ignored, so this is the control that stops header spoofing.
+	TrustedProxies []*net.IPNet
+
+	// ExtraRedirectURIs are additional exact redirect URIs accepted at client
+	// registration, beyond the built-in Claude callbacks and loopback
+	// (OAUTH_EXTRA_REDIRECT_URIS). Normally empty.
+	ExtraRedirectURIs []string
+
+	// SigningKeyPath is the chmod-600 JSON file holding the EdDSA signing key
+	// (OAUTH_SIGNING_KEY_PATH, default "./polar-oauth-key.json"). Created on
+	// first start; persisting it keeps issued tokens valid across restarts.
+	SigningKeyPath string
+
+	// AccessTTL / RefreshTTL are token lifetimes (OAUTH_ACCESS_TTL_MINUTES,
+	// default 60; OAUTH_REFRESH_TTL_HOURS, default 720 = 30 days).
+	AccessTTL  time.Duration
+	RefreshTTL time.Duration
 }
 
 // Load reads configuration from environment variables, validates all required fields, and
@@ -148,49 +177,77 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-// loadOAuth populates and validates the optional OAuth Resource Server config.
-// Auth is enabled iff OIDC_ISSUER is set; when enabled it is fail-closed —
-// MCP_RESOURCE and introspection credentials are mandatory.
+// loadOAuth populates and validates the optional OAuth config. Auth is enabled
+// iff OAUTH_PUBLIC_URL is set; when enabled it is fail-closed — the allowlist
+// and trusted proxies are mandatory (without them the server would either trust
+// nobody or trust spoofable headers).
 func loadOAuth(o *OAuthConfig) error {
-	o.Issuer = strings.TrimRight(os.Getenv("OIDC_ISSUER"), "/")
-	if o.Issuer == "" {
+	o.PublicURL = strings.TrimRight(os.Getenv("OAUTH_PUBLIC_URL"), "/")
+	if o.PublicURL == "" {
 		o.Enabled = false
 		return nil
 	}
 	o.Enabled = true
 
-	o.Resource = os.Getenv("MCP_RESOURCE")
-	o.IntrospectionClientID = os.Getenv("OIDC_INTROSPECTION_CLIENT_ID")
-	o.IntrospectionClientSecret = os.Getenv("OIDC_INTROSPECTION_CLIENT_SECRET")
+	if err := requireHTTPSURL("OAUTH_PUBLIC_URL", o.PublicURL); err != nil {
+		return err
+	}
+	o.Resource = o.PublicURL + "/mcp"
 
-	if err := requireHTTPSURL("OIDC_ISSUER", o.Issuer); err != nil {
-		return err
-	}
-	if o.Resource == "" {
-		return errors.New("MCP_RESOURCE must be set (the exact public /mcp URL) when OIDC_ISSUER is configured")
-	}
-	if err := requireHTTPSURL("MCP_RESOURCE", o.Resource); err != nil {
-		return err
-	}
-	if o.IntrospectionClientID == "" || o.IntrospectionClientSecret == "" {
+	o.AllowedEmails = splitCSV(os.Getenv("OAUTH_ALLOWED_EMAIL"))
+	if len(o.AllowedEmails) == 0 {
 		return errors.New(
-			"OIDC_INTROSPECTION_CLIENT_ID and OIDC_INTROSPECTION_CLIENT_SECRET must be set " +
-				"when OIDC_ISSUER is configured (the server validates tokens via RFC 7662 introspection)",
+			"OAUTH_ALLOWED_EMAIL must list at least one email when OAUTH_PUBLIC_URL is set " +
+				"(it is the allowlist of who may connect)",
 		)
 	}
 
-	o.AllowedClientIDs = splitCSV(os.Getenv("AUTH_ALLOWED_CLIENT_IDS"))
-	o.AllowedAudiences = splitCSV(os.Getenv("AUTH_ALLOWED_AUDIENCES"))
-	o.AllowedSubjects = splitCSV(os.Getenv("AUTH_ALLOWED_SUBJECTS"))
-	o.AllowedGroups = splitCSV(os.Getenv("AUTH_ALLOWED_GROUPS"))
-	o.AllowedOrigins = splitCSV(os.Getenv("AUTH_ALLOWED_ORIGINS"))
+	proxies, err := parseCIDRs(os.Getenv("OAUTH_TRUSTED_PROXIES"))
+	if err != nil {
+		return err
+	}
+	if len(proxies) == 0 {
+		return errors.New(
+			"OAUTH_TRUSTED_PROXIES must list the proxy network(s) (CIDRs or IPs) whose forward-auth " +
+				"identity headers are trusted when OAUTH_PUBLIC_URL is set; without it, identity headers " +
+				"would be spoofable",
+		)
+	}
+	o.TrustedProxies = proxies
+
+	o.AllowedGroups = splitCSV(os.Getenv("OAUTH_ALLOWED_GROUPS"))
+	o.AllowedOrigins = splitCSV(os.Getenv("OAUTH_ALLOWED_ORIGINS"))
+	o.ExtraRedirectURIs = splitCSV(os.Getenv("OAUTH_EXTRA_REDIRECT_URIS"))
+
+	o.EmailHeader = os.Getenv("OAUTH_FORWARD_AUTH_EMAIL_HEADER")
+	if o.EmailHeader == "" {
+		o.EmailHeader = "Remote-Email"
+	}
+	o.GroupsHeader = os.Getenv("OAUTH_FORWARD_AUTH_GROUPS_HEADER")
+	if o.GroupsHeader == "" {
+		o.GroupsHeader = "Remote-Groups"
+	}
+
+	o.SigningKeyPath = os.Getenv("OAUTH_SIGNING_KEY_PATH")
+	if o.SigningKeyPath == "" {
+		o.SigningKeyPath = "./polar-oauth-key.json"
+	}
+
+	o.AccessTTL, err = durationEnv("OAUTH_ACCESS_TTL_MINUTES", 60, time.Minute)
+	if err != nil {
+		return err
+	}
+	o.RefreshTTL, err = durationEnv("OAUTH_REFRESH_TTL_HOURS", 720, time.Hour)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 // requireHTTPSURL validates that raw is a syntactically valid absolute URL.
-// HTTPS is required except for loopback hosts (to allow local Authelia and
-// tests over http://127.0.0.1).
+// HTTPS is required except for loopback hosts (to allow local testing over
+// http://127.0.0.1).
 func requireHTTPSURL(name, raw string) error {
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "http") {
@@ -209,6 +266,46 @@ func isLoopbackHost(host string) bool {
 	default:
 		return false
 	}
+}
+
+// parseCIDRs parses a comma-separated list of CIDRs or bare IPs into networks.
+// A bare IP becomes a /32 (or /128) host network. Returns nil for empty input.
+func parseCIDRs(raw string) ([]*net.IPNet, error) {
+	parts := splitCSV(raw)
+	if len(parts) == 0 {
+		return nil, nil
+	}
+	out := make([]*net.IPNet, 0, len(parts))
+	for _, p := range parts {
+		if _, n, err := net.ParseCIDR(p); err == nil {
+			out = append(out, n)
+			continue
+		}
+		ip := net.ParseIP(p)
+		if ip == nil {
+			return nil, fmt.Errorf("OAUTH_TRUSTED_PROXIES entry %q is not a valid CIDR or IP", p)
+		}
+		bits := 32
+		if ip.To4() == nil {
+			bits = 128
+		}
+		out = append(out, &net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
+	}
+	return out, nil
+}
+
+// durationEnv reads an integer env var and multiplies it by unit. An unset or
+// empty value yields def*unit; a non-integer value is an error.
+func durationEnv(name string, def int, unit time.Duration) (time.Duration, error) {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return time.Duration(def) * unit, nil
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n <= 0 {
+		return 0, fmt.Errorf("%s must be a positive integer; got %q", name, raw)
+	}
+	return time.Duration(n) * unit, nil
 }
 
 // splitCSV parses a comma-separated env value into a trimmed, empties-removed
@@ -241,15 +338,14 @@ func LogStartupBanner(cfg *Config) {
 		"cookie_jar", cfg.CookieJarPath,
 	)
 	if cfg.OAuth.Enabled {
-		slog.Info("inbound OAuth enabled (Resource Server, RFC 7662 introspection)",
-			"issuer", cfg.OAuth.Issuer,
+		slog.Info("inbound OAuth enabled (app-as-Authorization-Server + Dynamic Client Registration)",
+			"issuer", cfg.OAuth.PublicURL,
 			"resource", cfg.OAuth.Resource,
-			"introspection_client", cfg.OAuth.IntrospectionClientID,
-			"pin_client_ids", len(cfg.OAuth.AllowedClientIDs) > 0,
-			"pin_audiences", len(cfg.OAuth.AllowedAudiences) > 0,
-			"pin_subjects", len(cfg.OAuth.AllowedSubjects) > 0,
-			"pin_groups", len(cfg.OAuth.AllowedGroups) > 0,
+			"allowed_emails", len(cfg.OAuth.AllowedEmails),
+			"allowed_groups", len(cfg.OAuth.AllowedGroups) > 0,
+			"trusted_proxies", len(cfg.OAuth.TrustedProxies),
 			"origin_allowlist", len(cfg.OAuth.AllowedOrigins) > 0,
+			"signing_key", cfg.OAuth.SigningKeyPath,
 		)
 	} else if cfg.Transport == "http" {
 		slog.Info("inbound OAuth disabled — /mcp is unauthenticated; bind to localhost or front with a trusted proxy")

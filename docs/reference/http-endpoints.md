@@ -5,11 +5,18 @@ HTTP endpoints on `BIND_ADDRESS:PORT`.
 
 ## Endpoints
 
+All `/.well-known/*` and `/mcp/oauth/*` endpoints are **only mounted when OAuth
+is enabled** (`OAUTH_PUBLIC_URL` set).
+
 | Path | Method | Auth | Purpose |
 |------|--------|------|---------|
 | `/healthz` | GET | none | Liveness probe. Returns `200 ok` if the process is up. |
-| `/mcp`, `/mcp/` | POST + SSE | Bearer if OAuth enabled, else none | Streamable HTTP MCP endpoint. When `OIDC_ISSUER` is set, requires a valid `Authorization: Bearer` token (validated by introspection). |
-| `/.well-known/oauth-protected-resource` | GET | none | RFC 9728 protected-resource metadata. **Only mounted when OAuth is enabled.** Advertises the `resource` and `authorization_servers` so clients can discover the issuer. |
+| `/mcp`, `/mcp/` | POST + SSE | Bearer if OAuth enabled, else none | Streamable HTTP MCP endpoint. When OAuth is enabled, requires a valid `Authorization: Bearer` access token (an EdDSA JWT this server signed). |
+| `/.well-known/oauth-protected-resource` | GET | none | RFC 9728 protected-resource metadata. Advertises `resource` and `authorization_servers` (which point back at this server). |
+| `/.well-known/oauth-authorization-server` | GET | none | RFC 8414 authorization-server metadata: the authorize/token/registration endpoints and `S256` PKCE support. |
+| `/mcp/oauth/register` | POST | none | RFC 7591 Dynamic Client Registration. Issues a stateless `client_id` for a public PKCE client; redirect URIs are restricted to the Claude callbacks + loopback. |
+| `/mcp/oauth/authorize` | GET | forward-auth | Browser consent endpoint. **Must be forward-auth'd by your proxy** — the proxy logs the user in and sets the identity header; the server checks the email allowlist and issues a PKCE-bound code. |
+| `/mcp/oauth/token` | POST | none (PKCE) | Token endpoint: `authorization_code` (with PKCE verification) and `refresh_token` grants. Returns the signed access + refresh JWTs. |
 
 ## What's gone
 
@@ -22,20 +29,21 @@ is no per-user OAuth handshake to host.
 
 There are two supported postures:
 
-- **Local / trusted-network (default).** With `OIDC_ISSUER` unset, `/mcp` has no
-  built-in auth. Run it on `127.0.0.1` for Claude Code / Claude Desktop on the
+- **Local / trusted-network (default).** With `OAUTH_PUBLIC_URL` unset, `/mcp` has
+  no built-in auth. Run it on `127.0.0.1` for Claude Code / Claude Desktop on the
   same machine, or behind a trusted-network barrier (Tailscale, VPN). If
   `BIND_ADDRESS` is non-localhost **and** OAuth is off, the server logs a warning
   at startup.
-- **Public, OAuth-protected.** Set `OIDC_ISSUER` (+ `MCP_RESOURCE` +
-  introspection credentials) to turn the server into an OAuth 2.1 Resource
+- **Public, OAuth-protected.** Set `OAUTH_PUBLIC_URL` (+ `OAUTH_ALLOWED_EMAIL` +
+  `OAUTH_TRUSTED_PROXIES`) to turn the server into its own OAuth 2.1 Authorization
   Server. Unauthenticated requests get `401` with a `WWW-Authenticate: Bearer
-  resource_metadata="…"` header; valid Bearer tokens are checked by RFC 7662
-  introspection on every call. This is the path for **Claude.ai web/mobile** —
-  see [Exposing Securely](../deployment/exposing-securely.md).
+  resource_metadata="…"` header; valid Bearer tokens (EdDSA JWTs the server
+  signed) are verified locally on every call. This path serves **Claude.ai
+  web/mobile and Claude Code** — see
+  [Exposing Securely](../deployment/exposing-securely.md).
 
-Note: Claude **Code (CLI)** cannot use the public OAuth path (it forces Dynamic
-Client Registration); keep it on the local stdio / `127.0.0.1` transport.
+Because the server provides Dynamic Client Registration, **Claude Code (CLI)
+works over the public OAuth path too** — no separate transport needed.
 
 ## Health-check semantics
 

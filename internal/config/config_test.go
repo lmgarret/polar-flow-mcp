@@ -4,6 +4,7 @@ package config_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lmgarret/polar-flow-mcp/internal/config"
 )
@@ -18,15 +19,17 @@ func clearConfigEnv(t *testing.T) {
 		"POLAR_EMAIL",
 		"POLAR_PASSWORD",
 		"COOKIE_JAR_PATH",
-		"OIDC_ISSUER",
-		"MCP_RESOURCE",
-		"OIDC_INTROSPECTION_CLIENT_ID",
-		"OIDC_INTROSPECTION_CLIENT_SECRET",
-		"AUTH_ALLOWED_CLIENT_IDS",
-		"AUTH_ALLOWED_AUDIENCES",
-		"AUTH_ALLOWED_SUBJECTS",
-		"AUTH_ALLOWED_GROUPS",
-		"AUTH_ALLOWED_ORIGINS",
+		"OAUTH_PUBLIC_URL",
+		"OAUTH_ALLOWED_EMAIL",
+		"OAUTH_ALLOWED_GROUPS",
+		"OAUTH_ALLOWED_ORIGINS",
+		"OAUTH_TRUSTED_PROXIES",
+		"OAUTH_FORWARD_AUTH_EMAIL_HEADER",
+		"OAUTH_FORWARD_AUTH_GROUPS_HEADER",
+		"OAUTH_EXTRA_REDIRECT_URIS",
+		"OAUTH_SIGNING_KEY_PATH",
+		"OAUTH_ACCESS_TTL_MINUTES",
+		"OAUTH_REFRESH_TTL_HOURS",
 	} {
 		t.Setenv(key, "")
 	}
@@ -47,38 +50,59 @@ func TestLoad_OAuthDisabledByDefault(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if cfg.OAuth.Enabled {
-		t.Error("OAuth should be disabled when OIDC_ISSUER is unset")
+		t.Error("OAuth should be disabled when OAUTH_PUBLIC_URL is unset")
 	}
 }
 
-func TestLoad_OAuthRequiresResourceAndCreds(t *testing.T) {
+func TestLoad_OAuthValidation(t *testing.T) {
 	cases := []struct {
 		name string
 		env  map[string]string
 		want string
 	}{
 		{
-			name: "missing resource",
-			env:  map[string]string{"OIDC_ISSUER": "https://auth.example.com"},
-			want: "MCP_RESOURCE",
-		},
-		{
-			name: "missing introspection creds",
+			name: "missing allowed email",
 			env: map[string]string{
-				"OIDC_ISSUER":  "https://auth.example.com",
-				"MCP_RESOURCE": "https://polar.example.com/mcp",
+				"OAUTH_PUBLIC_URL":      "https://polar.example.com",
+				"OAUTH_TRUSTED_PROXIES": "10.0.0.0/8",
 			},
-			want: "OIDC_INTROSPECTION_CLIENT_ID",
+			want: "OAUTH_ALLOWED_EMAIL",
 		},
 		{
-			name: "non-https issuer",
+			name: "missing trusted proxies",
 			env: map[string]string{
-				"OIDC_ISSUER":                      "http://auth.example.com",
-				"MCP_RESOURCE":                     "https://polar.example.com/mcp",
-				"OIDC_INTROSPECTION_CLIENT_ID":     "rs",
-				"OIDC_INTROSPECTION_CLIENT_SECRET": "s",
+				"OAUTH_PUBLIC_URL":    "https://polar.example.com",
+				"OAUTH_ALLOWED_EMAIL": "me@example.com",
+			},
+			want: "OAUTH_TRUSTED_PROXIES",
+		},
+		{
+			name: "non-https public url",
+			env: map[string]string{
+				"OAUTH_PUBLIC_URL":      "http://polar.example.com",
+				"OAUTH_ALLOWED_EMAIL":   "me@example.com",
+				"OAUTH_TRUSTED_PROXIES": "10.0.0.0/8",
 			},
 			want: "https",
+		},
+		{
+			name: "bad cidr",
+			env: map[string]string{
+				"OAUTH_PUBLIC_URL":      "https://polar.example.com",
+				"OAUTH_ALLOWED_EMAIL":   "me@example.com",
+				"OAUTH_TRUSTED_PROXIES": "not-an-ip",
+			},
+			want: "OAUTH_TRUSTED_PROXIES",
+		},
+		{
+			name: "bad ttl",
+			env: map[string]string{
+				"OAUTH_PUBLIC_URL":         "https://polar.example.com",
+				"OAUTH_ALLOWED_EMAIL":      "me@example.com",
+				"OAUTH_TRUSTED_PROXIES":    "10.0.0.0/8",
+				"OAUTH_ACCESS_TTL_MINUTES": "zero",
+			},
+			want: "OAUTH_ACCESS_TTL_MINUTES",
 		},
 	}
 	for _, tc := range cases {
@@ -102,13 +126,11 @@ func TestLoad_OAuthRequiresResourceAndCreds(t *testing.T) {
 func TestLoad_OAuthEnabledFull(t *testing.T) {
 	clearConfigEnv(t)
 	withCreds(t)
-	t.Setenv("OIDC_ISSUER", "https://auth.example.com/") // trailing slash trimmed
-	t.Setenv("MCP_RESOURCE", "https://polar.example.com/mcp")
-	t.Setenv("OIDC_INTROSPECTION_CLIENT_ID", "polar-mcp-rs")
-	t.Setenv("OIDC_INTROSPECTION_CLIENT_SECRET", "secret")
-	t.Setenv("AUTH_ALLOWED_CLIENT_IDS", "claude, ")
-	t.Setenv("AUTH_ALLOWED_SUBJECTS", "abc-123")
-	t.Setenv("AUTH_ALLOWED_ORIGINS", "https://claude.ai")
+	t.Setenv("OAUTH_PUBLIC_URL", "https://polar.example.com/") // trailing slash trimmed
+	t.Setenv("OAUTH_ALLOWED_EMAIL", "me@example.com, ")
+	t.Setenv("OAUTH_TRUSTED_PROXIES", "10.0.0.0/8, 172.18.0.5")
+	t.Setenv("OAUTH_ALLOWED_GROUPS", "polar")
+	t.Setenv("OAUTH_ALLOWED_ORIGINS", "https://claude.ai")
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -118,27 +140,38 @@ func TestLoad_OAuthEnabledFull(t *testing.T) {
 	if !o.Enabled {
 		t.Fatal("OAuth should be enabled")
 	}
-	if o.Issuer != "https://auth.example.com" {
-		t.Errorf("issuer trailing slash not trimmed: %q", o.Issuer)
+	if o.PublicURL != "https://polar.example.com" {
+		t.Errorf("PublicURL trailing slash not trimmed: %q", o.PublicURL)
 	}
-	if len(o.AllowedClientIDs) != 1 || o.AllowedClientIDs[0] != "claude" {
-		t.Errorf("AllowedClientIDs: want [claude], got %v", o.AllowedClientIDs)
+	if o.Resource != "https://polar.example.com/mcp" {
+		t.Errorf("Resource: want .../mcp, got %q", o.Resource)
 	}
-	if len(o.AllowedSubjects) != 1 || o.AllowedSubjects[0] != "abc-123" {
-		t.Errorf("AllowedSubjects: got %v", o.AllowedSubjects)
+	if len(o.AllowedEmails) != 1 || o.AllowedEmails[0] != "me@example.com" {
+		t.Errorf("AllowedEmails: got %v", o.AllowedEmails)
 	}
-	if len(o.AllowedGroups) != 0 {
-		t.Errorf("AllowedGroups should be empty, got %v", o.AllowedGroups)
+	if len(o.TrustedProxies) != 2 {
+		t.Errorf("TrustedProxies: want 2, got %v", o.TrustedProxies)
+	}
+	if o.EmailHeader != "Remote-Email" || o.GroupsHeader != "Remote-Groups" {
+		t.Errorf("default forward-auth headers wrong: %q / %q", o.EmailHeader, o.GroupsHeader)
+	}
+	if o.AccessTTL != 60*time.Minute {
+		t.Errorf("default AccessTTL: want 60m, got %v", o.AccessTTL)
+	}
+	if o.RefreshTTL != 720*time.Hour {
+		t.Errorf("default RefreshTTL: want 720h, got %v", o.RefreshTTL)
+	}
+	if o.SigningKeyPath != "./polar-oauth-key.json" {
+		t.Errorf("default SigningKeyPath: got %q", o.SigningKeyPath)
 	}
 }
 
 func TestLoad_OAuthAllowsLoopbackHTTP(t *testing.T) {
 	clearConfigEnv(t)
 	withCreds(t)
-	t.Setenv("OIDC_ISSUER", "http://127.0.0.1:9091")
-	t.Setenv("MCP_RESOURCE", "http://127.0.0.1:8080/mcp")
-	t.Setenv("OIDC_INTROSPECTION_CLIENT_ID", "rs")
-	t.Setenv("OIDC_INTROSPECTION_CLIENT_SECRET", "s")
+	t.Setenv("OAUTH_PUBLIC_URL", "http://127.0.0.1:8080")
+	t.Setenv("OAUTH_ALLOWED_EMAIL", "me@example.com")
+	t.Setenv("OAUTH_TRUSTED_PROXIES", "127.0.0.1")
 	if _, err := config.Load(); err != nil {
 		t.Fatalf("loopback http should be allowed: %v", err)
 	}

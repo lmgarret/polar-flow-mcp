@@ -107,32 +107,40 @@ func runHTTP(ctx context.Context, cfg *config.Config, mcpServer *server.MCPServe
 	if !cfg.OAuth.Enabled && cfg.BindAddress != "127.0.0.1" && cfg.BindAddress != "::1" {
 		slog.Warn(
 			"BIND_ADDRESS is not localhost and inbound OAuth is disabled — /mcp is unauthenticated; "+
-				"set OIDC_ISSUER to enable OAuth or front the server with a trusted proxy",
+				"set OAUTH_PUBLIC_URL to enable OAuth or front the server with a trusted proxy",
 			"bind_address", cfg.BindAddress,
 		)
 	}
 
 	httpMCPServer := server.NewStreamableHTTPServer(mcpServer)
 
-	// Wrap the MCP handler with the OAuth Resource Server middleware when
-	// configured. When disabled this is the bare handler (historical behaviour).
+	// Wrap the MCP handler with the OAuth middleware when configured, and mount
+	// the authorization-server endpoints. When disabled this is the bare handler
+	// (historical behaviour).
 	var mcpHandler http.Handler = httpMCPServer
 	mux := http.NewServeMux()
 	if cfg.OAuth.Enabled {
-		authn := auth.New(auth.Config{
-			Issuer:                    cfg.OAuth.Issuer,
-			Resource:                  cfg.OAuth.Resource,
-			IntrospectionClientID:     cfg.OAuth.IntrospectionClientID,
-			IntrospectionClientSecret: cfg.OAuth.IntrospectionClientSecret,
-			AllowedClientIDs:          cfg.OAuth.AllowedClientIDs,
-			AllowedAudiences:          cfg.OAuth.AllowedAudiences,
-			AllowedSubjects:           cfg.OAuth.AllowedSubjects,
-			AllowedGroups:             cfg.OAuth.AllowedGroups,
-			AllowedOrigins:            cfg.OAuth.AllowedOrigins,
-			Logger:                    slog.Default(),
+		authn, err := auth.New(auth.Config{
+			Issuer:            cfg.OAuth.PublicURL,
+			Resource:          cfg.OAuth.Resource,
+			AllowedEmails:     cfg.OAuth.AllowedEmails,
+			AllowedGroups:     cfg.OAuth.AllowedGroups,
+			AllowedOrigins:    cfg.OAuth.AllowedOrigins,
+			EmailHeader:       cfg.OAuth.EmailHeader,
+			GroupsHeader:      cfg.OAuth.GroupsHeader,
+			TrustedProxies:    cfg.OAuth.TrustedProxies,
+			ExtraRedirectURIs: cfg.OAuth.ExtraRedirectURIs,
+			SigningKeyPath:    cfg.OAuth.SigningKeyPath,
+			AccessTTL:         cfg.OAuth.AccessTTL,
+			RefreshTTL:        cfg.OAuth.RefreshTTL,
+			Logger:            slog.Default(),
 		})
-		mcpHandler = authn.OriginGuard(authn.Middleware(httpMCPServer))
-		mux.Handle("GET "+auth.MetadataPath, authn.MetadataHandler())
+		if err != nil {
+			slog.Error("failed to initialise OAuth", "error", err)
+			os.Exit(1)
+		}
+		mcpHandler = authn.ProtectedHandler(httpMCPServer)
+		authn.RegisterRoutes(mux)
 	}
 
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {

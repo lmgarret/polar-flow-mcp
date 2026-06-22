@@ -170,20 +170,23 @@ Optional:
 - `TRANSPORT` — `stdio` or `http` (default `http`)
 - `BIND_ADDRESS`, `PORT` — HTTP listen address
 - `LOG_LEVEL`, `LOG_FILE`
-- `OIDC_ISSUER` (+ `MCP_RESOURCE`, `OIDC_INTROSPECTION_CLIENT_ID/SECRET`, `AUTH_ALLOWED_*`) — enable inbound OAuth (see below)
+- `OAUTH_PUBLIC_URL` (+ `OAUTH_ALLOWED_EMAIL`, `OAUTH_TRUSTED_PROXIES`) — enable inbound OAuth (see below)
 
 ## Exposing to the internet (Claude.ai)
 
 By default the HTTP transport has **no inbound auth** — run it on localhost or a
 trusted network. To use it as a **Claude.ai custom connector** over the public
-internet, set `OIDC_ISSUER` to turn it into an OAuth 2.1 Resource Server: it
-serves discovery metadata and validates every Bearer token by RFC 7662
-introspection against your identity provider (Authelia, Keycloak, Cloudflare,
-Auth0, …). Claude **Code (CLI)** stays on the local stdio transport.
+internet, set `OAUTH_PUBLIC_URL` to turn the server into its **own OAuth 2.1
+Authorization Server**: clients self-register via Dynamic Client Registration
+(nothing to paste), browser login on the consent step is delegated to a
+forward-auth proxy (Authelia), and an email allowlist decides who may connect.
+Access tokens are short-lived EdDSA JWTs the server signs and validates itself —
+no database. Because it provides DCR, **Claude Code (CLI) works over the same
+public URL**.
 
 See **[Exposing Securely (Caddy + Authelia + Claude.ai)](https://lmgarret.github.io/polar-flow-mcp/deployment/exposing-securely/)**
-for the complete walkthrough — including why Authelia *forward-auth* can't be
-used and which hardening env vars to set.
+for the complete walkthrough — including why forward-auth goes on `/authorize`
+only and which hardening env vars to set.
 
 ## Multi-user
 

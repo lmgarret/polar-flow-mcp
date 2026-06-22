@@ -40,7 +40,7 @@ and silent refresh.
 | **3-hop silent refresh on `401 {"error":"NotAuthenticated"}`** | Standard Polar Flow session-rotation path; falls back to full login if `session_id` on `auth.polar.com` has also expired. |
 | **Bind-first / deferred login** (`flow.New` never logs in; `EnsureSession` runs lazily from `transport.Do`, warmed up in a background goroutine) | A full login takes seconds (CloudFront WAF + redirect chain). Blocking startup on it blocks the listener from binding, which races the MCP client's `initialize` and times it out at 60s. Binding first makes the handshake instant. |
 | **Custom `ht.Client` transport wraps ogen's `gen.Client`** | Lets us inject `X-Requested-With`, the cookie jar, and the 401-retry without touching generated code. |
-| **Optional, provider-agnostic OAuth 2.1 Resource Server** (`internal/auth`, enabled by `OIDC_ISSUER`; off by default) | Lets the server be exposed publicly as a Claude.ai connector. Validates inbound Bearer tokens by **RFC 7662 introspection** (not local JWT) — works with Authelia's default opaque tokens and gives instant revocation. Authelia is the OIDC AS; *forward-auth cannot work* for MCP clients. Claude Code (CLI) forces DCR so it stays on local stdio. Stdlib only — no new deps. See `docs/deployment/exposing-securely.md`. |
+| **App-as-Authorization-Server + Dynamic Client Registration** (`internal/auth`, enabled by `OAUTH_PUBLIC_URL`; off by default) | Lets the server be exposed publicly as a Claude.ai connector **and** work with Claude Code — both speak DCR (RFC 7591), so clients self-register with no client to pre-create. The server signs/validates its **own** EdDSA JWT access tokens locally (no DB, no introspection). Browser login on `/mcp/oauth/authorize` only is delegated to a **forward-auth proxy** (Authelia); the authenticated email arrives in `Remote-Email`, trusted **only** from `OAUTH_TRUSTED_PROXIES` (the spoofing footgun — header is honoured only from those peers). `OAUTH_ALLOWED_EMAIL` gates who may consent; redirect URIs are restricted to Claude callbacks + loopback. Revocation is coarse: short access TTL or rotate `OAUTH_SIGNING_KEY_PATH`. Dep: `golang-jwt/jwt/v5`. See `docs/deployment/exposing-securely.md`. |
 
 ## Tech Stack
 
@@ -50,7 +50,8 @@ and silent refresh.
 - `github.com/joho/godotenv` — `.env` loader
 - `github.com/Noooste/azuretls-client` — Chrome JA3 + HTTP/2 fingerprint for login chain
 - `github.com/refraction-networking/utls` + `golang.org/x/net/http2` — Chrome ClientHello over HTTP/2 for the stdlib http.Client (used by ogen for API calls)
-- `log/slog`, `net/http`, `net/http/cookiejar` — stdlib for everything else
+- `github.com/golang-jwt/jwt/v5` — EdDSA JWT signing/verification for the inbound OAuth server (`internal/auth`)
+- `log/slog`, `net/http`, `net/http/cookiejar`, `crypto/ed25519` — stdlib for everything else
 
 ## Tools exposed
 
