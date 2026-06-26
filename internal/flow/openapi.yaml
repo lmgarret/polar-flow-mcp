@@ -3680,9 +3680,11 @@ components:
         hrAvg:
           type: integer
           description: Average HR (bpm). Note the camelCase differs from create's `hrAverage`.
+          nullable: true
         calories:
           type: integer
           description: Kilocalories. Note the field name differs from create's `kiloCalories`.
+          nullable: true
         note:
           type: string
           description: 'Free-text note. Observed as `" "` (single space) when the form note
@@ -3709,6 +3711,7 @@ components:
         recoveryTime:
           type: integer
           description: Recovery time. Unit TODO (likely seconds).
+          nullable: true
         iconUrl:
           type: string
           format: uri

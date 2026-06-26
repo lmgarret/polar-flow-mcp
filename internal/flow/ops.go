@@ -3,14 +3,32 @@ package flow
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/ogen-go/ogen/validate"
+
 	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
+
+// wrapFlowError enriches ogen's UnexpectedStatusCodeError with the upstream
+// response body, which ogen captures but omits from its Error() string.
+func wrapFlowError(op string, err error) error {
+	var sce *validate.UnexpectedStatusCodeError
+	if errors.As(err, &sce) && sce.Payload != nil {
+		body, _ := io.ReadAll(io.LimitReader(sce.Payload.Body, 512))
+		if trimmed := strings.TrimSpace(string(body)); trimmed != "" {
+			return fmt.Errorf("flow: %s: upstream %d: %s", op, sce.StatusCode, trimmed)
+		}
+		return fmt.Errorf("flow: %s: upstream %d (empty body)", op, sce.StatusCode)
+	}
+	return fmt.Errorf("flow: %s: %w", op, err)
+}
 
 // formatValidationError renders Polar's 400 body — a map of field name to a list
 // of error codes, e.g. {"time": ["error.trainingTarget.twoTargetsForSameTime"]}
@@ -79,7 +97,7 @@ func (c *Client) CreateTrainingTarget(ctx context.Context, body *gen.TrainingTar
 		XRequestedWith: gen.XRequestedWithXMLHttpRequest,
 	})
 	if err != nil {
-		return 0, fmt.Errorf("flow: create training target: %w", err)
+		return 0, wrapFlowError("create training target", err)
 	}
 	switch v := res.(type) {
 	case *gen.CreateTrainingTargetCreated:
@@ -221,7 +239,12 @@ func (c *Client) GetProgressViewSummary(ctx context.Context, from, to time.Time,
 		gen.GetProgressViewSummaryParams{XRequestedWith: gen.XRequestedWithXMLHttpRequest},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("flow: progress view summary: %w", err)
+		var sce *validate.UnexpectedStatusCodeError
+		if errors.As(err, &sce) && sce.StatusCode == http.StatusNotFound {
+			// Account has no progress data in this range — return zeros per the tool contract.
+			return &gen.ProgressViewSummary{}, nil
+		}
+		return nil, wrapFlowError("progress view summary", err)
 	}
 	switch v := res.(type) {
 	case *gen.ProgressViewSummary:
@@ -332,7 +355,7 @@ func (c *Client) ListTrainingSessions(ctx context.Context, userID int64, from, t
 		XRequestedWith: gen.XRequestedWithXMLHttpRequest,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("flow: list training sessions: %w", err)
+		return nil, wrapFlowError("list training sessions", err)
 	}
 	switch v := res.(type) {
 	case *gen.ListTrainingSessionsOKApplicationJSON:

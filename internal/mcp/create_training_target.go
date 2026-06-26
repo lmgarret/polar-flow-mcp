@@ -58,18 +58,33 @@ func buildTrainingTargetCreate(req mcpgo.CallToolRequest) (*gen.TrainingTargetCr
 		return nil, err.Error()
 	}
 
+	et := gen.ExerciseTarget{
+		SportId: sportID,
+		Phases:  phases,
+	}
+
 	targetType := gen.TrainingTargetCreateTypeVOLUME
 	if len(phases) > 0 {
 		targetType = gen.TrainingTargetCreateTypePHASED
+	} else {
+		// VOLUME target: requires exactly one of duration_s or distance_m.
+		volDur, hasDur := goalDuration(req.GetArguments(), "duration_s")
+		volDist, _ := req.GetArguments()["distance_m"].(float64)
+		switch {
+		case hasDur:
+			et.Duration.SetTo(volDur)
+		case volDist > 0:
+			et.Distance.SetTo(volDist)
+		default:
+			return nil, "VOLUME targets (no phases) require duration_s or distance_m"
+		}
 	}
+
 	body := &gen.TrainingTargetCreate{
-		Type:     targetType,
-		Name:     name,
-		Datetime: date + "T" + clock,
-		ExerciseTargets: []gen.ExerciseTarget{{
-			SportId: sportID,
-			Phases:  phases,
-		}},
+		Type:            targetType,
+		Name:            name,
+		Datetime:        date + "T" + clock,
+		ExerciseTargets: []gen.ExerciseTarget{et},
 	}
 	if description != "" {
 		body.Description.SetTo(description)
