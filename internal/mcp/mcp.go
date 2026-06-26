@@ -123,10 +123,12 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"  name: \"5x1km Threshold\", date: \"2026-06-02\", time: \"09:00\", sport_id: 1,\n"+
 				"  phases: [\n"+
 				"    {\"type\": \"warmup\", \"duration_s\": 600},\n"+
-				"    {\"type\": \"repeat\", \"reps\": 5, \"goal\": {\"distance_m\": 1000}, "+
+				"    {\"type\": \"repeat\", \"reps\": 5, \"name\": \"1km rep\", \"goal\": {\"distance_m\": 1000}, "+
 				"\"intensity\": {\"label\": \"threshold\"}, \"recovery\": {\"duration_s\": 120}},\n"+
 				"    {\"type\": \"cooldown\", \"duration_s\": 600}\n"+
-				"  ]",
+				"  ]\n"+
+				"Each phase accepts an optional name (persisted verbatim by Polar); it defaults to "+
+				"a type-derived label (\"Warm-up\", \"Work\", \"Recovery\", \"Cool-down\") when omitted.",
 		),
 		mcpgo.WithString("name", mcpgo.Required(),
 			mcpgo.Description("Display name shown in the diary (e.g. \"5x1km Threshold\").")),
@@ -165,6 +167,13 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 						"enum":        []string{"warmup", "repeat", "cooldown"},
 						"description": "Phase kind.",
 					},
+					"name": map[string]any{
+						"type": "string",
+						"description": "Optional free-text label for this phase, persisted verbatim by Polar and " +
+							"shown per-phase in the workout breakdown. For a repeat phase this names the work " +
+							"interval (recovery has its own recovery.name). Defaults to a label derived from the " +
+							"phase type when omitted (\"Warm-up\", \"Work\", \"Cool-down\").",
+					},
 					"duration_s": map[string]any{
 						"type":        "integer",
 						"description": "Phase length in seconds. Required for warmup/cooldown.",
@@ -195,6 +204,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 						"description": "Optional easy recovery inserted between reps of a repeat phase.",
 						"properties": map[string]any{
 							"duration_s": map[string]any{"type": "integer", "description": "Recovery duration in seconds."},
+							"name":       map[string]any{"type": "string", "description": "Optional free-text label for the recovery phase (default \"Recovery\")."},
 						},
 					},
 				},
@@ -287,6 +297,13 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 						"enum":        []string{"warmup", "repeat", "cooldown"},
 						"description": "Phase kind.",
 					},
+					"name": map[string]any{
+						"type": "string",
+						"description": "Optional free-text label for this phase, persisted verbatim by Polar and " +
+							"shown per-phase in the workout breakdown. For a repeat phase this names the work " +
+							"interval (recovery has its own recovery.name). Defaults to a label derived from the " +
+							"phase type when omitted (\"Warm-up\", \"Work\", \"Cool-down\").",
+					},
 					"duration_s": map[string]any{
 						"type":        "integer",
 						"description": "Phase length in seconds. Required for warmup/cooldown.",
@@ -317,6 +334,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 						"description": "Optional easy recovery inserted between reps of a repeat phase.",
 						"properties": map[string]any{
 							"duration_s": map[string]any{"type": "integer", "description": "Recovery duration in seconds."},
+							"name":       map[string]any{"type": "string", "description": "Optional free-text label for the recovery phase (default \"Recovery\")."},
 						},
 					},
 				},

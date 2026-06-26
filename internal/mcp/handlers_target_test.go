@@ -60,6 +60,46 @@ func TestBuildTrainingTargetCreate_DistancePhaseGoalDiscrimination(t *testing.T)
 	}
 }
 
+// Per-phase names must reach the wire body verbatim, with the type-derived
+// label (Warm-up / Work / Recovery / Cool-down) used only as a fallback when
+// the caller omits name.
+func TestBuildTrainingTargetCreate_PhaseNames(t *testing.T) {
+	body, errMsg := buildTrainingTargetCreate(req(map[string]any{
+		"name":     "Named phases",
+		"date":     "2026-06-10",
+		"time":     "09:00",
+		"sport_id": float64(1),
+		"phases": []any{
+			map[string]any{"type": "warmup", "name": "Easy jog", "duration_s": float64(600)},
+			map[string]any{
+				"type": "repeat", "reps": float64(5), "name": "Hard 1k",
+				"goal":     map[string]any{"distance_m": float64(1000)},
+				"recovery": map[string]any{"duration_s": float64(120), "name": "Float"},
+			},
+			// No name → falls back to the default "Cool-down".
+			map[string]any{"type": "cooldown", "duration_s": float64(600)},
+		},
+	}))
+	if errMsg != "" {
+		t.Fatalf("unexpected build error: %s", errMsg)
+	}
+	phases := body.ExerciseTargets[0].Phases
+	if got := phases[0].PhaseLeaf.Name; got != "Easy jog" {
+		t.Fatalf("warmup name = %q, want %q", got, "Easy jog")
+	}
+	work := phases[1].PhaseRepeat.Phases[0]
+	if work.Name != "Hard 1k" {
+		t.Fatalf("work name = %q, want %q", work.Name, "Hard 1k")
+	}
+	recovery := phases[1].PhaseRepeat.Phases[1]
+	if recovery.Name != "Float" {
+		t.Fatalf("recovery name = %q, want %q", recovery.Name, "Float")
+	}
+	if got := phases[2].PhaseLeaf.Name; got != "Cool-down" {
+		t.Fatalf("cooldown name = %q, want default %q", got, "Cool-down")
+	}
+}
+
 func TestPreserveExerciseTargetIDs(t *testing.T) {
 	var existingID gen.OptNilFloat64
 	existingID.SetTo(1454144110)
