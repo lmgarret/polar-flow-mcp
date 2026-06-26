@@ -23,6 +23,40 @@ start with a descriptive error.
 | `LOG_LEVEL` | `info` | `info` or `debug`. |
 | `LOG_FILE` | *(empty — stderr)* | If set, slog output is appended to this file (chmod 0600). Useful when stderr is unavailable, e.g. when running under Claude Code's stdio transport. |
 
+## Inbound OAuth (app-as-Authorization-Server + DCR)
+
+Setting `OAUTH_PUBLIC_URL` turns the server into its **own** OAuth 2.1
+Authorization Server. Clients self-register via Dynamic Client Registration
+(RFC 7591) — nothing to pre-create — and every `/mcp` request must carry a valid
+`Authorization: Bearer` access token the server itself signed (EdDSA JWT,
+validated locally). Browser login on `/mcp/oauth/authorize` is delegated to a
+forward-auth proxy. When `OAUTH_PUBLIC_URL` is unset, none of these apply and
+`/mcp` is unauthenticated (the historical behaviour). See
+[Exposing Securely](../deployment/exposing-securely.md) for the full Caddy +
+Authelia + Claude.ai walkthrough.
+
+When `OAUTH_PUBLIC_URL` **is** set, the server is fail-closed: `OAUTH_ALLOWED_EMAIL`
+and `OAUTH_TRUSTED_PROXIES` are mandatory.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OAUTH_PUBLIC_URL` | *(unset → auth off)* | Public origin and OAuth issuer, e.g. `https://polar.example.com`. The MCP resource (token audience) is this URL + `/mcp`. Setting this **enables** inbound OAuth and must match the host Claude connects to. |
+| `OAUTH_ALLOWED_EMAIL` | *(required if auth on)* | Comma-separated allowlist of forward-auth identities permitted to consent. Matching is case-insensitive. This is the "lock to me" control. |
+| `OAUTH_TRUSTED_PROXIES` | *(required if auth on)* | Comma-separated CIDRs/IPs whose forward-auth identity header is trusted on `/authorize`. An identity header from any other peer is ignored, so this is what stops header spoofing. Scope it to your proxy/container network. |
+
+### Optional OAuth tuning
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OAUTH_ALLOWED_GROUPS` | *(unset)* | Comma-separated group allowlist. When set, the forward-auth groups header must also intersect this set to consent. |
+| `OAUTH_ALLOWED_ORIGINS` | *(unset)* | Comma-separated `Origin` allowlist on `/mcp` (DNS-rebinding defence). Enforced only when set; requests with no `Origin` (Claude's server-to-server calls) are always allowed. |
+| `OAUTH_FORWARD_AUTH_EMAIL_HEADER` | `Remote-Email` | Forward-auth header carrying the authenticated email (Authelia default). |
+| `OAUTH_FORWARD_AUTH_GROUPS_HEADER` | `Remote-Groups` | Forward-auth header carrying the user's groups. |
+| `OAUTH_EXTRA_REDIRECT_URIS` | *(unset)* | Comma-separated extra exact redirect URIs accepted at registration, beyond the built-in Claude callbacks and loopback. Normally empty. |
+| `OAUTH_SIGNING_KEY_PATH` | `./polar-oauth-key.json` | chmod-600 JSON file holding the EdDSA signing key. Created on first start; persist it (e.g. on a named volume) so issued tokens survive restarts. |
+| `OAUTH_ACCESS_TTL_MINUTES` | `60` | Access-token lifetime in minutes. |
+| `OAUTH_REFRESH_TTL_HOURS` | `720` | Refresh-token lifetime in hours (default 30 days). |
+
 ## Removed (no longer used)
 
 The following env vars existed before the migration to the Polar Flow web

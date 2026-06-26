@@ -26,7 +26,8 @@ services:
       # block below; they would be visible in docker inspect and Portainer.
       - /etc/polar-flow/secrets.env:/.env:ro
 
-      # Cookie jar — keep on a named volume so sessions survive restarts.
+      # Cookie jar + OAuth signing key — keep on a named volume so sessions and
+      # issued tokens survive restarts.
       - polar-data:/data
     environment:
       COOKIE_JAR_PATH: "/data/polar-cookies.json"
@@ -39,6 +40,19 @@ services:
       # OPTIONAL: logging.
       # LOG_LEVEL: "info"
       # LOG_FILE: ""
+
+      # OPTIONAL: inbound OAuth for public exposure (Claude.ai web/mobile +
+      # Claude Code). Leave unset for local/trusted-network use. When
+      # OAUTH_PUBLIC_URL is set the server becomes its own OAuth 2.1
+      # Authorization Server with Dynamic Client Registration — nothing to
+      # pre-register. Put Authelia forward-auth in front of the /authorize path
+      # only (NOT /mcp). Full walkthrough:
+      # https://lmgarret.github.io/polar-flow-mcp/deployment/exposing-securely/
+      # OAUTH_PUBLIC_URL: "https://polar.example.com"
+      # OAUTH_ALLOWED_EMAIL: "you@example.com"
+      # OAUTH_TRUSTED_PROXIES: "172.18.0.0/16"     # your proxy/container network (REQUIRED)
+      # OAUTH_SIGNING_KEY_PATH: "/data/polar-oauth-key.json"
+      # OAUTH_ALLOWED_ORIGINS: "https://claude.ai"
 
 volumes:
   polar-data:

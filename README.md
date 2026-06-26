@@ -170,6 +170,23 @@ Optional:
 - `TRANSPORT` — `stdio` or `http` (default `http`)
 - `BIND_ADDRESS`, `PORT` — HTTP listen address
 - `LOG_LEVEL`, `LOG_FILE`
+- `OAUTH_PUBLIC_URL` (+ `OAUTH_ALLOWED_EMAIL`, `OAUTH_TRUSTED_PROXIES`) — enable inbound OAuth (see below)
+
+## Exposing to the internet (Claude.ai)
+
+By default the HTTP transport has **no inbound auth** — run it on localhost or a
+trusted network. To use it as a **Claude.ai custom connector** over the public
+internet, set `OAUTH_PUBLIC_URL` to turn the server into its **own OAuth 2.1
+Authorization Server**: clients self-register via Dynamic Client Registration
+(nothing to paste), browser login on the consent step is delegated to a
+forward-auth proxy (Authelia), and an email allowlist decides who may connect.
+Access tokens are short-lived EdDSA JWTs the server signs and validates itself —
+no database. Because it provides DCR, **Claude Code (CLI) works over the same
+public URL**.
+
+See **[Exposing Securely (Caddy + Authelia + Claude.ai)](https://lmgarret.github.io/polar-flow-mcp/deployment/exposing-securely/)**
+for the complete walkthrough — including why forward-auth goes on `/authorize`
+only and which hardening env vars to set.
 
 ## Multi-user
 

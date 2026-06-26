@@ -50,9 +50,47 @@ isn't protected, and operational practices to follow.
 - **The `.env` file is whatever you make it.** It contains the Polar
   password in plaintext by design. Use restrictive permissions and avoid
   committing it.
-- **The HTTP transport has no auth.** Bind to localhost or put it behind a
-  trusted-network barrier (Tailscale, VPN, reverse proxy with auth). A
-  warning is logged at startup if `BIND_ADDRESS` is non-localhost.
+- **The HTTP transport has no auth *by default*.** With `OAUTH_PUBLIC_URL` unset,
+  bind to localhost or put it behind a trusted-network barrier (Tailscale, VPN).
+  A warning is logged at startup if `BIND_ADDRESS` is non-localhost and OAuth is
+  off. To expose it publicly, enable the OAuth Authorization Server (below).
+
+## Exposing publicly: app-as-Authorization-Server
+
+To reach the server from **Claude.ai web/mobile and Claude Code**, enable inbound
+OAuth by setting `OAUTH_PUBLIC_URL` (+ `OAUTH_ALLOWED_EMAIL` +
+`OAUTH_TRUSTED_PROXIES`). The server then *becomes its own OAuth 2.1
+Authorization Server*:
+
+- Serves RFC 9728 / RFC 8414 discovery metadata pointing clients back at itself.
+- Implements Dynamic Client Registration (RFC 7591), so Claude self-registers —
+  nothing to pre-create or paste.
+- Delegates browser login on `/mcp/oauth/authorize` to a forward-auth proxy
+  (Authelia), reads the authenticated email from a trusted header, and checks the
+  email allowlist before issuing a PKCE-bound code.
+- Returns `401` + `WWW-Authenticate` to unauthenticated `/mcp` callers and
+  validates every Bearer token **locally** (EdDSA JWT it signed).
+
+The full Caddy + Authelia + Claude.ai walkthrough — including why forward-auth
+goes on `/authorize` only — is in
+[Exposing Securely](deployment/exposing-securely.md).
+
+### The controls that matter
+
+- **`OAUTH_TRUSTED_PROXIES`** — the linchpin. The forward-auth identity header is
+  honoured only from these peers, so a too-broad value lets a network neighbour
+  spoof an identity. Scope it to your proxy/container network.
+- **`OAUTH_ALLOWED_EMAIL`** — the allowlist of who may consent; checked again on
+  every `/mcp` call and refresh, so removing an email cuts access within the
+  access-token TTL.
+- **Redirect URIs are restricted** to the Claude callbacks + loopback even though
+  registration is open, so a rogue client can't point authorization codes at an
+  attacker URL.
+- **`OAUTH_ALLOWED_ORIGINS`** — opt-in DNS-rebinding defence (no-Origin requests
+  are always allowed, so it never breaks Claude's server-to-server calls).
+- **Revocation** is coarse: short `OAUTH_ACCESS_TTL_MINUTES`, or rotate the
+  signing key (delete `OAUTH_SIGNING_KEY_PATH` + restart) to invalidate every
+  outstanding token at once.
 
 ## What the server does on every request
 
@@ -96,8 +134,10 @@ leak. Protect `.env` accordingly.
 - Run as a non-root user.
 - Mount the cookie jar on a volume that the host's other users / containers
   can't read.
-- Bind the HTTP transport to `127.0.0.1` and consume via SSH tunnel,
-  Tailscale, or a Unix-socket proxy — not a public reverse proxy.
+- For local/private use, bind the HTTP transport to `127.0.0.1` and consume via
+  SSH tunnel or Tailscale.
+- For public use (Claude.ai), enable the OAuth Authorization Server and front it
+  with a TLS reverse proxy — see [Exposing Securely](deployment/exposing-securely.md).
 - Use a Polar account dedicated to MCP use, not your main one.
 
 ## Reporting issues

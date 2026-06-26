@@ -105,6 +105,11 @@ Add to `~/.claude/mcp_servers.json` (or per-project `.mcp.json`):
 Run with `TRANSPORT=http` (the default) and point Claude at
 `http://127.0.0.1:8080/mcp`.
 
+To reach it from **Claude.ai web/mobile (and Claude Code)** over the public
+internet, set `OAUTH_PUBLIC_URL` to turn the server into its own OAuth 2.1
+Authorization Server, and front it with a TLS reverse proxy — see
+[Exposing Securely](deployment/exposing-securely.md).
+
 ## 5. Try it out
 
 In a Claude conversation:
@@ -127,4 +132,5 @@ If something failed, check `LOG_LEVEL=debug` for the request / refresh trace.
 
 - [Usage guide](usage.md) — phase vocabulary and worked examples
 - [MCP Tools reference](reference/mcp-tools.md) — full argument schemas
+- [Exposing Securely](deployment/exposing-securely.md) — public access for Claude.ai (Caddy + Authelia)
 - [Security model](security.md) — what's protected and what isn't

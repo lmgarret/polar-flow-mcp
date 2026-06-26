@@ -22,6 +22,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/lmgarret/polar-flow-mcp/internal/auth"
 	"github.com/lmgarret/polar-flow-mcp/internal/config"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow"
 	"github.com/lmgarret/polar-flow-mcp/internal/mcp"
@@ -103,23 +104,51 @@ func runStdio(ctx context.Context, mcpServer *server.MCPServer) {
 }
 
 func runHTTP(ctx context.Context, cfg *config.Config, mcpServer *server.MCPServer) {
-	if cfg.BindAddress != "127.0.0.1" && cfg.BindAddress != "::1" {
+	if !cfg.OAuth.Enabled && cfg.BindAddress != "127.0.0.1" && cfg.BindAddress != "::1" {
 		slog.Warn(
-			"BIND_ADDRESS is not localhost — single-user MCP server is not designed for "+
-				"unprotected exposure; put it behind a trusted proxy",
+			"BIND_ADDRESS is not localhost and inbound OAuth is disabled — /mcp is unauthenticated; "+
+				"set OAUTH_PUBLIC_URL to enable OAuth or front the server with a trusted proxy",
 			"bind_address", cfg.BindAddress,
 		)
 	}
 
 	httpMCPServer := server.NewStreamableHTTPServer(mcpServer)
 
+	// Wrap the MCP handler with the OAuth middleware when configured, and mount
+	// the authorization-server endpoints. When disabled this is the bare handler
+	// (historical behaviour).
+	var mcpHandler http.Handler = httpMCPServer
 	mux := http.NewServeMux()
+	if cfg.OAuth.Enabled {
+		authn, err := auth.New(auth.Config{
+			Issuer:            cfg.OAuth.PublicURL,
+			Resource:          cfg.OAuth.Resource,
+			AllowedEmails:     cfg.OAuth.AllowedEmails,
+			AllowedGroups:     cfg.OAuth.AllowedGroups,
+			AllowedOrigins:    cfg.OAuth.AllowedOrigins,
+			EmailHeader:       cfg.OAuth.EmailHeader,
+			GroupsHeader:      cfg.OAuth.GroupsHeader,
+			TrustedProxies:    cfg.OAuth.TrustedProxies,
+			ExtraRedirectURIs: cfg.OAuth.ExtraRedirectURIs,
+			SigningKeyPath:    cfg.OAuth.SigningKeyPath,
+			AccessTTL:         cfg.OAuth.AccessTTL,
+			RefreshTTL:        cfg.OAuth.RefreshTTL,
+			Logger:            slog.Default(),
+		})
+		if err != nil {
+			slog.Error("failed to initialise OAuth", "error", err)
+			os.Exit(1)
+		}
+		mcpHandler = authn.ProtectedHandler(httpMCPServer)
+		authn.RegisterRoutes(mux)
+	}
+
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = fmt.Fprint(w, "ok")
 	})
-	mux.Handle("/mcp", httpMCPServer)
-	mux.Handle("/mcp/", httpMCPServer)
+	mux.Handle("/mcp", mcpHandler)
+	mux.Handle("/mcp/", mcpHandler)
 
 	srv := &http.Server{
 		Addr:    cfg.BindAddress + ":" + cfg.Port,
