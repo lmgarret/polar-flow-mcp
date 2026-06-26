@@ -150,6 +150,16 @@ func buildPhases(args []any) ([]gen.Phase, error) {
 	return out, nil
 }
 
+// phaseName returns a caller-supplied phase name (p["name"]) when present and
+// non-empty, otherwise the type-derived fallback (e.g. "Warm-up", "Work"). The
+// Polar Flow API persists this string verbatim per phase.
+func phaseName(p map[string]any, fallback string) string {
+	if name, ok := p["name"].(string); ok && name != "" {
+		return name
+	}
+	return fallback
+}
+
 // buildSimpleLeaf constructs a duration-goal warm-up / cool-down leaf.
 func buildSimpleLeaf(p map[string]any, name, changeType string) (gen.PhaseLeaf, error) {
 	dur, ok := goalDuration(p, "duration_s")
@@ -158,7 +168,7 @@ func buildSimpleLeaf(p map[string]any, name, changeType string) (gen.PhaseLeaf, 
 	}
 	leaf := gen.PhaseLeaf{
 		PhaseType:       "PHASE",
-		Name:            name,
+		Name:            phaseName(p, name),
 		PhaseChangeType: gen.PhaseLeafPhaseChangeType(changeType),
 		GoalType:        "DURATION",
 		IntensityType:   "NONE",
@@ -184,7 +194,7 @@ func buildRepeat(p map[string]any) (gen.PhaseRepeat, error) {
 		if dur, ok := goalDuration(rec, "duration_s"); ok {
 			recLeaf := gen.PhaseLeaf{
 				PhaseType:       "PHASE",
-				Name:            "Recovery",
+				Name:            phaseName(rec, "Recovery"),
 				PhaseChangeType: "AUTOMATIC",
 				GoalType:        "DURATION",
 				IntensityType:   "NONE",
@@ -204,7 +214,7 @@ func buildRepeat(p map[string]any) (gen.PhaseRepeat, error) {
 func buildWorkLeaf(goal, intensityCtx map[string]any) (gen.PhaseLeaf, error) {
 	leaf := gen.PhaseLeaf{
 		PhaseType:       "PHASE",
-		Name:            "Work",
+		Name:            phaseName(intensityCtx, "Work"),
 		PhaseChangeType: "AUTOMATIC",
 		IntensityType:   "NONE",
 	}
