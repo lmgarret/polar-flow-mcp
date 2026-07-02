@@ -47,7 +47,7 @@ services:
       # Authorization Server with Dynamic Client Registration — nothing to
       # pre-register. Put Authelia forward-auth in front of the /authorize path
       # only (NOT /mcp). Full walkthrough:
-      # https://lmgarret.github.io/polar-flow-mcp/deployment/exposing-securely/
+      # https://lmgarret.github.io/polar-flow-mcp/guides/expose-securely/
       # OAUTH_PUBLIC_URL: "https://polar.example.com"
       # OAUTH_ALLOWED_EMAIL: "you@example.com"
       # OAUTH_TRUSTED_PROXIES: "172.18.0.0/16"     # your proxy/container network (REQUIRED)

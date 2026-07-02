@@ -15,7 +15,13 @@ and silent refresh.
 1. **Lint**: `~/go/bin/golangci-lint run ./...` — fix all errors.
 2. **Tests**: `CGO_ENABLED=0 go test -count=1 ./...` — fix all failures. (`-race` requires CGO and is skipped here.)
 3. **Docs**: keep `README.md`, `internal/flow/README.md`, and this file in sync
-   when adding or removing tools, env vars, or persistence behaviour.
+   when adding or removing tools, env vars, or persistence behaviour. The docs
+   site lives in `docs/` — an [Astro Starlight](https://starlight.astro.build/)
+   project organised by the [Diátaxis](https://diataxis.fr/) framework
+   (`src/content/docs/{tutorials,guides,reference,explanation}/`). Cross-page
+   links are relative (`../<page>/` same-group, `../../<group>/<page>/`
+   cross-group) so they survive the site's `base` path. Build/preview with
+   `cd docs && npm ci && npm run build` (or `npm run dev`).
 
 ## Project Conventions
 
@@ -40,7 +46,7 @@ and silent refresh.
 | **3-hop silent refresh on `401 {"error":"NotAuthenticated"}`** | Standard Polar Flow session-rotation path; falls back to full login if `session_id` on `auth.polar.com` has also expired. |
 | **Bind-first / deferred login** (`flow.New` never logs in; `EnsureSession` runs lazily from `transport.Do`, warmed up in a background goroutine) | A full login takes seconds (CloudFront WAF + redirect chain). Blocking startup on it blocks the listener from binding, which races the MCP client's `initialize` and times it out at 60s. Binding first makes the handshake instant. |
 | **Custom `ht.Client` transport wraps ogen's `gen.Client`** | Lets us inject `X-Requested-With`, the cookie jar, and the 401-retry without touching generated code. |
-| **App-as-Authorization-Server + Dynamic Client Registration** (`internal/auth`, enabled by `OAUTH_PUBLIC_URL`; off by default) | Lets the server be exposed publicly as a Claude.ai connector **and** work with Claude Code — both speak DCR (RFC 7591), so clients self-register with no client to pre-create. The server signs/validates its **own** EdDSA JWT access tokens locally (no DB, no introspection). Browser login on `/mcp/oauth/authorize` only is delegated to a **forward-auth proxy** (Authelia); the authenticated email arrives in `Remote-Email`, trusted **only** from `OAUTH_TRUSTED_PROXIES` (the spoofing footgun — header is honoured only from those peers). `OAUTH_ALLOWED_EMAIL` gates who may consent; redirect URIs are restricted to Claude callbacks + loopback. Revocation is coarse: short access TTL or rotate `OAUTH_SIGNING_KEY_PATH`. Dep: `golang-jwt/jwt/v5`. See `docs/deployment/exposing-securely.md`. |
+| **App-as-Authorization-Server + Dynamic Client Registration** (`internal/auth`, enabled by `OAUTH_PUBLIC_URL`; off by default) | Lets the server be exposed publicly as a Claude.ai connector **and** work with Claude Code — both speak DCR (RFC 7591), so clients self-register with no client to pre-create. The server signs/validates its **own** EdDSA JWT access tokens locally (no DB, no introspection). Browser login on `/mcp/oauth/authorize` only is delegated to a **forward-auth proxy** (Authelia); the authenticated email arrives in `Remote-Email`, trusted **only** from `OAUTH_TRUSTED_PROXIES` (the spoofing footgun — header is honoured only from those peers). `OAUTH_ALLOWED_EMAIL` gates who may consent; redirect URIs are restricted to Claude callbacks + loopback. Revocation is coarse: short access TTL or rotate `OAUTH_SIGNING_KEY_PATH`. Dep: `golang-jwt/jwt/v5`. See `docs/src/content/docs/guides/expose-securely.md`. |
 
 ## Tech Stack
 

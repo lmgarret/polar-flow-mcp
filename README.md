@@ -11,6 +11,9 @@ which the official AccessLink API does not allow.
 > **Not the official Polar AccessLink API.** The web API is reverse-engineered
 > from browser traffic. Use a test account where possible. See `internal/flow/README.md`.
 
+📖 **Full documentation:** <https://lmgarret.github.io/polar-flow-mcp/> — tutorials,
+how-to guides, reference, and explanation (built with [Astro Starlight](https://starlight.astro.build/)).
+
 ## Quickstart
 
 ```bash
@@ -184,7 +187,7 @@ Access tokens are short-lived EdDSA JWTs the server signs and validates itself �
 no database. Because it provides DCR, **Claude Code (CLI) works over the same
 public URL**.
 
-See **[Exposing Securely (Caddy + Authelia + Claude.ai)](https://lmgarret.github.io/polar-flow-mcp/deployment/exposing-securely/)**
+See **[Expose the server securely (Caddy + Authelia + Claude.ai)](https://lmgarret.github.io/polar-flow-mcp/guides/expose-securely/)**
 for the complete walkthrough — including why forward-auth goes on `/authorize`
 only and which hardening env vars to set.
 

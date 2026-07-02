@@ -1,4 +1,9 @@
-# Exposing securely (Caddy + Authelia + Claude.ai)
+---
+title: Expose the server securely
+description: Expose polar-flow-mcp to the public internet as a Claude.ai custom connector, protected by OAuth 2.1 and locked to one person (Caddy + Authelia).
+sidebar:
+  order: 3
+---
 
 This guide exposes the server to the public internet so you can use it as a
 **Claude.ai custom connector** (web + mobile, and Claude Code), protected by
@@ -13,11 +18,12 @@ header, and an **email allowlist** decides who may connect. Access tokens are
 short-lived EdDSA JWTs the server signs and validates itself — no database, no
 introspection round-trip.
 
-!!! info "Which Claude clients work"
-    - **Claude.ai web + mobile** — yes.
-    - **Claude Desktop** — yes (same remote-connector path).
-    - **Claude Code (CLI)** — **yes.** Claude Code requires Dynamic Client
-      Registration, which this server provides, so the same public URL works.
+:::note[Which Claude clients work]
+- **Claude.ai web + mobile** — yes.
+- **Claude Desktop** — yes (same remote-connector path).
+- **Claude Code (CLI)** — **yes.** Claude Code requires Dynamic Client
+  Registration, which this server provides, so the same public URL works.
+:::
 
 ## Why not Authelia forward-auth on `/mcp`?
 
@@ -34,7 +40,7 @@ forward-auth'd — it is guarded by the access tokens this server issues.
 
 ## Topology
 
-```
+```text
 Claude.ai / Claude Code ──HTTPS──► Caddy (TLS) ─┬─► polar-flow-mcp :8080
         │ 1. GET /mcp → 401 + WWW-Authenticate   │     (issues + validates tokens)
         │ 2. discover /.well-known/oauth-*        │
@@ -49,7 +55,8 @@ Claude.ai / Claude Code ──HTTPS──► Caddy (TLS) ─┬─► polar-flow
 
 Setting `OAUTH_PUBLIC_URL` turns auth on. `OAUTH_ALLOWED_EMAIL` and
 `OAUTH_TRUSTED_PROXIES` are then mandatory (the server refuses to start without
-them — see [Environment Variables](../reference/env-vars.md)).
+them — see the
+[environment variables reference](../../reference/environment-variables/)).
 
 ```bash
 OAUTH_PUBLIC_URL=https://polar.example.com    # public origin = OAuth issuer
@@ -62,13 +69,14 @@ OAUTH_SIGNING_KEY_PATH=/data/polar-oauth-key.json   # persist across restarts
 # OAUTH_ALLOWED_ORIGINS=https://claude.ai      # DNS-rebinding defence on /mcp
 ```
 
-!!! danger "OAUTH_TRUSTED_PROXIES is the linchpin"
-    The server reads the authenticated email from a forward-auth header
-    (`Remote-Email`). It only trusts that header when the request's peer IP is in
-    `OAUTH_TRUSTED_PROXIES` — i.e. it came from *your* Caddy. Set this to the
-    network Caddy connects from (the Docker bridge subnet, or the proxy host IP).
-    If it is too broad, anyone who can reach the container could spoof an
-    identity. This replaces the static-client secret as the thing to get right.
+:::danger[OAUTH_TRUSTED_PROXIES is the linchpin]
+The server reads the authenticated email from a forward-auth header
+(`Remote-Email`). It only trusts that header when the request's peer IP is in
+`OAUTH_TRUSTED_PROXIES` — i.e. it came from *your* Caddy. Set this to the
+network Caddy connects from (the Docker bridge subnet, or the proxy host IP).
+If it is too broad, anyone who can reach the container could spoof an identity.
+This replaces the static-client secret as the thing to get right.
+:::
 
 The public URL is the issuer; the MCP resource is `OAUTH_PUBLIC_URL` + `/mcp`.
 
@@ -102,7 +110,7 @@ Caddy terminates TLS, forward-auths **only** `/mcp/oauth/authorize`, and proxies
 everything to the container. The `copy_headers` line is what carries the
 authenticated email to polar-flow-mcp.
 
-```caddyfile
+```text
 polar.example.com {
     # Forward-auth ONLY the browser consent endpoint.
     @authorize path /mcp/oauth/authorize
@@ -126,9 +134,10 @@ What any other proxy must replicate:
   Caddy does these by default; nginx needs `proxy_set_header Host $host;`,
   `proxy_buffering off;`, and raised timeouts on `/mcp`.
 
-!!! danger "Exact-match the public URL"
-    `OAUTH_PUBLIC_URL` must equal the scheme+host Claude connects to. The MCP
-    endpoint is that URL + `/mcp`. A mismatch breaks token-audience validation.
+:::danger[Exact-match the public URL]
+`OAUTH_PUBLIC_URL` must equal the scheme+host Claude connects to. The MCP
+endpoint is that URL + `/mcp`. A mismatch breaks token-audience validation.
+:::
 
 ## Add the connector in Claude.ai
 
@@ -179,5 +188,6 @@ Tokens are self-issued and stateless, so revocation is coarse-grained:
 - [ ] `OAUTH_ALLOWED_EMAIL` lists only the identities that may connect.
 - [ ] An Authelia rule locks `/authorize` to you (two_factor + subject).
 - [ ] `OAUTH_SIGNING_KEY_PATH` is on a persistent, chmod-600 volume.
-- [ ] A **dedicated** Polar account (not your main one) — see [Security](../security.md).
+- [ ] A **dedicated** Polar account (not your main one) — see the
+      [security model](../../explanation/security-model/).
 - [ ] Container bound to localhost/private, reachable only through the proxy.

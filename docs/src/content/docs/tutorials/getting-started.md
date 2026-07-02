@@ -1,20 +1,27 @@
-# Getting Started
+---
+title: Getting started
+description: A five-minute walkthrough from a fresh checkout to a running polar-flow-mcp that Claude can talk to.
+sidebar:
+  order: 1
+---
 
 This walkthrough takes you from a fresh checkout to a running polar-flow-mcp
-that Claude can talk to. Allow ~5 minutes.
+that Claude can talk to. Allow about five minutes.
 
-> **Use a Polar test account if you can.** This server drives the unofficial
-> reverse-engineered Polar Flow web API — your credentials are sent to
-> `auth.polar.com` on every cold start and persisted as session cookies on
-> disk.
+:::caution[Use a Polar test account if you can]
+This server drives the unofficial, reverse-engineered Polar Flow web API — your
+credentials are sent to `auth.polar.com` on every cold start and persisted as
+session cookies on disk. See the [security model](../../explanation/security-model/)
+for what that means.
+:::
 
 ## Prerequisites
 
 - A Polar Flow account (email + password) — ideally a dedicated test account.
 - One of the following:
-    - **Go 1.26+** if you want to run from source.
-    - **Docker** if you prefer the container path (recommended for anything
-      long-running).
+  - **Go 1.26+** if you want to run from source.
+  - **Docker** if you prefer the container path (recommended for anything
+    long-running).
 - A Claude client (Claude Code CLI, Claude Desktop, or another MCP-capable
   client).
 
@@ -51,7 +58,8 @@ PORT=8080
 LOG_LEVEL=info                    # info | debug
 ```
 
-See [Environment Variables](reference/env-vars.md) for the full reference.
+See the [environment variables reference](../../reference/environment-variables/)
+for the full list.
 
 ## 3. Run
 
@@ -75,7 +83,7 @@ use, so an actively-used server never re-prompts.
 docker compose up -d
 ```
 
-See the [Docker Compose page](deployment/docker-compose.md) for the
+See the [Docker Compose guide](../../guides/deploy-with-docker-compose/) for the
 compose file structure and volume layout.
 
 ## 4. Wire it into Claude
@@ -108,13 +116,13 @@ Run with `TRANSPORT=http` (the default) and point Claude at
 To reach it from **Claude.ai web/mobile (and Claude Code)** over the public
 internet, set `OAUTH_PUBLIC_URL` to turn the server into its own OAuth 2.1
 Authorization Server, and front it with a TLS reverse proxy — see
-[Exposing Securely](deployment/exposing-securely.md).
+[Expose the server securely](../../guides/expose-securely/).
 
 ## 5. Try it out
 
 In a Claude conversation:
 
-```
+```text
 You: who's linked to polar-flow?
 Claude: [calls get_user_info]
 Claude: Linked Polar account: you+polartest@example.com (FR).
@@ -130,7 +138,12 @@ If something failed, check `LOG_LEVEL=debug` for the request / refresh trace.
 
 ## What's next
 
-- [Usage guide](usage.md) — phase vocabulary and worked examples
-- [MCP Tools reference](reference/mcp-tools.md) — full argument schemas
-- [Exposing Securely](deployment/exposing-securely.md) — public access for Claude.ai (Caddy + Authelia)
-- [Security model](security.md) — what's protected and what isn't
+- [Create and manage training targets](../../guides/create-training-targets/) — phase
+  vocabulary and worked examples.
+- [Install the polar-coach skill](../../guides/install-the-coach-skill/) — teach
+  Claude when and how to call each tool.
+- [MCP tools reference](../../reference/mcp-tools/) — full argument schemas.
+- [Expose the server securely](../../guides/expose-securely/) — public access for
+  Claude.ai (Caddy + Authelia).
+- [Security model](../../explanation/security-model/) — what's protected and what
+  isn't.

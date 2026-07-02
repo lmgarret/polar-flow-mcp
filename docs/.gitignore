@@ -1,0 +1,11 @@
+# Astro / Starlight build artefacts
+node_modules/
+dist/
+.astro/
+
+# Environment
+.env
+.env.production
+
+# Logs
+npm-debug.log*
