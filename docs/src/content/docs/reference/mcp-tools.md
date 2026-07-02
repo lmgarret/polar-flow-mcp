@@ -36,16 +36,27 @@ than hard-coding ids.
 
 ## `create_training_target`
 
-Schedule a training target in Polar Flow.
+Schedule a training target (a planned workout) in Polar Flow. There are two
+shapes:
+
+- **VOLUME target** (no `phases`): a single open-goal block — set `duration_s`
+  **or** `distance_m` at the top level. Use for easy/general runs.
+- **PHASED target** (with `phases`): omit the top-level `duration_s`/`distance_m`
+  and provide an ordered list of `warmup` / `repeat` / `cooldown` blocks.
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
 | `name` | string | yes | Display name (shown in the diary). |
-| `date` | string | yes | ISO 8601 `YYYY-MM-DD`. |
+| `date` | string | yes | ISO 8601 `YYYY-MM-DD`. The server applies the account's timezone. |
 | `time` | string | no | `HH:MM` (24h). Default `18:00`. |
-| `sport_id` | integer | no | Polar sport ID. Default `1` (running); e.g. `2` cycling, `23` swimming. Use `list_sports` for the full mapping. |
+| `sport_id` | integer | no | Polar sport ID. Default `1` (running); e.g. `2` cycling, `23` swimming, `15` strength, `11` hiking, `68` triathlon. Use `list_sports` for the full mapping. |
 | `description` | string | no | Free-text notes. |
-| `phases` | array | no | See below. Empty/omitted → simple `VOLUME` target. |
+| `duration_s` | integer | conditional | VOLUME total duration in seconds (e.g. `2100` = 35 min). Required when `phases` is omitted and `distance_m` is not set. Ignored when `phases` is provided. |
+| `distance_m` | integer | conditional | VOLUME total distance in metres (e.g. `10000` = 10 km). Required when `phases` is omitted and `duration_s` is not set. Ignored when `phases` is provided. |
+| `phases` | array | no | Ordered phase list for a PHASED target. See below. |
+
+A VOLUME target with neither `duration_s` nor `distance_m` is rejected
+(`VOLUME targets (no phases) require duration_s or distance_m`).
 
 ### Phase shape
 
@@ -63,10 +74,19 @@ Each entry in `phases` is an object with `type` ∈ {`warmup`, `repeat`,
 { "type": "cooldown", "duration_s": 600 }
 ```
 
-- `goal` accepts either `distance_m` (metres) or `duration_s` (seconds).
+- `warmup` / `cooldown` require `duration_s` (seconds, > 0) and run at easy
+  intensity.
+- `repeat` is an interval block repeated `reps` times (**`reps` must be ≥ 2**).
+  It needs a `goal` (exactly one of `distance_m` metres **or** `duration_s`
+  seconds), an optional `intensity`, and an optional `recovery` (`duration_s`,
+  inserted between reps). A single continuous effort with no intervals is not a
+  `repeat` — use a VOLUME target instead.
 - `intensity` accepts either an `hr_zone` integer (1–5) or a `label`
-  (`easy`, `aerobic`, `tempo`, `threshold`, `vo2max`).
-- `recovery` is optional and only meaningful on `repeat` phases.
+  (`easy`→Z1–2, `aerobic`→Z2, `tempo`→Z3, `threshold`→Z4, `vo2max`→Z5). If both
+  are given, `hr_zone` wins.
+- Each phase (and a `recovery`) accepts an optional `name`, persisted verbatim
+  by Polar; it defaults to a type-derived label (`Warm-up`, `Work`, `Recovery`,
+  `Cool-down`).
 
 **Response:** human-readable confirmation including the new target's numeric
 ID.
@@ -109,18 +129,23 @@ payload, plus server-assigned ids and rolled-up totals).
 
 ## `update_training_target`
 
-Full-replace edit of a target by ID. The argument shape is identical to
-`create_training_target` with one extra required field (`target_id`). The
-server overwrites the target with the supplied body — there is no patch
-semantics, so always read the target with `get_training_target` first if you
-only want to change one field.
+Full-replace edit of a target by ID. The argument shape matches
+`create_training_target` (same VOLUME/PHASED shapes, units, and `phases`
+schema) plus a required `target_id`. The server overwrites the target with the
+supplied body — there are no patch semantics, so always read the target with
+`get_training_target` first if you only want to change one field. Anything you
+omit is cleared.
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
 | `target_id` | integer | yes | Numeric ID of the target to edit. |
+| `name` | string | yes | Display name shown in the diary. |
+| `date` | string | yes | ISO 8601 `YYYY-MM-DD`. |
 
-All other arguments (`name`, `date`, `time`, `sport_id`, `description`,
-`phases`) match `create_training_target`.
+All other arguments (`time`, `sport_id`, `description`, `duration_s`,
+`distance_m`, `phases`) match `create_training_target`. You do not need to
+manage server-side ids — the tool reads the live target and carries its
+exercise-target id over so the edit lands on the existing target.
 
 ## `get_calendar_events`
 

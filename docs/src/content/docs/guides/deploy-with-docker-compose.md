@@ -18,16 +18,20 @@ docker compose up -d
 docker compose logs -f
 ```
 
-On the first start you should see:
+On the first start you should see something like this. Login is deferred so the
+listener binds immediately (the MCP handshake is never blocked behind the
+login), then a background warm-up runs the full login:
 
 ```text
 level=INFO msg="polar-flow-mcp starting" transport=http polar_account=…
-level=INFO msg="flow: no cookie jar — running full login"
+level=INFO msg="flow: no session yet — login deferred to first request"
 level=INFO msg="server listening" addr=0.0.0.0:8080
+level=INFO msg="flow: no session — running full login"
 ```
 
-On subsequent starts the second line disappears — the server re-uses the
-persisted cookie jar.
+On subsequent starts those login lines are replaced by a single
+`flow: reusing persisted session from cookie jar` — the server re-uses the
+persisted cookie jar and skips the password step.
 
 ## Volumes
 

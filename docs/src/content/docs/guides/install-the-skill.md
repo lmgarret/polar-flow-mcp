@@ -1,14 +1,23 @@
 ---
-title: Install the polar-coach skill
-description: Install the polar-coach skill so Claude knows when and how to call each tool, and connect your Claude client to the server.
+title: Install the polar-flow skill
+description: Install the polar-flow skill so Claude knows which tool to call and the exact parameter shapes, and connect your Claude client to the server.
 sidebar:
   order: 4
 ---
 
-The `polar-coach` skill is a plain Markdown file (`SKILL.md`) that tells Claude
-how to use the polar-flow-mcp tools — so you can speak in coaching terms rather
-than remembering API parameters. It ships in the repository at
-`skill/polar-coach/SKILL.md`.
+The `polar-flow` skill tells Claude how to drive the polar-flow-mcp tools
+correctly — which tool does what, the exact parameter shapes, the units the API
+expects, and how to handle failures — so you can speak in plain language rather
+than remembering API parameters. It ships in the repository under
+`skill/polar-flow/`: a `SKILL.md` entry point plus a `reference/` directory of
+on-demand detail pages.
+
+:::note
+The `polar-flow` skill covers only the *mechanics* of calling the tools. It
+deliberately does **not** prescribe training (periodization, warm-up/cool-down
+choices, weekly load) — that is left to a separate, brand-agnostic sport-coaching
+skill.
+:::
 
 This guide covers installing the skill **and** connecting your Claude client to
 the running server — they are two separate steps.
@@ -21,10 +30,11 @@ Works when you run Claude Desktop or Claude Code on your local machine:
 
 1. Locate your Claude skills directory. On Claude Code this is typically
    `~/.claude/skills/`.
-2. Copy (or symlink) the `polar-coach/` directory into it:
+2. Copy (or symlink) the whole `polar-flow/` directory into it (the `reference/`
+   files must travel with `SKILL.md`):
 
    ```bash
-   cp -r skill/polar-coach ~/.claude/skills/
+   cp -r skill/polar-flow ~/.claude/skills/
    ```
 
 3. Restart Claude. The skill is auto-discovered and active for all
@@ -35,7 +45,8 @@ Works when you run Claude Desktop or Claude Code on your local machine:
 Works for Claude.ai conversations via the Projects feature:
 
 1. Open your Claude.ai project (or create one for training management).
-2. Upload `skill/polar-coach/SKILL.md` as a project file.
+2. Upload the files under `skill/polar-flow/` (`SKILL.md` and the `reference/`
+   pages) as project files.
 3. The skill becomes active for all chats in that project — no restart needed.
 
 Both methods give Claude identical guidance and tool-calling behaviour.

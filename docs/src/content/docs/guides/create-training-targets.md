@@ -13,9 +13,9 @@ examples.
 ![Claude calling create_training_target](../../../assets/claude-tool-call.png)
 
 :::tip
-Install the [polar-coach skill](../install-the-coach-skill/) first. It teaches
-Claude when and how to call each tool, so you can speak in coaching terms rather
-than tool arguments.
+Install the [polar-flow skill](../install-the-skill/) first. It teaches Claude
+which tool to call and the exact parameter shapes, so you can speak in plain
+language rather than tool arguments.
 :::
 
 ## Intensity vocabulary
@@ -23,17 +23,18 @@ than tool arguments.
 Polar Flow uses five heart-rate zones (Z1–Z5). When creating training targets,
 you specify intensity using either a **label** (preferred) or a numeric zone.
 
-| Label | Zone | Coaching meaning |
-|-------|------|-----------------|
-| `easy` | Z1 | Recovery pace. Conversational, fully aerobic. Shakeout runs, warm-ups, recovery jogs. |
+| Label | HR zone | Coaching meaning |
+|-------|---------|-----------------|
+| `easy` | Z1–2 | Recovery pace. Conversational, fully aerobic. Shakeout runs, warm-ups, recovery jogs. |
 | `aerobic` | Z2 | Easy aerobic / base building. Comfortable, sustainable for long runs. Bulk of weekly volume. |
 | `tempo` | Z3 | Steady-state, comfortably hard. Marathon to half-marathon effort. |
 | `threshold` | Z4 | Lactate threshold. Hard, sustainable for ~30–60 min. Classic 1km repeats, cruise intervals. |
 | `vo2max` | Z5 | Very hard. Short repeats (1–5 min) at near-maximal aerobic effort. |
 
-Prefer labels in conversation — they are more readable and match coaching
-vocabulary. Use numeric zone numbers (`hr_zone: 4`) only when someone explicitly
-says "zone 4" or "Z3".
+The label → zone mapping is a fact of the API, not a coaching opinion. Prefer
+labels in conversation — they are more readable. Use a numeric zone
+(`hr_zone: 4`) only when someone explicitly says "zone 4"; `hr_zone` wins if both
+are supplied.
 
 ## Create a workout
 
@@ -41,15 +42,15 @@ Ask Claude for the session you want:
 
 > "Create a 5x1km threshold session with 2-minute recovery for next Thursday"
 
-Claude resolves the date, applies default warmup (10 min) and cooldown (5 min),
-maps "threshold" to Z4, and calls `create_training_target`:
+Claude resolves the date, maps "threshold" to Z4, and calls
+`create_training_target` with the phase tree:
 
 ```json
 {
   "name": "5x1km Threshold",
   "date": "2026-05-21",
   "time": "18:00",
-  "sport": "RUNNING",
+  "sport_id": 1,
   "phases": [
     { "type": "warmup", "duration_s": 600 },
     {
@@ -67,17 +68,35 @@ maps "threshold" to Z4, and calls `create_training_target`:
 The new target shows up in the Polar Flow diary immediately, and Claude reports
 the target ID so you can reference it later.
 
-**Defaults Claude applies when you don't specify them:**
+Two things worth knowing about the structure:
 
-| Field | Default |
-|-------|---------|
-| Warmup | 10 minutes (600 s) |
-| Cooldown | 5 minutes (300 s) |
-| Time | 18:00 |
-| Sport | Running (`sport_id: 1`) |
+- `repeat` blocks need **at least 2 reps**. A single continuous effort is a
+  *simple run* (see below), not a `repeat`.
+- Warm-up and cool-down are **not** added automatically — they're a coaching
+  choice. The only defaults the tool itself applies are `time` = `18:00` and
+  `sport_id` = `1` (running).
 
 See the [`create_training_target` reference](../../reference/mcp-tools/#create_training_target)
 for the full argument schema.
+
+## Create a simple run (VOLUME target)
+
+For an easy run with no interval structure, you don't need phases at all — just
+a total duration or distance:
+
+> "Put an easy 35-minute run on Friday"
+
+```json
+{
+  "name": "Easy 35 min",
+  "date": "2026-06-14",
+  "duration_s": 2100,
+  "sport_id": 1
+}
+```
+
+This is a **VOLUME** target: set `duration_s` **or** `distance_m` at the top
+level and omit `phases`. (A VOLUME target with neither is rejected.)
 
 ## List upcoming workouts
 
