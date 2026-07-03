@@ -15,6 +15,33 @@ Use a Polar test account when possible. No warranty.
 
 ## Threat model
 
+```d2
+direction: down
+
+trusted: Trusted — the host you run on {
+  env: .env (POLAR_PASSWORD, plaintext)
+  proc: polar-flow-mcp (password in memory only)
+  jar: cookie jar — chmod 600 (FLOW_SESSION + remember-me)
+}
+
+untrusted: Untrusted {
+  others: other users / processes on the host
+  net: network path to *.polar.com
+}
+
+polar: Polar (flow.polar.com / auth.polar.com)
+
+trusted.env -> trusted.proc: read at startup
+trusted.proc -> trusted.jar: persist session
+trusted.proc -> polar: HTTPS (TLS)
+untrusted.net -> polar: mitigated by TLS {
+  style.stroke-dash: 3
+}
+untrusted.others -> trusted.jar: blocked by file perms {
+  style.stroke-dash: 3
+}
+```
+
 ### Trusted
 
 - The host running the server (process memory, the cookie-jar file).

@@ -40,15 +40,31 @@ forward-auth'd — it is guarded by the access tokens this server issues.
 
 ## Topology
 
-```text
-Claude.ai / Claude Code ──HTTPS──► Caddy (TLS) ─┬─► polar-flow-mcp :8080
-        │ 1. GET /mcp → 401 + WWW-Authenticate   │     (issues + validates tokens)
-        │ 2. discover /.well-known/oauth-*        │
-        │ 3. POST /mcp/oauth/register  (DCR)      │   forward-auth ONLY on:
-        ▼                                         └─► /mcp/oauth/authorize ──► Authelia
-  4. browser → /mcp/oauth/authorize  (Authelia logs you in; header Remote-Email)
-  5. POST /mcp/oauth/token  (PKCE) → access + refresh JWT
-  6. POST /mcp  Authorization: Bearer <jwt> → tools
+Forward-auth guards **only** `/mcp/oauth/authorize` (the one browser step);
+everything else is called server-to-server by Claude and guarded by the tokens
+this server issues.
+
+```d2
+shape: sequence_diagram
+
+claude: Claude.ai / Claude Code
+caddy: Caddy (TLS)
+authelia: Authelia
+server: polar-flow-mcp
+
+claude -> server: 1. GET /mcp
+server -> claude: 401 + WWW-Authenticate
+claude -> server: 2. discover /.well-known/oauth-*
+claude -> server: 3. POST /mcp/oauth/register (DCR)
+claude -> caddy: 4. browser → /mcp/oauth/authorize
+caddy -> authelia: forward-auth (this path only) {
+  style.stroke-dash: 3
+}
+authelia -> caddy: Remote-Email
+caddy -> server: authorize → PKCE code
+claude -> server: 5. POST /mcp/oauth/token (PKCE)
+server -> claude: access + refresh JWT
+claude -> server: 6. POST /mcp  Bearer <jwt> → tools
 ```
 
 ## polar-flow-mcp — enable OAuth
