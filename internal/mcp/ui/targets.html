@@ -100,20 +100,37 @@ function fmtDur(v) {
   if (m>0) return `${m}m${s?` ${s}s`:""}`;
   return `${s}s`;
 }
+// Phase duration is an "HH:MM:SS" string; drop a leading zero hour.
+function fmtDurStr(hms) {
+  const p = String(hms ?? "").split(":").map(Number);
+  if (p.length !== 3 || p.some(isNaN)) return String(hms ?? "");
+  const [h,m,s] = p;
+  return h>0 ? `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`
+             : `${m}:${String(s).padStart(2,"0")}`;
+}
 function fmtGoal(p) {
   if (!p) return null;
-  if (p.goal_type === "DISTANCE" || p.distance?.value) {
-    const v = Number(p.distance?.value ?? 0);
+  const gt = p.goalType ?? p.goal_type;
+  // distance: flat metres; duration: flat "HH:MM:SS". goalType picks which is set.
+  if (gt === "DISTANCE" || (p.distance != null && gt !== "DURATION")) {
+    const v = Number(p.distance ?? p.distance?.value ?? 0);
+    if (!v) return null;
     return v >= 1000 ? (v/1000).toFixed(1)+"km" : v+"m";
   }
-  if (p.goal_type === "DURATION" || p.duration?.value) return fmtDur(p.duration.value);
+  if (gt === "DURATION" || p.duration) {
+    const dur = p.duration?.value ?? p.duration;
+    return dur ? fmtDurStr(dur) : null;
+  }
   return null;
 }
 function fmtZone(p) {
   if (!p) return null;
-  const lo = p.lower_zone?.value, hi = p.upper_zone?.value;
-  if (lo && hi) return `Z${lo}${lo!==hi?`–${hi}`:""}`;
-  if (p.intensity_type && p.intensity_type !== "NONE") return p.intensity_type.replace(/_/g," ").toLowerCase();
+  // lowerZone/upperZone are 1–5; server reads back 0 as a "no zone" sentinel.
+  const lo = Number(p.lowerZone ?? p.lower_zone?.value ?? 0);
+  const hi = Number(p.upperZone ?? p.upper_zone?.value ?? 0);
+  if (lo > 0 && hi > 0) return `Z${lo}${lo!==hi?`–${hi}`:""}`;
+  const it = p.intensityType ?? p.intensity_type;
+  if (it && it !== "NONE") return String(it).replace(/_/g," ").toLowerCase();
   return null;
 }
 
@@ -145,7 +162,7 @@ function render(sc) {
     root.innerHTML = `<div class="fade-in">
       <div class="phase-name">${esc(t.name || "—")}</div>
       <div class="phase-meta">${esc(t.datetime ?? "")}</div>
-      ${renderPhases(t.exercise_targets ?? [])}
+      ${renderPhases(t.exerciseTargets ?? t.exercise_targets ?? [])}
     </div>`;
     return;
   }
@@ -168,22 +185,23 @@ function renderPhases(exercises) {
   let out = `<div class="phases-section">Phases</div>`;
   for (const ex of exercises) {
     for (const ph of (ex.phases ?? [])) {
-      const ptype = ph.phase_type ?? ph.type ?? "PHASE";
+      const ptype = ph.phaseType ?? ph.phase_type ?? ph.type ?? "PHASE";
       if (ptype === "REPEAT") {
         const work = (ph.phases ?? [])[0];
         const rec  = (ph.phases ?? [])[1];
         out += `<div class="phase-row">
           <div class="phase-type pt-repeat">REP</div>
           <div class="phase-body">
-            <span class="repeat-count">×${esc(ph.repeat_count)}</span>
+            <span class="repeat-count">×${esc(ph.repeatCount ?? ph.repeat_count)}</span>
             ${work ? phaseStats(work, "Work") : ""}
             ${rec  ? phaseStats(rec,  "Rest") : ""}
           </div>
         </div>`;
       } else {
         const name = ph.name ?? ptype;
-        const isWarm = name.toLowerCase().includes("warm");
-        const isCool = name.toLowerCase().includes("cool");
+        const ln = name.toLowerCase();
+        const isWarm = ln.includes("warm") || ln.includes("échauff") || ln.includes("echauff");
+        const isCool = ln.includes("cool") || ln.includes("calme") || ln.includes("retour");
         const cls = isWarm ? "pt-warmup" : isCool ? "pt-cooldown" : "pt-work";
         out += `<div class="phase-row">
           <div class="phase-type ${cls}">${isWarm?"WARM":isCool?"COOL":"WORK"}</div>
