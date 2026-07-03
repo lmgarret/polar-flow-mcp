@@ -45,7 +45,7 @@ function rpc(method, params) {
   const id = ++msgId;
   return new Promise((resolve,reject) => { pending.set(id,{resolve,reject}); window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*"); });
 }
-rpc("ui/initialize",{clientInfo:{name:"polar-calendar-ui",version:"2.0"},appCapabilities:{}})
+rpc("ui/initialize",{protocolVersion:"2026-01-26",appInfo:{name:"polar-calendar-ui",version:"2.0"},appCapabilities:{availableDisplayModes:["inline"]}})
   .then(()=>window.parent.postMessage({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}},"*"));
 
 const esc = s => String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
