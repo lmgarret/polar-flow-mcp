@@ -113,9 +113,11 @@ docs(security): document key rotation plan
 chore(deps): update mcp-go to v0.8.0
 ```
 
-Conventional commits are used by git-cliff to generate the changelog on release.
-The `chore(release)` type is reserved for the automated CHANGELOG commit and must
-not be used manually.
+Conventional commits feed the release notes. Pushing a `v*` tag runs the release
+workflow, which uses an LLM to summarise the commits since the previous tag into
+categorised, benefit-focused notes and publishes them on the GitHub Release
+(alongside the Docker image ladder and the full commit log). Clear, well-scoped
+commit messages therefore produce clearer release notes.
 
 ## Running locally
 

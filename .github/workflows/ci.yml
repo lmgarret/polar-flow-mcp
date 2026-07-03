@@ -61,8 +61,11 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
+          # `latest` and the semver ladder are owned by tagged releases (see
+          # release.yml). Main-branch builds publish the rolling `edge` tag plus
+          # the exact commit SHA.
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=edge,enable={{is_default_branch}}
             type=sha,prefix=sha-,format=short
 
       - name: Build and push
@@ -72,6 +75,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=0.0.0-edge+${{ github.sha }}
+            COMMIT=${{ github.sha }}
+            DATE=${{ github.event.repository.updated_at }}
 
   docker-pr:
     name: Docker (PR preview)
@@ -111,6 +118,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=0.0.0-pr.${{ github.event.pull_request.number }}+${{ github.sha }}
+            COMMIT=${{ github.sha }}
+            DATE=${{ github.event.repository.updated_at }}
 
   docker-pr-cleanup:
     name: Docker (PR cleanup)

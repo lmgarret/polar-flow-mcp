@@ -34,7 +34,9 @@ and silent refresh.
 - Logging: `log/slog` (stdlib)
 - Docker: `golang:1.26-alpine` builder → `FROM scratch` final; `CGO_ENABLED=0`,
   `-ldflags="-w -s"`, copy `ca-certificates.crt`
-- CI: `test` + `lint` → `docker` (ghcr.io, `latest` + SHA tags)
+- CI: `test` + `lint` → `docker` (ghcr.io; `edge` + `sha-` on main). Pushing a
+  `v*` tag runs `release.yml`: LLM-summarised release notes + the semver `latest`
+  ladder (owned by releases, not CI)
 - No CGO. No SQLite. No database.
 
 ## Critical Decisions (do not revisit without explicit discussion)

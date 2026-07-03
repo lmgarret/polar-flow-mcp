@@ -28,8 +28,17 @@ import (
 	"github.com/lmgarret/polar-flow-mcp/internal/mcp"
 )
 
+// Build metadata, injected at link time via -ldflags "-X main.version=…".
+// Defaults mirror the Dockerfile ARG defaults for `go build`/`go run` locally.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	initLogging()
+	slog.Info("polar-flow-mcp", "version", version, "commit", commit, "date", date)
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -59,7 +68,7 @@ func main() {
 
 	mcpServer := server.NewMCPServer(
 		"polar-flow-mcp",
-		"0.2.0",
+		version,
 		server.WithToolCapabilities(true),
 		server.WithResourceCapabilities(false, false),
 	)
