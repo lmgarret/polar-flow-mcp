@@ -39,8 +39,40 @@ reverse-engineered from browser traffic. polar-flow-mcp:
    refresh, and the header/CSRF quirks the web API requires.
 
 Every wire call is therefore type-checked Go generated from the spec, not
-hand-rolled HTTP. See [Design decisions](../design-decisions/) for the details of
+hand-rolled HTTP. See [Design decisions](/explanation/design-decisions/) for the details of
 the wrapper and why each quirk exists.
+
+```d2
+direction: right
+
+claude: Claude client
+
+server: polar-flow-mcp {
+  transport: MCP transport (stdio / HTTP)
+  auth: OAuth 2.1 AS (optional)
+  tools: MCP tools
+  flow: Flow client {
+    ogen: ogen client (generated)
+    tr: custom transport (uTLS + CSRF)
+    jar: cookie jar (chmod 600)
+    login: login + silent refresh
+  }
+}
+
+polar: Polar {
+  waf: flow.polar.com (WAF)
+  authp: auth.polar.com
+}
+
+claude -> server.transport: MCP JSON-RPC
+server.auth -> server.transport: Bearer JWT
+server.transport -> server.tools
+server.tools -> server.flow.ogen
+server.flow.ogen -> server.flow.tr
+server.flow.tr -> server.flow.jar: session cookie
+server.flow.tr -> polar.waf: HTTPS
+server.flow.login -> polar.authp: login / refresh
+```
 
 ## What it lets Claude do
 
@@ -56,7 +88,7 @@ the wrapper and why each quirk exists.
 
 The write operations — creating, editing, and deleting targets, and logging
 manual sessions — are exactly the ones AccessLink cannot do. See the
-[MCP tools reference](../../reference/mcp-tools/) for full argument schemas.
+[MCP tools reference](/reference/mcp-tools/) for full argument schemas.
 
 ## Tech stack
 

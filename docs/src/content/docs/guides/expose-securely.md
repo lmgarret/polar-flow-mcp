@@ -56,7 +56,7 @@ Claude.ai / Claude Code ──HTTPS──► Caddy (TLS) ─┬─► polar-flow
 Setting `OAUTH_PUBLIC_URL` turns auth on. `OAUTH_ALLOWED_EMAIL` and
 `OAUTH_TRUSTED_PROXIES` are then mandatory (the server refuses to start without
 them — see the
-[environment variables reference](../../reference/environment-variables/)).
+[environment variables reference](/reference/environment-variables/)).
 
 ```bash
 OAUTH_PUBLIC_URL=https://polar.example.com    # public origin = OAuth issuer
@@ -189,5 +189,5 @@ Tokens are self-issued and stateless, so revocation is coarse-grained:
 - [ ] An Authelia rule locks `/authorize` to you (two_factor + subject).
 - [ ] `OAUTH_SIGNING_KEY_PATH` is on a persistent, chmod-600 volume.
 - [ ] A **dedicated** Polar account (not your main one) — see the
-      [security model](../../explanation/security-model/).
+      [security model](/explanation/security-model/).
 - [ ] Container bound to localhost/private, reachable only through the proxy.

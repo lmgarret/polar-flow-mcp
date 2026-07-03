@@ -3,6 +3,9 @@ node_modules/
 dist/
 .astro/
 
+# astro-d2 generated diagrams (rebuilt from the ```d2 blocks on every build)
+public/d2/
+
 # Environment
 .env
 .env.production

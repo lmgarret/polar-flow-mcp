@@ -18,9 +18,13 @@ and silent refresh.
    when adding or removing tools, env vars, or persistence behaviour. The docs
    site lives in `docs/` — an [Astro Starlight](https://starlight.astro.build/)
    project organised by the [Diátaxis](https://diataxis.fr/) framework
-   (`src/content/docs/{tutorials,guides,reference,explanation}/`). Cross-page
-   links are relative (`../<page>/` same-group, `../../<group>/<page>/`
-   cross-group) so they survive the site's `base` path. Build/preview with
+   (`src/content/docs/{tutorials,guides,reference,explanation}/`). It is served
+   from the domain root (no `base`), so cross-page links are root-absolute
+   (`/<group>/<page>/`). Theme + icon live in `src/styles/theme.css` and
+   `public/favicon.svg` / `src/assets/logo.svg`. Architecture diagrams are
+   fenced `d2` code blocks rendered by [astro-d2](https://github.com/wobsoriano/astro-d2),
+   which needs the D2 binary on `PATH` (`go install oss.terrastruct.com/d2@v0.7.0`,
+   or the release tarball — CI installs it). Build/preview with
    `cd docs && npm ci && npm run build` (or `npm run dev`).
 
 ## Project Conventions

@@ -13,7 +13,7 @@ that shape how it behaves and that shouldn't be revisited without discussion.
 The server logs into exactly one Polar account (`POLAR_EMAIL` /
 `POLAR_PASSWORD`). To serve more than one account, run more than one instance
 (e.g. one container per user — see
-[Deploy with Docker Compose](../../guides/deploy-with-docker-compose/#multiple-accounts)).
+[Deploy with Docker Compose](/guides/deploy-with-docker-compose/#multiple-accounts)).
 
 The Flow web API requires email + password. Storing per-user passwords is a step
 up in risk over OAuth tokens — passwords are often reused and can't be revoked
@@ -75,8 +75,8 @@ OAuth 2.1 Authorization Server with Dynamic Client Registration — so it can be
 Claude.ai connector *and* work with Claude Code, both of which speak DCR. It
 signs and validates its own EdDSA JWT access tokens locally (no database, no
 introspection). Browser login on `/authorize` is delegated to a forward-auth
-proxy. See [Expose the server securely](../../guides/expose-securely/) and the
-[security model](../security-model/) for the trust boundaries.
+proxy. See [Expose the server securely](/guides/expose-securely/) and the
+[security model](/explanation/security-model/) for the trust boundaries.
 
 ## The request lifecycle
 

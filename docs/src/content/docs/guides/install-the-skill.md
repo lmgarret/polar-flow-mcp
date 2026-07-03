@@ -68,8 +68,8 @@ which handles OAuth.
 claude mcp add --transport http polar-flow-mcp --scope project https://<your-host>/mcp
 ```
 
-See the [HTTP endpoints reference](../../reference/http-endpoints/) for details
-on the `/mcp` endpoint, and [Expose the server securely](../expose-securely/) for
+See the [HTTP endpoints reference](/reference/http-endpoints/) for details
+on the `/mcp` endpoint, and [Expose the server securely](/guides/expose-securely/) for
 the public OAuth setup.
 
 ### Stdio mode (local development)
@@ -93,4 +93,4 @@ LOG_FILE=/tmp/polar-flow-mcp.log   # required — logs cannot go to stderr in st
 
 Place these in a `.env` file in the working directory, or pass them via the
 `env` block in your MCP server configuration. See
-[Getting started](../../tutorials/getting-started/) for the full walkthrough.
+[Getting started](/tutorials/getting-started/) for the full walkthrough.

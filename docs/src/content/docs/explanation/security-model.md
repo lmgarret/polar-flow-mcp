@@ -75,7 +75,7 @@ Authorization Server*:
   validates every Bearer token **locally** (EdDSA JWT it signed).
 
 The full walkthrough — including why forward-auth goes on `/authorize` only — is
-in [Expose the server securely](../../guides/expose-securely/).
+in [Expose the server securely](/guides/expose-securely/).
 
 ### The controls that matter
 
@@ -123,7 +123,7 @@ data and settings. This is **strictly worse** than a cookie-jar leak. Protect
   SSH tunnel or Tailscale.
 - For public use (Claude.ai), enable the OAuth Authorization Server and front it
   with a TLS reverse proxy — see
-  [Expose the server securely](../../guides/expose-securely/).
+  [Expose the server securely](/guides/expose-securely/).
 - Use a Polar account dedicated to MCP use, not your main one.
 
 ## Reporting issues

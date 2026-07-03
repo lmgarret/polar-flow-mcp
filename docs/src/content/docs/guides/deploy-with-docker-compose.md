@@ -80,7 +80,7 @@ volumes:
 ```
 
 Each MCP client points at the appropriate port. See
-[Why single-user?](../../explanation/design-decisions/#single-user-via-env-vars)
+[Why single-user?](/explanation/design-decisions/#single-user-via-env-vars)
 for the reasoning.
 
 ## Security defaults
@@ -98,7 +98,7 @@ Two ways to reach it remotely:
 - **Public (Claude.ai web/mobile + Claude Code)** — set `OAUTH_PUBLIC_URL` to
   turn the server into its own OAuth 2.1 Authorization Server (+
   `OAUTH_ALLOWED_EMAIL` + `OAUTH_TRUSTED_PROXIES`) and front it with a TLS reverse
-  proxy. See [Expose the server securely](../expose-securely/) for the full Caddy +
+  proxy. See [Expose the server securely](/guides/expose-securely/) for the full Caddy +
   Authelia walkthrough.
 
 ## Image
