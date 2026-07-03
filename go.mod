@@ -10,7 +10,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/mark3labs/mcp-go v0.54.1
+	github.com/mark3labs/mcp-go v0.55.1
 	github.com/ogen-go/ogen v1.22.0
 	github.com/refraction-networking/utls v1.8.2
 	go.opentelemetry.io/otel v1.44.0
