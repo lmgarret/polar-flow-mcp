@@ -49,7 +49,9 @@ claude: Claude client
 
 server: polar-flow-mcp {
   transport: MCP transport (stdio / HTTP)
-  auth: OAuth 2.1 AS (optional)
+  auth: OAuth 2.1 AS (optional) {
+    style.stroke-dash: 3
+  }
   tools: MCP tools
   flow: Flow client {
     ogen: ogen client (generated)
@@ -65,7 +67,9 @@ polar: Polar {
 }
 
 claude -> server.transport: MCP JSON-RPC
-server.auth -> server.transport: Bearer JWT
+server.auth -> server.transport: Bearer JWT (if public) {
+  style.stroke-dash: 3
+}
 server.transport -> server.tools
 server.tools -> server.flow.ogen
 server.flow.ogen -> server.flow.tr
@@ -74,7 +78,10 @@ server.flow.tr -> polar.waf: HTTPS
 server.flow.login -> polar.authp: login / refresh
 ```
 
-## What it lets Claude do
+The dashed OAuth 2.1 Authorization Server is **optional** — it is off by default
+and only turns on when you set `OAUTH_PUBLIC_URL` to expose the server publicly.
+With it unset, `/mcp` has no inbound auth (run it on localhost or behind a
+trusted-network barrier).
 
 | Capability | Tool(s) |
 |------------|---------|

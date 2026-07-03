@@ -42,6 +42,16 @@
 	--sl-color-bg-sidebar: #fafafa;
 }
 
+/* D2 diagrams render as a bare inline <svg> with no intrinsic width, so they
+   stretch to the full content column and look over-zoomed. Cap and centre. */
+svg[data-d2-version] {
+	display: block;
+	width: 100%;
+	max-width: 480px;
+	height: auto;
+	margin-inline: auto;
+}
+
 /* Give the splash hero's title a subtle red-tinged gradient. */
 .hero h1 {
 	background: linear-gradient(90deg, var(--sl-color-white), var(--sl-color-accent));
