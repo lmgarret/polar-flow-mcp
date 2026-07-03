@@ -156,19 +156,45 @@ function fmtDate(iso) {
   const d = iso.slice(0,10).split("-");
   return `${d[2]} ${MONTHS_SHORT[parseInt(d[1])-1]} ${d[0]}`;
 }
+// Parse an ISO-8601 duration string ("PT35M23.512S") to seconds. The session
+// summary endpoint returns durations in this form.
+function isoDurToSecs(str) {
+  const m = /^P(?:\d+D)?T(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?$/.exec(String(str ?? ""));
+  if (!m) return 0;
+  return (parseFloat(m[1])||0)*3600 + (parseFloat(m[2])||0)*60 + (parseFloat(m[3])||0);
+}
+// Coerce any duration value this UI receives into seconds. List/history items
+// give integer **milliseconds**; the summary gives an ISO-8601 duration string.
+function durToSecs(v) {
+  if (v == null) return 0;
+  if (typeof v === "string") return v.startsWith("P") ? isoDurToSecs(v) : (Number(v)||0)/1000;
+  return Number(v) / 1000; // numeric == milliseconds
+}
+// The summary nests real per-exercise data under an object keyed by exerciseId.
+function firstExercise(s) {
+  const ex = s?.exercises;
+  if (!ex || typeof ex !== "object") return null;
+  const k = Object.keys(ex)[0];
+  return k ? ex[k] : null;
+}
 function sessionDate(s) {
-  const raw = s.start_time ?? s.date_time ?? s.start ?? s.datetime ?? "";
+  // startDate: "2026-07-03 07:28:09.855" (list) / "2026-07-03T07:28:09.855" (summary).
+  const raw = s.startDate ?? s.start_time ?? s.date_time ?? s.start ?? "";
   return String(raw).slice(0,10);
 }
 function sportInfo(s) {
-  const n = (s.sport_name ?? s.sport ?? s.detailed_sport_info?.sport_name ?? "").toLowerCase();
-  const id = Number(s.sport_id ?? s.detailed_sport_info?.sport_id ?? 0);
-  if (n.includes("run") || id===1)  return {color:"#d9232e", label:"RUN"};
-  if (n.includes("cycl")||n.includes("bik")||id===2) return {color:"#ff8c00", label:"RIDE"};
-  if (n.includes("swim")||id===3)   return {color:"#0099cc", label:"SWIM"};
-  if (n.includes("walk")||n.includes("hike"))        return {color:"#90be6d", label:"WALK"};
-  if (n.includes("gym")||n.includes("strength")||n.includes("weight")) return {color:"#f77f00", label:"GYM"};
-  if (n.includes("ski")||n.includes("nordic"))       return {color:"#00b4d8", label:"SKI"};
+  s = s || {};
+  const ex = firstExercise(s);
+  const n = String(s.sportName ?? s.sport ?? s.sportParent ?? ex?.sportParent ?? "").toLowerCase();
+  const id = Number(s.sportId ?? s.sport?.id ?? ex?.sport?.id ?? 0);
+  if (n.includes("run") || n.includes("course") || id===1)                       return {color:"#d9232e", label:"RUN"};
+  if (n.includes("cycl")||n.includes("bik")||n.includes("vélo")||n.includes("velo")||id===2) return {color:"#ff8c00", label:"RIDE"};
+  if (n.includes("swim")||n.includes("natation"))                                return {color:"#0099cc", label:"SWIM"};
+  if (n.includes("hik")||n.includes("rando")||id===11)                           return {color:"#90be6d", label:"HIKE"};
+  if (n.includes("walk")||n.includes("marche"))                                  return {color:"#90be6d", label:"WALK"};
+  if (n.includes("gym")||n.includes("strength")||n.includes("weight")||n.includes("fonctionnel")||n.includes("renfor")||id===57) return {color:"#f77f00", label:"GYM"};
+  if (n.includes("ski")||n.includes("nordic"))                                   return {color:"#00b4d8", label:"SKI"};
+  if (n.includes("esport")||id===191)                                            return {color:"#8a8a8a", label:"ESPORT"};
   return {color:"#666", label:"SPORT"};
 }
 
@@ -271,9 +297,9 @@ function renderSessionList(sessions) {
     <div class="multi-sessions">
       ${sessions.map((s,i) => {
         const sp = sportInfo(s);
-        const dur = s.duration ?? s.session_duration_s ?? 0;
+        const dur = durToSecs(s.duration);
         const dist = s.distance ?? 0;
-        const name = s.name ?? s.training_session_name ?? s.sportName ?? "Session";
+        const name = s.sportName ?? s.name ?? "Session";
         return `<div class="session-item" id="si-${i}" onclick="fetchSummary(activeSessions[${i}],this)">
           <span class="si-sport" style="color:${sp.color}">${sp.label}</span>
           <span class="si-name">${esc(name)}</span>
@@ -306,15 +332,19 @@ async function fetchSummary(session, el) {
 
 function renderSummaryData(s, container, fallbackSession) {
   if (!s) { container.innerHTML = `<div class="empty-state">No data returned.</div>`; return; }
-  const name = s.name ?? s.training_session_name ?? fallbackSession?.name ?? "Session";
-  const dateStr = sessionDate(s) || selectedDate || "";
-  const dur = s.duration ?? s.session_duration_s ?? fallbackSession?.duration ?? 0;
-  const dist = s.distance ?? fallbackSession?.distance ?? 0;
-  const hrAvg = s.hr_data?.average ?? s.heart_rate?.average ?? s.hr_avg;
-  const hrMax = s.hr_data?.maximum ?? s.heart_rate?.maximum ?? s.hr_max;
-  const kcal = s.calories ?? s.kcal;
+  const ex = firstExercise(s);
+  const hr = ex?.trainingStatistic?.HEART_RATE ?? {};
+  const name = (s.trainingSessionName && s.trainingSessionName.trim())
+    || fallbackSession?.sportName || sportInfo(fallbackSession ?? ex ?? s).label || "Session";
+  const dateStr = sessionDate(s) || sessionDate(fallbackSession ?? {}) || selectedDate || "";
+  // duration: summary → ISO-8601 string; list fallback → milliseconds.
+  const dur = durToSecs(s.duration ?? ex?.duration ?? fallbackSession?.duration);
+  const dist = s.distance ?? ex?.distance ?? fallbackSession?.distance ?? 0;
+  const hrAvg = s.hrAverage ?? hr.avg ?? fallbackSession?.hrAvg;
+  const hrMax = s.hrMax ?? hr.max;
+  const kcal = s.kiloCalories ?? ex?.calories ?? fallbackSession?.calories;
   const pace = fmtPace(dist, dur);
-  const sp = sportInfo(s.detailed_sport_info ?? s ?? {});
+  const sp = sportInfo(fallbackSession ?? ex ?? s);
 
   const stats = [
     {v: fmtDur(dur), l: "Duration"},
@@ -412,28 +442,89 @@ function renderDirectSummary(sc) {
 
 function renderLaps(sc) {
   document.getElementById("cal-wrap").innerHTML = "";
-  document.getElementById("hdr-label").textContent = "Lap Details";
+  document.getElementById("hdr-label").textContent = "Session Details";
   document.getElementById("hdr-range").textContent = "";
   openDetail();
   document.getElementById("detail").style.maxHeight = "none";
   document.getElementById("detail").style.opacity = "1";
-  const d = sc.details ?? {};
-  const laps = d.laps ?? d.exercise_laps ?? [];
-  if (!laps.length) {
-    document.getElementById("detail-inner").innerHTML = `<div class="empty-state">No lap data available.</div>`;
-    return;
+
+  const det = sc.details ?? {};
+  const exObj = det.exercises ?? {};
+  const ex = exObj[Object.keys(exObj)[0]] ?? null;
+
+  // Time-in-zone lives under details.zones[exId].HEART_RATE; inZone is ISO-8601.
+  const zonesObj = det.zones ?? {};
+  let hrZones = [];
+  for (const k of Object.keys(zonesObj)) {
+    const hr = zonesObj[k]?.HEART_RATE;
+    if (hr?.length) { hrZones = hr; break; }
   }
-  document.getElementById("detail-inner").innerHTML = `
+
+  // details.laps is keyed by exerciseId: {exId:{automaticLaps,manualLaps}}.
+  const lapsObj = det.laps ?? {};
+  let laps = [];
+  for (const k of Object.keys(lapsObj)) {
+    const block = lapsObj[k] || {};
+    const arr = (block.automaticLaps?.length ? block.automaticLaps : block.manualLaps) ?? [];
+    laps = laps.concat(arr);
+  }
+
+  // Per-exercise headline stats (trainingStatistic holds avg/max per metric).
+  const hrStat = ex?.trainingStatistic?.HEART_RATE ?? {};
+  const dur = durToSecs(ex?.duration);
+  const dist = ex?.distance ?? 0;
+  const pace = fmtPace(dist, dur);
+  const stats = [
+    dur  ? {v: fmtDur(dur),   l: "Duration"} : null,
+    dist ? {v: fmtDist(dist), l: "Distance"} : null,
+    pace ? {v: pace,          l: "Pace"}     : null,
+    hrStat.avg ? {v: hrStat.avg+" bpm", l: "Avg HR"} : null,
+    hrStat.max ? {v: hrStat.max+" bpm", l: "Max HR"} : null,
+    ex?.calories ? {v: String(ex.calories), l: "kcal"} : null,
+  ].filter(Boolean);
+
+  const maxZ = Math.max(...hrZones.map(z => isoDurToSecs(z.inZone)), 1);
+  const zonesHTML = hrZones.length ? `
+    <div class="zones-label" style="margin-top:14px">Heart Rate Zones</div>
+    ${hrZones.map((z,i)=>{
+      const t = isoDurToSecs(z.inZone);
+      const idx = Math.min(5, Math.max(1, Number(z.zoneIndex || i+1)));
+      const pct = Math.max(2, Math.round(t/maxZ*100));
+      return `<div class="zone-bar">
+        <span class="zb-label zc${idx}">Z${idx}</span>
+        <div class="zb-track"><div class="zb-fill z${idx}f" style="width:${pct}%"></div></div>
+        <span class="zb-time">${fmtDur(t)}</span>
+      </div>`;
+    }).join("")}` : "";
+
+  const lapsHTML = laps.length ? `
+    <div class="zones-label" style="margin-top:16px">Laps</div>
     <table class="laps-table">
       <thead><tr><th>Lap</th><th>Time</th><th>Dist</th><th>Avg HR</th><th>Max HR</th></tr></thead>
       <tbody>${laps.map((l,i)=>`<tr>
         <td style="color:#555">${i+1}</td>
-        <td>${esc(fmtDur(l.duration??l.duration_s??0))}</td>
+        <td>${esc(fmtDur(durToSecs(l.duration)))}</td>
         <td>${esc(fmtDist(l.distance??0))}</td>
-        <td>${esc(l.heart_rate?.average??l.hr_avg??"—")}</td>
-        <td>${esc(l.heart_rate?.maximum??l.hr_max??"—")}</td>
+        <td>${esc(l.heartRate?.average??l.hrAvg??"—")}</td>
+        <td>${esc(l.heartRate?.maximum??l.hrMax??"—")}</td>
       </tr>`).join("")}</tbody>
-    </table>`;
+    </table>` : "";
+
+  const inner = document.getElementById("detail-inner");
+  if (!stats.length && !zonesHTML && !lapsHTML) {
+    inner.innerHTML = `<div class="empty-state">No detailed data available.</div>`;
+    return;
+  }
+  const sp = sportInfo(ex ?? {});
+  const nm = ex?.sportParent
+    ? ex.sportParent.charAt(0) + ex.sportParent.slice(1).toLowerCase()
+    : sp.label;
+  inner.innerHTML = `<div class="fade-in">
+    <div style="font-size:.75rem;font-weight:600;color:#888;margin-bottom:10px;border-left:3px solid ${sp.color};padding-left:8px">${esc(nm)}</div>
+    ${stats.length ? `<div class="stats-row">${stats.map(s=>`<div class="stat-box"><div class="stat-val">${esc(s.v)}</div><div class="stat-lbl">${esc(s.l)}</div></div>`).join("")}</div>` : ""}
+    ${zonesHTML}
+    ${lapsHTML}
+  </div>`;
 }
 </script>
 </body>

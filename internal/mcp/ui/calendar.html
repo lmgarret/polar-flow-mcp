@@ -114,7 +114,11 @@ function render(sc) {
     label.textContent = "Weekly Load";
     sub.textContent = "";
     const weeks = sc.weeks ?? [];
-    if (!weeks.length) { root.innerHTML = `<div class="empty-state">No weekly data available.</div>`; return; }
+    // The upstream week-summary items currently decode to empty objects (the
+    // vendored OpenAPI schema does not model their fields yet), so guard against
+    // rows that carry no usable data rather than rendering blank "W— · 0m" rows.
+    const hasData = weeks.some(w => w && Object.keys(w).length > 0);
+    if (!weeks.length || !hasData) { root.innerHTML = `<div class="empty-state">No weekly totals available.</div>`; return; }
     const maxDur = Math.max(...weeks.map(w => Number(w.duration?.value ?? w.total_duration_s ?? w.total_duration ?? 0)), 1);
     root.innerHTML = `<div class="fade-in">${weeks.map(w => {
       const week = w.week_start ?? w.start_date ?? w.date ?? "";

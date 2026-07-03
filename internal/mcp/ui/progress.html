@@ -62,60 +62,64 @@ function fmtDist(m) {
   const v=Number(m)||0; if(!v) return "—";
   return v>=1000 ? (v/1000).toFixed(0)+"km" : v+"m";
 }
-function barList(items, cls) {
+// items: [{label, value}]. `fmt` renders the numeric value for display.
+function barList(items, cls, fmt) {
   if (!items?.length) return "";
-  const max = Math.max(...items.map(i=>Number(i.value??i.duration??i.count??0)),1);
+  const max = Math.max(...items.map(i=>Number(i.value)||0), 1);
   return items.map(item => {
-    const val = Number(item.value??item.duration??item.count??0);
+    const val = Number(item.value) || 0;
     const pct = Math.max(2, Math.round(val/max*100));
-    const lbl = item.sport_name??item.name??item.label??item.benefit??"—";
-    const isSeconds = item.unit==="SECONDS" || item.duration;
-    const valStr = isSeconds ? fmtDur(val) : item.unit==="METERS" ? fmtDist(val) : String(val);
     return `<div class="bar-row">
-      <span class="br-label">${esc(lbl)}</span>
+      <span class="br-label">${esc(item.label)}</span>
       <div class="br-track"><div class="br-fill ${cls}" style="width:${pct}%"></div></div>
-      <span class="br-val">${esc(valStr)}</span>
+      <span class="br-val">${esc(fmt(val))}</span>
     </div>`;
   }).join("");
+}
+// "STEADY_STATE_TRAINING" → "Steady State Training"
+function prettyLabel(s) {
+  return String(s ?? "—").toLowerCase().replace(/_/g," ").replace(/\b\w/g, c=>c.toUpperCase());
 }
 
 function render(sc) {
   if (!sc || sc.type !== "progress_summary") return;
   const d = sc.data ?? {};
-  document.getElementById("hdr-sub").textContent = [d.from_date, d.to_date].filter(Boolean).join(" → ");
+  document.getElementById("hdr-sub").textContent = [d.from, d.to].filter(Boolean).join(" → ");
 
-  const sessions = d.number_of_sessions ?? d.sessions ?? 0;
-  const dur  = d.total_duration_s ?? d.duration ?? 0;
-  const dist = d.total_distance_m ?? d.distance ?? 0;
-  const kcal = d.total_kcal ?? d.calories ?? 0;
-  const avgHR = d.average_heart_rate ?? 0;
+  // Headline totals (camelCase; totalDuration is a StandardDuration object).
+  const sessions = d.totalTrainingSessionCount ?? 0;
+  const durS = d.totalDuration ? (Number(d.totalDuration.millis)/1000 || Number(d.totalDuration.standardSeconds) || 0) : 0;
+  const dist = d.totalDistance ?? 0;
+  const kcal = d.totalCalories ?? 0;
+  const ascent = d.totalAscent ?? 0;
 
   const statBoxes = [
     {v: String(sessions), l: "Sessions"},
-    dur  ? {v: fmtDur(dur),  l: "Total Time"} : null,
-    dist ? {v: fmtDist(dist), l: "Distance"}  : null,
-    kcal ? {v: String(kcal), l: "Calories"}   : null,
-    avgHR ? {v: avgHR+" bpm", l: "Avg HR"}    : null,
+    durS ? {v: fmtDur(durS),  l: "Total Time"} : null,
+    dist ? {v: fmtDist(dist), l: "Distance"}   : null,
+    kcal ? {v: String(Math.round(kcal)), l: "Calories"} : null,
+    ascent ? {v: Math.round(ascent)+"m", l: "Ascent"}   : null,
   ].filter(Boolean);
 
-  const sports   = d.sport_breakdown ?? d.sports ?? d.activity_breakdown ?? [];
-  const zones    = d.heart_rate_zones ?? d.hr_zones ?? d.zone_breakdown ?? [];
-  const benefits = d.training_benefit_breakdown ?? d.benefits ?? [];
+  // Per-sport breakdown: prefer distance, fall back to duration. valueForChart
+  // is metres for the distance list, milliseconds for the duration list.
+  const sd = d.sportDistributions ?? {};
+  const sportSrc = sd.distance?.length ? sd.distance : (sd.duration ?? []);
+  const sportIsDist = !!sd.distance?.length;
+  const sports = sportSrc.map(x => ({ label: x.sportName ?? x.nameForChart ?? "—", value: Number(x.valueForChart) || 0 }));
 
-  const zonesHTML = zones.length ? `
-    <div class="section-label">Heart Rate Zones</div>
-    <div class="zone-row">${zones.map((z,i)=>{
-      const t=Number(z.duration_in_seconds??z.duration??z.in_zone??0);
-      return `<div class="zone-pill z${i+1}p">Z${i+1}<br>${fmtDur(t)}</div>`;
-    }).join("")}</div>` : "";
+  // Training benefits: trainingBenefitTotal is in milliseconds.
+  const benefits = (d.trainingBenefitDistributionList ?? []).map(x => ({
+    label: prettyLabel(x.nameForChart ?? x.trainingBenefit),
+    value: Number(x.trainingBenefitTotal) || 0,
+  }));
 
   document.getElementById("root").innerHTML = `<div class="fade-in">
     <div class="stats-grid">${statBoxes.map(s=>`
       <div class="stat-box"><div class="stat-val">${esc(s.v)}</div><div class="stat-lbl">${esc(s.l)}</div></div>`).join("")}
     </div>
-    ${sports.length   ? `<div class="section-label">By Sport</div>${barList(sports,"br-fill-a")}` : ""}
-    ${zonesHTML}
-    ${benefits.length ? `<div class="section-label">Training Benefits</div>${barList(benefits,"br-fill-b")}` : ""}
+    ${sports.length   ? `<div class="section-label">By Sport</div>${barList(sports,"br-fill-a", sportIsDist ? fmtDist : v=>fmtDur(v/1000))}` : ""}
+    ${benefits.length ? `<div class="section-label">Training Benefits</div>${barList(benefits,"br-fill-b", v=>fmtDur(v/1000))}` : ""}
   </div>`;
 }
 </script>
