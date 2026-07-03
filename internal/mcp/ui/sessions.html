@@ -442,34 +442,89 @@ function renderDirectSummary(sc) {
 
 function renderLaps(sc) {
   document.getElementById("cal-wrap").innerHTML = "";
-  document.getElementById("hdr-label").textContent = "Lap Details";
+  document.getElementById("hdr-label").textContent = "Session Details";
   document.getElementById("hdr-range").textContent = "";
   openDetail();
   document.getElementById("detail").style.maxHeight = "none";
   document.getElementById("detail").style.opacity = "1";
-  // details.laps is an object keyed by exerciseId: {exId:{automaticLaps,manualLaps}}.
-  const lapsObj = sc.details?.laps ?? {};
+
+  const det = sc.details ?? {};
+  const exObj = det.exercises ?? {};
+  const ex = exObj[Object.keys(exObj)[0]] ?? null;
+
+  // Time-in-zone lives under details.zones[exId].HEART_RATE; inZone is ISO-8601.
+  const zonesObj = det.zones ?? {};
+  let hrZones = [];
+  for (const k of Object.keys(zonesObj)) {
+    const hr = zonesObj[k]?.HEART_RATE;
+    if (hr?.length) { hrZones = hr; break; }
+  }
+
+  // details.laps is keyed by exerciseId: {exId:{automaticLaps,manualLaps}}.
+  const lapsObj = det.laps ?? {};
   let laps = [];
   for (const k of Object.keys(lapsObj)) {
     const block = lapsObj[k] || {};
     const arr = (block.automaticLaps?.length ? block.automaticLaps : block.manualLaps) ?? [];
     laps = laps.concat(arr);
   }
-  if (!laps.length) {
-    document.getElementById("detail-inner").innerHTML = `<div class="empty-state">No lap data available.</div>`;
-    return;
-  }
-  document.getElementById("detail-inner").innerHTML = `
+
+  // Per-exercise headline stats (trainingStatistic holds avg/max per metric).
+  const hrStat = ex?.trainingStatistic?.HEART_RATE ?? {};
+  const dur = durToSecs(ex?.duration);
+  const dist = ex?.distance ?? 0;
+  const pace = fmtPace(dist, dur);
+  const stats = [
+    dur  ? {v: fmtDur(dur),   l: "Duration"} : null,
+    dist ? {v: fmtDist(dist), l: "Distance"} : null,
+    pace ? {v: pace,          l: "Pace"}     : null,
+    hrStat.avg ? {v: hrStat.avg+" bpm", l: "Avg HR"} : null,
+    hrStat.max ? {v: hrStat.max+" bpm", l: "Max HR"} : null,
+    ex?.calories ? {v: String(ex.calories), l: "kcal"} : null,
+  ].filter(Boolean);
+
+  const maxZ = Math.max(...hrZones.map(z => isoDurToSecs(z.inZone)), 1);
+  const zonesHTML = hrZones.length ? `
+    <div class="zones-label" style="margin-top:14px">Heart Rate Zones</div>
+    ${hrZones.map((z,i)=>{
+      const t = isoDurToSecs(z.inZone);
+      const idx = Math.min(5, Math.max(1, Number(z.zoneIndex || i+1)));
+      const pct = Math.max(2, Math.round(t/maxZ*100));
+      return `<div class="zone-bar">
+        <span class="zb-label zc${idx}">Z${idx}</span>
+        <div class="zb-track"><div class="zb-fill z${idx}f" style="width:${pct}%"></div></div>
+        <span class="zb-time">${fmtDur(t)}</span>
+      </div>`;
+    }).join("")}` : "";
+
+  const lapsHTML = laps.length ? `
+    <div class="zones-label" style="margin-top:16px">Laps</div>
     <table class="laps-table">
       <thead><tr><th>Lap</th><th>Time</th><th>Dist</th><th>Avg HR</th><th>Max HR</th></tr></thead>
       <tbody>${laps.map((l,i)=>`<tr>
         <td style="color:#555">${i+1}</td>
         <td>${esc(fmtDur(durToSecs(l.duration)))}</td>
         <td>${esc(fmtDist(l.distance??0))}</td>
-        <td>${esc(l.heartRate?.average??l.heart_rate?.average??l.hrAvg??"—")}</td>
-        <td>${esc(l.heartRate?.maximum??l.heart_rate?.maximum??l.hrMax??"—")}</td>
+        <td>${esc(l.heartRate?.average??l.hrAvg??"—")}</td>
+        <td>${esc(l.heartRate?.maximum??l.hrMax??"—")}</td>
       </tr>`).join("")}</tbody>
-    </table>`;
+    </table>` : "";
+
+  const inner = document.getElementById("detail-inner");
+  if (!stats.length && !zonesHTML && !lapsHTML) {
+    inner.innerHTML = `<div class="empty-state">No detailed data available.</div>`;
+    return;
+  }
+  const sp = sportInfo(ex ?? {});
+  const nm = ex?.sportParent
+    ? ex.sportParent.charAt(0) + ex.sportParent.slice(1).toLowerCase()
+    : sp.label;
+  inner.innerHTML = `<div class="fade-in">
+    <div style="font-size:.75rem;font-weight:600;color:#888;margin-bottom:10px;border-left:3px solid ${sp.color};padding-left:8px">${esc(nm)}</div>
+    ${stats.length ? `<div class="stats-row">${stats.map(s=>`<div class="stat-box"><div class="stat-val">${esc(s.v)}</div><div class="stat-lbl">${esc(s.l)}</div></div>`).join("")}</div>` : ""}
+    ${zonesHTML}
+    ${lapsHTML}
+  </div>`;
 }
 </script>
 </body>
