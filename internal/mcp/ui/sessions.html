@@ -117,7 +117,7 @@ function rpc(method, params) {
     window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
   });
 }
-rpc("ui/initialize", { clientInfo: { name: "polar-sessions-ui", version: "2.0" }, appCapabilities: {} })
+rpc("ui/initialize", { protocolVersion: "2026-01-26", appInfo: { name: "polar-sessions-ui", version: "2.0" }, appCapabilities: { availableDisplayModes: ["inline"] } })
   .then(() => window.parent.postMessage({ jsonrpc: "2.0", method: "ui/notifications/initialized", params: {} }, "*"));
 
 // ── State ──────────────────────────────────────────────
