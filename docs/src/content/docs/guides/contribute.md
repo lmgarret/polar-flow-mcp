@@ -1,19 +1,26 @@
-# Contributing
-
-Contributions are welcome! This page covers how to set up your development environment,
-run the test suite, and submit a pull request.
-
-The authoritative version of these guidelines is [CONTRIBUTING.md](https://github.com/lmgarret/polar-flow-mcp/blob/main/CONTRIBUTING.md)
-in the repository root.
-
 ---
+title: Set up a dev environment & contribute
+description: Build, test, lint, and submit a pull request for polar-flow-mcp, including regenerating the OpenAPI client.
+sidebar:
+  order: 5
+---
+
+Contributions are welcome. This guide covers setting up your development
+environment, running the test suite, and submitting a pull request.
+
+:::note
+The authoritative version of these guidelines is
+[CONTRIBUTING.md](https://github.com/lmgarret/polar-flow-mcp/blob/main/CONTRIBUTING.md)
+in the repository root.
+:::
 
 ## Prerequisites
 
-- **Go 1.26+** — install from [https://go.dev/dl/](https://go.dev/dl/)
-- **golangci-lint v2.11** — the linter version pinned for this project
+- **Go 1.26+** — install from [go.dev/dl](https://go.dev/dl/).
+- **golangci-lint v2.11** — the linter version pinned for this project.
 
-Install golangci-lint to `~/go/bin/` (the `go install` path does not work for v2.x — use the install script):
+Install golangci-lint to `~/go/bin/` (the `go install` path does not work for
+v2.x — use the install script):
 
 ```bash
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
@@ -27,8 +34,6 @@ Verify:
 # golangci-lint has version v2.11.x
 ```
 
----
-
 ## Clone and build
 
 ```bash
@@ -37,10 +42,8 @@ cd polar-flow-mcp
 make build
 ```
 
-The binary is written to `bin/polar-flow-mcp`. The build uses `CGO_ENABLED=0` so no C
-toolchain is required.
-
----
+The binary is written to `bin/polar-flow-mcp`. The build uses `CGO_ENABLED=0` so
+no C toolchain is required.
 
 ## Run the tests
 
@@ -55,11 +58,8 @@ CGO_ENABLED=0 go test -tags=polartest -race -count=1 ./...
 ```
 
 The `-tags=polartest` flag is required — it enables test-only code that allows
-redirecting HTTP requests to test servers. Omitting the flag will cause test failures.
-
-All tests must pass before submitting a PR. The CI pipeline runs the same command.
-
----
+redirecting HTTP requests to test servers. Omitting the flag will cause test
+failures. All tests must pass before submitting a PR; CI runs the same command.
 
 ## Run the linter
 
@@ -73,34 +73,26 @@ This runs:
 ~/go/bin/golangci-lint run ./...
 ```
 
-The linter is configured in `.golangci.yml` at the repo root. Enabled linters include
-`gocyclo`, `godot`, `misspell`, `noctx`, and `errcheck` (with type assertion checking).
-Fix all lint errors before submitting a PR.
-
----
+The linter is configured in `.golangci.yml` at the repo root. Enabled linters
+include `gocyclo`, `godot`, `misspell`, `noctx`, and `errcheck` (with type
+assertion checking). Fix all lint errors before submitting a PR.
 
 ## Pre-PR checklist
 
-Before opening a pull request:
-
 - [ ] `make test` passes
 - [ ] `make lint` passes with zero errors
-- [ ] Documentation updated if you changed behavior or added a feature
+- [ ] Documentation updated if you changed behaviour or added a feature
 - [ ] Commit messages follow conventional commit format (see below)
-
----
 
 ## Commit message format
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 <type>(<scope>): <short description>
 
 [optional body]
 ```
-
-**Types:**
 
 | Type | When to use |
 |------|-------------|
@@ -108,28 +100,26 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/):
 | `fix` | Bug fix |
 | `docs` | Documentation only |
 | `chore` | Maintenance (deps, config) |
-| `refactor` | Code restructuring without behavior change |
+| `refactor` | Code restructuring without behaviour change |
 | `test` | Test additions or changes |
 | `ci` | CI workflow changes |
 
 **Examples:**
 
-```
+```text
 feat(mcp): add list_training_targets tool
 fix(oauth): handle expired CSRF state gracefully
 docs(security): document key rotation plan
 chore(deps): update mcp-go to v0.8.0
 ```
 
-Conventional commits are used by git-cliff to generate the changelog on release. The
-`chore(release)` type is reserved for the automated CHANGELOG commit and must not be
-used manually.
-
----
+Conventional commits are used by git-cliff to generate the changelog on release.
+The `chore(release)` type is reserved for the automated CHANGELOG commit and must
+not be used manually.
 
 ## Running locally
 
-To run the server locally for development, you need a `.env` file (or exported
+To run the server locally for development you need a `.env` file (or exported
 variables) with at minimum:
 
 ```bash
@@ -156,7 +146,7 @@ On the first run the server performs the headless login chain against
 `auth.polar.com` and writes `polar-cookies-dev.json` (mode 0600). Subsequent
 runs re-use the jar and skip the password step.
 
-### Regenerating the OpenAPI client
+## Regenerating the OpenAPI client
 
 If you bump the upstream spec or the ogen version, regenerate
 `internal/flow/gen/`:
@@ -172,12 +162,29 @@ ogen --target internal/flow/gen --package gen --clean internal/flow/openapi.yaml
 The preprocessor converts OpenAPI 3.1 nullable union syntax to the 3.0.3 form
 ogen accepts. No other semantic changes.
 
----
+## Documenting your changes
+
+These docs are built with [Astro Starlight](https://starlight.astro.build/) and
+live under `docs/`. To preview locally:
+
+```bash
+cd docs
+npm install
+npm run dev
+```
+
+Content is organised by the [Diátaxis](https://diataxis.fr/) framework — put new
+pages under `src/content/docs/{tutorials,guides,reference,explanation}/` depending
+on whether they teach, solve a task, describe, or explain. Cross-page links are
+relative (`../../<group>/<page>/`) so they stay correct under the site's base
+path.
 
 ## Code style
 
 - Follow standard Go formatting (`gofmt`).
-- Keep cyclomatic complexity below 15 per function (`gocyclo` will catch violations).
+- Keep cyclomatic complexity below 15 per function (`gocyclo` will catch
+  violations).
 - End comments with a period (`godot` will catch violations).
 - Use `log/slog` for all logging — no `fmt.Println` or `log.Printf`.
-- Context keys must use unexported struct types to prevent cross-package collisions.
+- Context keys must use unexported struct types to prevent cross-package
+  collisions.

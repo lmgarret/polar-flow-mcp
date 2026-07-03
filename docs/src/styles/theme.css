@@ -1,0 +1,61 @@
+/* polar-flow-mcp docs — dark-grey + red theme.
+   Overrides Starlight's accent (red) and gray (neutral grey) scales. */
+
+:root {
+	/* Dark mode (default). Red accent + warm-neutral greys. */
+	--sl-color-accent-low: #3d1310;
+	--sl-color-accent: #e5322c;
+	--sl-color-accent-high: #ffb7ac;
+
+	--sl-color-white: #f4f4f6;
+	--sl-color-gray-1: #e7e7ea;
+	--sl-color-gray-2: #c3c3c9;
+	--sl-color-gray-3: #8b8b93;
+	--sl-color-gray-4: #56565e;
+	--sl-color-gray-5: #37373d;
+	--sl-color-gray-6: #26262b;
+	--sl-color-black: #19191d;
+
+	/* Warm the page background very slightly toward the red end. */
+	--sl-color-bg: #19191d;
+	--sl-color-bg-nav: #1f1f24;
+	--sl-color-bg-sidebar: #1c1c21;
+}
+
+:root[data-theme='light'] {
+	--sl-color-accent-low: #ffe0dc;
+	--sl-color-accent: #cc1d13;
+	--sl-color-accent-high: #4c1310;
+
+	--sl-color-white: #19191d;
+	--sl-color-gray-1: #26262b;
+	--sl-color-gray-2: #37373d;
+	--sl-color-gray-3: #56565e;
+	--sl-color-gray-4: #8b8b93;
+	--sl-color-gray-5: #c3c3c9;
+	--sl-color-gray-6: #e7e7ea;
+	--sl-color-gray-7: #f4f4f6;
+	--sl-color-black: #ffffff;
+
+	--sl-color-bg: #ffffff;
+	--sl-color-bg-nav: #f7f7f8;
+	--sl-color-bg-sidebar: #fafafa;
+}
+
+/* D2 diagrams render as a bare inline <svg> with no intrinsic width, so they
+   stretch to the full content column and look over-zoomed. Cap and centre. */
+svg[data-d2-version] {
+	display: block;
+	width: 100%;
+	max-width: 480px;
+	height: auto;
+	margin-inline: auto;
+}
+
+/* Give the splash hero's title a subtle red-tinged gradient. */
+.hero h1 {
+	background: linear-gradient(90deg, var(--sl-color-white), var(--sl-color-accent));
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}

@@ -1,4 +1,9 @@
-# Docker Compose Deployment
+---
+title: Deploy with Docker Compose
+description: Run polar-flow-mcp as a container with cookies persisted on a named volume, plus the multi-account pattern.
+sidebar:
+  order: 2
+---
 
 The repository ships a `docker-compose.yml` configured for the common case:
 one container, one Polar account, cookies persisted on a named volume.
@@ -13,16 +18,20 @@ docker compose up -d
 docker compose logs -f
 ```
 
-On the first start you should see:
+On the first start you should see something like this. Login is deferred so the
+listener binds immediately (the MCP handshake is never blocked behind the
+login), then a background warm-up runs the full login:
 
-```
+```text
 level=INFO msg="polar-flow-mcp starting" transport=http polar_account=…
-level=INFO msg="flow: no cookie jar — running full login"
+level=INFO msg="flow: no session yet — login deferred to first request"
 level=INFO msg="server listening" addr=0.0.0.0:8080
+level=INFO msg="flow: no session — running full login"
 ```
 
-On subsequent starts the second line disappears — the server re-uses the
-persisted cookie jar.
+On subsequent starts those login lines are replaced by a single
+`flow: reusing persisted session from cookie jar` — the server re-uses the
+persisted cookie jar and skips the password step.
 
 ## Volumes
 
@@ -42,9 +51,8 @@ the env-var credentials.
 ## Multiple accounts
 
 This server is single-user by design. To serve multiple Polar accounts,
-run multiple compose stacks — copy the `polar-flow-mcp` service to a new
-file, give it a unique container name and a unique published port, and use
-separate volumes:
+run multiple compose stacks — copy the `polar-flow-mcp` service, give it a
+unique container name and a unique published port, and use separate volumes:
 
 ```yaml
 services:
@@ -71,7 +79,9 @@ volumes:
   bob-data:
 ```
 
-Each MCP client points at the appropriate port.
+Each MCP client points at the appropriate port. See
+[Why single-user?](/explanation/design-decisions/#single-user-via-env-vars)
+for the reasoning.
 
 ## Security defaults
 
@@ -88,7 +98,7 @@ Two ways to reach it remotely:
 - **Public (Claude.ai web/mobile + Claude Code)** — set `OAUTH_PUBLIC_URL` to
   turn the server into its own OAuth 2.1 Authorization Server (+
   `OAUTH_ALLOWED_EMAIL` + `OAUTH_TRUSTED_PROXIES`) and front it with a TLS reverse
-  proxy. See [Exposing Securely](exposing-securely.md) for the full Caddy +
+  proxy. See [Expose the server securely](/guides/expose-securely/) for the full Caddy +
   Authelia walkthrough.
 
 ## Image

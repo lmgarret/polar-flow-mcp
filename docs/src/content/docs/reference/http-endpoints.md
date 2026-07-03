@@ -1,4 +1,9 @@
-# HTTP Endpoints
+---
+title: HTTP endpoints
+description: The HTTP surface polar-flow-mcp exposes under the http transport, and its authentication postures.
+sidebar:
+  order: 3
+---
 
 When `TRANSPORT=http` (the default), polar-flow-mcp exposes the following
 HTTP endpoints on `BIND_ADDRESS:PORT`.
@@ -40,7 +45,7 @@ There are two supported postures:
   resource_metadata="…"` header; valid Bearer tokens (EdDSA JWTs the server
   signed) are verified locally on every call. This path serves **Claude.ai
   web/mobile and Claude Code** — see
-  [Exposing Securely](../deployment/exposing-securely.md).
+  [Expose the server securely](/guides/expose-securely/).
 
 Because the server provides Dynamic Client Registration, **Claude Code (CLI)
 works over the public OAuth path too** — no separate transport needed.

@@ -1,4 +1,9 @@
-# Environment Variables
+---
+title: Environment variables
+description: Every environment variable polar-flow-mcp reads, with defaults and behaviour notes.
+sidebar:
+  order: 2
+---
 
 polar-flow-mcp is configured entirely through environment variables (loaded
 from `.env` at startup via [`godotenv`](https://github.com/joho/godotenv)).
@@ -32,11 +37,13 @@ Authorization Server. Clients self-register via Dynamic Client Registration
 validated locally). Browser login on `/mcp/oauth/authorize` is delegated to a
 forward-auth proxy. When `OAUTH_PUBLIC_URL` is unset, none of these apply and
 `/mcp` is unauthenticated (the historical behaviour). See
-[Exposing Securely](../deployment/exposing-securely.md) for the full Caddy +
+[Expose the server securely](/guides/expose-securely/) for the full Caddy +
 Authelia + Claude.ai walkthrough.
 
-When `OAUTH_PUBLIC_URL` **is** set, the server is fail-closed: `OAUTH_ALLOWED_EMAIL`
-and `OAUTH_TRUSTED_PROXIES` are mandatory.
+:::note
+When `OAUTH_PUBLIC_URL` **is** set, the server is fail-closed:
+`OAUTH_ALLOWED_EMAIL` and `OAUTH_TRUSTED_PROXIES` are mandatory.
+:::
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -68,4 +75,5 @@ API. They are now ignored — you can delete them from `.env`:
 `DEV_MODE`, `DEV_USER_ID`.
 
 The OAuth flow, SQLite store, encryption layer, and reverse-proxy auth
-contract no longer exist. See [Security](../security.md) for the new model.
+contract no longer exist. See the [security model](/explanation/security-model/)
+for the current design.

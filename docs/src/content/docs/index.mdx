@@ -1,0 +1,83 @@
+---
+title: polar-flow-mcp
+description: Single-user MCP server that drives the reverse-engineered Polar Flow web API from Claude — create, list, and delete training targets in plain language.
+template: splash
+hero:
+  tagline: Schedule structured workouts in your Polar Flow diary from a Claude conversation — no app, no UI navigation.
+  image:
+    file: ../../assets/claude-tool-call.png
+  actions:
+    - text: Get started
+      link: /tutorials/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/lmgarret/polar-flow-mcp
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+**"Schedule a 5×1km threshold session for Thursday."** Claude calls
+`create_training_target` and the workout appears in your Polar Flow diary.
+
+polar-flow-mcp is a single-user [MCP](https://modelcontextprotocol.io) server
+that drives the reverse-engineered **Polar Flow web API** (`flow.polar.com`) —
+the same API the browser app uses — so Claude can perform *write* operations the
+official read-only AccessLink API cannot.
+
+## Find your way around
+
+These docs follow the [Diátaxis](https://diataxis.fr/) framework — four kinds of
+documentation for four kinds of need.
+
+<CardGrid>
+	<LinkCard
+		title="Tutorials"
+		href="/tutorials/getting-started/"
+		description="Learning-oriented. Go from a fresh checkout to talking to Claude in about five minutes."
+	/>
+	<LinkCard
+		title="How-to Guides"
+		href="/guides/create-training-targets/"
+		description="Task-oriented. Deploy, expose securely, create workouts, install the skill."
+	/>
+	<LinkCard
+		title="Reference"
+		href="/reference/mcp-tools/"
+		description="Information-oriented. Every MCP tool, environment variable, and HTTP endpoint."
+	/>
+	<LinkCard
+		title="Explanation"
+		href="/explanation/why-flow-web-api/"
+		description="Understanding-oriented. Why the web API, the design decisions, and the security model."
+	/>
+</CardGrid>
+
+## What it does
+
+<CardGrid>
+	<Card title="Write to your diary" icon="pencil">
+		Create, edit, and delete structured training targets (warmup / repeat /
+		cooldown) — the AccessLink API can only read.
+	</Card>
+	<Card title="Read your training" icon="open-book">
+		List completed sessions, per-week totals, and aggregated progress
+		summaries over any date range.
+	</Card>
+	<Card title="Single binary" icon="rocket">
+		A <code>FROM scratch</code> image (~14 MB), no database, no CGO — just a
+		chmod-600 cookie jar for session persistence.
+	</Card>
+	<Card title="Public or private" icon="setting">
+		Run it on localhost for Claude Code, or expose it as a Claude.ai custom
+		connector behind its own OAuth 2.1 server.
+	</Card>
+</CardGrid>
+
+:::caution[Not an official Polar API]
+This server drives the unofficial, reverse-engineered Polar Flow web API. Use a
+dedicated Polar test account where you can. No warranty. See the
+[security model](/explanation/security-model/).
+:::
