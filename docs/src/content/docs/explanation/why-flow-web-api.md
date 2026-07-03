@@ -43,7 +43,7 @@ hand-rolled HTTP. See [Design decisions](/explanation/design-decisions/) for the
 the wrapper and why each quirk exists.
 
 ```d2
-direction: right
+direction: down
 
 claude: Claude client
 

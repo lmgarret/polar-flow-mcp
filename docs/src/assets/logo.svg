@@ -7,5 +7,5 @@
       <path d="M24 4 L25.05 6.95 L28 8 L25.05 9.05 L24 12 L22.95 9.05 L20 8 L22.95 6.95 Z" fill="black"/>
     </mask>
   </defs>
-  <circle cx="16" cy="16" r="16" fill="#e5484d" mask="url(#logo-sparkle-cutout)"/>
+  <circle cx="16" cy="16" r="16" fill="#e5322c" mask="url(#logo-sparkle-cutout)"/>
 </svg>

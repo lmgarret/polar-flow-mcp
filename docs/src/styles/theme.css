@@ -3,9 +3,9 @@
 
 :root {
 	/* Dark mode (default). Red accent + warm-neutral greys. */
-	--sl-color-accent-low: #3a1416;
-	--sl-color-accent: #e5484d;
-	--sl-color-accent-high: #ffc4c4;
+	--sl-color-accent-low: #3d1310;
+	--sl-color-accent: #e5322c;
+	--sl-color-accent-high: #ffb7ac;
 
 	--sl-color-white: #f4f4f6;
 	--sl-color-gray-1: #e7e7ea;
@@ -23,9 +23,9 @@
 }
 
 :root[data-theme='light'] {
-	--sl-color-accent-low: #ffe0e1;
-	--sl-color-accent: #d21f26;
-	--sl-color-accent-high: #4c1416;
+	--sl-color-accent-low: #ffe0dc;
+	--sl-color-accent: #cc1d13;
+	--sl-color-accent-high: #4c1310;
 
 	--sl-color-white: #19191d;
 	--sl-color-gray-1: #26262b;
