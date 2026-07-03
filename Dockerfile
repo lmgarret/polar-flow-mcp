@@ -3,6 +3,10 @@
 # Stage 1: Build
 FROM golang:1.26-alpine AS builder
 
+ARG VERSION=dev
+ARG COMMIT=none
+ARG DATE=unknown
+
 WORKDIR /build
 
 # Copy dependency manifests first for layer caching
@@ -12,7 +16,7 @@ RUN CGO_ENABLED=0 go mod download
 # Copy source and build
 COPY . .
 RUN CGO_ENABLED=0 go build \
-    -ldflags="-w -s" \
+    -ldflags="-w -s -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}" \
     -o polar-flow-mcp \
     ./cmd/polar-flow-mcp
 

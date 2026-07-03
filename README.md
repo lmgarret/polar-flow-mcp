@@ -37,7 +37,17 @@ re-used on subsequent runs. The password is held in memory only.
 
 ## Running with Docker
 
-A pre-built image is published to GHCR on every push to `main`.
+Pre-built multi-arch images (`linux/amd64`, `linux/arm64`) are published to GHCR:
+
+| Tag | Points to |
+|-----|-----------|
+| `latest` | Newest tagged release (recommended) |
+| `X.Y.Z`, `X.Y`, `X` | Semver ladder — pin as tightly as you like |
+| `edge` | Rolling build of `main` |
+| `sha-<short>` | Exact commit |
+
+Tagged releases (`vX.Y.Z`) also get AI-summarised release notes on the
+[Releases page](https://github.com/lmgarret/polar-flow-mcp/releases).
 
 ### HTTP transport (recommended for persistent servers)
 
