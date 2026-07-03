@@ -2,10 +2,16 @@
    Overrides Starlight's accent (red) and gray (neutral grey) scales. */
 
 :root {
-	/* Dark mode (default). Red accent + warm-neutral greys. */
+	/* Dark mode (default). Red accent + warm-neutral greys.
+	   In dark mode Starlight uses accent-high as the accent *text* colour
+	   (links, headings, active nav), so it must be the logo red — not a light
+	   tint — or the accent reads pink. */
 	--sl-color-accent-low: #3d1310;
 	--sl-color-accent: #e5322c;
-	--sl-color-accent-high: #ffb7ac;
+	--sl-color-accent-high: #e5322c;
+	/* Force the derived accent-text token to the logo red too, regardless of
+	   Starlight's light/dark mapping. */
+	--sl-color-text-accent: #e5322c;
 
 	--sl-color-white: #f4f4f6;
 	--sl-color-gray-1: #e7e7ea;
@@ -16,6 +22,11 @@
 	--sl-color-gray-6: #26262b;
 	--sl-color-black: #19191d;
 
+	/* Text that sits on an accent-coloured surface (active sidebar entry,
+	   primary buttons). The accent is a saturated red here, so this must be
+	   white — the default (--sl-color-black) renders as dark text on red. */
+	--sl-color-text-invert: #ffffff;
+
 	/* Warm the page background very slightly toward the red end. */
 	--sl-color-bg: #19191d;
 	--sl-color-bg-nav: #1f1f24;
@@ -24,8 +35,14 @@
 
 :root[data-theme='light'] {
 	--sl-color-accent-low: #ffe0dc;
-	--sl-color-accent: #cc1d13;
+	/* Match the logo red exactly. */
+	--sl-color-accent: #e5322c;
 	--sl-color-accent-high: #4c1310;
+	--sl-color-text-accent: #e5322c;
+
+	/* Keep accent-surface text white here too (light-mode accent surfaces are
+	   dark red). Set explicitly so the dark :root override above can't leak in. */
+	--sl-color-text-invert: #ffffff;
 
 	--sl-color-white: #19191d;
 	--sl-color-gray-1: #26262b;

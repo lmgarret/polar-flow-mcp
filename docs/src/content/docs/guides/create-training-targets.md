@@ -10,7 +10,7 @@ workouts through plain-language Claude conversations. This guide covers the
 intensity vocabulary and the create / list / edit / delete flow, with worked
 examples.
 
-![Claude calling create_training_target](../../../assets/claude-tool-call.png)
+![Claude calling create_training_target](../../../assets/claude-tool-call.webp)
 
 :::tip
 Install the [polar-flow skill](/guides/install-the-skill/) first. It teaches Claude
