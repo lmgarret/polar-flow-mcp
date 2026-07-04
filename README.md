@@ -37,7 +37,7 @@ re-used on subsequent runs. The password is held in memory only.
 
 ## Running with Docker
 
-Pre-built multi-arch images (`linux/amd64`, `linux/arm64`) are published to GHCR:
+Pre-built `linux/amd64` images are published to GHCR:
 
 | Tag | Points to |
 |-----|-----------|
