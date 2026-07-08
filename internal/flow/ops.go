@@ -13,6 +13,7 @@ import (
 
 	"github.com/ogen-go/ogen/validate"
 
+	"github.com/lmgarret/polar-flow-mcp/internal/convert"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
 
@@ -202,7 +203,7 @@ func (c *Client) GetCalendarWeekSummary(ctx context.Context, from, to time.Time)
 		return nil, fmt.Errorf("flow: calendar week summary: range exceeds Polar's 45-day limit")
 	}
 	res, err := c.API.GetCalendarWeekSummary(ctx,
-		&gen.GetCalendarWeekSummaryReq{From: formatDayMonthYear(from), To: formatDayMonthYear(to)},
+		&gen.GetCalendarWeekSummaryReq{From: convert.ToDotDMY(from), To: convert.ToDotDMY(to)},
 		gen.GetCalendarWeekSummaryParams{XRequestedWith: gen.XRequestedWithXMLHttpRequest},
 	)
 	if err != nil {
@@ -225,9 +226,12 @@ func (c *Client) GetCalendarWeekSummary(ctx context.Context, from, to time.Time)
 // supplied [from, to] range. `group` filters to a single sportId (use 0 for all
 // sports). `timeFrame` is the bucket size for breakdowns: "6w", "3m", or "1y".
 func (c *Client) GetProgressViewSummary(ctx context.Context, from, to time.Time, group, timeFrame string) (*gen.ProgressViewSummary, error) {
+	// Progress endpoints want DD-MM-YYYY (dashes, zero-padded) — distinct from
+	// the D.M.YYYY dot form the calendar endpoints use. Sending the dot form
+	// here happened to work only on empty-range accounts.
 	req := &gen.GetProgressViewSummaryReq{
-		From: formatDayMonthYear(from),
-		To:   formatDayMonthYear(to),
+		From: convert.ToDashDMY(from),
+		To:   convert.ToDashDMY(to),
 	}
 	if group != "" {
 		req.Group.SetTo(group)
@@ -327,8 +331,8 @@ func (c *Client) ListTrainingTargets(ctx context.Context, from, to time.Time) ([
 // Dates are converted to the D.M.YYYY format expected by the upstream API.
 func (c *Client) GetCalendarEvents(ctx context.Context, from, to time.Time) ([]gen.CalendarEvent, error) {
 	res, err := c.API.GetCalendarEvents(ctx, gen.GetCalendarEventsParams{
-		Start: formatDayMonthYear(from),
-		End:   formatDayMonthYear(to),
+		Start: convert.ToDotDMY(from),
+		End:   convert.ToDotDMY(to),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("flow: get calendar events: %w", err)
@@ -449,10 +453,3 @@ func (c *Client) ListSports(ctx context.Context) (gen.SportsMap, error) {
 		return nil, fmt.Errorf("flow: get sports: unexpected response %T", res)
 	}
 }
-
-// formatDayMonthYear formats t as "D.M.YYYY" — the format the calendar endpoint
-// expects (single-digit days/months, no zero-padding).
-func formatDayMonthYear(t time.Time) string {
-	return fmt.Sprintf("%d.%d.%d", t.Day(), int(t.Month()), t.Year())
-}
-

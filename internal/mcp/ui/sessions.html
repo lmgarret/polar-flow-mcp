@@ -185,8 +185,8 @@ function sessionDate(s) {
 function sportInfo(s) {
   s = s || {};
   const ex = firstExercise(s);
-  const n = String(s.sportName ?? s.sport ?? s.sportParent ?? ex?.sportParent ?? "").toLowerCase();
-  const id = Number(s.sportId ?? s.sport?.id ?? ex?.sport?.id ?? 0);
+  const n = String(s.sport_name ?? s.sportName ?? s.sport ?? s.sportParent ?? ex?.sportParent ?? "").toLowerCase();
+  const id = Number(s.sport_id ?? s.sportId ?? s.sport?.id ?? ex?.sport?.id ?? 0);
   if (n.includes("run") || n.includes("course") || id===1)                       return {color:"#d9232e", label:"RUN"};
   if (n.includes("cycl")||n.includes("bik")||n.includes("vélo")||n.includes("velo")||id===2) return {color:"#ff8c00", label:"RIDE"};
   if (n.includes("swim")||n.includes("natation"))                                return {color:"#0099cc", label:"SWIM"};
@@ -297,9 +297,11 @@ function renderSessionList(sessions) {
     <div class="multi-sessions">
       ${sessions.map((s,i) => {
         const sp = sportInfo(s);
-        const dur = durToSecs(s.duration);
-        const dist = s.distance ?? 0;
-        const name = s.sportName ?? s.name ?? "Session";
+        // Backend now emits canonical fields (session_duration_s, distance_m,
+        // sport_name); keep the raw-shape fallbacks for resilience.
+        const dur = s.session_duration_s ?? durToSecs(s.duration);
+        const dist = s.distance_m ?? s.distance ?? 0;
+        const name = s.name ?? s.training_session_name ?? s.sport_name ?? s.sportName ?? "Session";
         return `<div class="session-item" id="si-${i}" onclick="fetchSummary(activeSessions[${i}],this)">
           <span class="si-sport" style="color:${sp.color}">${sp.label}</span>
           <span class="si-name">${esc(name)}</span>
@@ -332,17 +334,22 @@ async function fetchSummary(session, el) {
 
 function renderSummaryData(s, container, fallbackSession) {
   if (!s) { container.innerHTML = `<div class="empty-state">No data returned.</div>`; return; }
+  // Backend now emits a canonical summary DTO (session_duration_s, distance_m,
+  // hr_avg/hr_max, name); the raw-shape and per-exercise fallbacks stay for
+  // resilience against un-normalised payloads.
   const ex = firstExercise(s);
   const hr = ex?.trainingStatistic?.HEART_RATE ?? {};
-  const name = (s.trainingSessionName && s.trainingSessionName.trim())
-    || fallbackSession?.sportName || sportInfo(fallbackSession ?? ex ?? s).label || "Session";
+  const name = s.name ?? s.training_session_name
+    ?? (s.trainingSessionName && s.trainingSessionName.trim() ? s.trainingSessionName : null)
+    ?? fallbackSession?.name ?? fallbackSession?.sport_name ?? fallbackSession?.sportName
+    ?? sportInfo(fallbackSession ?? ex ?? s).label ?? "Session";
   const dateStr = sessionDate(s) || sessionDate(fallbackSession ?? {}) || selectedDate || "";
-  // duration: summary → ISO-8601 string; list fallback → milliseconds.
-  const dur = durToSecs(s.duration ?? ex?.duration ?? fallbackSession?.duration);
-  const dist = s.distance ?? ex?.distance ?? fallbackSession?.distance ?? 0;
-  const hrAvg = s.hrAverage ?? hr.avg ?? fallbackSession?.hrAvg;
-  const hrMax = s.hrMax ?? hr.max;
-  const kcal = s.kiloCalories ?? ex?.calories ?? fallbackSession?.calories;
+  const dur = s.session_duration_s ?? fallbackSession?.session_duration_s
+    ?? durToSecs(s.duration ?? ex?.duration ?? fallbackSession?.duration);
+  const dist = s.distance_m ?? s.distance ?? ex?.distance ?? fallbackSession?.distance_m ?? fallbackSession?.distance ?? 0;
+  const hrAvg = s.hr_avg ?? s.hrAverage ?? hr.avg ?? fallbackSession?.hr_avg ?? fallbackSession?.hrAvg;
+  const hrMax = s.hr_max ?? s.hrMax ?? hr.max;
+  const kcal = s.calories ?? s.kiloCalories ?? ex?.calories ?? fallbackSession?.calories;
   const pace = fmtPace(dist, dur);
   const sp = sportInfo(fallbackSession ?? ex ?? s);
 

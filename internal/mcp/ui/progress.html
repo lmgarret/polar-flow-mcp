@@ -84,14 +84,16 @@ function prettyLabel(s) {
 function render(sc) {
   if (!sc || sc.type !== "progress_summary") return;
   const d = sc.data ?? {};
-  document.getElementById("hdr-sub").textContent = [d.from, d.to].filter(Boolean).join(" → ");
+  document.getElementById("hdr-sub").textContent = [d.from_date ?? d.from, d.to_date ?? d.to].filter(Boolean).join(" → ");
 
-  // Headline totals (camelCase; totalDuration is a StandardDuration object).
-  const sessions = d.totalTrainingSessionCount ?? 0;
-  const durS = d.totalDuration ? (Number(d.totalDuration.millis)/1000 || Number(d.totalDuration.standardSeconds) || 0) : 0;
-  const dist = d.totalDistance ?? 0;
-  const kcal = d.totalCalories ?? 0;
-  const ascent = d.totalAscent ?? 0;
+  // Headline totals: the backend now emits a canonical DTO (seconds, metres);
+  // the raw camelCase / StandardDuration fallbacks stay for resilience.
+  const sessions = d.number_of_sessions ?? d.totalTrainingSessionCount ?? 0;
+  const durS = d.total_duration_s
+    ?? (d.totalDuration ? (Number(d.totalDuration.millis) / 1000 || Number(d.totalDuration.standardSeconds) || 0) : 0);
+  const dist = d.total_distance_m ?? d.totalDistance ?? 0;
+  const kcal = d.total_kcal ?? d.totalCalories ?? 0;
+  const ascent = d.total_ascent_m ?? d.totalAscent ?? 0;
 
   const statBoxes = [
     {v: String(sessions), l: "Sessions"},
@@ -103,13 +105,13 @@ function render(sc) {
 
   // Per-sport breakdown: prefer distance, fall back to duration. valueForChart
   // is metres for the distance list, milliseconds for the duration list.
-  const sd = d.sportDistributions ?? {};
+  const sd = d.sport_breakdown ?? d.sportDistributions ?? {};
   const sportSrc = sd.distance?.length ? sd.distance : (sd.duration ?? []);
   const sportIsDist = !!sd.distance?.length;
   const sports = sportSrc.map(x => ({ label: x.sportName ?? x.nameForChart ?? "—", value: Number(x.valueForChart) || 0 }));
 
   // Training benefits: trainingBenefitTotal is in milliseconds.
-  const benefits = (d.trainingBenefitDistributionList ?? []).map(x => ({
+  const benefits = (d.training_benefit_breakdown ?? d.trainingBenefitDistributionList ?? []).map(x => ({
     label: prettyLabel(x.nameForChart ?? x.trainingBenefit),
     value: Number(x.trainingBenefitTotal) || 0,
   }));

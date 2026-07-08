@@ -42,6 +42,23 @@ ogen is used because it has the best OpenAPI 3.1 coverage in Go. Its one quirk:
 it rejects the 3.1 nullable-union syntax, so the spec is preprocessed to 3.0.3
 via `internal/flow/preprocess-spec.py` before generation.
 
+## Adapter layer for a unified contract
+
+The Flow web API is internally inconsistent — durations arrive in five encodings,
+dates in ~eight, and units and field names drift endpoint to endpoint (metres vs
+km, km/h vs m/s, `hrAverage` vs `hrAvg`, `""`/`-1`/`" "` used as null). Rather
+than let those quirks reach the model and the MCP apps, a dedicated adapter
+package (`internal/convert`) owns **one canonical, unit-consistent contract** —
+seconds, metres, km/h, bpm, ISO 8601, real nulls — and does all wire conversion
+in one place. `internal/flow` stays a thin transport; `internal/convert` holds
+the pure primitives (`units.go`) and the response DTOs and their mappers
+(`dto.go`). The full contract lives in
+[Units & dates](/reference/units-and-dates/).
+
+This keeps a single seam for the divergences: every tool argument, tool result,
+and MCP-app payload speaks the same language, and the messiness is quarantined to
+one unit-tested package instead of being re-derived ad hoc in each handler.
+
 ## Browser-fingerprint TLS + HTTP/2
 
 `flow.polar.com` sits behind a CloudFront WAF that inspects JA3/JA4 fingerprints

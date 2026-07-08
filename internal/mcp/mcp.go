@@ -159,57 +159,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 					"optional recovery (duration_s) inserted between reps.\n"+
 					"Note: structured work is only expressible via repeat (reps must be ≥ 2). For a "+
 					"single continuous effort with no intervals, omit phases and use a VOLUME target."),
-			mcpgo.Items(map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"type": map[string]any{
-						"type":        "string",
-						"enum":        []string{"warmup", "repeat", "cooldown"},
-						"description": "Phase kind.",
-					},
-					"name": map[string]any{
-						"type": "string",
-						"description": "Optional free-text label for this phase, persisted verbatim by Polar and " +
-							"shown per-phase in the workout breakdown. For a repeat phase this names the work " +
-							"interval (recovery has its own recovery.name). Defaults to a label derived from the " +
-							"phase type when omitted (\"Warm-up\", \"Work\", \"Cool-down\").",
-					},
-					"duration_s": map[string]any{
-						"type":        "integer",
-						"description": "Phase length in seconds. Required for warmup/cooldown.",
-					},
-					"reps": map[string]any{
-						"type":        "integer",
-						"description": "Repeat count for a repeat phase (≥ 2).",
-						"minimum":     2,
-					},
-					"goal": map[string]any{
-						"type":        "object",
-						"description": "Per-rep goal for a repeat phase. Set exactly one of distance_m or duration_s.",
-						"properties": map[string]any{
-							"distance_m": map[string]any{"type": "number", "description": "Goal distance in metres (e.g. 1000 = 1 km)."},
-							"duration_s": map[string]any{"type": "integer", "description": "Goal duration in seconds."},
-						},
-					},
-					"intensity": map[string]any{
-						"type":        "object",
-						"description": "Target intensity for the work portion of a repeat. Set hr_zone or label; hr_zone wins if both given. Omit for no zone (open intensity).",
-						"properties": map[string]any{
-							"label":   map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}, "description": "Effort label, mapped to an HR zone."},
-							"hr_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar HR zone 1–5, used as both lower and upper bound."},
-						},
-					},
-					"recovery": map[string]any{
-						"type":        "object",
-						"description": "Optional easy recovery inserted between reps of a repeat phase.",
-						"properties": map[string]any{
-							"duration_s": map[string]any{"type": "integer", "description": "Recovery duration in seconds."},
-							"name":       map[string]any{"type": "string", "description": "Optional free-text label for the recovery phase (default \"Recovery\")."},
-						},
-					},
-				},
-				"required": []string{"type"},
-			}),
+			mcpgo.Items(phaseItemSchema()),
 		),
 	)
 	ct.Meta = uiMeta("ui://polar-flow/targets.html")
@@ -289,57 +239,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Ordered workout phases — identical shape to create_training_target.phases "+
 				"(warmup / repeat / cooldown; distances in metres, durations in seconds). "+
 				"Omit (and set duration_s or distance_m) to replace with a VOLUME target."),
-			mcpgo.Items(map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"type": map[string]any{
-						"type":        "string",
-						"enum":        []string{"warmup", "repeat", "cooldown"},
-						"description": "Phase kind.",
-					},
-					"name": map[string]any{
-						"type": "string",
-						"description": "Optional free-text label for this phase, persisted verbatim by Polar and " +
-							"shown per-phase in the workout breakdown. For a repeat phase this names the work " +
-							"interval (recovery has its own recovery.name). Defaults to a label derived from the " +
-							"phase type when omitted (\"Warm-up\", \"Work\", \"Cool-down\").",
-					},
-					"duration_s": map[string]any{
-						"type":        "integer",
-						"description": "Phase length in seconds. Required for warmup/cooldown.",
-					},
-					"reps": map[string]any{
-						"type":        "integer",
-						"description": "Repeat count for a repeat phase (≥ 2).",
-						"minimum":     2,
-					},
-					"goal": map[string]any{
-						"type":        "object",
-						"description": "Per-rep goal for a repeat phase. Set exactly one of distance_m or duration_s.",
-						"properties": map[string]any{
-							"distance_m": map[string]any{"type": "number", "description": "Goal distance in metres (e.g. 1000 = 1 km)."},
-							"duration_s": map[string]any{"type": "integer", "description": "Goal duration in seconds."},
-						},
-					},
-					"intensity": map[string]any{
-						"type":        "object",
-						"description": "Target intensity for the work portion of a repeat. Set hr_zone or label; hr_zone wins if both given.",
-						"properties": map[string]any{
-							"label":   map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}, "description": "Effort label, mapped to an HR zone."},
-							"hr_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar HR zone 1–5, used as both lower and upper bound."},
-						},
-					},
-					"recovery": map[string]any{
-						"type":        "object",
-						"description": "Optional easy recovery inserted between reps of a repeat phase.",
-						"properties": map[string]any{
-							"duration_s": map[string]any{"type": "integer", "description": "Recovery duration in seconds."},
-							"name":       map[string]any{"type": "string", "description": "Optional free-text label for the recovery phase (default \"Recovery\")."},
-						},
-					},
-				},
-				"required": []string{"type"},
-			}),
+			mcpgo.Items(phaseItemSchema()),
 		),
 	), withLogging("update_training_target", UpdateTrainingTargetHandler(fc)))
 
@@ -484,4 +384,62 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 	)
 	gsd.Meta = uiMeta("ui://polar-flow/sessions.html")
 	s.AddTool(gsd, withLogging("get_training_session_details", GetTrainingSessionDetailsHandler(fc)))
+}
+
+// phaseItemSchema returns the JSON-schema for one entry of the `phases` array.
+// create_training_target and update_training_target share this identical shape
+// (both take a full create-style body), so the schema lives in one place to
+// stop the two copies from drifting.
+func phaseItemSchema() map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"type": map[string]any{
+				"type":        "string",
+				"enum":        []string{"warmup", "repeat", "cooldown"},
+				"description": "Phase kind.",
+			},
+			"name": map[string]any{
+				"type": "string",
+				"description": "Optional free-text label for this phase, persisted verbatim by Polar and " +
+					"shown per-phase in the workout breakdown. For a repeat phase this names the work " +
+					"interval (recovery has its own recovery.name). Defaults to a label derived from the " +
+					"phase type when omitted (\"Warm-up\", \"Work\", \"Cool-down\").",
+			},
+			"duration_s": map[string]any{
+				"type":        "integer",
+				"description": "Phase length in seconds. Required for warmup/cooldown.",
+			},
+			"reps": map[string]any{
+				"type":        "integer",
+				"description": "Repeat count for a repeat phase (≥ 2).",
+				"minimum":     2,
+			},
+			"goal": map[string]any{
+				"type":        "object",
+				"description": "Per-rep goal for a repeat phase. Set exactly one of distance_m or duration_s.",
+				"properties": map[string]any{
+					"distance_m": map[string]any{"type": "number", "description": "Goal distance in metres (e.g. 1000 = 1 km)."},
+					"duration_s": map[string]any{"type": "integer", "description": "Goal duration in seconds."},
+				},
+			},
+			"intensity": map[string]any{
+				"type":        "object",
+				"description": "Target intensity for the work portion of a repeat. Set hr_zone or label; hr_zone wins if both given. Omit for no zone (open intensity).",
+				"properties": map[string]any{
+					"label":   map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}, "description": "Effort label, mapped to an HR zone."},
+					"hr_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar HR zone 1–5, used as both lower and upper bound."},
+				},
+			},
+			"recovery": map[string]any{
+				"type":        "object",
+				"description": "Optional easy recovery inserted between reps of a repeat phase.",
+				"properties": map[string]any{
+					"duration_s": map[string]any{"type": "integer", "description": "Recovery duration in seconds."},
+					"name":       map[string]any{"type": "string", "description": "Optional free-text label for the recovery phase (default \"Recovery\")."},
+				},
+			},
+		},
+		"required": []string{"type"},
+	}
 }
