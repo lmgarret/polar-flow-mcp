@@ -197,7 +197,8 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"phases. Always read with this before update_training_target so you can "+
 				"preserve the existing structure (especially the exerciseTargets ids). "+
 				"Note: on read-back the server fills phase durations (a DISTANCE phase shows "+
-				"duration \"00:00:00\") and rolls each exerciseTarget's duration up from its phases.",
+				"duration \"00:00:00\") and rolls each exerciseTarget's duration up from its phases. "+
+				"description reads back as null when the target was created without one.",
 		),
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
 			mcpgo.Description("Numeric target id from list_training_targets.")),

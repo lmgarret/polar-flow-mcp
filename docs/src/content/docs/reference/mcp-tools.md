@@ -125,7 +125,8 @@ Return the full server-normalized view of a single target. Use this before
 | `target_id` | integer | yes |
 
 **Response:** JSON `TrainingTargetCreate` object (same shape as the create
-payload, plus server-assigned ids and rolled-up totals).
+payload, plus server-assigned ids and rolled-up totals). `description` reads back
+as `null` when the target was created without one.
 
 ## `update_training_target`
 
@@ -174,9 +175,10 @@ right-hand "week totals" strip in the Polar Flow diary.
 Range is capped at **45 days** by the server. Larger ranges return a 400
 that's surfaced as a tool error.
 
-**Response:** JSON array of week-summary objects. Item shape is currently
-TBD upstream (test accounts return `[]`); the tool surfaces the raw JSON so
-callers can adapt as the spec firms up.
+**Response:** JSON array of week-summary objects — one per ISO week in range.
+The element shape is currently TBD upstream: the objects come back empty
+(`[{}, {}, …]`) even on accounts with recorded sessions, so the tool surfaces the
+raw JSON as-is for callers to adapt as the spec firms up.
 
 ## `get_progress_summary`
 
