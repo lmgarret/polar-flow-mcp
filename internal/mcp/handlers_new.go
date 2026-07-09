@@ -9,6 +9,7 @@ import (
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/lmgarret/polar-flow-mcp/internal/convert"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
@@ -120,9 +121,10 @@ func GetProgressSummaryHandler(fc *flow.Client) func(context.Context, mcpgo.Call
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		body, _ := json.MarshalIndent(summary, "", "  ")
+		dto := convert.FromWireProgressSummary(summary, from.Format(isoDate), to.Format(isoDate))
+		body, _ := json.MarshalIndent(dto, "", "  ")
 		result := mcpgo.NewToolResultText(string(body))
-		result.StructuredContent = map[string]any{"type": "progress_summary", "data": summary}
+		result.StructuredContent = map[string]any{"type": "progress_summary", "data": dto}
 		return result, nil
 	}
 }

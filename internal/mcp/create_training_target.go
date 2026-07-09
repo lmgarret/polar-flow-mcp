@@ -3,10 +3,10 @@ package mcp
 import (
 	"context"
 	"fmt"
-	"time"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/lmgarret/polar-flow-mcp/internal/convert"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
@@ -42,14 +42,15 @@ func buildTrainingTargetCreate(req mcpgo.CallToolRequest) (*gen.TrainingTargetCr
 	if date == "" {
 		return nil, "date is required (YYYY-MM-DD)"
 	}
-	if _, err := time.Parse(isoDate, date); err != nil {
-		return nil, "date must be ISO 8601 YYYY-MM-DD: " + err.Error()
-	}
 	clock := req.GetString("time", "18:00")
-	if _, err := time.Parse("15:04", clock); err != nil {
-		return nil, "time must be HH:MM (24h): " + err.Error()
+	// Targets send a tz-less local datetime; the server applies the account's
+	// timezone. Shared assembly path with create_training_session (which sends
+	// the offset form) — see convert.ParseLocalDateTime.
+	when, err := convert.ParseLocalDateTime(date, clock)
+	if err != nil {
+		return nil, err.Error()
 	}
-	sportID := req.GetInt("sport_id", 1)
+	sportID := argInt(req, "sport_id", 1)
 	description := req.GetString("description", "")
 
 	args, _ := req.GetArguments()["phases"].([]any)
@@ -83,32 +84,13 @@ func buildTrainingTargetCreate(req mcpgo.CallToolRequest) (*gen.TrainingTargetCr
 	body := &gen.TrainingTargetCreate{
 		Type:            targetType,
 		Name:            name,
-		Datetime:        date + "T" + clock,
+		Datetime:        convert.WireDateTimeTZLess(when),
 		ExerciseTargets: []gen.ExerciseTarget{et},
 	}
 	if description != "" {
 		body.Description.SetTo(description)
 	}
 	return body, ""
-}
-
-// hrZoneForLabel maps an effort label to a (lower, upper) Polar HR zone pair.
-// Conservative defaults — Claude can override by passing hr_zone explicitly.
-func hrZoneForLabel(label string) (int, int, bool) {
-	switch label {
-	case "easy":
-		return 1, 2, true
-	case "aerobic":
-		return 2, 2, true
-	case "tempo":
-		return 3, 3, true
-	case "threshold":
-		return 4, 4, true
-	case "vo2max":
-		return 5, 5, true
-	default:
-		return 0, 0, false
-	}
 }
 
 // buildPhases turns the user-facing flat phase array into Polar Flow's
@@ -248,7 +230,7 @@ func applyIntensity(leaf *gen.PhaseLeaf, intensity map[string]any) {
 		return
 	}
 	if label, ok := intensity["label"].(string); ok {
-		if lo, hi, ok := hrZoneForLabel(label); ok {
+		if lo, hi, ok := convert.HRZoneForLabel(label); ok {
 			leaf.IntensityType = "HEART_RATE_ZONES"
 			leaf.LowerZone.SetTo(float64(lo))
 			leaf.UpperZone.SetTo(float64(hi))
@@ -261,16 +243,12 @@ func goalHasFloat(m map[string]any, key string) bool {
 	return ok && v > 0
 }
 
-// goalDuration extracts an int seconds value and formats it as the HH:MM:SS
-// string the API wants.
+// goalDuration extracts an int seconds value from the args map and formats it
+// as the HH:MM:SS string the training-target endpoints want.
 func goalDuration(m map[string]any, key string) (string, bool) {
 	v, ok := m[key].(float64)
 	if !ok || v <= 0 {
 		return "", false
 	}
-	secs := int(v)
-	h := secs / 3600
-	min := (secs % 3600) / 60
-	s := secs % 60
-	return fmt.Sprintf("%02d:%02d:%02d", h, min, s), true
+	return convert.SecondsToClock(int(v)), true
 }

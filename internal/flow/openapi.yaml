@@ -2687,8 +2687,11 @@ components:
           description: Display name shown in the diary
         description:
           type: string
-          description: Free-text notes. Empty string when not provided (not null).
+          nullable: true
           default: ''
+          description: Free-text notes. The create form sends an empty string when not
+            provided, but the server stores and returns `null` on read-back — so this
+            must be nullable to decode a target created without a description.
         datetime:
           type: string
           description: 'Local date-time of the planned workout, ISO 8601 without timezone offset

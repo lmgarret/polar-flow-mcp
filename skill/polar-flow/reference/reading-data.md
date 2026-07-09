@@ -75,7 +75,17 @@ zeroed result means "no data in range", not a failure.
 
 ## Unit reminders on read
 
-Returned values follow the wire API, which is not always self-consistent across
-endpoints (e.g. some durations come back in milliseconds, distances in metres
-as floats). Read field-by-field; don't assume a unit carries across tools.
-Distances are metres; convert to km for display only.
+Returned values follow **one canonical contract** — the MCP layer's adapter
+normalises the inconsistent wire encodings before you ever see them. Trust the
+field-name suffix:
+
+- durations in **seconds** (`*_s`), distances in **metres** (`*_m`), speed in
+  **km/h** (`*_kmh`), heart rate in **bpm**, dates as **ISO 8601**.
+- absent values are **omitted** (real nulls) — not `-1`, `0`, or `""` sentinels.
+- distances are metres; convert to km for display only.
+
+Caveat: a few deep, partly-unpinned payloads still pass through raw and are the
+exception to the above — the `sport_breakdown` / `training_benefit_breakdown`
+lists inside `get_progress_summary`, the `get_calendar_week_summary` items, and
+the lap/sample detail from `get_training_session_details`. Read those
+field-by-field.

@@ -125,7 +125,8 @@ Return the full server-normalized view of a single target. Use this before
 | `target_id` | integer | yes |
 
 **Response:** JSON `TrainingTargetCreate` object (same shape as the create
-payload, plus server-assigned ids and rolled-up totals).
+payload, plus server-assigned ids and rolled-up totals). `description` reads back
+as `null` when the target was created without one.
 
 ## `update_training_target`
 
@@ -174,9 +175,10 @@ right-hand "week totals" strip in the Polar Flow diary.
 Range is capped at **45 days** by the server. Larger ranges return a 400
 that's surfaced as a tool error.
 
-**Response:** JSON array of week-summary objects. Item shape is currently
-TBD upstream (test accounts return `[]`); the tool surfaces the raw JSON so
-callers can adapt as the spec firms up.
+**Response:** JSON array of week-summary objects — one per ISO week in range.
+The element shape is currently TBD upstream: the objects come back empty
+(`[{}, {}, …]`) even on accounts with recorded sessions, so the tool surfaces the
+raw JSON as-is for callers to adapt as the spec firms up.
 
 ## `get_progress_summary`
 
@@ -191,8 +193,13 @@ the supplied range.
 | `group` | string | `MONTH` — time-bucket granularity, **not** a sport filter (likely also `DAY`/`WEEK`/`YEAR`) |
 | `time_frame` | string | `3m` — also accepts `6w`, `1y` |
 
-**Response:** JSON `ProgressViewSummary` object — sport distributions,
-training-benefit distributions, HR-zone totals, fit/fat-zone totals.
+**Response:** canonical progress object — `number_of_sessions`,
+`total_duration_s` (seconds, decoded from the wire's `StandardDuration`
+object), `total_distance_m`, `total_kcal`, `total_ascent_m` / `total_descent_m`,
+plus `from_date` / `to_date` echoing the range. The `sport_breakdown`,
+`heart_rate_zones`, and `training_benefit_breakdown` lists are passed through
+from the wire (their element shapes are only partly pinned upstream). See
+[Units & dates](/reference/units-and-dates/).
 
 ## `create_training_session`
 
@@ -238,7 +245,11 @@ List **completed** training sessions in a date range.
 The tool resolves the numeric user ID by calling `get_user_info` internally,
 so no `user_id` parameter is needed.
 
-**Response:** JSON array of `TrainingSessionSummary` objects.
+**Response:** JSON array of canonical session objects (`id`, `sport_id`,
+`sport_name`, `start_time`, `session_duration_s`, `distance_m`, `hr_avg`,
+`calories`, …). Durations are seconds, distances metres, dates ISO 8601 — see
+[Units & dates](/reference/units-and-dates/). Absent values are omitted rather
+than sent as `-1` / `""`.
 
 ## `get_training_session_summary`
 
@@ -248,6 +259,10 @@ averages, sport, etc.
 | Argument | Type | Required |
 |----------|------|----------|
 | `session_id` | integer | yes |
+
+**Response:** canonical session object — `session_duration_s` (seconds, decoded
+from the wire's ISO-8601 `PTxxM`), `distance_m`, `hr_avg` / `hr_max` (bpm),
+`calories`, `start_time` (ISO 8601). See [Units & dates](/reference/units-and-dates/).
 
 ## `get_training_session_details`
 
@@ -260,6 +275,11 @@ user asks about pace splits, HR zone time, or per-lap stats.
 
 ## Behaviour notes
 
+- **Units & dates.** Every tool speaks one canonical contract — durations in
+  seconds (`*_s`), distances in metres (`*_m`), speed in km/h (`*_kmh`), heart
+  rate in bpm, ISO 8601 dates — regardless of the many encodings the underlying
+  Flow endpoints use. The adapter (`internal/convert`) does the conversion. See
+  [Units & dates](/reference/units-and-dates/) for the full table.
 - **Time zones.** `create_training_target` sends a local ISO datetime
   (`YYYY-MM-DDTHH:MM` with no offset). The Polar server applies the user's
   configured timezone. Make sure your test account's timezone matches your

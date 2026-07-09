@@ -30,7 +30,8 @@ and silent refresh.
 ## Project Conventions
 
 - Go 1.26, module `github.com/lmgarret/polar-flow-mcp`
-- Layout: `cmd/polar-flow-mcp/main.go` + `internal/{config,flow,mcp}/`
+- Layout: `cmd/polar-flow-mcp/main.go` + `internal/{config,convert,flow,mcp}/`
+  (`convert` is the adapter: canonical units/dates + response DTOs)
 - Logging: `log/slog` (stdlib)
 - Docker: `golang:1.26-alpine` builder → `FROM scratch` final; `CGO_ENABLED=0`,
   `-ldflags="-w -s"`, copy `ca-certificates.crt`
@@ -45,6 +46,7 @@ and silent refresh.
 |----------|-----|
 | **Reverse-engineered Flow web API** (NOT the official AccessLink) | AccessLink is read-only. The web API is the only way to create / delete training targets. |
 | **`ogen` for client generation** | Best OpenAPI 3.1 coverage in Go. Quirk: rejects 3.1 nullable union syntax — we preprocess to 3.0.3 via `internal/flow/preprocess-spec.py`. |
+| **Adapter layer (`internal/convert`) owns one canonical unit/date contract** | The Flow web API is internally inconsistent: 5 duration encodings, ~8 date encodings, units and field names that drift endpoint to endpoint. `convert` normalises everything to seconds (`*_s`), metres (`*_m`), km/h (`*_kmh`), bpm, ISO 8601, and real nulls — for tool args, results, and MCP-app payloads. `units.go` = pure primitives (unit-tested); `dto.go` = response DTOs + `gen.*` mappers. `internal/flow` stays a thin transport. Scope is pragmatic: headline read fields are normalised; deep/partly-unpinned payloads (target phase trees, session lap detail, week summary, progress breakdown lists) pass through raw. See `docs/src/content/docs/reference/units-and-dates.md`. |
 | **Single-user via env vars** (`POLAR_EMAIL`, `POLAR_PASSWORD`) | Storing per-user passwords would be a step up in risk over OAuth tokens — passwords often reused, can't be revoked granularly. One container per Polar account is the recommended multi-user pattern. |
 | **Cookies-only persistence** in chmod-600 JSON jar (`COOKIE_JAR_PATH`) | Password stays in env / memory; only the `remember-me` cookie + `FLOW_SESSION` are persisted. Rolling 14d remember-me means an active server never has to re-prompt. |
 | **`X-Requested-With: XMLHttpRequest` on every mutation** (any method ≠ GET, not just `/api/*`) | Play's CSRF filter whitelists this header. Required on `DELETE /training/target/{id}` too — that path sits outside `/api/*`. Without it: `403` with HTML body. Easy footgun. |
@@ -107,3 +109,9 @@ and parameter docs rich enough that a caller never needs to read the spec:
 - **Encode constraints structurally** where it documents the param: `mcp.Enum`
   for fixed value sets, `mcp.DefaultString`/`DefaultNumber` for advertised
   defaults, `min`/`max` on numeric schema fields.
+- **Stick to the canonical contract.** Every arg and result field uses the units
+  and encodings in `internal/convert` (seconds `*_s`, metres `*_m`, km/h `*_kmh`,
+  bpm, ISO 8601 dates, real nulls). Do the wire conversion in `convert`, never
+  ad hoc in a handler — add a primitive to `units.go` or a mapper to `dto.go` and
+  reuse it. The two divergent date/duration paths and three numeric-arg accessors
+  this replaced are exactly what not to reintroduce.

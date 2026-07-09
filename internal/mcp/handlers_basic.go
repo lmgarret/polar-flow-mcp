@@ -11,6 +11,7 @@ import (
 	"github.com/go-faster/jx"
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/lmgarret/polar-flow-mcp/internal/convert"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
@@ -96,7 +97,9 @@ func DeleteTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 			}
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		return mcpgo.NewToolResultText(fmt.Sprintf("Deleted target %d.", id)), nil
+		result := mcpgo.NewToolResultText(fmt.Sprintf("Deleted target %d.", id))
+		result.StructuredContent = map[string]any{"type": "target_deleted", "data": map[string]any{"id": id}}
+		return result, nil
 	}
 }
 
@@ -138,10 +141,11 @@ func ListTrainingSessionsHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		body, _ := json.MarshalIndent(sessions, "", "  ")
+		items := convert.FromWireSessionList(sessions)
+		body, _ := json.MarshalIndent(items, "", "  ")
 		result := mcpgo.NewToolResultText(string(body))
 		result.StructuredContent = map[string]any{
-			"type": "session_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "sessions": sessions,
+			"type": "session_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "sessions": items,
 		}
 		return result, nil
 	}
@@ -161,9 +165,10 @@ func GetTrainingSessionSummaryHandler(fc *flow.Client) func(context.Context, mcp
 			}
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		body, _ := json.MarshalIndent(summary, "", "  ")
+		dto := convert.FromWireSessionSummary(summary)
+		body, _ := json.MarshalIndent(dto, "", "  ")
 		result := mcpgo.NewToolResultText(string(body))
-		result.StructuredContent = map[string]any{"type": "session_summary", "summary": summary}
+		result.StructuredContent = map[string]any{"type": "session_summary", "summary": dto}
 		return result, nil
 	}
 }
@@ -204,19 +209,14 @@ func CreateTrainingSessionHandler(fc *flow.Client) func(context.Context, mcpgo.C
 		if strings.TrimSpace(dateStr) == "" {
 			return mcpgo.NewToolResultError("date is required (YYYY-MM-DD)"), nil
 		}
-		day, err := time.ParseInLocation(isoDate, dateStr, time.Local)
-		if err != nil {
-			return mcpgo.NewToolResultError(fmt.Sprintf("date must be ISO 8601 YYYY-MM-DD: %v", err)), nil
-		}
 		timeStr := req.GetString("time", "18:00")
-		hhmm, err := time.ParseInLocation("15:04", timeStr, time.Local)
+		// Sessions send an offset-bearing local datetime (targets send the
+		// tz-less form) — shared assembly path via convert.ParseLocalDateTime.
+		when, err := convert.ParseLocalDateTime(dateStr, timeStr)
 		if err != nil {
-			return mcpgo.NewToolResultError(fmt.Sprintf("time must be HH:MM 24h: %v", err)), nil
+			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		when := time.Date(day.Year(), day.Month(), day.Day(),
-			hhmm.Hour(), hhmm.Minute(), 0, 0, time.Local)
-		// Format: YYYY-MM-DDTHH:MM±ZZZZ
-		datePayload := when.Format("2006-01-02T15:04-0700")
+		datePayload := convert.WireDateTimeOffset(when)
 
 		duration := int(req.GetFloat("duration_s", 0))
 		if duration <= 0 {
@@ -225,22 +225,18 @@ func CreateTrainingSessionHandler(fc *flow.Client) func(context.Context, mcpgo.C
 
 		body := &gen.TrainingSessionCreate{
 			Date:                         datePayload,
-			Sport:                        int(req.GetFloat("sport_id", 1)),
+			Sport:                        argInt(req, "sport_id", 1),
 			Duration:                     duration,
-			Distance:                     int(req.GetFloat("distance_m", 0)),
-			KiloCalories:                 int(req.GetFloat("kcal", 0)),
+			Distance:                     argInt(req, "distance_m", 0),
+			KiloCalories:                 argInt(req, "kcal", 0),
 			Note:                         req.GetString("note", ""),
 			TrainingSessionName:          name,
 			InterpolatedHeartRateSamples: []jx.Raw{},
 			SaveHeartRateSamples:         false,
 		}
 		// HR: integer-as-string convention, "" when unset.
-		if v := int(req.GetFloat("hr_avg", 0)); v > 0 {
-			body.HrAverage = fmt.Sprintf("%d", v)
-		}
-		if v := int(req.GetFloat("hr_max", 0)); v > 0 {
-			body.HrMax = fmt.Sprintf("%d", v)
-		}
+		body.HrAverage = convert.WireHRString(argInt(req, "hr_avg", 0))
+		body.HrMax = convert.WireHRString(argInt(req, "hr_max", 0))
 		// SpeedAverage: nullable float (km/h). Omit by leaving NilFloat64 zero
 		// (Null:true via SetToNull).
 		body.SpeedAverage.SetToNull()
@@ -252,9 +248,14 @@ func CreateTrainingSessionHandler(fc *flow.Client) func(context.Context, mcpgo.C
 		if err := fc.CreateTrainingSession(ctx, body); err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		return mcpgo.NewToolResultText(fmt.Sprintf(
+		result := mcpgo.NewToolResultText(fmt.Sprintf(
 			"Created training session %q on %s (duration %ds). Note: this writes a real session to your diary and counts toward your training stats.",
-			name, datePayload, duration)), nil
+			name, datePayload, duration))
+		result.StructuredContent = map[string]any{
+			"type": "session_created",
+			"data": map[string]any{"name": name, "start_time": datePayload, "session_duration_s": duration},
+		}
+		return result, nil
 	}
 }
 
@@ -282,4 +283,12 @@ func requireInt(req mcpgo.CallToolRequest, name string) (int64, bool) {
 		return 0, false
 	}
 	return int64(v), true
+}
+
+// argInt reads an integer argument, defaulting when absent. mcp-go normalizes
+// JSON numbers to float64, so we read through GetFloat and truncate. This is the
+// single numeric-arg accessor shared by every handler (previously the codebase
+// mixed GetInt, int(GetFloat), and requireInt for the same job).
+func argInt(req mcpgo.CallToolRequest, name string, def int) int {
+	return int(req.GetFloat(name, float64(def)))
 }

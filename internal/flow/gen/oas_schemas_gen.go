@@ -3011,8 +3011,10 @@ type GetTrainingTargetOK struct {
 	Type GetTrainingTargetOKType `json:"type"`
 	// Display name shown in the diary.
 	Name string `json:"name"`
-	// Free-text notes. Empty string when not provided (not null).
-	Description OptString `json:"description"`
+	// Free-text notes. The create form sends an empty string when not provided, but the
+	// server stores and returns `null` on read-back — so this must be nullable to decode
+	// a target created without a description.
+	Description OptNilString `json:"description"`
 	// Local date-time of the planned workout, ISO 8601 without timezone offset
 	// (e.g. "2026-05-24T10:00"). The server applies the user's timezone setting.
 	Datetime string `json:"datetime"`
@@ -3039,7 +3041,7 @@ func (s *GetTrainingTargetOK) GetName() string {
 }
 
 // GetDescription returns the value of Description.
-func (s *GetTrainingTargetOK) GetDescription() OptString {
+func (s *GetTrainingTargetOK) GetDescription() OptNilString {
 	return s.Description
 }
 
@@ -3074,7 +3076,7 @@ func (s *GetTrainingTargetOK) SetName(val string) {
 }
 
 // SetDescription sets the value of Description.
-func (s *GetTrainingTargetOK) SetDescription(val OptString) {
+func (s *GetTrainingTargetOK) SetDescription(val OptNilString) {
 	s.Description = val
 }
 
@@ -10741,8 +10743,10 @@ type TrainingTargetCreate struct {
 	Type TrainingTargetCreateType `json:"type"`
 	// Display name shown in the diary.
 	Name string `json:"name"`
-	// Free-text notes. Empty string when not provided (not null).
-	Description OptString `json:"description"`
+	// Free-text notes. The create form sends an empty string when not provided, but the
+	// server stores and returns `null` on read-back — so this must be nullable to decode
+	// a target created without a description.
+	Description OptNilString `json:"description"`
 	// Local date-time of the planned workout, ISO 8601 without timezone offset
 	// (e.g. "2026-05-24T10:00"). The server applies the user's timezone setting.
 	Datetime string `json:"datetime"`
@@ -10765,7 +10769,7 @@ func (s *TrainingTargetCreate) GetName() string {
 }
 
 // GetDescription returns the value of Description.
-func (s *TrainingTargetCreate) GetDescription() OptString {
+func (s *TrainingTargetCreate) GetDescription() OptNilString {
 	return s.Description
 }
 
@@ -10790,7 +10794,7 @@ func (s *TrainingTargetCreate) SetName(val string) {
 }
 
 // SetDescription sets the value of Description.
-func (s *TrainingTargetCreate) SetDescription(val OptString) {
+func (s *TrainingTargetCreate) SetDescription(val OptNilString) {
 	s.Description = val
 }
 
