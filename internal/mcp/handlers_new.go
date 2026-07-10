@@ -30,7 +30,10 @@ func GetTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.CallT
 		}
 		body, _ := json.MarshalIndent(t, "", "  ")
 		result := mcpgo.NewToolResultText(string(body))
-		result.StructuredContent = map[string]any{"type": "target_detail", "id": id, "target": t}
+		result.StructuredContent = map[string]any{
+			"type": "target_detail", "id": id, "target": t,
+			"sport_category": convert.SportCategory(t.Name, 0),
+		}
 		return result, nil
 	}
 }

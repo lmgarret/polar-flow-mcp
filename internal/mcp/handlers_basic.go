@@ -76,12 +76,31 @@ func ListTrainingTargetsHandler(fc *flow.Client) func(context.Context, mcpgo.Cal
 			}
 			fmt.Fprintf(&b, "- %d: %s (%s)\n", t.ID, title, t.Start)
 		}
+		items := make([]targetListItem, len(targets))
+		for i, t := range targets {
+			items[i] = targetListItem{
+				ID: t.ID, Title: t.Title, Start: t.Start, URL: t.URL,
+				// Targets carry no sport field; classify the free-text title.
+				SportCategory: convert.SportCategory(t.Title, 0),
+			}
+		}
 		result := mcpgo.NewToolResultText(b.String())
 		result.StructuredContent = map[string]any{
-			"type": "target_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "targets": targets,
+			"type": "target_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "targets": items,
 		}
 		return result, nil
 	}
+}
+
+// targetListItem augments a CalendarTarget with its UI sport category, derived
+// server-side from the title so the targets app reads a field instead of
+// re-deriving the classification client-side.
+type targetListItem struct {
+	ID            int64  `json:"id"`
+	Title         string `json:"title"`
+	Start         string `json:"start"`
+	URL           string `json:"url,omitempty"`
+	SportCategory string `json:"sport_category,omitempty"`
 }
 
 // DeleteTrainingTargetHandler deletes a training target by id.
