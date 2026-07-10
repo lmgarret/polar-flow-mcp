@@ -9,26 +9,28 @@
 html,body{background:#0d0d0d;color:#f0f0f0;font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px}
 body{padding:16px}
 .hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
-.hdr-label{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#d9232e}
-.hdr-sub{font-size:.72rem;color:#555}
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:16px}
-.stat-box{background:#111;border:1px solid #1a1a1a;border-radius:7px;padding:12px 10px 10px}
-.stat-val{font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;font-family:'SF Mono','Fira Code',Consolas,monospace;color:#f0f0f0}
-.stat-lbl{font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#444;margin-top:4px}
-.section-label{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#444;margin:14px 0 8px}
-.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.br-label{font-size:.75rem;color:#888;min-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
-.br-track{flex:1;height:6px;background:#1a1a1a;border-radius:3px;overflow:hidden}
-.br-fill{height:100%;border-radius:3px;min-width:2px;transition:width .4s cubic-bezier(.4,0,.2,1)}
-.br-fill-a{background:#d9232e}
-.br-fill-b{background:#4a90d9}
-.br-val{font-size:.7rem;color:#444;min-width:48px;text-align:right;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;flex-shrink:0}
-.zone-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
-.zone-pill{border-radius:4px;padding:5px 10px;font-size:.72rem;font-weight:700;color:#fff;text-align:center;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
-.z1p{background:#1a3a4a;color:#60a0d0}.z2p{background:#1a3a1a;color:#60c060}.z3p{background:#3a3210;color:#d4b420}.z4p{background:#3a2010;color:#e06020}.z5p{background:#2a0d0d;color:#d9232e}
-.empty-state{color:#444;font-size:.8rem;font-style:italic;padding:12px 0}
-.loading{color:#444;font-size:.8rem;font-style:italic}
-.fade-in{animation:fadeIn .2s ease}
+.hdr-label{font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#e4002b}
+.hdr-sub{font-size:.72rem;color:#666;font-variant-numeric:tabular-nums}
+
+/* Red hero panel */
+.hero{background:linear-gradient(140deg,#e4002b 0%,#c40023 100%);border-radius:16px;padding:20px 18px;display:grid;grid-template-columns:1fr 1fr;gap:22px 14px;margin-bottom:18px}
+.hero-cell{color:#fff;min-width:0}
+.hc-top{height:26px;margin-bottom:8px;display:flex;align-items:center}
+.hc-icon svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.95}
+.hc-val{font-size:1.6rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hc-unit{font-size:.8rem;font-weight:700;margin-left:3px;opacity:.82}
+.hc-lbl{font-size:.68rem;font-weight:600;opacity:.82;margin-top:6px}
+
+.section-label{font-size:.64rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4a4a4a;margin:16px 0 9px}
+.bar-row{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.br-tile{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.br-label{font-size:.76rem;color:#aaa;min-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
+.br-track{flex:1;height:7px;background:#181818;border-radius:4px;overflow:hidden}
+.br-fill{height:100%;border-radius:4px;min-width:2px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.br-val{font-size:.7rem;color:#666;min-width:50px;text-align:right;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;flex-shrink:0}
+.empty-state{color:#4a4a4a;font-size:.8rem;font-style:italic;padding:12px 0}
+.loading{color:#4a4a4a;font-size:.8rem;font-style:italic}
+.fade-in{animation:fadeIn .22s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
@@ -48,37 +50,59 @@ function rpc(method, params) {
   const id = ++msgId;
   return new Promise((resolve,reject) => { pending.set(id,{resolve,reject}); window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*"); });
 }
-rpc("ui/initialize",{protocolVersion:"2026-01-26",appInfo:{name:"polar-progress-ui",version:"2.0"},appCapabilities:{availableDisplayModes:["inline"]}})
+rpc("ui/initialize",{protocolVersion:"2026-01-26",appInfo:{name:"polar-progress-ui",version:"3.0"},appCapabilities:{availableDisplayModes:["inline"]}})
   .then(()=>window.parent.postMessage({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}},"*"));
 
 const esc = s => String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
-function fmtDur(secs) {
-  const s=Math.round(Number(secs)||0); if(!s) return "0m";
-  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60);
-  return h>0 ? `${h}h` : `${m}m`;
+function fmtDurH(secs) { const s=Math.round(Number(secs)||0); if(!s) return {n:"0",u:"m"}; const h=Math.floor(s/3600), m=Math.floor((s%3600)/60); return h>0?{n:String(h),u:"h"}:{n:String(m),u:"m"}; }
+function fmtDurShort(secs){ const d=fmtDurH(secs); return d.n+d.u; }
+function fmtDistKm(m){ const v=Number(m)||0; if(!v) return {n:"0",u:"km"}; return v>=1000?{n:(v/1000).toFixed(1),u:"km"}:{n:String(Math.round(v)),u:"m"}; }
+function fmtDistFlat(m){ const d=fmtDistKm(m); return d.n+d.u; }
+function prettyLabel(s){ return String(s ?? "—").toLowerCase().replace(/_/g," ").replace(/\b\w/g, c=>c.toUpperCase()); }
+
+// Sport → color (shared vocabulary with sessions.html)
+function sportColor(name){
+  const n = String(name??"").toLowerCase();
+  if(n.includes("run")||n.includes("course")||n.includes("footing")) return "#e4002b";
+  if(n.includes("cycl")||n.includes("bik")||n.includes("velo")||n.includes("vélo")||n.includes("ride")) return "#f77f00";
+  if(n.includes("swim")||n.includes("natation")) return "#0099cc";
+  if(n.includes("hik")||n.includes("rando")||n.includes("walk")||n.includes("marche")) return "#57a05a";
+  if(n.includes("gym")||n.includes("strength")||n.includes("muscu")||n.includes("renfor")) return "#8a8a8a";
+  if(n.includes("ski")||n.includes("nordic")) return "#00b4d8";
+  return "#e4002b";
 }
-function fmtDist(m) {
-  const v=Number(m)||0; if(!v) return "—";
-  return v>=1000 ? (v/1000).toFixed(0)+"km" : v+"m";
+
+const METRIC_GLYPHS = {
+  count:'<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',
+  duration:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9M9.5 2h5M18.5 6l1.4-1.4M12 6V4"/>',
+  distance:'<rect x="2.5" y="8.5" width="19" height="7" rx="1.5"/><path d="M6.5 8.5v3M10 8.5v4.2M13.5 8.5v3M17 8.5v4.2"/>',
+  flame:'<path d="M12 2.5s5.2 3.8 5.2 9.2a5.2 5.2 0 0 1-10.4 0c0-1.6.7-2.9 1.6-3.7C7.9 9.4 9 11.4 9 11.4s.1-4.4 3-8.9Z"/>',
+  ascent:'<path d="M3 20.5l6.5-11 4 6 3-4.5 5 9.5Z"/>',
+};
+function heroCell(icon, val, unit, label) {
+  return `<div class="hero-cell">
+    <div class="hc-top"><span class="hc-icon"><svg viewBox="0 0 24 24">${METRIC_GLYPHS[icon]??""}</svg></span></div>
+    <div class="hc-val">${esc(val)}${unit?`<span class="hc-unit">${esc(unit)}</span>`:""}</div>
+    <div class="hc-lbl">${esc(label)}</div>
+  </div>`;
 }
-// items: [{label, value}]. `fmt` renders the numeric value for display.
-function barList(items, cls, fmt) {
+
+// items: [{label, value, color?}]. `fmt` renders the numeric value.
+function barList(items, fixedColor, fmt) {
   if (!items?.length) return "";
   const max = Math.max(...items.map(i=>Number(i.value)||0), 1);
   return items.map(item => {
     const val = Number(item.value) || 0;
     const pct = Math.max(2, Math.round(val/max*100));
+    const color = item.color ?? fixedColor;
     return `<div class="bar-row">
+      <span class="br-tile" style="background:${color}"></span>
       <span class="br-label">${esc(item.label)}</span>
-      <div class="br-track"><div class="br-fill ${cls}" style="width:${pct}%"></div></div>
+      <div class="br-track"><div class="br-fill" style="width:${pct}%;background:${color}"></div></div>
       <span class="br-val">${esc(fmt(val))}</span>
     </div>`;
   }).join("");
-}
-// "STEADY_STATE_TRAINING" → "Steady State Training"
-function prettyLabel(s) {
-  return String(s ?? "—").toLowerCase().replace(/_/g," ").replace(/\b\w/g, c=>c.toUpperCase());
 }
 
 function render(sc) {
@@ -86,42 +110,33 @@ function render(sc) {
   const d = sc.data ?? {};
   document.getElementById("hdr-sub").textContent = [d.from_date ?? d.from, d.to_date ?? d.to].filter(Boolean).join(" → ");
 
-  // Headline totals: the backend now emits a canonical DTO (seconds, metres);
-  // the raw camelCase / StandardDuration fallbacks stay for resilience.
   const sessions = d.number_of_sessions ?? d.totalTrainingSessionCount ?? 0;
-  const durS = d.total_duration_s
-    ?? (d.totalDuration ? (Number(d.totalDuration.millis) / 1000 || Number(d.totalDuration.standardSeconds) || 0) : 0);
+  const durS = d.total_duration_s ?? (d.totalDuration ? (Number(d.totalDuration.millis)/1000 || Number(d.totalDuration.standardSeconds) || 0) : 0);
   const dist = d.total_distance_m ?? d.totalDistance ?? 0;
   const kcal = d.total_kcal ?? d.totalCalories ?? 0;
   const ascent = d.total_ascent_m ?? d.totalAscent ?? 0;
 
-  const statBoxes = [
-    {v: String(sessions), l: "Sessions"},
-    durS ? {v: fmtDur(durS),  l: "Total Time"} : null,
-    dist ? {v: fmtDist(dist), l: "Distance"}   : null,
-    kcal ? {v: String(Math.round(kcal)), l: "Calories"} : null,
-    ascent ? {v: Math.round(ascent)+"m", l: "Ascent"}   : null,
-  ].filter(Boolean);
+  const durH = fmtDurH(durS), distK = fmtDistKm(dist);
+  const cells = [heroCell("count", String(sessions), "", "Sessions")];
+  if (durS) cells.push(heroCell("duration", durH.n, durH.u, "Total Time"));
+  if (dist) cells.push(heroCell("distance", distK.n, distK.u, "Distance"));
+  if (kcal) cells.push(heroCell("flame", Math.round(kcal), "kcal", "Calories"));
+  if (ascent) cells.push(heroCell("ascent", Math.round(ascent), "m", "Ascent"));
 
-  // Per-sport breakdown: prefer distance, fall back to duration. valueForChart
-  // is metres for the distance list, milliseconds for the duration list.
   const sd = d.sport_breakdown ?? d.sportDistributions ?? {};
   const sportSrc = sd.distance?.length ? sd.distance : (sd.duration ?? []);
   const sportIsDist = !!sd.distance?.length;
-  const sports = sportSrc.map(x => ({ label: x.sportName ?? x.nameForChart ?? "—", value: Number(x.valueForChart) || 0 }));
+  const sports = sportSrc.map(x => { const label = x.sportName ?? x.nameForChart ?? "—"; return { label, value: Number(x.valueForChart)||0, color: sportColor(label) }; });
 
-  // Training benefits: trainingBenefitTotal is in milliseconds.
   const benefits = (d.training_benefit_breakdown ?? d.trainingBenefitDistributionList ?? []).map(x => ({
-    label: prettyLabel(x.nameForChart ?? x.trainingBenefit),
-    value: Number(x.trainingBenefitTotal) || 0,
+    label: prettyLabel(x.nameForChart ?? x.trainingBenefit), value: Number(x.trainingBenefitTotal)||0,
   }));
 
+  document.getElementById("root").className = "";
   document.getElementById("root").innerHTML = `<div class="fade-in">
-    <div class="stats-grid">${statBoxes.map(s=>`
-      <div class="stat-box"><div class="stat-val">${esc(s.v)}</div><div class="stat-lbl">${esc(s.l)}</div></div>`).join("")}
-    </div>
-    ${sports.length   ? `<div class="section-label">By Sport</div>${barList(sports,"br-fill-a", sportIsDist ? fmtDist : v=>fmtDur(v/1000))}` : ""}
-    ${benefits.length ? `<div class="section-label">Training Benefits</div>${barList(benefits,"br-fill-b", v=>fmtDur(v/1000))}` : ""}
+    <div class="hero">${cells.join("")}</div>
+    ${sports.length   ? `<div class="section-label">By Sport</div>${barList(sports, "#e4002b", sportIsDist ? fmtDistFlat : v=>fmtDurShort(v/1000))}` : ""}
+    ${benefits.length ? `<div class="section-label">Training Benefits</div>${barList(benefits, "#4a90d9", v=>fmtDurShort(v/1000))}` : ""}
   </div>`;
 }
 </script>

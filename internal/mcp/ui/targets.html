@@ -10,45 +10,50 @@ html,body{background:#0d0d0d;color:#f0f0f0;font-family:-apple-system,'Helvetica 
 body{padding:16px}
 
 .hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
-.hdr-label{font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#d9232e}
-.hdr-sub{font-size:.72rem;color:#555}
+.hdr-label{font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#e4002b}
+.hdr-sub{font-size:.72rem;color:#666;font-variant-numeric:tabular-nums}
 
 /* Target list */
-.target-list{display:flex;flex-direction:column;gap:2px}
-.target-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#111;border-radius:6px;border:1px solid #1a1a1a;transition:border-color .15s,background .15s}
-.target-row:hover{background:#161616;border-color:#2a2a2a}
-.target-date{font-size:.72rem;font-variant-numeric:tabular-nums;color:#555;min-width:100px;flex-shrink:0;font-family:'SF Mono','Fira Code',Consolas,monospace}
-.target-name{flex:1;font-size:.85rem;font-weight:600;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.target-id{font-size:.65rem;color:#333;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;flex-shrink:0}
-.red-line{width:3px;height:28px;background:#d9232e;border-radius:2px;flex-shrink:0}
+.target-list{display:flex;flex-direction:column;gap:4px}
+.target-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:10px;transition:background .15s}
+.target-row:hover{background:#141414}
+.tile{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tile svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.tr-main{flex:1;min-width:0}
+.tr-name{font-size:.88rem;font-weight:700;color:#f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}
+.tr-date{font-size:.72rem;color:#666;font-variant-numeric:tabular-nums;margin-top:2px;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.tr-id{font-size:.66rem;color:#3a3a3a;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;flex-shrink:0}
 
-/* Phase table */
-.phase-name{font-size:.95rem;font-weight:700;margin-bottom:3px}
-.phase-meta{font-size:.72rem;color:#555;margin-bottom:14px;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
-.phases-section{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-bottom:8px}
-.phase-row{display:flex;align-items:stretch;gap:0;margin-bottom:6px;border-radius:6px;overflow:hidden}
-.phase-type{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:8px 6px;min-height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:22px}
-.pt-warmup{background:#0d2d42;color:#60a0d0}
-.pt-cooldown{background:#0d2d18;color:#60c060}
-.pt-work{background:#2a0d0d;color:#d9232e}
-.pt-recovery{background:#1a1a0d;color:#d4b420}
-.pt-repeat{background:#1e0d2a;color:#9b59b6}
-.phase-body{flex:1;background:#141414;padding:8px 12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.phase-stat{display:flex;flex-direction:column;gap:1px}
-.ps-val{font-size:.82rem;font-weight:700;font-variant-numeric:tabular-nums;color:#e0e0e0;font-family:'SF Mono','Fira Code',Consolas,monospace}
-.ps-lbl{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#444}
-.repeat-count{font-size:.75rem;font-weight:700;color:#9b59b6;padding:2px 6px;background:#1e0d2a;border-radius:3px;margin-left:auto;flex-shrink:0}
+/* Detail */
+.det-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.dh-txt{min-width:0}
+.dh-name{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dh-meta{font-size:.72rem;color:#666;margin-top:2px;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.phases-section{font-size:.64rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4a4a4a;margin-bottom:9px}
+.phase-row{display:flex;align-items:stretch;margin-bottom:7px;border-radius:10px;overflow:hidden}
+.phase-type{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.56rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:8px 0;min-height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:24px}
+.pt-warmup{background:#0d2d42;color:#5aa0d8}
+.pt-cooldown{background:#0d2d18;color:#57c46b}
+.pt-work{background:#2a0409;color:#ff5566}
+.pt-repeat{background:#1e0d2a;color:#b07de0}
+.phase-body{flex:1;background:#141414;padding:9px 13px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.phase-stat{display:flex;flex-direction:column;gap:2px}
+.ps-val{font-size:.84rem;font-weight:800;font-variant-numeric:tabular-nums;color:#f0f0f0;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.ps-lbl{font-size:.58rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4a4a4a}
+.repeat-count{font-size:.76rem;font-weight:800;color:#b07de0;padding:3px 8px;background:#1e0d2a;border-radius:6px;margin-left:auto;flex-shrink:0}
 
-/* Created card */
-.created-card{border:1px solid #2a0d0d;background:#141414;border-radius:8px;padding:16px;border-left:4px solid #d9232e}
-.cc-label{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#d9232e;margin-bottom:8px}
-.cc-name{font-size:1.1rem;font-weight:700;margin-bottom:4px}
-.cc-datetime{font-size:.8rem;color:#555;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;margin-bottom:8px}
-.cc-id{font-size:.7rem;color:#333;font-family:'SF Mono','Fira Code',Consolas,monospace}
+/* Created confirmation (red hero style) */
+.created-card{background:linear-gradient(140deg,#e4002b 0%,#c40023 100%);border-radius:16px;padding:20px;color:#fff}
+.cc-label{display:flex;align-items:center;gap:6px;font-size:.64rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.9;margin-bottom:12px}
+.cc-check{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center}
+.cc-check svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.cc-name{font-size:1.3rem;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+.cc-datetime{font-size:.82rem;opacity:.9;font-variant-numeric:tabular-nums;margin-bottom:10px;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.cc-id{font-size:.7rem;opacity:.7;font-family:'SF Mono','Fira Code',Consolas,monospace}
 
-.empty-state{color:#444;font-size:.8rem;font-style:italic;padding:16px 0}
-.loading{color:#444;font-size:.8rem;font-style:italic;padding:16px 0}
-.fade-in{animation:fadeIn .2s ease}
+.empty-state{color:#4a4a4a;font-size:.8rem;font-style:italic;padding:16px 0}
+.loading{color:#4a4a4a;font-size:.8rem;font-style:italic;padding:16px 0}
+.fade-in{animation:fadeIn .22s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
@@ -72,46 +77,54 @@ function rpc(method, params) {
   const id = ++msgId;
   return new Promise((resolve,reject) => { pending.set(id,{resolve,reject}); window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*"); });
 }
-rpc("ui/initialize",{protocolVersion:"2026-01-26",appInfo:{name:"polar-targets-ui",version:"2.0"},appCapabilities:{availableDisplayModes:["inline"]}})
+rpc("ui/initialize",{protocolVersion:"2026-01-26",appInfo:{name:"polar-targets-ui",version:"3.0"},appCapabilities:{availableDisplayModes:["inline"]}})
   .then(()=>window.parent.postMessage({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}},"*"));
 
 const esc = s => String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const SPORT_GLYPHS = {
+  run:'<path d="M13.5 5.2a1.6 1.6 0 1 0 0-3.2 1.6 1.6 0 0 0 0 3.2Z" fill="#fff" stroke="none"/><path d="M4.5 13l3.2-1.2 2-2.6 3 1.2.9 3.4 3 1.6M9 21.5l1.8-4.7"/>',
+  ride:'<circle cx="6" cy="17" r="3.4"/><circle cx="18" cy="17" r="3.4"/><path d="M6 17l4-6.5h4.5M9.5 10.5H7.5M12.5 8h3.2L18 17"/><circle cx="12.7" cy="5.4" r="1.3" fill="#fff" stroke="none"/>',
+  swim:'<path d="M2 18.2c2 0 2-1.4 4-1.4s2 1.4 4 1.4 2-1.4 4-1.4 2 1.4 4 1.4"/><path d="M6.5 12.5l4 1.6 5.5-4.2"/><circle cx="17" cy="7.2" r="1.5" fill="#fff" stroke="none"/>',
+  hike:'<circle cx="12.5" cy="4.4" r="1.5" fill="#fff" stroke="none"/><path d="M9 21l2-5-2-3 1-3.5 3 2 2.4-1M11 13l3.6 1 1.4 7M8.6 10.4 6.8 9.6M17 21l-2-8"/>',
+  gym:'<path d="M4 9v6M7 6.5v11M17 6.5v11M20 9v6M7 12h10"/>',
+  ski:'<path d="M3.5 20l16.5-5M6 18.4l1.6-2.2M11.5 8.8l-4 1.2M11.5 8.8l3 2-1 4"/><circle cx="15.5" cy="5" r="1.4" fill="#fff" stroke="none"/>',
+  generic:'<path d="M3 12h4l2.2-6.5 4 13 2-6.5H22"/>',
+};
+const SPORT_COLORS = { run:"#e4002b", ride:"#f77f00", swim:"#0099cc", hike:"#57a05a", gym:"#8a8a8a", ski:"#00b4d8", generic:"#e4002b" };
+function sportKey(name){
+  const n = String(name??"").toLowerCase();
+  if(n.includes("run")||n.includes("course")||n.includes("footing")) return "run";
+  if(n.includes("cycl")||n.includes("bik")||n.includes("velo")||n.includes("vélo")||n.includes("ride")) return "ride";
+  if(n.includes("swim")||n.includes("natation")) return "swim";
+  if(n.includes("hik")||n.includes("rando")||n.includes("walk")||n.includes("marche")) return "hike";
+  if(n.includes("gym")||n.includes("strength")||n.includes("muscu")||n.includes("renfor")||n.includes("fonctionnel")) return "gym";
+  if(n.includes("ski")||n.includes("nordic")) return "ski";
+  return "generic";
+}
+function sportTile(name){
+  const k = sportKey(name);
+  return `<div class="tile" style="background:${SPORT_COLORS[k]}"><svg viewBox="0 0 24 24">${SPORT_GLYPHS[k]}</svg></div>`;
+}
 
 function fmtDateTime(iso) {
   if (!iso) return "—";
   const s = String(iso);
   const date = s.slice(0,10).split("-");
   const time = s.slice(11,16);
-  const d = `${parseInt(date[2])} ${MONTHS_SHORT[parseInt(date[1])-1]}`;
+  const d = `${parseInt(date[2])} ${MONTHS_SHORT[parseInt(date[1])-1]} ${date[0]}`;
   return time ? `${d} · ${time}` : d;
 }
-function fmtDur(v) {
-  if (!v) return "—";
-  const parts = String(v).split(":").map(Number);
-  if (parts.length === 3) {
-    const [h,m,s] = parts;
-    if (h > 0) return `${h}h${m?` ${m}m`:""}`;
-    if (m > 0) return `${m}m${s?` ${s}s`:""}`;
-    return `${s}s`;
-  }
-  const secs = Number(v); const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
-  if (h>0) return `${h}h${m?` ${m}m`:""}`;
-  if (m>0) return `${m}m${s?` ${s}s`:""}`;
-  return `${s}s`;
-}
-// Phase duration is an "HH:MM:SS" string; drop a leading zero hour.
 function fmtDurStr(hms) {
   const p = String(hms ?? "").split(":").map(Number);
   if (p.length !== 3 || p.some(isNaN)) return String(hms ?? "");
   const [h,m,s] = p;
-  return h>0 ? `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`
-             : `${m}:${String(s).padStart(2,"0")}`;
+  return h>0 ? `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`;
 }
 function fmtGoal(p) {
   if (!p) return null;
   const gt = p.goalType ?? p.goal_type;
-  // distance: flat metres; duration: flat "HH:MM:SS". goalType picks which is set.
   if (gt === "DISTANCE" || (p.distance != null && gt !== "DURATION")) {
     const v = Number(p.distance ?? p.distance?.value ?? 0);
     if (!v) return null;
@@ -125,7 +138,6 @@ function fmtGoal(p) {
 }
 function fmtZone(p) {
   if (!p) return null;
-  // lowerZone/upperZone are 1–5; server reads back 0 as a "no zone" sentinel.
   const lo = Number(p.lowerZone ?? p.lower_zone?.value ?? 0);
   const hi = Number(p.upperZone ?? p.upper_zone?.value ?? 0);
   if (lo > 0 && hi > 0) return `Z${lo}${lo!==hi?`–${hi}`:""}`;
@@ -139,6 +151,7 @@ function render(sc) {
   const root = document.getElementById("root");
   const label = document.getElementById("hdr-label");
   const sub = document.getElementById("hdr-sub");
+  root.className = "";
 
   if (sc.type === "target_list") {
     label.textContent = "Training Targets";
@@ -147,10 +160,12 @@ function render(sc) {
     if (!targets.length) { root.innerHTML = `<div class="empty-state">No targets in this period.</div>`; return; }
     root.innerHTML = `<div class="target-list fade-in">${targets.map(t => `
       <div class="target-row">
-        <div class="red-line"></div>
-        <div class="target-date">${esc(fmtDateTime(t.start))}</div>
-        <div class="target-name">${esc(t.title || "(unnamed)")}</div>
-        <div class="target-id">#${esc(t.id)}</div>
+        ${sportTile(t.title)}
+        <div class="tr-main">
+          <div class="tr-name">${esc(t.title || "(unnamed)")}</div>
+          <div class="tr-date">${esc(fmtDateTime(t.start))}</div>
+        </div>
+        <div class="tr-id">#${esc(t.id)}</div>
       </div>`).join("")}</div>`;
     return;
   }
@@ -160,8 +175,7 @@ function render(sc) {
     label.textContent = "Target";
     sub.textContent = `#${sc.id}`;
     root.innerHTML = `<div class="fade-in">
-      <div class="phase-name">${esc(t.name || "—")}</div>
-      <div class="phase-meta">${esc(t.datetime ?? "")}</div>
+      <div class="det-head">${sportTile(t.name)}<div class="dh-txt"><div class="dh-name">${esc(t.name || "—")}</div>${t.datetime?`<div class="dh-meta">${esc(fmtDateTime(t.datetime))}</div>`:""}</div></div>
       ${renderPhases(t.exerciseTargets ?? t.exercise_targets ?? [])}
     </div>`;
     return;
@@ -171,9 +185,9 @@ function render(sc) {
     label.textContent = "Target Created";
     sub.textContent = "";
     root.innerHTML = `<div class="created-card fade-in">
-      <div class="cc-label">✓ Scheduled</div>
+      <div class="cc-label"><span class="cc-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Scheduled</div>
       <div class="cc-name">${esc(sc.name)}</div>
-      <div class="cc-datetime">${esc(sc.datetime)}</div>
+      <div class="cc-datetime">${esc(fmtDateTime(sc.datetime))}</div>
       <div class="cc-id">ID ${esc(sc.id)}</div>
     </div>`;
     return;
@@ -190,7 +204,7 @@ function renderPhases(exercises) {
         const work = (ph.phases ?? [])[0];
         const rec  = (ph.phases ?? [])[1];
         out += `<div class="phase-row">
-          <div class="phase-type pt-repeat">REP</div>
+          <div class="phase-type pt-repeat">Rep</div>
           <div class="phase-body">
             <span class="repeat-count">×${esc(ph.repeatCount ?? ph.repeat_count)}</span>
             ${work ? phaseStats(work, "Work") : ""}
@@ -204,7 +218,7 @@ function renderPhases(exercises) {
         const isCool = ln.includes("cool") || ln.includes("calme") || ln.includes("retour");
         const cls = isWarm ? "pt-warmup" : isCool ? "pt-cooldown" : "pt-work";
         out += `<div class="phase-row">
-          <div class="phase-type ${cls}">${isWarm?"WARM":isCool?"COOL":"WORK"}</div>
+          <div class="phase-type ${cls}">${isWarm?"Warm":isCool?"Cool":"Work"}</div>
           <div class="phase-body">${phaseStats(ph, null)}</div>
         </div>`;
       }
