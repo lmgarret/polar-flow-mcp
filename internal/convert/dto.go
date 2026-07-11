@@ -146,12 +146,16 @@ func FromWireSessionSummary(s *gen.SessionSummary) SessionSummary {
 	if v, ok := s.Note.Get(); ok {
 		out.Note = CleanNote(v)
 	}
-	id := 0
-	if out.SportID != nil {
-		id = *out.SportID
-	}
-	out.SportCategory = SportCategory(out.Name, id)
+	out.SportCategory = SportCategory(out.Name, derefInt(out.SportID))
 	return out
+}
+
+// derefInt returns the pointed-to int, or 0 when the pointer is nil.
+func derefInt(p *int) int {
+	if p == nil {
+		return 0
+	}
+	return *p
 }
 
 // ProgressSummary is the canonical shape for get_progress_summary, mapped from
@@ -178,6 +182,21 @@ type ProgressSummary struct {
 	// the classification client-side. Derived, not a normalisation of the raw
 	// breakdown lists themselves (which stay pass-through by design).
 	SportCategories map[string]string `json:"sport_categories,omitempty"`
+}
+
+// sportCategoriesFromBreakdown collects the UI sport category for every sport
+// name across the (raw) breakdown lists, so the progress app can colour bars by
+// category without re-deriving the classification client-side.
+func sportCategoriesFromBreakdown(v gen.ProgressViewSummarySportDistributions) map[string]string {
+	cats := map[string]string{}
+	for _, list := range [][]gen.SportDistributionEntry{v.Distance, v.Duration, v.Sessions} {
+		for _, e := range list {
+			if name, ok := e.SportName.Get(); ok && name != "" {
+				cats[name] = SportCategory(name, 0)
+			}
+		}
+	}
+	return cats
 }
 
 // FromWireProgressSummary maps gen.ProgressViewSummary plus the request date
@@ -207,15 +226,7 @@ func FromWireProgressSummary(p *gen.ProgressViewSummary, fromDate, toDate string
 	}
 	if v, ok := p.SportDistributions.Get(); ok {
 		out.SportBreakdown = v
-		cats := map[string]string{}
-		for _, list := range [][]gen.SportDistributionEntry{v.Distance, v.Duration, v.Sessions} {
-			for _, e := range list {
-				if name, ok := e.SportName.Get(); ok && name != "" {
-					cats[name] = SportCategory(name, 0)
-				}
-			}
-		}
-		if len(cats) > 0 {
+		if cats := sportCategoriesFromBreakdown(v); len(cats) > 0 {
 			out.SportCategories = cats
 		}
 	}
