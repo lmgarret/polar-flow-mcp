@@ -20,6 +20,7 @@ type SessionListItem struct {
 	ID                int64    `json:"id"`
 	SportID           int      `json:"sport_id"`
 	SportName         string   `json:"sport_name,omitempty"`
+	SportCategory     string   `json:"sport_category,omitempty"`
 	StartTime         string   `json:"start_time,omitempty"`
 	SessionDurationS  int      `json:"session_duration_s"`
 	DistanceM         *float64 `json:"distance_m,omitempty"`
@@ -43,6 +44,7 @@ func FromWireSessionListItem(s gen.TrainingSessionSummary) SessionListItem {
 	if v, ok := s.SportName.Get(); ok {
 		item.SportName = v
 	}
+	item.SportCategory = SportCategory(item.SportName, item.SportID)
 	if v, ok := s.Distance.Get(); ok {
 		item.DistanceM = &v
 	}
@@ -88,6 +90,7 @@ type SessionSummary struct {
 	ID               *int64   `json:"id,omitempty"`
 	Name             string   `json:"name,omitempty"`
 	SportID          *int     `json:"sport_id,omitempty"`
+	SportCategory    string   `json:"sport_category,omitempty"`
 	StartTime        string   `json:"start_time,omitempty"`
 	StopTime         string   `json:"stop_time,omitempty"`
 	SessionDurationS *int     `json:"session_duration_s,omitempty"`
@@ -143,7 +146,16 @@ func FromWireSessionSummary(s *gen.SessionSummary) SessionSummary {
 	if v, ok := s.Note.Get(); ok {
 		out.Note = CleanNote(v)
 	}
+	out.SportCategory = SportCategory(out.Name, derefInt(out.SportID))
 	return out
+}
+
+// derefInt returns the pointed-to int, or 0 when the pointer is nil.
+func derefInt(p *int) int {
+	if p == nil {
+		return 0
+	}
+	return *p
 }
 
 // ProgressSummary is the canonical shape for get_progress_summary, mapped from
@@ -165,6 +177,26 @@ type ProgressSummary struct {
 	SportBreakdown           any     `json:"sport_breakdown,omitempty"`
 	HeartRateZones           any     `json:"heart_rate_zones,omitempty"`
 	TrainingBenefitBreakdown any     `json:"training_benefit_breakdown,omitempty"`
+	// SportCategories maps each sport name appearing in the (raw) breakdown to
+	// its UI category, so the progress app can colour bars without re-deriving
+	// the classification client-side. Derived, not a normalisation of the raw
+	// breakdown lists themselves (which stay pass-through by design).
+	SportCategories map[string]string `json:"sport_categories,omitempty"`
+}
+
+// sportCategoriesFromBreakdown collects the UI sport category for every sport
+// name across the (raw) breakdown lists, so the progress app can colour bars by
+// category without re-deriving the classification client-side.
+func sportCategoriesFromBreakdown(v gen.ProgressViewSummarySportDistributions) map[string]string {
+	cats := map[string]string{}
+	for _, list := range [][]gen.SportDistributionEntry{v.Distance, v.Duration, v.Sessions} {
+		for _, e := range list {
+			if name, ok := e.SportName.Get(); ok && name != "" {
+				cats[name] = SportCategory(name, 0)
+			}
+		}
+	}
+	return cats
 }
 
 // FromWireProgressSummary maps gen.ProgressViewSummary plus the request date
@@ -194,6 +226,9 @@ func FromWireProgressSummary(p *gen.ProgressViewSummary, fromDate, toDate string
 	}
 	if v, ok := p.SportDistributions.Get(); ok {
 		out.SportBreakdown = v
+		if cats := sportCategoriesFromBreakdown(v); len(cats) > 0 {
+			out.SportCategories = cats
+		}
 	}
 	if len(p.TotalHeartRateZoneList) > 0 {
 		out.HeartRateZones = p.TotalHeartRateZoneList

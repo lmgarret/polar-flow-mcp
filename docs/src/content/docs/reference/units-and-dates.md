@@ -22,6 +22,7 @@ one canonical contract.
 | Date (only) | ISO 8601 `YYYY-MM-DD` | `*_date` |
 | Datetime | ISO 8601 (`start_time`, RFC3339 or tz-less) | `*_time` / `*_at` |
 | Sport | numeric `sport_id` (+ `sport_name` on output) | — |
+| Sport category | one of ~20 UI category keys (`run`, `cycle`, …, `generic`) | `sport_category` |
 | Absent value | omitted / JSON `null` — never `""`, `-1`, or `" "` | — |
 
 If you are writing a new tool, keep to these. State the unit explicitly in every
@@ -57,6 +58,13 @@ a nullable integer on read. Field names drift too — `hrAverage` vs `hrAvg`,
   converters; the intensity-label → HR-zone map; sentinel cleaners), each unit-tested.
 - `internal/convert/dto.go` — the canonical response DTOs and their `gen.*` → DTO
   mappers, one per normalised read tool.
+- `internal/convert/sport.go` — `SportCategory(name, id)`, the single source of
+  truth mapping any of Polar's ~150 sports to one of ~20 UI categories
+  (keyword-first on the sport name, resilient to new sports; stable id hints as a
+  fallback). It feeds `sport_category` on the session DTOs and target list, and
+  the `sport_categories` name→category lookup on the progress summary, so the
+  MCP-app UIs read a field instead of re-deriving the classification. The apps
+  own only the presentation (SVG glyph, colour, label) per category. Unit-tested.
 
 The two hand-written trimmed structs in `internal/flow` — `UserInfo` and
 `CalendarTarget` — predate this package and already follow the same pattern.

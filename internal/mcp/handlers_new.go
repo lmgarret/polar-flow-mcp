@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -28,10 +27,10 @@ func GetTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.CallT
 			}
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		body, _ := json.MarshalIndent(t, "", "  ")
-		result := mcpgo.NewToolResultText(string(body))
-		result.StructuredContent = map[string]any{"type": "target_detail", "id": id, "target": t}
-		return result, nil
+		return widgetResult(map[string]any{
+			"type": "target_detail", "id": id, "target": t,
+			"sport_category": convert.SportCategory(t.Name, 0),
+		}), nil
 	}
 }
 
@@ -100,10 +99,7 @@ func GetCalendarWeekSummaryHandler(fc *flow.Client) func(context.Context, mcpgo.
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		body, _ := json.MarshalIndent(items, "", "  ")
-		result := mcpgo.NewToolResultText(string(body))
-		result.StructuredContent = map[string]any{"type": "week_summary", "weeks": items}
-		return result, nil
+		return widgetResult(map[string]any{"type": "week_summary", "weeks": items}), nil
 	}
 }
 
@@ -122,9 +118,6 @@ func GetProgressSummaryHandler(fc *flow.Client) func(context.Context, mcpgo.Call
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		dto := convert.FromWireProgressSummary(summary, from.Format(isoDate), to.Format(isoDate))
-		body, _ := json.MarshalIndent(dto, "", "  ")
-		result := mcpgo.NewToolResultText(string(body))
-		result.StructuredContent = map[string]any{"type": "progress_summary", "data": dto}
-		return result, nil
+		return widgetResult(map[string]any{"type": "progress_summary", "data": dto}), nil
 	}
 }

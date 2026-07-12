@@ -25,10 +25,7 @@ func GetUserInfoHandler(fc *flow.Client) func(context.Context, mcpgo.CallToolReq
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		body, _ := json.MarshalIndent(ui, "", "  ")
-		result := mcpgo.NewToolResultText(string(body))
-		result.StructuredContent = map[string]any{"type": "user_info", "data": ui}
-		return result, nil
+		return widgetResult(map[string]any{"type": "user_info", "data": ui}), nil
 	}
 }
 
@@ -59,12 +56,11 @@ func ListTrainingTargetsHandler(fc *flow.Client) func(context.Context, mcpgo.Cal
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		if len(targets) == 0 {
-			result := mcpgo.NewToolResultText(fmt.Sprintf(
-				"No training targets between %s and %s.", from.Format(isoDate), to.Format(isoDate)))
-			result.StructuredContent = map[string]any{
-				"type": "target_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "targets": []any{},
-			}
-			return result, nil
+			return widgetResultText(
+				fmt.Sprintf("No training targets between %s and %s.", from.Format(isoDate), to.Format(isoDate)),
+				map[string]any{
+					"type": "target_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "targets": []any{},
+				}), nil
 		}
 		var b strings.Builder
 		fmt.Fprintf(&b, "Training targets between %s and %s (%d):\n",
@@ -76,12 +72,29 @@ func ListTrainingTargetsHandler(fc *flow.Client) func(context.Context, mcpgo.Cal
 			}
 			fmt.Fprintf(&b, "- %d: %s (%s)\n", t.ID, title, t.Start)
 		}
-		result := mcpgo.NewToolResultText(b.String())
-		result.StructuredContent = map[string]any{
-			"type": "target_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "targets": targets,
+		items := make([]targetListItem, len(targets))
+		for i, t := range targets {
+			items[i] = targetListItem{
+				ID: t.ID, Title: t.Title, Start: t.Start, URL: t.URL,
+				// Targets carry no sport field; classify the free-text title.
+				SportCategory: convert.SportCategory(t.Title, 0),
+			}
 		}
-		return result, nil
+		return widgetResultText(b.String(), map[string]any{
+			"type": "target_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "targets": items,
+		}), nil
 	}
+}
+
+// targetListItem augments a CalendarTarget with its UI sport category, derived
+// server-side from the title so the targets app reads a field instead of
+// re-deriving the classification client-side.
+type targetListItem struct {
+	ID            int64  `json:"id"`
+	Title         string `json:"title"`
+	Start         string `json:"start"`
+	URL           string `json:"url,omitempty"`
+	SportCategory string `json:"sport_category,omitempty"`
 }
 
 // DeleteTrainingTargetHandler deletes a training target by id.
@@ -115,12 +128,9 @@ func GetCalendarEventsHandler(fc *flow.Client) func(context.Context, mcpgo.CallT
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		body, _ := json.MarshalIndent(events, "", "  ")
-		result := mcpgo.NewToolResultText(string(body))
-		result.StructuredContent = map[string]any{
+		return widgetResult(map[string]any{
 			"type": "calendar_events", "from": from.Format(isoDate), "to": to.Format(isoDate), "events": events,
-		}
-		return result, nil
+		}), nil
 	}
 }
 
@@ -142,12 +152,9 @@ func ListTrainingSessionsHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		items := convert.FromWireSessionList(sessions)
-		body, _ := json.MarshalIndent(items, "", "  ")
-		result := mcpgo.NewToolResultText(string(body))
-		result.StructuredContent = map[string]any{
+		return widgetResult(map[string]any{
 			"type": "session_list", "from": from.Format(isoDate), "to": to.Format(isoDate), "sessions": items,
-		}
-		return result, nil
+		}), nil
 	}
 }
 
@@ -166,10 +173,7 @@ func GetTrainingSessionSummaryHandler(fc *flow.Client) func(context.Context, mcp
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		dto := convert.FromWireSessionSummary(summary)
-		body, _ := json.MarshalIndent(dto, "", "  ")
-		result := mcpgo.NewToolResultText(string(body))
-		result.StructuredContent = map[string]any{"type": "session_summary", "summary": dto}
-		return result, nil
+		return widgetResult(map[string]any{"type": "session_summary", "summary": dto}), nil
 	}
 }
 
@@ -187,10 +191,16 @@ func GetTrainingSessionDetailsHandler(fc *flow.Client) func(context.Context, mcp
 			}
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		body, _ := json.MarshalIndent(details, "", "  ")
-		result := mcpgo.NewToolResultText(string(body))
-		result.StructuredContent = map[string]any{"type": "session_details", "details": details}
-		return result, nil
+		// The raw SessionDetails carries a large per-second Samples tree (plus
+		// several free-form jx.Raw blocks) that the UI never uses and that can
+		// break json.Marshal (NaN/huge). Send only what the detail view reads:
+		// per-exercise stats, HR zones, and laps.
+		return widgetResult(map[string]any{"type": "session_details", "details": map[string]any{
+			"id":        details.ID,
+			"exercises": details.Exercises,
+			"zones":     details.Zones,
+			"laps":      details.Laps,
+		}}), nil
 	}
 }
 

@@ -8,6 +8,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"time"
 
@@ -67,6 +68,53 @@ func uiMeta(resourceURI string) *mcpgo.Meta {
 	})
 }
 
+// widgetOutputSchema is a permissive object schema advertised by every
+// UI-bound tool. Declaring an outputSchema is what makes the host (Claude
+// Desktop) forward a result's structuredContent to the MCP-app iframe: without
+// one, the host drops structuredContent from the ui/notifications/tool-result
+// it delivers, and the app hangs on "Loading…" with no data. It is deliberately
+// permissive ({"type":"object"}) — we do not enable server-side output
+// validation (WithOutputSchemaValidation), so this only advertises "returns an
+// object" and never rejects a payload.
+var widgetOutputSchema = json.RawMessage(`{"type":"object"}`)
+
+// bindUI links a tool to its MCP-app UI resource and advertises structured
+// output so the host delivers the result's structuredContent to that UI.
+func bindUI(t *mcpgo.Tool, resourceURI string) {
+	t.Meta = uiMeta(resourceURI)
+	t.RawOutputSchema = widgetOutputSchema
+}
+
+// Delivering data to the MCP-app UIs: current hosts (Claude Desktop, tested
+// 2026-07) drop the result's structuredContent from the ui/notifications/tool-
+// result they forward to the iframe, even when the tool advertises an
+// outputSchema — so a text content block is the only channel the app can read.
+// The helpers below always set StructuredContent (correct per spec; preferred by
+// hosts that honour it) AND expose the same tagged payload as text. Every widget
+// payload is a map with a "type" discriminator; the UIs parse the first text
+// block that is a JSON object carrying that "type" field. See internal/mcp/ui/.
+
+// widgetResult marshals the payload to the sole text block and mirrors it into
+// StructuredContent. Use for read tools whose payload already is the full data.
+func widgetResult(payload map[string]any) *mcpgo.CallToolResult {
+	b, _ := json.MarshalIndent(payload, "", "  ")
+	result := mcpgo.NewToolResultText(string(b))
+	result.StructuredContent = payload
+	return result
+}
+
+// widgetResultText keeps a human-readable summary as the primary text block (for
+// the model) and appends the tagged payload as a second, machine-readable block
+// (for the UI). Use for confirmation / list tools whose sentence carries meaning.
+func widgetResultText(modelText string, payload map[string]any) *mcpgo.CallToolResult {
+	result := mcpgo.NewToolResultText(modelText)
+	result.StructuredContent = payload
+	if b, err := json.Marshal(payload); err == nil {
+		result.Content = append(result.Content, mcpgo.NewTextContent(string(b)))
+	}
+	return result
+}
+
 // RegisterTools registers all Polar Flow MCP tools with the given server.
 //
 // Documentation convention (read before adding or editing a tool):
@@ -89,7 +137,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"Good first call to confirm which account the server is driving.",
 		),
 	)
-	t.Meta = uiMeta("ui://polar-flow/user.html")
+	bindUI(&t, "ui://polar-flow/user.html")
 	s.AddTool(t, withLogging("get_user_info", GetUserInfoHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("list_sports",
@@ -162,7 +210,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Items(phaseItemSchema()),
 		),
 	)
-	ct.Meta = uiMeta("ui://polar-flow/targets.html")
+	bindUI(&ct, "ui://polar-flow/targets.html")
 	s.AddTool(ct, withLogging("create_training_target", CreateTrainingTargetHandler(fc)))
 
 	ltt := mcpgo.NewTool("list_training_targets",
@@ -177,7 +225,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today + 30 days).")),
 	)
-	ltt.Meta = uiMeta("ui://polar-flow/targets.html")
+	bindUI(&ltt, "ui://polar-flow/targets.html")
 	s.AddTool(ltt, withLogging("list_training_targets", ListTrainingTargetsHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("delete_training_target",
@@ -203,7 +251,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
 			mcpgo.Description("Numeric target id from list_training_targets.")),
 	)
-	gtt.Meta = uiMeta("ui://polar-flow/targets.html")
+	bindUI(&gtt, "ui://polar-flow/targets.html")
 	s.AddTool(gtt, withLogging("get_training_target", GetTrainingTargetHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("update_training_target",
@@ -257,7 +305,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today). Must be within 45 days of from_date.")),
 	)
-	cws.Meta = uiMeta("ui://polar-flow/calendar.html")
+	bindUI(&cws, "ui://polar-flow/calendar.html")
 	s.AddTool(cws, withLogging("get_calendar_week_summary", GetCalendarWeekSummaryHandler(fc)))
 
 	ps := mcpgo.NewTool("get_progress_summary",
@@ -281,7 +329,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"\"3m\" (3 months), or \"1y\" (1 year). Default: \"3m\". Affects only how the "+
 				"breakdown is grouped, not the headline totals.")),
 	)
-	ps.Meta = uiMeta("ui://polar-flow/progress.html")
+	bindUI(&ps, "ui://polar-flow/progress.html")
 	s.AddTool(ps, withLogging("get_progress_summary", GetProgressSummaryHandler(fc)))
 
 	ce := mcpgo.NewTool("get_calendar_events",
@@ -300,7 +348,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today + 30 days).")),
 	)
-	ce.Meta = uiMeta("ui://polar-flow/calendar.html")
+	bindUI(&ce, "ui://polar-flow/calendar.html")
 	s.AddTool(ce, withLogging("get_calendar_events", GetCalendarEventsHandler(fc)))
 
 	lts := mcpgo.NewTool("list_training_sessions",
@@ -316,7 +364,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithString("to_date",
 			mcpgo.Description("End date, ISO 8601 YYYY-MM-DD (default: today).")),
 	)
-	lts.Meta = uiMeta("ui://polar-flow/sessions.html")
+	bindUI(&lts, "ui://polar-flow/sessions.html")
 	s.AddTool(lts, withLogging("list_training_sessions", ListTrainingSessionsHandler(fc)))
 
 	gss := mcpgo.NewTool("get_training_session_summary",
@@ -328,7 +376,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithNumber("session_id", mcpgo.Required(),
 			mcpgo.Description("Numeric session id from list_training_sessions.")),
 	)
-	gss.Meta = uiMeta("ui://polar-flow/sessions.html")
+	bindUI(&gss, "ui://polar-flow/sessions.html")
 	s.AddTool(gss, withLogging("get_training_session_summary", GetTrainingSessionSummaryHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("create_training_session",
@@ -375,15 +423,15 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 
 	gsd := mcpgo.NewTool("get_training_session_details",
 		mcpgo.WithDescription(
-			"Return lap- and sample-level detail for one completed training session: per-lap "+
-				"splits and the time-series samples (HR, speed, etc.) behind the summary. "+
-				"Heavier than get_training_session_summary — use it when you need splits or "+
-				"the within-session trace, not just totals.",
+			"Return lap-level detail for one completed training session: per-lap splits "+
+				"(time, distance, average/max HR) and the HR time-in-zone distribution behind "+
+				"the summary. Use it when you need splits or the zone breakdown, not just totals. "+
+				"(Raw per-second sample traces are omitted — they are large and not generally useful.)",
 		),
 		mcpgo.WithNumber("session_id", mcpgo.Required(),
 			mcpgo.Description("Numeric session id from list_training_sessions.")),
 	)
-	gsd.Meta = uiMeta("ui://polar-flow/sessions.html")
+	bindUI(&gsd, "ui://polar-flow/sessions.html")
 	s.AddTool(gsd, withLogging("get_training_session_details", GetTrainingSessionDetailsHandler(fc)))
 }
 
