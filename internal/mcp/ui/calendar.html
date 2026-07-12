@@ -7,28 +7,31 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#0d0d0d;color:#f0f0f0;font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px}
-body{padding:16px}
-.hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
-.hdr-label{font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#e4002b}
-.hdr-sub{font-size:.72rem;color:#666;font-variant-numeric:tabular-nums}
+body{padding:12px 14px;overflow-x:hidden;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
+.hdr{display:none}
+.hdr-label{font-size:.64rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#e4002b}
+.hdr-sub{font-size:.68rem;color:#666;font-variant-numeric:tabular-nums}
+.strip,.chart{scrollbar-width:thin;scrollbar-color:#3a3a3a #161616}
+::-webkit-scrollbar{height:9px}::-webkit-scrollbar-track{background:#161616;border-radius:5px}::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px}::-webkit-scrollbar-thumb:hover{background:#4a4a4a}
 
-.day-group{margin-bottom:14px}
-.day-head{font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4a4a4a;padding:0 2px 8px;border-bottom:1px solid #171717;margin-bottom:8px}
-.event-row{display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:10px;transition:background .15s}
-.event-row:hover{background:#141414}
-.ev-tile{width:32px;height:32px;border-radius:10px;background:#1c1c1c;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.ev-tile svg{width:17px;height:17px;stroke:#888;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.ev-main{flex:1;min-width:0}
-.ev-title{font-size:.84rem;font-weight:600;color:#e8e8e8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ev-type{font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#555;margin-top:2px}
-.ev-time{font-size:.72rem;color:#666;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;flex-shrink:0}
+/* Event cards — horizontal strip */
+.strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.ev-card{flex-shrink:0;width:158px;background:#111;border:1px solid #1c1c1c;border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;gap:7px}
+.ev-top{display:flex;align-items:center;justify-content:space-between}
+.ev-tile{width:30px;height:30px;border-radius:9px;background:#1c1c1c;display:flex;align-items:center;justify-content:center}
+.ev-tile svg{width:16px;height:16px;stroke:#888;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ev-time{font-size:.72rem;color:#888;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.ev-day{font-size:.6rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#e4002b}
+.ev-title{font-size:.82rem;font-weight:600;color:#e8e8e8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-type{font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#555}
 
-/* Weekly-load bars */
-.week-row{display:flex;align-items:center;gap:11px;margin-bottom:9px}
-.wk-label{font-size:.72rem;font-weight:800;letter-spacing:.04em;color:#888;min-width:36px;flex-shrink:0;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
-.wk-track{flex:1;height:9px;background:#181818;border-radius:5px;overflow:hidden}
-.wk-fill{height:100%;background:linear-gradient(90deg,#e4002b,#ff2d4f);border-radius:5px;min-width:2px;transition:width .5s cubic-bezier(.4,0,.2,1)}
-.wk-val{font-size:.7rem;color:#666;min-width:74px;text-align:right;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;flex-shrink:0}
+/* Weekly-load — vertical bar chart */
+.chart{display:flex;align-items:stretch;gap:10px;height:148px;overflow-x:auto;padding-bottom:2px}
+.wk-col{display:flex;flex-direction:column;align-items:center;height:100%;flex:1;min-width:34px;max-width:96px}
+.wk-val2{font-size:.6rem;color:#999;margin-bottom:4px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.wk-barwrap{flex:1;width:26px;display:flex;align-items:flex-end}
+.wk-bar{width:100%;background:linear-gradient(180deg,#ff2d4f,#e4002b);border-radius:5px 5px 0 0;min-height:3px;transition:height .5s cubic-bezier(.4,0,.2,1)}
+.wk-lbl2{font-size:.6rem;font-weight:800;color:#777;margin-top:6px;white-space:nowrap;font-family:'SF Mono','Fira Code',Consolas,monospace}
 .empty-state{color:#4a4a4a;font-size:.8rem;font-style:italic;padding:12px 0}
 .loading{color:#4a4a4a;font-size:.8rem;font-style:italic}
 .fade-in{animation:fadeIn .22s ease}
@@ -45,11 +48,25 @@ window.addEventListener("message", e => {
   if (m.id != null && pending.has(m.id)) {
     const {resolve,reject} = pending.get(m.id); pending.delete(m.id);
     m.error ? reject(new Error(m.error?.message ?? "RPC error")) : resolve(m.result);
-  } else if (m.method === "ui/notifications/tool-result") render(m.params?.structuredContent);
+  } else if (m.method === "ui/notifications/tool-result") render(extractPayload(m.params));
 });
 function rpc(method, params) {
   const id = ++msgId;
   return new Promise((resolve,reject) => { pending.set(id,{resolve,reject}); window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*"); });
+}
+// Current MCP-app hosts (Claude Desktop, 2026-07) drop structuredContent from
+// the forwarded tool-result, so read the tagged {"type":...} JSON text block the
+// server also emits. structuredContent is still preferred when the host sends it.
+function extractPayload(params) {
+  if (params && params.structuredContent) return params.structuredContent;
+  const content = (params && params.content) || [];
+  for (let i = content.length - 1; i >= 0; i--) {
+    const c = content[i];
+    if (c && c.type === "text" && typeof c.text === "string" && c.text.trim()[0] === "{") {
+      try { const p = JSON.parse(c.text); if (p && typeof p.type === "string") return p; } catch (_) {}
+    }
+  }
+  return null;
 }
 rpc("ui/initialize",{protocolVersion:"2026-01-26",appInfo:{name:"polar-calendar-ui",version:"3.0"},appCapabilities:{availableDisplayModes:["inline"]}})
   .then(()=>window.parent.postMessage({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}},"*"));
@@ -90,22 +107,19 @@ function render(sc) {
     sub.textContent = `${sc.from} → ${sc.to}`;
     const events = (sc.events ?? []).filter(e => (e.type?.value ?? e.type ?? "").toUpperCase() !== "EXERCISE");
     if (!events.length) { root.innerHTML = `<div class="empty-state">No events in this period.</div>`; return; }
-    const byDay = {};
-    for (const e of events) { const start = String(e.start?.value ?? e.start ?? ""); const day = start.slice(0,10); if (day) (byDay[day]=byDay[day]??[]).push(e); }
-    root.innerHTML = `<div class="fade-in">${Object.keys(byDay).sort().reverse().map(day => `
-      <div class="day-group"><div class="day-head">${esc(fmtDay(day))}</div>
-        ${byDay[day].map(e => {
-          const start = String(e.start?.value ?? e.start ?? "");
-          const time = start.slice(11,16);
-          const evtype = (e.type?.value ?? e.type ?? "");
-          const evtitle = e.title?.value ?? e.title ?? evtype.replace(/_/g," ").toLowerCase();
-          return `<div class="event-row">
-            <div class="ev-tile"><svg viewBox="0 0 24 24">${eventGlyph(evtype)}</svg></div>
-            <div class="ev-main"><div class="ev-title">${esc(evtitle)}</div><div class="ev-type">${esc(evtype.replace(/_/g," ").toLowerCase())}</div></div>
-            <span class="ev-time">${esc(time)}</span>
-          </div>`;
-        }).join("")}
-      </div>`).join("")}</div>`;
+    events.sort((a,b) => String(a.start?.value ?? a.start ?? "").localeCompare(String(b.start?.value ?? b.start ?? "")));
+    root.innerHTML = `<div class="strip fade-in">${events.map(e => {
+      const start = String(e.start?.value ?? e.start ?? "");
+      const time = start.slice(11,16);
+      const evtype = (e.type?.value ?? e.type ?? "");
+      const evtitle = e.title?.value ?? e.title ?? evtype.replace(/_/g," ").toLowerCase();
+      return `<div class="ev-card">
+        <div class="ev-top"><div class="ev-tile"><svg viewBox="0 0 24 24">${eventGlyph(evtype)}</svg></div>${time ? `<span class="ev-time">${esc(time)}</span>` : ""}</div>
+        <div class="ev-day">${esc(fmtDay(start.slice(0,10)))}</div>
+        <div class="ev-title">${esc(evtitle)}</div>
+        <div class="ev-type">${esc(evtype.replace(/_/g," ").toLowerCase())}</div>
+      </div>`;
+    }).join("")}</div>`;
     return;
   }
 
@@ -116,13 +130,12 @@ function render(sc) {
     const hasData = weeks.some(w => w && Object.keys(w).length > 0);
     if (!weeks.length || !hasData) { root.innerHTML = `<div class="empty-state">No weekly totals available.</div>`; return; }
     const maxDur = Math.max(...weeks.map(w => Number(w.duration?.value ?? w.total_duration_s ?? w.total_duration ?? 0)), 1);
-    root.innerHTML = `<div class="fade-in">${weeks.map(w => {
+    root.innerHTML = `<div class="chart fade-in">${weeks.map(w => {
       const week = w.week_start ?? w.start_date ?? w.date ?? "";
       const dur = Number(w.duration?.value ?? w.total_duration_s ?? w.total_duration ?? 0);
-      const sessions = w.sessions ?? w.number_of_sessions ?? 0;
       const pct = Math.max(2, Math.round(dur/maxDur*100));
       const wnum = week ? `W${isoWeek(week.slice(0,10))}` : "—";
-      return `<div class="week-row"><span class="wk-label">${esc(wnum)}</span><div class="wk-track"><div class="wk-fill" style="width:${pct}%"></div></div><span class="wk-val">${esc(fmtDur(dur))}${sessions ? ` · ${sessions}×` : ""}</span></div>`;
+      return `<div class="wk-col"><span class="wk-val2">${dur ? esc(fmtDur(dur)) : ""}</span><div class="wk-barwrap"><div class="wk-bar" style="height:${pct}%"></div></div><span class="wk-lbl2">${esc(wnum)}</span></div>`;
     }).join("")}</div>`;
     return;
   }

@@ -7,12 +7,12 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#0d0d0d;color:#f0f0f0;font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px}
-body{padding:16px}
+body{padding:7px 14px;overflow-x:hidden}
 
 /* ── Header ── */
-.hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
-.hdr-label{font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#e4002b}
-.hdr-range{font-size:.72rem;color:#666;font-variant-numeric:tabular-nums}
+.hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:7px}
+.hdr-label{font-size:.64rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#e4002b}
+.hdr-range{font-size:.68rem;color:#666;font-variant-numeric:tabular-nums}
 
 /* ── Sport tile (shared) ── */
 .tile{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -20,61 +20,59 @@ body{padding:16px}
 .tile.sm{width:30px;height:30px;border-radius:9px}
 .tile.sm svg{width:17px;height:17px}
 
-/* ── Day-grouped list ── */
-.day-group{margin-bottom:14px}
-.day-head{font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4a4a4a;padding:0 2px 8px;border-bottom:1px solid #171717;margin-bottom:8px;font-variant-numeric:tabular-nums}
-.sess-row{display:flex;align-items:center;gap:12px;padding:10px 6px;border-radius:10px;cursor:pointer;transition:background .15s}
-.sess-row:hover{background:#141414}
-.sess-row.active{background:#160305}
-.sr-main{flex:1;min-width:0}
-.sr-name{font-size:.9rem;font-weight:700;color:#f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}
-.sr-sub{display:flex;align-items:center;gap:7px;margin-top:3px}
-.sr-time{font-size:.72rem;color:#666;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
-.chip{font-size:.56rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:#2a0409;color:#ff5566}
-.sr-right{text-align:right;flex-shrink:0}
-.sr-dur{font-size:1rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:#f0f0f0;font-family:'SF Mono','Fira Code',Consolas,monospace}
-.sr-dist{font-size:.7rem;color:#666;font-variant-numeric:tabular-nums;margin-top:2px;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.strip{scrollbar-width:thin;scrollbar-color:#3a3a3a #161616}
+::-webkit-scrollbar{height:9px}::-webkit-scrollbar-track{background:#161616;border-radius:5px}::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px}::-webkit-scrollbar-thumb:hover{background:#4a4a4a}
 
-/* ── Inline expand slot ── */
-.slot{overflow:hidden;max-height:0;opacity:0;transition:max-height .35s cubic-bezier(.4,0,.2,1),opacity .3s}
-.slot.open{max-height:1200px;opacity:1;margin-top:8px}
+/* ── Session cards — horizontal strip ── */
+.strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.sess-card{flex-shrink:0;width:150px;background:#111;border:1px solid #1c1c1c;border-radius:12px;padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;gap:4px;transition:border-color .15s}
+.sess-card:hover{border-color:#333}
+.sc-top{display:flex;align-items:center;justify-content:space-between}
+.sc-time{font-size:.68rem;color:#888;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.sc-date{font-size:.6rem;color:#e4002b;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.sc-name{font-size:.8rem;font-weight:700;color:#eee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc-dur{font-size:1.1rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:#fff;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.sc-stats{display:flex;gap:10px;font-size:.66rem;color:#777;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
 
-/* ── Summary header (sport tile + name + date) ── */
-.sum-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+/* ── Summary / detail header ── */
+.sum-head{display:flex;align-items:center;gap:10px;margin-bottom:5px}
+.back-btn{background:#161616;border:1px solid #262626;color:#ccc;cursor:pointer;font-size:1.05rem;line-height:1;padding:4px 11px;border-radius:9px;flex-shrink:0}
+.back-btn:hover{background:#1e1e1e;color:#fff}
 .sh-txt{min-width:0}
-.sh-name{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sh-date{font-size:.72rem;color:#666;margin-top:2px;font-variant-numeric:tabular-nums}
-.sum-close{margin-left:auto;background:none;border:none;color:#555;cursor:pointer;font-size:1rem;padding:2px 6px;line-height:1;transition:color .15s;align-self:flex-start}
-.sum-close:hover{color:#f0f0f0}
+.sh-name{font-size:1rem;font-weight:800;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh-date{font-size:.7rem;color:#666;margin-top:1px;font-variant-numeric:tabular-nums}
 
-/* ── Red hero stat panel ── */
-.hero{background:linear-gradient(140deg,#e4002b 0%,#c40023 100%);border-radius:16px;padding:20px 18px;display:grid;grid-template-columns:1fr 1fr;gap:22px 14px}
-.hero-cell{color:#fff;min-width:0}
-.hc-top{display:flex;align-items:center;justify-content:space-between;height:26px;margin-bottom:8px}
-.hc-icon svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.95}
-.hc-badge{font-size:.55rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;background:rgba(0,0,0,.2);padding:2px 6px;border-radius:5px}
-.hc-val{font-size:1.7rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hc-unit{font-size:.8rem;font-weight:700;margin-left:3px;opacity:.82}
-.hc-lbl{font-size:.68rem;font-weight:600;opacity:.82;margin-top:6px}
+/* ── Red hero stat panel — horizontal row ── */
+.hero{background:linear-gradient(140deg,#e4002b 0%,#c40023 100%);border-radius:14px;padding:9px 6px;display:flex;justify-content:space-around;gap:6px}
+.hero-cell{color:#fff;min-width:0;flex:1;text-align:center;padding:0 6px}
+.hero-cell + .hero-cell{border-left:1px solid rgba(255,255,255,.18)}
+.hc-top{display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+.hc-icon svg{width:17px;height:17px;stroke:#fff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.95}
+.hc-val{font-size:1.15rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.03em;white-space:nowrap}
+.hc-unit{font-size:.62rem;font-weight:700;margin-left:2px;opacity:.82}
+.hc-lbl{font-size:.54rem;font-weight:600;opacity:.82;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* ── HR zones ── */
-.zones{margin-top:16px}
-.zones-label{font-size:.64rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4a4a4a;margin-bottom:9px}
-.zone-bar{display:flex;align-items:center;gap:9px;margin-bottom:6px}
-.zb-label{font-size:.64rem;font-weight:800;width:18px;text-align:center;flex-shrink:0}
-.zb-track{flex:1;height:7px;background:#1a1a1a;border-radius:4px;overflow:hidden}
-.zb-fill{height:100%;border-radius:4px;transition:width .5s cubic-bezier(.4,0,.2,1)}
-.zb-time{font-size:.64rem;font-variant-numeric:tabular-nums;color:#666;width:38px;text-align:right;flex-shrink:0;font-family:'SF Mono','Fira Code',Consolas,monospace}
+/* ── HR zones — single segmented bar ── */
+.zones{margin-top:8px}
+.zones-label{font-size:.56rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4a4a4a;margin-bottom:5px}
+.zbar{display:flex;height:11px;border-radius:5px;overflow:hidden;background:#1a1a1a;gap:1px}
+.zseg{height:100%}
+.zlegend{display:flex;gap:12px;margin-top:6px;flex-wrap:wrap}
+.zleg{display:flex;align-items:center;gap:5px;font-size:.62rem;color:#999;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.zdot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 .z1f{background:#5aa0d8}.z2f{background:#57c46b}.z3f{background:#e3bd2e}.z4f{background:#ee7326}.z5f{background:#e4002b}
-.zb-label.zc1{color:#5aa0d8}.zb-label.zc2{color:#57c46b}.zb-label.zc3{color:#e3bd2e}.zb-label.zc4{color:#ee7326}.zb-label.zc5{color:#e4002b}
 
-/* ── Laps table ── */
-.laps-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:6px}
-.laps-table th{text-align:right;font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#4a4a4a;padding:0 6px 9px;border-bottom:1px solid #1e1e1e}
-.laps-table th:first-child{text-align:left}
-.laps-table td{text-align:right;padding:7px 6px;border-bottom:1px solid #141414;font-variant-numeric:tabular-nums;color:#ccc;font-family:'SF Mono','Fira Code',Consolas,monospace;font-size:.74rem}
-.laps-table td:first-child{text-align:left;color:#666}
-.laps-table tr:last-child td{border-bottom:none}
+/* ── Detail: zones + laps side by side to use the width ── */
+.det-cols{display:flex;gap:20px;margin-top:7px;align-items:flex-start}
+.det-cols .zones{margin-top:0;flex:0 0 330px;max-width:330px}
+.laps-col{flex:1;min-width:0}
+.laps-col .laps-strip{margin-top:5px}
+/* ── Laps — horizontal chips ── */
+.laps-strip{display:flex;gap:8px;overflow-x:auto;margin-top:6px;padding-bottom:4px}
+.lap-chip{flex-shrink:0;min-width:78px;background:#141414;border:1px solid #1c1c1c;border-radius:9px;padding:6px 9px;text-align:center}
+.lap-num{font-size:.56rem;font-weight:800;color:#e4002b;letter-spacing:.06em;margin-bottom:4px}
+.lap-time{font-size:.82rem;font-weight:800;color:#eee;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.lap-sub{font-size:.6rem;color:#777;margin-top:3px;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
 
 /* ── States ── */
 .loading{color:#4a4a4a;font-size:.8rem;font-style:italic;padding:20px 0}
@@ -100,7 +98,7 @@ window.addEventListener("message", e => {
   if (m.id != null && pending.has(m.id)) {
     const { resolve, reject } = pending.get(m.id); pending.delete(m.id);
     m.error ? reject(new Error(m.error?.message ?? "RPC error")) : resolve(m.result);
-  } else if (m.method === "ui/notifications/tool-result") onToolResult(m.params?.structuredContent);
+  } else if (m.method === "ui/notifications/tool-result") onToolResult(extractPayload(m.params));
 });
 function rpc(method, params) {
   const id = ++msgId;
@@ -108,6 +106,20 @@ function rpc(method, params) {
     pending.set(id, { resolve, reject });
     window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
   });
+}
+// Current MCP-app hosts (Claude Desktop, 2026-07) drop structuredContent from
+// the forwarded tool-result, so read the tagged {"type":...} JSON text block the
+// server also emits. structuredContent is still preferred when the host sends it.
+function extractPayload(params) {
+  if (params && params.structuredContent) return params.structuredContent;
+  const content = (params && params.content) || [];
+  for (let i = content.length - 1; i >= 0; i--) {
+    const c = content[i];
+    if (c && c.type === "text" && typeof c.text === "string" && c.text.trim()[0] === "{") {
+      try { const p = JSON.parse(c.text); if (p && typeof p.type === "string") return p; } catch (_) {}
+    }
+  }
+  return null;
 }
 rpc("ui/initialize", { protocolVersion: "2026-01-26", appInfo: { name: "polar-sessions-ui", version: "3.0" }, appCapabilities: { availableDisplayModes: ["inline"] } })
   .then(() => window.parent.postMessage({ jsonrpc: "2.0", method: "ui/notifications/initialized", params: {} }, "*"));
@@ -145,6 +157,21 @@ function fmtDateLong(iso) {
   return `${WEEKDAYS[d.getDay()]} ${parseInt(p[2])} ${MONTHS_SHORT[parseInt(p[1])-1]} ${p[0]}`;
 }
 function fmtTime(iso) { return String(iso ?? "").slice(11,16); }
+function fmtDayShort(iso) {
+  if (!iso) return "";
+  const p = iso.slice(0,10).split("-");
+  const d = new Date(iso.slice(0,10)+"T00:00:00");
+  return `${WEEKDAYS[d.getDay()]} ${parseInt(p[2])} ${MONTHS_SHORT[parseInt(p[1])-1]}`;
+}
+// HR zones as one compact segmented bar. pairs: [{idx:1..5, secs}].
+function zonesBarHTML(pairs) {
+  const items = (pairs ?? []).filter(p => p.secs > 0);
+  if (!items.length) return "";
+  const total = items.reduce((a,p) => a + p.secs, 0) || 1;
+  const bar = items.map(p => `<div class="zseg z${p.idx}f" style="width:${(p.secs/total*100).toFixed(2)}%"></div>`).join("");
+  const legend = items.map(p => `<span class="zleg"><span class="zdot z${p.idx}f"></span>Z${p.idx} ${esc(fmtDur(p.secs))}</span>`).join("");
+  return `<div class="zones"><div class="zones-label">Heart Rate Zones</div><div class="zbar">${bar}</div><div class="zlegend">${legend}</div></div>`;
+}
 
 // Parse ISO-8601 duration ("PT35M23.512S") to seconds.
 function isoDurToSecs(str) {
@@ -190,10 +217,11 @@ const METRIC_GLYPHS = {
   load:'<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />',
 };
 function heroCell(icon, val, unit, label, badge) {
+  const lbl = badge ? `${badge} ${label}` : label;
   return `<div class="hero-cell">
-    <div class="hc-top"><span class="hc-icon"><svg viewBox="0 0 24 24">${METRIC_GLYPHS[icon] ?? ""}</svg></span>${badge?`<span class="hc-badge">${esc(badge)}</span>`:""}</div>
+    <div class="hc-top"><span class="hc-icon"><svg viewBox="0 0 24 24">${METRIC_GLYPHS[icon] ?? ""}</svg></span></div>
     <div class="hc-val">${esc(val)}${unit?`<span class="hc-unit">${esc(unit)}</span>`:""}</div>
-    <div class="hc-lbl">${esc(label)}</div>
+    <div class="hc-lbl">${esc(lbl)}</div>
   </div>`;
 }
 
@@ -202,97 +230,68 @@ let openRow = null;
 
 // ── Tool result dispatch ───────────────────────────────
 function onToolResult(sc) {
-  if (!sc) return;
-  if (sc.type === "session_list") renderDayList(sc);
-  else if (sc.type === "session_summary") renderDirectSummary(sc);
-  else if (sc.type === "session_details") renderDirectDetails(sc);
+  const root = document.getElementById("root");
+  if (!sc) { root.className = ""; root.innerHTML = `<div class="empty-state">No data received.</div>`; return; }
+  try {
+    if (sc.type === "session_list") renderDayList(sc);
+    else if (sc.type === "session_summary") renderDirectSummary(sc);
+    else if (sc.type === "session_details") renderDirectDetails(sc);
+    else { root.className = ""; root.innerHTML = `<div class="empty-state">Unexpected result: ${esc(sc.type ?? "?")}</div>`; }
+  } catch (e) {
+    root.className = ""; root.innerHTML = `<div class="empty-state">Could not render: ${esc(e.message)}</div>`;
+  }
 }
 
-// ── Day-grouped list ───────────────────────────────────
+// ── Session list → horizontal card strip ───────────────
 function renderDayList(sc) {
+  window.__lastList = sc;
   const sessions = sc.sessions ?? [];
-  document.getElementById("hdr-label").textContent = "Training Log";
-  document.getElementById("hdr-range").textContent = sessions.length ? `${sessions.length} session${sessions.length>1?"s":""}` : "";
-
-  if (!sessions.length) {
-    document.getElementById("root").className = "";
-    document.getElementById("root").innerHTML = `<div class="empty-state">No sessions in this period.</div>`;
-    return;
-  }
-
-  // Group by date, newest day first, newest session first within a day.
-  const byDate = {};
-  for (const s of sessions) { const d = sessionDate(s); if (d) (byDate[d] = byDate[d] ?? []).push(s); }
-  const days = Object.keys(byDate).sort().reverse();
-
-  window.__sessIndex = {}; // id → session, for click handlers
-  let html = `<div class="fade-in">`;
-  for (const day of days) {
-    const items = byDate[day].sort((a,b) => String(b.start_time??"").localeCompare(String(a.start_time??"")));
-    html += `<div class="day-group"><div class="day-head">${esc(fmtDateLong(day))}</div>`;
-    for (const s of items) {
-      const id = s.id ?? s.exercise_id;
-      window.__sessIndex[id] = s;
-      const info = sportInfo(s);
-      const name = s.sport_name ?? s.sportName ?? info.label;
-      const dur = s.session_duration_s ?? durToSecs(s.duration);
-      const dist = s.distance_m ?? s.distance ?? 0;
-      const phases = s.has_training_target ? `<span class="chip">Phases</span>` : "";
-      html += `<div class="sess-row" id="row-${esc(id)}" onclick="toggleRow('${esc(id)}')">
-        ${sportTile(s)}
-        <div class="sr-main">
-          <div class="sr-name">${esc(name)}</div>
-          <div class="sr-sub"><span class="sr-time">${esc(fmtTime(s.start_time))}</span>${phases}</div>
-        </div>
-        <div class="sr-right">
-          <div class="sr-dur">${esc(fmtDur(dur))}</div>
-          ${dist ? `<div class="sr-dist">${esc(fmtDistFlat(dist))}</div>` : ""}
-        </div>
-      </div>
-      <div class="slot" id="slot-${esc(id)}"></div>`;
-    }
-    html += `</div>`;
-  }
-  html += `</div>`;
+  pageHeader(false);
   const root = document.getElementById("root");
   root.className = "";
-  root.innerHTML = html;
+  if (!sessions.length) { root.innerHTML = `<div class="empty-state">No sessions in this period.</div>`; return; }
+
+  // Newest first.
+  const sorted = sessions.slice().sort((a,b) => String(b.start_time ?? "").localeCompare(String(a.start_time ?? "")));
+  window.__sessIndex = {}; // id → session, for the drill-in
+  root.innerHTML = `<div class="strip fade-in">${sorted.map(s => {
+    const id = s.id ?? s.exercise_id;
+    window.__sessIndex[id] = s;
+    const name = s.sport_name ?? s.sportName ?? sportInfo(s).label;
+    const dur = s.session_duration_s ?? durToSecs(s.duration);
+    const dist = s.distance_m ?? s.distance ?? 0;
+    const pace = fmtPace(dist, dur);
+    return `<div class="sess-card" onclick="openSession('${esc(id)}')">
+      <div class="sc-top">${sportTile(s, true)}<span class="sc-date">${esc(fmtDayShort(sessionDate(s)))}</span></div>
+      <div class="sc-name">${esc(name)}</div>
+      <div class="sc-dur">${esc(fmtDur(dur))}</div>
+      <div class="sc-stats">${esc(fmtTime(s.start_time))}${dist ? ` · ${esc(fmtDistFlat(dist))}` : ""}${pace ? ` · ${esc(pace)}/km` : ""}</div>
+    </div>`;
+  }).join("")}</div>`;
 }
 
-function toggleRow(id) {
-  const row = document.getElementById("row-"+id);
-  const slot = document.getElementById("slot-"+id);
-  if (!slot) return;
-  if (openRow === id) {
-    slot.classList.remove("open"); slot.innerHTML = "";
-    row.classList.remove("active"); openRow = null; return;
-  }
-  if (openRow) {
-    const prev = document.getElementById("slot-"+openRow);
-    if (prev) { prev.classList.remove("open"); prev.innerHTML = ""; }
-    document.getElementById("row-"+openRow)?.classList.remove("active");
-  }
-  openRow = id;
-  row.classList.add("active");
-  slot.classList.add("open");
-  fetchSummary(window.__sessIndex[id], slot);
-}
-
-async function fetchSummary(session, slot) {
-  const id = session?.id ?? session?.exercise_id;
-  if (!id) { slot.innerHTML = `<div class="empty-state">No session ID available.</div>`; return; }
-  slot.innerHTML = `<div class="loading"><span class="spinner"></span>Loading…</div>`;
+// Drill from a card into its summary; the summary shows a back button.
+async function openSession(id) {
+  const session = window.__sessIndex?.[id];
+  const root = document.getElementById("root");
+  pageHeader(false);
+  root.className = "";
+  root.innerHTML = `<div class="loading"><span class="spinner"></span>Loading…</div>`;
   try {
     const result = await rpc("tools/call", { name: "get_training_session_summary", arguments: { session_id: Number(id) } });
-    const sc = result?.structuredContent;
-    slot.innerHTML = summaryHTML(sc?.summary ?? sc?.data ?? sc, session, false);
+    const sc = extractPayload(result);
+    root.innerHTML = summaryHTML(sc?.summary ?? sc?.data ?? sc, session, true, true);
   } catch (err) {
-    slot.innerHTML = `<div class="empty-state">Could not load session: ${esc(err.message)}</div>`;
+    root.innerHTML = `<div class="empty-state">Could not load session: ${esc(err.message)}</div>`;
   }
 }
+function backToList() { if (window.__lastList) renderDayList(window.__lastList); }
+// Summary/detail views carry their own sport+name header, so hide the page
+// header there to reclaim vertical space in the short viewport.
+function pageHeader(show) { const h = document.querySelector(".hdr"); if (h) h.style.display = show ? "flex" : "none"; }
 
 // ── Summary → red hero panel ───────────────────────────
-function summaryHTML(s, fallback, withHeader) {
+function summaryHTML(s, fallback, withHeader, withBack) {
   if (!s) return `<div class="empty-state">No data returned.</div>`;
   const ex = firstExercise(s);
   const hr = ex?.trainingStatistic?.HEART_RATE ?? {};
@@ -318,18 +317,11 @@ function summaryHTML(s, fallback, withHeader) {
   if (load)  cells.push(heroCell("load", Math.round(load), "", "Training Load", null));
 
   const zones = s.heart_rate_zones ?? s.hr_zones ?? [];
-  let zonesHTML = "";
-  if (zones.length) {
-    const maxZone = Math.max(...zones.map(z => Number(z.duration_in_seconds ?? z.in_zone ?? 0)), 1);
-    zonesHTML = `<div class="zones"><div class="zones-label">Heart Rate Zones</div>${zones.map((z,i)=>{
-      const t = Number(z.duration_in_seconds ?? z.in_zone ?? 0);
-      const pct = Math.max(2, Math.round(t/maxZone*100));
-      return `<div class="zone-bar"><span class="zb-label zc${i+1}">Z${i+1}</span><div class="zb-track"><div class="zb-fill z${i+1}f" style="width:${pct}%"></div></div><span class="zb-time">${fmtDur(t)}</span></div>`;
-    }).join("")}</div>`;
-  }
+  const zonesHTML = zonesBarHTML(zones.map((z,i) => ({ idx: i+1, secs: Number(z.duration_in_seconds ?? z.in_zone ?? 0) })));
 
   const header = withHeader ? `<div class="sum-head">
-      ${sportTile(fallback ?? ex ?? s)}
+      ${withBack ? `<button class="back-btn" onclick="backToList()">‹ Back</button>` : ""}
+      ${sportTile(fallback ?? ex ?? s, true)}
       <div class="sh-txt"><div class="sh-name">${esc(name)}</div>${dateStr?`<div class="sh-date">${esc(fmtDateLong(dateStr))}</div>`:""}</div>
     </div>` : "";
 
@@ -338,8 +330,7 @@ function summaryHTML(s, fallback, withHeader) {
 
 // ── Direct summary (single tool call, no list) ─────────
 function renderDirectSummary(sc) {
-  document.getElementById("hdr-label").textContent = "Session Summary";
-  document.getElementById("hdr-range").textContent = "";
+  pageHeader(false);
   const root = document.getElementById("root");
   root.className = "";
   root.innerHTML = summaryHTML(sc.summary ?? sc.data ?? sc, null, true);
@@ -347,8 +338,7 @@ function renderDirectSummary(sc) {
 
 // ── Direct details (laps) ──────────────────────────────
 function renderDirectDetails(sc) {
-  document.getElementById("hdr-label").textContent = "Session Details";
-  document.getElementById("hdr-range").textContent = "";
+  pageHeader(false);
   const det = sc.details ?? {};
   const exObj = det.exercises ?? {};
   const ex = exObj[Object.keys(exObj)[0]] ?? null;
@@ -378,26 +368,23 @@ function renderDirectDetails(sc) {
   if (hrStat.max) cells.push(heroCell("heart", hrStat.max, "bpm", "Heart Rate", "Max"));
   if (ex?.calories) cells.push(heroCell("flame", Math.round(ex.calories), "kcal", "Calories", null));
 
-  const maxZ = Math.max(...hrZones.map(z => isoDurToSecs(z.inZone)), 1);
-  const zonesHTML = hrZones.length ? `<div class="zones"><div class="zones-label">Heart Rate Zones</div>${hrZones.map((z,i)=>{
-    const t = isoDurToSecs(z.inZone);
-    const idx = Math.min(5, Math.max(1, Number(z.zoneIndex || i+1)));
-    const pct = Math.max(2, Math.round(t/maxZ*100));
-    return `<div class="zone-bar"><span class="zb-label zc${idx}">Z${idx}</span><div class="zb-track"><div class="zb-fill z${idx}f" style="width:${pct}%"></div></div><span class="zb-time">${fmtDur(t)}</span></div>`;
-  }).join("")}</div>` : "";
+  const zonesHTML = zonesBarHTML(hrZones.map((z,i) => ({ idx: Math.min(5, Math.max(1, Number(z.zoneIndex || i+1))), secs: isoDurToSecs(z.inZone) })));
 
-  const lapsHTML = laps.length ? `<div class="zones-label" style="margin-top:18px">Laps</div>
-    <table class="laps-table"><thead><tr><th>Lap</th><th>Time</th><th>Dist</th><th>Avg HR</th><th>Max HR</th></tr></thead>
-    <tbody>${laps.map((l,i)=>`<tr><td>${i+1}</td><td>${esc(fmtDur(durToSecs(l.duration)))}</td><td>${esc(fmtDistFlat(l.distance??0))}</td><td>${esc(l.heartRate?.average??l.hrAvg??"—")}</td><td>${esc(l.heartRate?.maximum??l.hrMax??"—")}</td></tr>`).join("")}</tbody></table>` : "";
+  const lapsCol = laps.length ? `<div class="laps-col"><div class="zones-label">Laps</div>
+    <div class="laps-strip">${laps.map((l,i)=>{
+      const hrA = l.heartRate?.average ?? l.hrAvg;
+      const d = Number(l.distance ?? 0);
+      return `<div class="lap-chip"><div class="lap-num">LAP ${i+1}</div><div class="lap-time">${esc(fmtDur(durToSecs(l.duration)))}</div><div class="lap-sub">${d ? esc(fmtDistFlat(d)) : "—"}${hrA ? ` · ${esc(hrA)}bpm` : ""}</div></div>`;
+    }).join("")}</div></div>` : "";
 
   const root = document.getElementById("root");
   root.className = "";
-  if (!cells.length && !zonesHTML && !lapsHTML) { root.innerHTML = `<div class="empty-state">No detailed data available.</div>`; return; }
+  if (!cells.length && !zonesHTML && !lapsCol) { root.innerHTML = `<div class="empty-state">No detailed data available.</div>`; return; }
   const nm = ex?.sportParent ? ex.sportParent.charAt(0)+ex.sportParent.slice(1).toLowerCase() : sportInfo(ex ?? {}).label;
   root.innerHTML = `<div class="fade-in">
-    <div class="sum-head">${sportTile(ex ?? {})}<div class="sh-txt"><div class="sh-name">${esc(nm)}</div></div></div>
+    <div class="sum-head">${sportTile(ex ?? {}, true)}<div class="sh-txt"><div class="sh-name">${esc(nm)}</div></div></div>
     ${cells.length ? `<div class="hero">${cells.join("")}</div>` : ""}
-    ${zonesHTML}${lapsHTML}
+    ${(zonesHTML || lapsCol) ? `<div class="det-cols">${zonesHTML}${lapsCol}</div>` : ""}
   </div>`;
 }
 </script>

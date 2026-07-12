@@ -7,49 +7,51 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#0d0d0d;color:#f0f0f0;font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px}
-body{padding:16px}
+body{padding:12px 14px;overflow-x:hidden;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
 
-.hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
-.hdr-label{font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#e4002b}
-.hdr-sub{font-size:.72rem;color:#666;font-variant-numeric:tabular-nums}
+.hdr{display:none}
+.hdr-label{font-size:.64rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#e4002b}
+.hdr-sub{font-size:.68rem;color:#666;font-variant-numeric:tabular-nums}
+.strip{scrollbar-width:thin;scrollbar-color:#3a3a3a #161616}
+::-webkit-scrollbar{height:9px}::-webkit-scrollbar-track{background:#161616;border-radius:5px}::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px}::-webkit-scrollbar-thumb:hover{background:#4a4a4a}
 
-/* Target list */
-.target-list{display:flex;flex-direction:column;gap:4px}
-.target-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:10px;transition:background .15s}
-.target-row:hover{background:#141414}
-.tile{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.tile svg{width:22px;height:22px;fill:#fff}
-.tr-main{flex:1;min-width:0}
-.tr-name{font-size:.88rem;font-weight:700;color:#f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}
-.tr-date{font-size:.72rem;color:#666;font-variant-numeric:tabular-nums;margin-top:2px;font-family:'SF Mono','Fira Code',Consolas,monospace}
-.tr-id{font-size:.66rem;color:#3a3a3a;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;flex-shrink:0}
+/* Horizontal card strip (list + phases) */
+.strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.tile{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tile svg{width:20px;height:20px;fill:#fff}
+
+/* Target list cards */
+.t-card{flex-shrink:0;width:172px;background:#111;border:1px solid #1c1c1c;border-radius:12px;padding:12px 13px;display:flex;flex-direction:column;gap:9px}
+.t-top{display:flex;align-items:center;justify-content:space-between}
+.tr-name{font-size:.86rem;font-weight:700;color:#f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}
+.tr-date{font-size:.7rem;color:#666;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.tr-id{font-size:.66rem;color:#3a3a3a;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
 
 /* Detail */
-.det-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.det-head{display:flex;align-items:center;gap:11px;margin-bottom:10px}
 .dh-txt{min-width:0}
-.dh-name{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dh-meta{font-size:.72rem;color:#666;margin-top:2px;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
-.phases-section{font-size:.64rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4a4a4a;margin-bottom:9px}
-.phase-row{display:flex;align-items:stretch;margin-bottom:7px;border-radius:10px;overflow:hidden}
-.phase-type{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.56rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:8px 0;min-height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:24px}
+.dh-name{font-size:1rem;font-weight:800;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dh-meta{font-size:.7rem;color:#666;margin-top:1px;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.phase-card{flex-shrink:0;min-width:104px;background:#141414;border:1px solid #1c1c1c;border-radius:10px;overflow:hidden}
+.phase-badge{font-size:.56rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:6px 10px;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px}
 .pt-warmup{background:#0d2d42;color:#5aa0d8}
 .pt-cooldown{background:#0d2d18;color:#57c46b}
 .pt-work{background:#2a0409;color:#ff5566}
 .pt-repeat{background:#1e0d2a;color:#b07de0}
-.phase-body{flex:1;background:#141414;padding:9px 13px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.phase-content{padding:10px 12px;display:flex;gap:14px;align-items:center}
 .phase-stat{display:flex;flex-direction:column;gap:2px}
-.ps-val{font-size:.84rem;font-weight:800;font-variant-numeric:tabular-nums;color:#f0f0f0;font-family:'SF Mono','Fira Code',Consolas,monospace}
-.ps-lbl{font-size:.58rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4a4a4a}
-.repeat-count{font-size:.76rem;font-weight:800;color:#b07de0;padding:3px 8px;background:#1e0d2a;border-radius:6px;margin-left:auto;flex-shrink:0}
+.ps-val{font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums;color:#f0f0f0;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.ps-lbl{font-size:.56rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4a4a4a}
+.rep-badge{font-size:.62rem;font-weight:800;color:#b07de0}
 
-/* Created confirmation (red hero style) */
-.created-card{background:linear-gradient(140deg,#e4002b 0%,#c40023 100%);border-radius:16px;padding:20px;color:#fff}
-.cc-label{display:flex;align-items:center;gap:6px;font-size:.64rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.9;margin-bottom:12px}
-.cc-check{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center}
-.cc-check svg{width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.cc-name{font-size:1.3rem;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
-.cc-datetime{font-size:.82rem;opacity:.9;font-variant-numeric:tabular-nums;margin-bottom:10px;font-family:'SF Mono','Fira Code',Consolas,monospace}
-.cc-id{font-size:.7rem;opacity:.7;font-family:'SF Mono','Fira Code',Consolas,monospace}
+/* Created confirmation — horizontal red card */
+.created-card{background:linear-gradient(140deg,#e4002b 0%,#c40023 100%);border-radius:14px;padding:14px 20px;color:#fff;display:flex;align-items:center;gap:16px}
+.cc-check{width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cc-check svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.cc-main{min-width:0}
+.cc-label2{font-size:.58rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.85;margin-bottom:3px}
+.cc-name{font-size:1.15rem;font-weight:800;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-datetime{font-size:.78rem;opacity:.9;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;margin-left:auto;text-align:right;flex-shrink:0}
 
 .empty-state{color:#4a4a4a;font-size:.8rem;font-style:italic;padding:16px 0}
 .loading{color:#4a4a4a;font-size:.8rem;font-style:italic;padding:16px 0}
@@ -71,11 +73,25 @@ window.addEventListener("message", e => {
   if (m.id != null && pending.has(m.id)) {
     const {resolve,reject} = pending.get(m.id); pending.delete(m.id);
     m.error ? reject(new Error(m.error?.message ?? "RPC error")) : resolve(m.result);
-  } else if (m.method === "ui/notifications/tool-result") render(m.params?.structuredContent);
+  } else if (m.method === "ui/notifications/tool-result") render(extractPayload(m.params));
 });
 function rpc(method, params) {
   const id = ++msgId;
   return new Promise((resolve,reject) => { pending.set(id,{resolve,reject}); window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*"); });
+}
+// Current MCP-app hosts (Claude Desktop, 2026-07) drop structuredContent from
+// the forwarded tool-result, so read the tagged {"type":...} JSON text block the
+// server also emits. structuredContent is still preferred when the host sends it.
+function extractPayload(params) {
+  if (params && params.structuredContent) return params.structuredContent;
+  const content = (params && params.content) || [];
+  for (let i = content.length - 1; i >= 0; i--) {
+    const c = content[i];
+    if (c && c.type === "text" && typeof c.text === "string" && c.text.trim()[0] === "{") {
+      try { const p = JSON.parse(c.text); if (p && typeof p.type === "string") return p; } catch (_) {}
+    }
+  }
+  return null;
 }
 rpc("ui/initialize",{protocolVersion:"2026-01-26",appInfo:{name:"polar-targets-ui",version:"3.0"},appCapabilities:{availableDisplayModes:["inline"]}})
   .then(()=>window.parent.postMessage({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}},"*"));
@@ -139,14 +155,11 @@ function render(sc) {
     sub.textContent = `${sc.from} → ${sc.to}`;
     const targets = sc.targets ?? [];
     if (!targets.length) { root.innerHTML = `<div class="empty-state">No targets in this period.</div>`; return; }
-    root.innerHTML = `<div class="target-list fade-in">${targets.map(t => `
-      <div class="target-row">
-        ${sportTile(t.sport_category)}
-        <div class="tr-main">
-          <div class="tr-name">${esc(t.title || "(unnamed)")}</div>
-          <div class="tr-date">${esc(fmtDateTime(t.start))}</div>
-        </div>
-        <div class="tr-id">#${esc(t.id)}</div>
+    root.innerHTML = `<div class="strip fade-in">${targets.map(t => `
+      <div class="t-card">
+        <div class="t-top">${sportTile(t.sport_category)}<span class="tr-id">#${esc(t.id)}</span></div>
+        <div class="tr-name">${esc(t.title || "(unnamed)")}</div>
+        <div class="tr-date">${esc(fmtDateTime(t.start))}</div>
       </div>`).join("")}</div>`;
     return;
   }
@@ -166,46 +179,44 @@ function render(sc) {
     label.textContent = "Target Created";
     sub.textContent = "";
     root.innerHTML = `<div class="created-card fade-in">
-      <div class="cc-label"><span class="cc-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Scheduled</div>
-      <div class="cc-name">${esc(sc.name)}</div>
+      <span class="cc-check"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+      <div class="cc-main">
+        <div class="cc-label2">Target Scheduled · #${esc(sc.id)}</div>
+        <div class="cc-name">${esc(sc.name)}</div>
+      </div>
       <div class="cc-datetime">${esc(fmtDateTime(sc.datetime))}</div>
-      <div class="cc-id">ID ${esc(sc.id)}</div>
     </div>`;
     return;
   }
 }
 
 function renderPhases(exercises) {
-  if (!exercises.length) return `<div class="empty-state">No phase data.</div>`;
-  let out = `<div class="phases-section">Phases</div>`;
+  const cards = [];
   for (const ex of exercises) {
     for (const ph of (ex.phases ?? [])) {
       const ptype = ph.phaseType ?? ph.phase_type ?? ph.type ?? "PHASE";
       if (ptype === "REPEAT") {
         const work = (ph.phases ?? [])[0];
         const rec  = (ph.phases ?? [])[1];
-        out += `<div class="phase-row">
-          <div class="phase-type pt-repeat">Rep</div>
-          <div class="phase-body">
-            <span class="repeat-count">×${esc(ph.repeatCount ?? ph.repeat_count)}</span>
-            ${work ? phaseStats(work, "Work") : ""}
-            ${rec  ? phaseStats(rec,  "Rest") : ""}
-          </div>
-        </div>`;
+        cards.push(`<div class="phase-card">
+          <div class="phase-badge pt-repeat">Repeat <span class="rep-badge">×${esc(ph.repeatCount ?? ph.repeat_count)}</span></div>
+          <div class="phase-content">${work ? phaseStats(work, "Work") : ""}${rec ? phaseStats(rec, "Rest") : ""}</div>
+        </div>`);
       } else {
         const name = ph.name ?? ptype;
         const ln = name.toLowerCase();
         const isWarm = ln.includes("warm") || ln.includes("échauff") || ln.includes("echauff");
         const isCool = ln.includes("cool") || ln.includes("calme") || ln.includes("retour");
         const cls = isWarm ? "pt-warmup" : isCool ? "pt-cooldown" : "pt-work";
-        out += `<div class="phase-row">
-          <div class="phase-type ${cls}">${isWarm?"Warm":isCool?"Cool":"Work"}</div>
-          <div class="phase-body">${phaseStats(ph, null)}</div>
-        </div>`;
+        cards.push(`<div class="phase-card">
+          <div class="phase-badge ${cls}">${isWarm?"Warm-up":isCool?"Cool-down":"Work"}</div>
+          <div class="phase-content">${phaseStats(ph, null)}</div>
+        </div>`);
       }
     }
   }
-  return out;
+  if (!cards.length) return `<div class="empty-state">No phase data.</div>`;
+  return `<div class="strip">${cards.join("")}</div>`;
 }
 
 function phaseStats(p, label) {

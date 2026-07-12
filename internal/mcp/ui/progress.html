@@ -7,27 +7,30 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#0d0d0d;color:#f0f0f0;font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px}
-body{padding:16px}
-.hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
-.hdr-label{font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#e4002b}
-.hdr-sub{font-size:.72rem;color:#666;font-variant-numeric:tabular-nums}
+body{padding:12px 14px;overflow-x:hidden}
+.hdr{display:none}
+.hdr-label{font-size:.64rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#e4002b}
+.hdr-sub{font-size:.68rem;color:#666;font-variant-numeric:tabular-nums}
 
-/* Red hero panel */
-.hero{background:linear-gradient(140deg,#e4002b 0%,#c40023 100%);border-radius:16px;padding:20px 18px;display:grid;grid-template-columns:1fr 1fr;gap:22px 14px;margin-bottom:18px}
-.hero-cell{color:#fff;min-width:0}
-.hc-top{height:26px;margin-bottom:8px;display:flex;align-items:center}
-.hc-icon svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.95}
-.hc-val{font-size:1.6rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hc-unit{font-size:.8rem;font-weight:700;margin-left:3px;opacity:.82}
-.hc-lbl{font-size:.68rem;font-weight:600;opacity:.82;margin-top:6px}
+/* Red hero panel — single horizontal row of stat cells */
+.hero{background:linear-gradient(140deg,#e4002b 0%,#c40023 100%);border-radius:14px;padding:11px 6px;display:flex;justify-content:space-around;gap:6px}
+.hero-cell{color:#fff;min-width:0;flex:1;text-align:center;padding:0 6px}
+.hero-cell + .hero-cell{border-left:1px solid rgba(255,255,255,.18)}
+.hc-top{margin-bottom:5px;display:flex;justify-content:center}
+.hc-icon svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.95}
+.hc-val{font-size:1.35rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.03em;white-space:nowrap}
+.hc-unit{font-size:.72rem;font-weight:700;margin-left:2px;opacity:.82}
+.hc-lbl{font-size:.6rem;font-weight:600;opacity:.82;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.section-label{font-size:.64rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#4a4a4a;margin:16px 0 9px}
-.bar-row{display:flex;align-items:center;gap:9px;margin-bottom:7px}
-.br-tile{width:9px;height:9px;border-radius:3px;flex-shrink:0}
-.br-label{font-size:.76rem;color:#aaa;min-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
-.br-track{flex:1;height:7px;background:#181818;border-radius:4px;overflow:hidden}
-.br-fill{height:100%;border-radius:4px;min-width:2px;transition:width .5s cubic-bezier(.4,0,.2,1)}
-.br-val{font-size:.7rem;color:#666;min-width:50px;text-align:right;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;flex-shrink:0}
+/* By-sport breakdown — horizontal chip strip */
+.sport-strip{display:flex;gap:8px;margin-top:8px;overflow-x:auto;padding-bottom:3px}
+.sp-chip{display:flex;align-items:center;gap:7px;background:#141414;border:1px solid #1e1e1e;border-radius:9px;padding:6px 11px;flex-shrink:0}
+.sp-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.sp-name{font-size:.72rem;color:#ccc;white-space:nowrap}
+.sp-val{font-size:.72rem;color:#777;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace}
+.strip-lbl{font-size:.56rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#4a4a4a;align-self:center;flex-shrink:0;margin-right:2px}
+.sport-strip{scrollbar-width:thin;scrollbar-color:#3a3a3a #161616}
+::-webkit-scrollbar{height:9px}::-webkit-scrollbar-track{background:#161616;border-radius:5px}::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:5px}::-webkit-scrollbar-thumb:hover{background:#4a4a4a}
 .empty-state{color:#4a4a4a;font-size:.8rem;font-style:italic;padding:12px 0}
 .loading{color:#4a4a4a;font-size:.8rem;font-style:italic}
 .fade-in{animation:fadeIn .22s ease}
@@ -44,11 +47,25 @@ window.addEventListener("message", e => {
   if (m.id != null && pending.has(m.id)) {
     const {resolve,reject} = pending.get(m.id); pending.delete(m.id);
     m.error ? reject(new Error(m.error?.message ?? "RPC error")) : resolve(m.result);
-  } else if (m.method === "ui/notifications/tool-result") render(m.params?.structuredContent);
+  } else if (m.method === "ui/notifications/tool-result") render(extractPayload(m.params));
 });
 function rpc(method, params) {
   const id = ++msgId;
   return new Promise((resolve,reject) => { pending.set(id,{resolve,reject}); window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*"); });
+}
+// Current MCP-app hosts (Claude Desktop, 2026-07) drop structuredContent from
+// the forwarded tool-result, so read the tagged {"type":...} JSON text block the
+// server also emits. structuredContent is still preferred when the host sends it.
+function extractPayload(params) {
+  if (params && params.structuredContent) return params.structuredContent;
+  const content = (params && params.content) || [];
+  for (let i = content.length - 1; i >= 0; i--) {
+    const c = content[i];
+    if (c && c.type === "text" && typeof c.text === "string" && c.text.trim()[0] === "{") {
+      try { const p = JSON.parse(c.text); if (p && typeof p.type === "string") return p; } catch (_) {}
+    }
+  }
+  return null;
 }
 rpc("ui/initialize",{protocolVersion:"2026-01-26",appInfo:{name:"polar-progress-ui",version:"3.0"},appCapabilities:{availableDisplayModes:["inline"]}})
   .then(()=>window.parent.postMessage({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}},"*"));
@@ -80,23 +97,6 @@ function heroCell(icon, val, unit, label) {
   </div>`;
 }
 
-// items: [{label, value, color?}]. `fmt` renders the numeric value.
-function barList(items, fixedColor, fmt) {
-  if (!items?.length) return "";
-  const max = Math.max(...items.map(i=>Number(i.value)||0), 1);
-  return items.map(item => {
-    const val = Number(item.value) || 0;
-    const pct = Math.max(2, Math.round(val/max*100));
-    const color = item.color ?? fixedColor;
-    return `<div class="bar-row">
-      <span class="br-tile" style="background:${color}"></span>
-      <span class="br-label">${esc(item.label)}</span>
-      <div class="br-track"><div class="br-fill" style="width:${pct}%;background:${color}"></div></div>
-      <span class="br-val">${esc(fmt(val))}</span>
-    </div>`;
-  }).join("");
-}
-
 function render(sc) {
   if (!sc || sc.type !== "progress_summary") return;
   const d = sc.data ?? {};
@@ -119,17 +119,19 @@ function render(sc) {
   const sd = d.sport_breakdown ?? d.sportDistributions ?? {};
   const sportSrc = sd.distance?.length ? sd.distance : (sd.duration ?? []);
   const sportIsDist = !!sd.distance?.length;
-  const sports = sportSrc.map(x => { const label = x.sportName ?? x.nameForChart ?? "—"; return { label, value: Number(x.valueForChart)||0, color: SPORT_COLORS[cats[label]] ?? SPORT_COLORS.generic }; });
+  const sports = sportSrc.map(x => { const label = x.sportName ?? x.nameForChart ?? "—"; return { label, value: Number(x.valueForChart)||0, color: SPORT_COLORS[cats[label]] ?? SPORT_COLORS.generic }; })
+    .sort((a,b)=>b.value-a.value);
 
-  const benefits = (d.training_benefit_breakdown ?? d.trainingBenefitDistributionList ?? []).map(x => ({
-    label: prettyLabel(x.nameForChart ?? x.trainingBenefit), value: Number(x.trainingBenefitTotal)||0,
-  }));
+  const chips = sports.map(s => `<div class="sp-chip">
+    <span class="sp-dot" style="background:${s.color}"></span>
+    <span class="sp-name">${esc(s.label)}</span>
+    <span class="sp-val">${esc(sportIsDist ? fmtDistFlat(s.value) : fmtDurShort(s.value/1000))}</span>
+  </div>`).join("");
 
   document.getElementById("root").className = "";
   document.getElementById("root").innerHTML = `<div class="fade-in">
     <div class="hero">${cells.join("")}</div>
-    ${sports.length   ? `<div class="section-label">By Sport</div>${barList(sports, "#e4002b", sportIsDist ? fmtDistFlat : v=>fmtDurShort(v/1000))}` : ""}
-    ${benefits.length ? `<div class="section-label">Training Benefits</div>${barList(benefits, "#4a90d9", v=>fmtDurShort(v/1000))}` : ""}
+    ${sports.length ? `<div class="sport-strip"><span class="strip-lbl">By Sport</span>${chips}</div>` : ""}
   </div>`;
 }
 </script>
