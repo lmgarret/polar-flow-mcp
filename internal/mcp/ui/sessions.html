@@ -81,6 +81,22 @@ body{padding:7px 14px;overflow-x:hidden}
 @keyframes spin{to{transform:rotate(360deg)}}
 .fade-in{animation:fadeIn .22s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Portrait / narrow (mobile iframe) ── */
+@media (max-width:520px){
+  body{display:block;min-height:0}
+  /* Card strips reflow into a responsive grid instead of a sideways scroller */
+  .strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));overflow-x:visible}
+  .sess-card{width:auto}
+  /* Hero cells wrap to 2+ rows instead of being crushed into one */
+  .hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));row-gap:10px}
+  .hero-cell+.hero-cell{border-left:none}
+  .hc-val{font-size:1rem}
+  /* Detail: stack zones over laps, drop the fixed 330px column */
+  .det-cols{flex-direction:column;gap:12px}
+  .det-cols .zones{flex:1 1 auto;max-width:none;width:100%}
+  .laps-strip{flex-wrap:wrap;overflow-x:visible}
+}
 </style>
 </head>
 <body>

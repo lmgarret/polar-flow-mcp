@@ -35,6 +35,16 @@ body{padding:12px 14px;overflow-x:hidden}
 .loading{color:#4a4a4a;font-size:.8rem;font-style:italic}
 .fade-in{animation:fadeIn .22s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Portrait / narrow (mobile iframe) ── */
+@media (max-width:520px){
+  body{display:block;min-height:0}
+  /* Hero cells wrap to 2+ rows instead of being crushed into one */
+  .hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));row-gap:11px}
+  .hero-cell+.hero-cell{border-left:none}
+  /* By-sport chips wrap instead of scrolling sideways */
+  .sport-strip{flex-wrap:wrap;overflow-x:visible}
+}
 </style>
 </head>
 <body>

@@ -21,6 +21,15 @@ body{padding:12px 14px;overflow-x:hidden;min-height:100vh;display:flex;flex-dire
 .loading{color:#4a4a4a;font-size:.8rem;font-style:italic}
 .fade-in{animation:fadeIn .25s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Portrait / narrow (mobile iframe) ── */
+@media (max-width:520px){
+  body{display:block;min-height:0}
+  /* Chips drop to a full-width row below the name instead of being pinned right */
+  .card{flex-wrap:wrap}
+  .fields{margin-left:0;width:100%}
+  .chip{flex:1 1 auto}
+}
 </style>
 </head>
 <body>
