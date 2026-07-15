@@ -57,6 +57,17 @@ body{padding:12px 14px;overflow-x:hidden;min-height:100vh;display:flex;flex-dire
 .loading{color:#4a4a4a;font-size:.8rem;font-style:italic;padding:16px 0}
 .fade-in{animation:fadeIn .22s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Portrait / narrow (mobile iframe) ── */
+@media (max-width:520px){
+  body{display:block;min-height:0}
+  /* List + phase cards reflow into a responsive grid */
+  .strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));overflow-x:visible}
+  .t-card,.phase-card{width:auto;min-width:0;flex-shrink:1}
+  /* Created confirmation: let the date wrap under the name */
+  .created-card{flex-wrap:wrap}
+  .cc-datetime{margin-left:0;text-align:left}
+}
 </style>
 </head>
 <body>
