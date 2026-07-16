@@ -1462,10 +1462,14 @@ type ExerciseTarget struct {
 	Index OptInt `json:"index"`
 	// Polar sport identifier. 1 = Course à pied (running).
 	SportId int `json:"sportId"`
-	// Target duration in HH:MM:SS format. Null when not duration-based.
+	// Target duration in HH:MM:SS format. On create: null for PHASED targets (each phase carries its own).
+	// On read-back: for PHASED targets the server rolls up the phase durations into this field, so it is
+	// non-null even though you sent null. Send it back unchanged on update — the server recomputes it
+	// and ignores what you send.
 	Duration OptNilString `json:"duration"`
 	// Target distance in metres (the UI shows km but the wire value is metres — UI 5 km → payload
-	// 5000). Null when not distance-based.
+	// 5000). Null when not distance-based on create; for PHASED targets the server rolls up the phase
+	// distances into this field on read-back (same as `duration`).
 	Distance OptNilFloat64 `json:"distance"`
 	// Target calorie burn (kcal). Null when not calorie-based.
 	Calories OptNilFloat64 `json:"calories"`
@@ -1931,10 +1935,14 @@ type FavoriteExerciseTargetsItem struct {
 	Index OptInt `json:"index"`
 	// Polar sport identifier. 1 = Course à pied (running).
 	SportId int `json:"sportId"`
-	// Target duration in HH:MM:SS format. Null when not duration-based.
+	// Target duration in HH:MM:SS format. On create: null for PHASED targets (each phase carries its own).
+	// On read-back: for PHASED targets the server rolls up the phase durations into this field, so it is
+	// non-null even though you sent null. Send it back unchanged on update — the server recomputes it
+	// and ignores what you send.
 	Duration OptNilString `json:"duration"`
 	// Target distance in metres (the UI shows km but the wire value is metres — UI 5 km → payload
-	// 5000). Null when not distance-based.
+	// 5000). Null when not distance-based on create; for PHASED targets the server rolls up the phase
+	// distances into this field on read-back (same as `duration`).
 	Distance OptNilFloat64 `json:"distance"`
 	// Target calorie burn (kcal). Null when not calorie-based.
 	Calories OptNilFloat64 `json:"calories"`
@@ -6535,14 +6543,25 @@ type PhaseLeaf struct {
 	// "AUTOMATIC" — next phase starts automatically when the goal is reached. "MANUAL" — wait for user
 	// input (verified via capture 10-phased-manual.json).
 	PhaseChangeType PhaseLeafPhaseChangeType `json:"phaseChangeType"`
-	// Drives which of `distance` / `duration` is non-null on this phase.
+	// Authoritative discriminator for the phase goal. A client MUST read `goalType` to decide whether the
+	// phase is distance- or duration-based — do NOT infer it from "which of `distance`/`duration` is
+	// non-null". On `GET /api/trainingtarget/{id}` a `goalType: DISTANCE` leaf reads back with BOTH
+	// `distance` AND a phantom `duration: "00:00:00"` set (see those fields), so the field-presence
+	// heuristic gives the wrong answer and is the root cause of round-trip update bugs (verified
+	// 2026-06-08, probe-E-roundtrip-update.json).
 	GoalType PhaseLeafGoalType `json:"goalType"`
-	// Phase distance in metres (not km). Non-null iff `goalType=DISTANCE`.
+	// Phase distance in metres (not km). On create it is non-null iff `goalType: DISTANCE` (null
+	// otherwise). On read-back the asymmetry is: `goalType: DURATION` leaves OMIT this field entirely,
+	// while `goalType: DISTANCE` leaves carry it. Always trust `goalType`, not this field's presence.
 	Distance OptNilFloat64 `json:"distance"`
-	// Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the UI validator).
-	// Non-null iff `goalType=DURATION`. A zero value `"00:00:00"` is accepted by the server and preserved
-	// on read-back (verified via probe-B-zero-duration.json) — though it has no practical training
-	// meaning.
+	// Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the UI validator). On
+	// create it is non-null iff `goalType: DURATION`. Read-back asymmetry: a `goalType: DISTANCE` leaf
+	// reads back with a phantom `duration: "00:00:00"` in addition to its real `distance` (verified
+	// 2026-06-08, probe-E-roundtrip-update.json) — so a phase can have both `distance` and a non-null
+	// `duration` on read. The server ignores this phantom value when the body is fed back into an update
+	// (`distance` is preserved), so the GET body round-trips safely; just never use it to infer the goal.
+	// A genuine zero `"00:00:00"` on a `goalType: DURATION` leaf is also accepted and preserved
+	// (probe-B-zero-duration.json).
 	Duration OptNilString `json:"duration"`
 	// Intensity metric for the phase. All four values verified from captures. Toggling off "Utiliser les
 	// zones d'entraînement" in the UI sets this to "NONE" and nulls both zones. POWER_ZONES requires a
@@ -6657,7 +6676,12 @@ func (s *PhaseLeaf) SetUpperZone(val OptNilFloat64) {
 	s.UpperZone = val
 }
 
-// Drives which of `distance` / `duration` is non-null on this phase.
+// Authoritative discriminator for the phase goal. A client MUST read `goalType` to decide whether the
+// phase is distance- or duration-based — do NOT infer it from "which of `distance`/`duration` is
+// non-null". On `GET /api/trainingtarget/{id}` a `goalType: DISTANCE` leaf reads back with BOTH
+// `distance` AND a phantom `duration: "00:00:00"` set (see those fields), so the field-presence
+// heuristic gives the wrong answer and is the root cause of round-trip update bugs (verified
+// 2026-06-08, probe-E-roundtrip-update.json).
 type PhaseLeafGoalType string
 
 const (
@@ -10345,9 +10369,9 @@ type TrainingSessionSummary struct {
 	Duration int `json:"duration"`
 	// Distance in metres, or null. Server returns floats for GPS-tracked sessions.
 	Distance OptNilFloat64 `json:"distance"`
-	// Average HR (bpm). Note the camelCase differs from create's `hrAverage`.
+	// Average HR (bpm), or null. Note the camelCase differs from create's `hrAverage`.
 	HrAvg OptNilInt `json:"hrAvg"`
-	// Kilocalories. Note the field name differs from create's `kiloCalories`.
+	// Kilocalories, or null. Note the field name differs from create's `kiloCalories`.
 	Calories OptNilInt `json:"calories"`
 	// Free-text note. Observed as `" "` (single space) when the form note was blank — quirk of the
 	// create flow.
@@ -10359,7 +10383,7 @@ type TrainingSessionSummary struct {
 	// Session start time, format `YYYY-MM-DD HH:MM:SS.fff` (space separator, no timezone — note: differs
 	// from create's ISO 8601 with offset).
 	StartDate string `json:"startDate"`
-	// Recovery time. Unit TODO (likely seconds).
+	// Recovery time, or null. Unit TODO (likely seconds).
 	RecoveryTime OptNilInt `json:"recoveryTime"`
 	// Sport icon URL.
 	IconUrl OptURI `json:"iconUrl"`

@@ -481,9 +481,26 @@ func (UnimplementedHandler) GetTrainingSessionSummary(ctx context.Context, param
 // GetTrainingTarget implements getTrainingTarget operation.
 //
 // Returns the server-normalized training-target object. Discovered during update-endpoint probing
-// 2026-05-26 — same URL as `updateTrainingTarget`. Server normalizes the stored shape: each
-// `exerciseTargets[].duration` is rolled up from its phases (e.g. `"00:03:00"` for a phase loop), and
-// PHASE-leaf phases carry `duration: "00:00:00"` even when `goalType: DISTANCE`.
+// 2026-05-26 — same URL as `updateTrainingTarget`.
+//
+// The read-back shape is NOT identical to the create payload. The server normalizes the stored shape,
+// and a client that feeds this body back into `updateTrainingTarget` must account for these read/send
+// asymmetries (all verified 2026-06-08, probe-E-roundtrip-update.json):
+//
+//   - `exerciseTargets[].duration` / `.distance` are rolled up from the phases on PHASED targets (e.g.
+//     a 4×3-min loop → `duration: "00:12:00"`), so they are non-null on read even though create
+//     sends them null.
+//   - `exerciseTargets[].index` is server-assigned (0, 1, …) and read-only.
+//   - Each PHASE leaf reads back with `goalType` as the authoritative goal discriminator. A
+//     `goalType: DISTANCE` leaf reads back with BOTH its real `distance` AND a phantom
+//     `duration: "00:00:00"`; a `goalType: DURATION` leaf omits `distance`. Do not infer the goal from
+//     field presence.
+//   - `intensityType: NONE` phases read back `lowerZone`/`upperZone` as `0` (zero-sentinel), not the
+//     `null` that create sends.
+//
+// None of these break a round-trip — the server tolerates all of them on update (see
+// `updateTrainingTarget`). They only break a client that re-derives goal/volume from field presence
+// instead of the explicit `goalType` / `type` fields.
 //
 // GET /api/trainingtarget/{id}
 func (UnimplementedHandler) GetTrainingTarget(ctx context.Context, params GetTrainingTargetParams) (r GetTrainingTargetRes, _ error) {
@@ -647,6 +664,19 @@ func (UnimplementedHandler) UpdateFavorite(ctx context.Context, req *Favorite, p
 //
 // Returns 200 with an empty body on success — note this differs from `POST /api/trainingtarget`
 // (create), which returns the new id as a bare string.
+//
+// The GET read-back round-trips safely. You can take the `GET /api/trainingtarget/{id}` body, change
+// what you want, and POST it straight back — the server tolerates every field the read adds that
+// create omits: the rolled-up `exerciseTargets[].duration`/`.distance`, the read-only `index`, the
+// phantom `duration: "00:00:00"` on DISTANCE phases, the `0` zone-sentinels on NONE phases, and the
+// server-assigned phase `id`s (all verified 2026-06-08). The only hard requirement is keeping each
+// `exerciseTargets[].id` (sending `id: null` no-ops that entry — see below). A client should NOT add
+// pre-flight validation that rejects these fields; doing so produces a "valid request refused before
+// it is sent" bug while the API would have accepted it.
+//
+// No date validation on update. A `datetime` in the past or future is accepted (200) — unlike
+// `POST /api/training/create` (a different endpoint) which 400s on future dates. Do not guard update
+// calls on the clock.
 //
 // Re-read via `GET /api/trainingtarget/{id}` to confirm the change landed (especially when modifying
 // exerciseTargets).
