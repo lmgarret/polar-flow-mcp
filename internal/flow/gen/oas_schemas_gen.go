@@ -755,8 +755,10 @@ type CalendarEvent struct {
 	// inconsistent casing is server-side.
 	ListItemId1 OptInt    `json:"listItemId"`
 	Title       OptString `json:"title"`
-	// Free-text notes on the event; empty string when none.
-	Description OptString `json:"description"`
+	// Free-text notes on the event. `TRAININGTARGET` events send an empty string when blank; `EXERCISE`
+	// (recorded session) events send `null` when absent — so nullable, not just empty (observed live
+	// 2026-07).
+	Description OptNilString `json:"description"`
 	// Event start. Polymorphic by event type: TRAININGTARGET events send an ISO 8601 UTC datetime string,
 	//  while EXERCISE events send a numeric epoch (seconds, e.g. 1779872400). Left untyped (free-form)
 	// to accept either.
@@ -822,7 +824,7 @@ func (s *CalendarEvent) GetTitle() OptString {
 }
 
 // GetDescription returns the value of Description.
-func (s *CalendarEvent) GetDescription() OptString {
+func (s *CalendarEvent) GetDescription() OptNilString {
 	return s.Description
 }
 
@@ -937,7 +939,7 @@ func (s *CalendarEvent) SetTitle(val OptString) {
 }
 
 // SetDescription sets the value of Description.
-func (s *CalendarEvent) SetDescription(val OptString) {
+func (s *CalendarEvent) SetDescription(val OptNilString) {
 	s.Description = val
 }
 

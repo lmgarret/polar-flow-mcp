@@ -2758,7 +2758,9 @@ components:
           example: 60 min easy run
         description:
           type: string
-          description: Free-text notes on the event; empty string when none.
+          description: Free-text notes on the event. `TRAININGTARGET` events send an empty string when blank; `EXERCISE` (recorded
+            session) events send `null` when absent — so nullable, not just empty (observed live 2026-07).
+          nullable: true
         start:
           description: 'Event start. Polymorphic by event type: TRAININGTARGET events send an ISO 8601 UTC datetime string,
             while EXERCISE events send a numeric epoch (seconds, e.g. 1779872400). Left untyped (free-form) to accept either.'
