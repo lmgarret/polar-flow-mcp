@@ -15,29 +15,31 @@ var _ Handler = UnimplementedHandler{}
 
 // AddRouteToFavorites implements addRouteToFavorites operation.
 //
-// Creates a new ROUTE-type favorite by extracting the GPS track from a
-// completed training session's exercise. Counterpart to
-// `POST /api/favorites/trainingTargets/importRoute` — that one ingests
-// a GPX/TCX upload, this one references an already-recorded session.
-// Discovered in the JS bundle as `addRouteToFavorites` mapping. Probed
-// 2026-05-26 on an account with **no recorded sessions**, so the success
-// path could not be reached. Validation findings below are inferred from
-// error patterns.
-// ### Body shape (inferred)
-// Required field is `id` — when present (with any value), the server
-// reaches the data-load stage and returns Polar's familiar JSON error
-// envelope (`{"error":"...itinéraire..."}`). Any other field name
-// (`exerciseId`, `trainingSessionId`, `tsid`, `sessionId`, …) is
-// rejected upfront by the body parser with a generic HTML 500.
-// Most likely `id` refers to an **exercise id** within a session — the
-// URL path's "addExerciseRoute" wording and the existence of
-// multi-exercise sessions both point that way — but it could also be
+// Creates a new ROUTE-type favorite by extracting the GPS track from a completed training session's
+// exercise. Counterpart to `POST /api/favorites/trainingTargets/importRoute` — that one ingests a
+// GPX/TCX upload, this one references an already-recorded session.
+//
+// Discovered in the JS bundle as `addRouteToFavorites` mapping. Probed 2026-05-26 on an account with
+// no recorded sessions, so the success path could not be reached. Validation findings below are
+// inferred from error patterns.
+//
+// # Body shape (inferred)
+//
+// Required field is `id` — when present (with any value), the server reaches the data-load stage and
+// returns Polar's familiar JSON error envelope (`{"error":"...itinéraire..."}`). Any other field name
+// (`exerciseId`, `trainingSessionId`, `tsid`, `sessionId`, …) is rejected upfront by the body parser
+// with a generic HTML 500.
+//
+// Most likely `id` refers to an exercise id within a session — the URL path's "addExerciseRoute"
+// wording and the existence of multi-exercise sessions both point that way — but it could also be
 // the trainingSessionId. # TODO: confirm on a device-synced account.
-// ### Other gotchas
-// - Method is POST. GET → 404, PUT/PATCH presumably likewise.
-// - Missing `X-Requested-With: XMLHttpRequest` → 403.
-// - Error bodies use the same misleading boilerplate
-// (`"...itinéraire..."`) as other favorites endpoints.
+//
+// # Other gotchas
+//
+//   - Method is POST. GET → 404, PUT/PATCH presumably likewise.
+//   - Missing `X-Requested-With: XMLHttpRequest` → 403.
+//   - Error bodies use the same misleading boilerplate (`"...itinéraire..."`) as other favorites
+//     endpoints.
 //
 // POST /api/favorites/trainingTargets/addExerciseRoute
 func (UnimplementedHandler) AddRouteToFavorites(ctx context.Context, req *AddRouteToFavoritesReq, params AddRouteToFavoritesParams) (r AddRouteToFavoritesRes, _ error) {
@@ -46,15 +48,15 @@ func (UnimplementedHandler) AddRouteToFavorites(ctx context.Context, req *AddRou
 
 // AddSportProfile implements addSportProfile operation.
 //
-// Creates a new sport profile for the signed-in user from a `sportId`. This
-// is the **real create endpoint** for sport profiles (the `/api/sports/*`
-// family does not expose one). Captured 2026-06-01 from a device-paired
-// account.
-// Body is **form-encoded** (`application/x-www-form-urlencoded`), a single
-// `sportId` field. Requires `X-Requested-With: XMLHttpRequest`.
-// Returns **200** with a `text/plain` body containing JSON: the new
-// profile's id (numeric, as a string), echoed `sportId`, icon, and
-// creation date/time.
+// Creates a new sport profile for the signed-in user from a `sportId`. This is the real create
+// endpoint for sport profiles (the `/api/sports/*` family does not expose one). Captured 2026-06-01
+// from a device-paired account.
+//
+// Body is form-encoded (`application/x-www-form-urlencoded`), a single `sportId` field. Requires
+// `X-Requested-With: XMLHttpRequest`.
+//
+// Returns 200 with a `text/plain` body containing JSON: the new profile's id (numeric, as a string),
+// echoed `sportId`, icon, and creation date/time.
 //
 // POST /settings/sports/add
 func (UnimplementedHandler) AddSportProfile(ctx context.Context, req *AddSportProfileReq, params AddSportProfileParams) (r AddSportProfileRes, _ error) {
@@ -63,26 +65,30 @@ func (UnimplementedHandler) AddSportProfile(ctx context.Context, req *AddSportPr
 
 // ChangeFavoriteSport implements changeFavoriteSport operation.
 //
-// Updates only the sport assignment of a favorite's exerciseTarget.
-// Takes `{favoriteId, favoriteSportId, exerciseTargetId}` — both the
-// favorite-level id AND the inner exerciseTarget id are required because
-// a favorite can hold multiple exerciseTargets (e.g. multi-sport sessions).
-// ### Method gotcha
-// Same as `saveName`: the verb is **`PUT`**, not POST.
-// ### Validation surprises
-// Polar's server is **dangerously lenient** here. Probed 2026-05-26:
-// | Body | Status |
-// |---|---|
-// | Missing `exerciseTargetId` | 400 |
-// | Unknown `exerciseTargetId` | **200** (silent no-op — favorite not actually updated
-// server-side) |
-// | Unknown `favoriteSportId` (e.g. `9999`, not in `/api/sports/sports`) | **200** (sport id is
-// accepted unchecked, then presumably 404s on watch sync) |
-// | Missing other fields | 400 |
-// Verify your changes by re-reading the favorite via
-// `GET /api/favoritetarget/{id}` rather than trusting the 200.
-// Error bodies share the same misleading boilerplate
-// (`{error: "...itinéraire..."}`) as `saveName`.
+// Updates only the sport assignment of a favorite's exerciseTarget. Takes
+// `{favoriteId, favoriteSportId, exerciseTargetId}` — both the favorite-level id AND the inner
+// exerciseTarget id are required because a favorite can hold multiple exerciseTargets (e.g.
+// multi-sport sessions).
+//
+// # Method gotcha
+//
+// Same as `saveName`: the verb is `PUT`, not POST.
+//
+// # Validation surprises
+//
+// Polar's server is dangerously lenient here. Probed 2026-05-26:
+//
+//	Body                                                                 | Status
+//	---------------------------------------------------------------------+-------------------------------------------------------------------------
+//	Missing `exerciseTargetId`                                           | 400
+//	Unknown `exerciseTargetId`                                           | 200 (silent no-op — favorite not actually updated server-side)
+//	Unknown `favoriteSportId` (e.g. `9999`, not in `/api/sports/sports`) | 200 (sport id is accepted unchecked, then presumably 404s on watch sync)
+//	Missing other fields                                                 | 400
+//
+// Verify your changes by re-reading the favorite via `GET /api/favoritetarget/{id}` rather than
+// trusting the 200.
+//
+// Error bodies share the same misleading boilerplate (`{error: "...itinéraire..."}`) as `saveName`.
 //
 // PUT /api/favorites/saveSport
 func (UnimplementedHandler) ChangeFavoriteSport(ctx context.Context, req *ChangeFavoriteSportReq, params ChangeFavoriteSportParams) (r ChangeFavoriteSportRes, _ error) {
@@ -91,8 +97,8 @@ func (UnimplementedHandler) ChangeFavoriteSport(ctx context.Context, req *Change
 
 // CreateFavorite implements createFavorite operation.
 //
-// Creates a reusable training-target template. Body shape is identical
-// to POST /api/trainingtarget minus the `datetime` field.
+// Creates a reusable training-target template. Body shape is identical to POST /api/trainingtarget
+// minus the `datetime` field.
 //
 // POST /api/favoritetarget
 func (UnimplementedHandler) CreateFavorite(ctx context.Context, req *FavoriteCreate, params CreateFavoriteParams) (r CreateFavoriteRes, _ error) {
@@ -101,12 +107,11 @@ func (UnimplementedHandler) CreateFavorite(ctx context.Context, req *FavoriteCre
 
 // CreateTrainingSession implements createTrainingSession operation.
 //
-// Records a completed workout entered manually via the "Manual training
-// result" form (`/exercises/add`). For file uploads (FIT/GPX/TCX) a
-// different endpoint is used — TODO: capture.
-// ⚠ Field-naming and unit conventions differ from
-// POST /api/trainingtarget — see docs/endpoints/training-sessions.md
-// for the cross-endpoint comparison.
+// Records a completed workout entered manually via the "Manual training result" form
+// (`/exercises/add`). For file uploads (FIT/GPX/TCX) a different endpoint is used — TODO: capture.
+//
+// ⚠ Field-naming and unit conventions differ from POST /api/trainingtarget — see
+// docs/endpoints/training-sessions.md for the cross-endpoint comparison.
 //
 // POST /api/training/create
 func (UnimplementedHandler) CreateTrainingSession(ctx context.Context, req *TrainingSessionCreate, params CreateTrainingSessionParams) (r CreateTrainingSessionRes, _ error) {
@@ -115,32 +120,34 @@ func (UnimplementedHandler) CreateTrainingSession(ctx context.Context, req *Trai
 
 // CreateTrainingTarget implements createTrainingTarget operation.
 //
-// Create a planned workout (training target). The `type` field selects the
-// shape:
-// - **VOLUME** — one metric only: set exactly one of `duration` / `distance` /
-// `calories` on the single exerciseTarget; leave `phases` empty (`[]`).
-// - **STEADY_RACE_PACE** — a time-trial: set both `duration` and `distance`
-// (pace is implicit); `phases` empty.
-// - **PHASED** — a structured workout: populate `exerciseTargets[].phases`.
-// ### Modelling phases (PHASED)
-// A phase is either a **PhaseLeaf** (`phaseType: "PHASE"`) or a **PhaseRepeat**
-// (`phaseType: "REPEAT"`) that loops nested leaves. Guidance below is verified
-// against the live API (probe captures in `captures/post-bodies/probe-*.json`):
-// - **Steady / continuous block** → use a single bare PhaseLeaf directly in
-// `phases` (see the `steadyBlock` example). Do **not** wrap it in a REPEAT.
-// - **Intervals** → use a REPEAT with `repeatCount` ≥ 2 (see `phasedRepeat`).
-// - **`repeatCount`**: the **server accepts 1** but silently unwraps a
-// single-rep REPEAT into a plain PHASE on read-back, so it is pointless — the
-// Flow UI enforces a minimum of 2. Prefer a bare PhaseLeaf for one block.
-// - **Recovery is optional**: a REPEAT may hold just one work phase with no
-// trailing rest leaf (verified — the server rolls the nested duration into
-// the exerciseTarget's top-level `duration`). To add recovery between reps,
-// append a second leaf (typically `intensityType: "NONE"`).
-// - **`duration`** uses strict `"HH:MM:SS"`; `"00:00:00"` is accepted but
-// meaningless. Set on a leaf iff `goalType: "DURATION"`; set `distance`
-// (metres) iff `goalType: "DISTANCE"`.
-// - **Multi-sport**: pass multiple `exerciseTargets` entries (see `multisport`);
-// the server assigns each a sequential read-only `index`.
+// Create a planned workout (training target). The `type` field selects the shape:
+//
+//   - VOLUME — one metric only: set exactly one of `duration` / `distance` / `calories` on the single
+//     exerciseTarget; leave `phases` empty (`[]`).
+//   - STEADY_RACE_PACE — a time-trial: set both `duration` and `distance` (pace is implicit);
+//     `phases` empty.
+//   - PHASED — a structured workout: populate `exerciseTargets[].phases`.
+//
+// # Modelling phases (PHASED)
+//
+// A phase is either a PhaseLeaf (`phaseType: "PHASE"`) or a PhaseRepeat (`phaseType: "REPEAT"`) that
+// loops nested leaves. Guidance below is verified against the live API (probe captures in
+// `captures/post-bodies/probe-*.json`):
+//
+//   - Steady / continuous block → use a single bare PhaseLeaf directly in `phases` (see the
+//     `steadyBlock` example). Do not wrap it in a REPEAT.
+//   - Intervals → use a REPEAT with `repeatCount` ≥ 2 (see `phasedRepeat`).
+//   - `repeatCount`: the server accepts 1 but silently unwraps a single-rep REPEAT into a plain PHASE
+//     on read-back, so it is pointless — the Flow UI enforces a minimum of 2. Prefer a bare PhaseLeaf
+//     for one block.
+//   - Recovery is optional: a REPEAT may hold just one work phase with no trailing rest leaf (verified
+//     — the server rolls the nested duration into the exerciseTarget's top-level `duration`). To add
+//     recovery between reps, append a second leaf (typically `intensityType: "NONE"`).
+//   - `duration` uses strict `"HH:MM:SS"`; `"00:00:00"` is accepted but meaningless. Set on a leaf iff
+//     `goalType: "DURATION"`; set `distance` (metres) iff `goalType: "DISTANCE"`.
+//   - Multi-sport: pass multiple `exerciseTargets` entries (see `multisport`); the server assigns each
+//     a sequential read-only `index`.
+//
 // Writes require the `X-Requested-With: XMLHttpRequest` header (CSRF defense).
 //
 // POST /api/trainingtarget
@@ -150,10 +157,9 @@ func (UnimplementedHandler) CreateTrainingTarget(ctx context.Context, req *Train
 
 // DeleteFavorite implements deleteFavorite operation.
 //
-// Verb-in-path REST violation (Polar's choice, not ours). Note the
-// `/favorites/delete/{id}` shape — distinct from create/get/update
-// which all use `/favoritetarget/{id}`. The response body is
-// non-empty (a localized success message).
+// Verb-in-path REST violation (Polar's choice, not ours). Note the `/favorites/delete/{id}` shape —
+// distinct from create/get/update which all use `/favoritetarget/{id}`. The response body is non-empty
+// (a localized success message).
 //
 // DELETE /api/favorites/delete/{id}
 func (UnimplementedHandler) DeleteFavorite(ctx context.Context, params DeleteFavoriteParams) (r DeleteFavoriteRes, _ error) {
@@ -162,18 +168,17 @@ func (UnimplementedHandler) DeleteFavorite(ctx context.Context, params DeleteFav
 
 // DeleteSportProfile implements deleteSportProfile operation.
 //
-// Deletes a sport profile by its UUID. The route **exists** (verified
-// 2026-06-01). Note create/update are not on this `/api/sports/*` resource —
-// they live on the legacy `/settings/sports/{add,save}` controller (numeric
-// ids); whether delete also has a `/settings/sports/*` equivalent is unknown.
-// **Could not reach the success path** on the device-less test account:
-// deleting a non-existent UUID returned `500` with an empty body rather than
-// a clean `404`, so the success status/body for an existing profile is
-// unconfirmed. # TODO: verify against a real profile (expect a 200, by
-// analogy with the other Polar delete endpoints). Note this is a genuinely
-// destructive operation — only exercise it on a throwaway profile.
-// Like other `/api/*` writes this requires the
-// `X-Requested-With: XMLHttpRequest` header.
+// Deletes a sport profile by its UUID. The route exists (verified 2026-06-01). Note create/update are
+// not on this `/api/sports/*` resource — they live on the legacy `/settings/sports/{add,save}`
+// controller (numeric ids); whether delete also has a `/settings/sports/*` equivalent is unknown.
+//
+// Could not reach the success path on the device-less test account: deleting a non-existent UUID
+// returned `500` with an empty body rather than a clean `404`, so the success status/body for an
+// existing profile is unconfirmed. # TODO: verify against a real profile (expect a 200, by analogy
+// with the other Polar delete endpoints). Note this is a genuinely destructive operation — only
+// exercise it on a throwaway profile.
+//
+// Like other `/api/*` writes this requires the `X-Requested-With: XMLHttpRequest` header.
 //
 // DELETE /api/sports/profiles/{id}
 func (UnimplementedHandler) DeleteSportProfile(ctx context.Context, params DeleteSportProfileParams) (r DeleteSportProfileRes, _ error) {
@@ -182,9 +187,8 @@ func (UnimplementedHandler) DeleteSportProfile(ctx context.Context, params Delet
 
 // DeleteTrainingSession implements deleteTrainingSession operation.
 //
-// ⚠ The path **must end with a trailing slash** — Polar's app sends
-// `/api/training/deleteTrainingSession/{id}/`. Sending without the
-// trailing slash may 404.
+// ⚠ The path must end with a trailing slash — Polar's app sends
+// `/api/training/deleteTrainingSession/{id}/`. Sending without the trailing slash may 404.
 //
 // DELETE /api/training/deleteTrainingSession/{id}/
 func (UnimplementedHandler) DeleteTrainingSession(ctx context.Context, params DeleteTrainingSessionParams) (r DeleteTrainingSessionRes, _ error) {
@@ -194,12 +198,13 @@ func (UnimplementedHandler) DeleteTrainingSession(ctx context.Context, params De
 // DeleteTrainingTarget implements deleteTrainingTarget operation.
 //
 // Delete a planned training target by id.
-// ⚠ Note the **inconsistent path prefix**: this endpoint lives under
-// `/training/target/{id}`, NOT `/api/trainingtarget/{id}` (which is used for
-// create/read/update). There is **no trailing slash** (unlike session delete,
-// `DELETE /api/training/deleteTrainingSession/{id}/`, which requires one).
-// Returns 200 with an empty body. Idempotent in practice — deleting an
-// already-gone id still returns 200.
+//
+// ⚠ Note the inconsistent path prefix: this endpoint lives under `/training/target/{id}`, NOT
+// `/api/trainingtarget/{id}` (which is used for create/read/update). There is no trailing slash
+// (unlike session delete, `DELETE /api/training/deleteTrainingSession/{id}/`, which requires one).
+//
+// Returns 200 with an empty body. Idempotent in practice — deleting an already-gone id still returns
+// 200.
 //
 // DELETE /training/target/{id}
 func (UnimplementedHandler) DeleteTrainingTarget(ctx context.Context, params DeleteTrainingTargetParams) (r DeleteTrainingTargetRes, _ error) {
@@ -208,13 +213,12 @@ func (UnimplementedHandler) DeleteTrainingTarget(ctx context.Context, params Del
 
 // GetActivityTimeline implements getActivityTimeline operation.
 //
-// Returns the activity / steps / HR / inactivity breakdown for a single
-// calendar day, keyed by date in the response. The modern endpoint used by
-// the `/diary/activity/<date>` view. Empty-account behaviour (no paired
-// device): all numeric fields are zeroes, sample arrays are empty, but the
-// envelope is returned with synthesized `activityZoneLimits` and report
-// URLs — see captures/responses/14-activity-timeline-loadFour.json for the
-// 4-day variant; the single-day shape is identical, just with one key.
+// Returns the activity / steps / HR / inactivity breakdown for a single calendar day, keyed by date in
+// the response. The modern endpoint used by the `/diary/activity/<date>` view. Empty-account behaviour
+// (no paired device): all numeric fields are zeroes, sample arrays are empty, but the envelope is
+// returned with synthesized `activityZoneLimits` and report URLs — see
+// captures/responses/14-activity-timeline-loadFour.json for the 4-day variant; the single-day shape is
+// identical, just with one key.
 //
 // GET /api/activity-timeline/load
 func (UnimplementedHandler) GetActivityTimeline(ctx context.Context, params GetActivityTimelineParams) (r GetActivityTimelineRes, _ error) {
@@ -223,12 +227,11 @@ func (UnimplementedHandler) GetActivityTimeline(ctx context.Context, params GetA
 
 // GetActivityTimelineFour implements getActivityTimelineFour operation.
 //
-// Same shape as `/api/activity-timeline/load`, but returns four
-// consecutive days as a `{[YYYY-MM-DD]: ActivityTimelineDay}` map. The
-// window observed is `[day-2, day-1, day, day+1]` — i.e. two days of
-// history, the target day, and one day of look-ahead. Future-dated days
-// beyond the latest synced data return `dataPanelData: null` (instead of
-// zeroes) but keep the rest of the envelope.
+// Same shape as `/api/activity-timeline/load`, but returns four consecutive days as a
+// `{[YYYY-MM-DD]: ActivityTimelineDay}` map. The window observed is `[day-2, day-1, day, day+1]` —
+// i.e. two days of history, the target day, and one day of look-ahead. Future-dated days beyond the
+// latest synced data return `dataPanelData: null` (instead of zeroes) but keep the rest of the
+// envelope.
 //
 // GET /api/activity-timeline/loadFour
 func (UnimplementedHandler) GetActivityTimelineFour(ctx context.Context, params GetActivityTimelineFourParams) (r GetActivityTimelineFourRes, _ error) {
@@ -237,12 +240,11 @@ func (UnimplementedHandler) GetActivityTimelineFour(ctx context.Context, params 
 
 // GetCalendarEvents implements getCalendarEvents operation.
 //
-// Returns all diary events (training sessions, targets, etc.) for a date range.
-// The response is polymorphic by `type`: training targets appear with `type: "TRAININGTARGET"`;
-// fitness-test results appear with `type: "FITNESSDATA"` (different field set — carries
-// calendar-styling colours and `index`/`timestamp`, and uses camelCase `listItemId` instead of
-// `ListItemId`). See `CalendarEvent` for the per-type field notes.
-// Date format: D.M.YYYY (no leading zeros).
+// Returns all diary events (training sessions, targets, etc.) for a date range. The response is
+// polymorphic by `type`: training targets appear with `type: "TRAININGTARGET"`; fitness-test results
+// appear with `type: "FITNESSDATA"` (different field set — carries calendar-styling colours and
+// `index`/`timestamp`, and uses camelCase `listItemId` instead of `ListItemId`). See `CalendarEvent`
+// for the per-type field notes. Date format: D.M.YYYY (no leading zeros).
 //
 // GET /training/getCalendarEvents
 func (UnimplementedHandler) GetCalendarEvents(ctx context.Context, params GetCalendarEventsParams) (r GetCalendarEventsRes, _ error) {
@@ -251,23 +253,21 @@ func (UnimplementedHandler) GetCalendarEvents(ctx context.Context, params GetCal
 
 // GetCalendarWeekSummary implements getCalendarWeekSummary operation.
 //
-// Returns one summary entry per ISO week intersecting `[from, to]`, used by
-// the right-hand "week totals" strip in `/diary`. Backed by the legacy
-// `Calendar.get.weekSummary` action in
+// Returns one summary entry per ISO week intersecting `[from, to]`, used by the right-hand "week
+// totals" strip in `/diary`. Backed by the legacy `Calendar.get.weekSummary` action in
 // `static/13.318.0/javascript/views/diary/calendar.min.js`.
-// ### Constraints (probed 2026-05-26)
-// - Date format: **`D.M.YYYY`** strict (ISO 8601 rejected with
-// `content of from (...) is not a valid date: Text '...' could not be
-// parsed at index 4`).
-// - `to` must be ≥ `from` (reversed → `400 from (...) date must be before
-// to (...) date`).
-// - **`to - from ≤ 45 days`** ("Maximum week aligned range is 45,
-// requested N" beyond that). Same-day and partial-week ranges are OK —
-// the "week aligned" label in the error is misleading; the server does
-// not require Monday-aligned dates.
-// Returns an array of week-summary objects on success. Empty array (`[]`)
-// when no sessions fall in the range — element shape on populated accounts
-// is TBD.
+//
+// # Constraints (probed 2026-05-26)
+//
+//   - Date format: `D.M.YYYY` strict (ISO 8601 rejected with
+//     `content of from (...) is not a valid date: Text '...' could not be parsed at index 4`).
+//   - `to` must be ≥ `from` (reversed → `400 from (...) date must be before to (...) date`).
+//   - `to - from ≤ 45 days` ("Maximum week aligned range is 45, requested N" beyond that). Same-day
+//     and partial-week ranges are OK — the "week aligned" label in the error is misleading; the
+//     server does not require Monday-aligned dates.
+//
+// Returns an array of week-summary objects on success. Empty array (`[]`) when no sessions fall in the
+// range — element shape on populated accounts is TBD.
 //
 // POST /training/getCalendarWeekSummary
 func (UnimplementedHandler) GetCalendarWeekSummary(ctx context.Context, req *GetCalendarWeekSummaryReq, params GetCalendarWeekSummaryParams) (r GetCalendarWeekSummaryRes, _ error) {
@@ -276,12 +276,11 @@ func (UnimplementedHandler) GetCalendarWeekSummary(ctx context.Context, req *Get
 
 // GetCurrentUser implements getCurrentUser operation.
 //
-// Returns the authenticated user's identity, localization preferences,
-// and physical settings. Use the `user.id` value as `userId` in
-// endpoints that require it (e.g. POST /api/training/history).
-// See `docs/endpoints/account.md` for the field-by-field meaning and
-// cross-endpoint naming inconsistencies (e.g. `height` here vs
-// `heightCm` in the POST /settings form).
+// Returns the authenticated user's identity, localization preferences, and physical settings. Use the
+// `user.id` value as `userId` in endpoints that require it (e.g. POST /api/training/history).
+//
+// See `docs/endpoints/account.md` for the field-by-field meaning and cross-endpoint naming
+// inconsistencies (e.g. `height` here vs `heightCm` in the POST /settings form).
 //
 // GET /api/account/users/current/user
 func (UnimplementedHandler) GetCurrentUser(ctx context.Context) (r GetCurrentUserRes, _ error) {
@@ -290,11 +289,11 @@ func (UnimplementedHandler) GetCurrentUser(ctx context.Context) (r GetCurrentUse
 
 // GetFavorite implements getFavorite operation.
 //
-// Read one favorite (training-target template) by `favoriteId`. Returns the
-// create-shape body plus a server-assigned `exerciseTargets[].id` and `index`.
-// For **ROUTE** favorites this returns only the thin metadata shell (no GPS
-// geometry) — fetch the waypoints from
-// `GET /api/favorites/exerciseTarget/{exerciseTargetId}` instead.
+// Read one favorite (training-target template) by `favoriteId`. Returns the create-shape body plus a
+// server-assigned `exerciseTargets[].id` and `index`.
+//
+// For ROUTE favorites this returns only the thin metadata shell (no GPS geometry) — fetch the
+// waypoints from `GET /api/favorites/exerciseTarget/{exerciseTargetId}` instead.
 //
 // GET /api/favoritetarget/{id}
 func (UnimplementedHandler) GetFavorite(ctx context.Context, params GetFavoriteParams) (r GetFavoriteRes, _ error) {
@@ -303,12 +302,11 @@ func (UnimplementedHandler) GetFavorite(ctx context.Context, params GetFavoriteP
 
 // GetFavoriteExerciseTarget implements getFavoriteExerciseTarget operation.
 //
-// Returns the inner exercise target — for ROUTE favorites, this is
-// where the **GPS waypoints** live. For other favorite types, this
-// returns target metadata (distance, duration, phases) that's also
+// Returns the inner exercise target — for ROUTE favorites, this is where the GPS waypoints live. For
+// other favorite types, this returns target metadata (distance, duration, phases) that's also
 // available via `GET /api/favoritetarget/{favoriteId}`.
-// ⚠ Path parameter is the **exerciseTargetId** (the inner id), NOT
-// the favoriteId. Get it from
+//
+// ⚠ Path parameter is the exerciseTargetId (the inner id), NOT the favoriteId. Get it from
 // `GET /api/favorites.targets[].exerciseTargetId`.
 //
 // GET /api/favorites/exerciseTarget/{id}
@@ -318,10 +316,9 @@ func (UnimplementedHandler) GetFavoriteExerciseTarget(ctx context.Context, param
 
 // GetFeaturesAvailable implements getFeaturesAvailable operation.
 //
-// Returns availability of a comma-separated list of feature flags. Observed
-// flag names: `balance`, `cardioload`, `polar-sso`, `gs2`,
-// `training-session-trim`, `nightly-recharge`, `exercise-phase-index`.
-// Premium / device-gated features (e.g. `cardioload`, `nightly-recharge`)
+// Returns availability of a comma-separated list of feature flags. Observed flag names: `balance`,
+// `cardioload`, `polar-sso`, `gs2`, `training-session-trim`, `nightly-recharge`,
+// `exercise-phase-index`. Premium / device-gated features (e.g. `cardioload`, `nightly-recharge`)
 // return `available: false` for free / device-less accounts.
 //
 // GET /api/features-available
@@ -331,20 +328,18 @@ func (UnimplementedHandler) GetFeaturesAvailable(ctx context.Context, params Get
 
 // GetProgressViewSummary implements getProgressViewSummary operation.
 //
-// Returns aggregated training totals (sessions, distance, duration,
-// calories, ascent/descent, zone time, sport distribution, training-benefit
-// distribution) for the inclusive `[from, to]` date range.
-// **Date format** here is `DD-MM-YYYY` with **dashes and leading zeros**
-// (observed live: `{"from":"01-06-2026","to":"30-06-2026"}`) — note this
-// differs from the dot-separated `D.M.YYYY` used by
-// `/training/getCalendarWeekSummary` and `/training/getCalendarEvents`.
-// The endpoint is lenient: it accepts malformed/missing dates without
-// erroring on a zero-session account (it just returns zeros), so the
-// dash form is what the UI sends rather than a hard requirement — strict
+// Returns aggregated training totals (sessions, distance, duration, calories, ascent/descent, zone
+// time, sport distribution, training-benefit distribution) for the inclusive `[from, to]` date range.
+//
+// Date format here is `DD-MM-YYYY` with dashes and leading zeros (observed live:
+// `{"from":"01-06-2026","to":"30-06-2026"}`) — note this differs from the dot-separated `D.M.YYYY`
+// used by `/training/getCalendarWeekSummary` and `/training/getCalendarEvents`. The endpoint is
+// lenient: it accepts malformed/missing dates without erroring on a zero-session account (it just
+// returns zeros), so the dash form is what the UI sends rather than a hard requirement — strict
 // validation behaviour on populated accounts is TBD.
-// The Polar Flow JS bundle has a Coach-vs-free fork that picks
-// `/progress/getSummaryDataAsJson` for Coach users and this URL for
-// regular users — but **both URLs are reachable from a free account** and
+//
+// The Polar Flow JS bundle has a Coach-vs-free fork that picks `/progress/getSummaryDataAsJson` for
+// Coach users and this URL for regular users — but both URLs are reachable from a free account and
 // return the same schema. The "Coach gate" is purely client-side.
 //
 // POST /progress/getProgressViewSummaryAsJson
@@ -354,28 +349,32 @@ func (UnimplementedHandler) GetProgressViewSummary(ctx context.Context, req *Get
 
 // GetSleepReport implements getSleepReport operation.
 //
-// Returns one `SleepNight` per recorded night in the inclusive date range
-// `[from, to]`. Lives on its own subdomain — `https://sleep-api.flow.polar.com`
-// — but reuses the `FLOW_SESSION` cookie via cross-origin credentials
-// (response carries `Access-Control-Allow-Credentials: true` and
+// Returns one `SleepNight` per recorded night in the inclusive date range `[from, to]`. Lives on its
+// own subdomain — `https://sleep-api.flow.polar.com` — but reuses the `FLOW_SESSION` cookie via
+// cross-origin credentials (response carries `Access-Control-Allow-Credentials: true` and
 // `Access-Control-Allow-Origin: https://flow.polar.com`).
+//
 // Backed by the `getSleepNights` action in the Polar Flow JS bundle.
-// ### Range constraints (probed empirically 2026-05-26)
-// - `to - from` must be **≥ 30 days and ≤ 365 days**. Shorter or longer
-// ranges return `400` with an empty body.
-// - `from == to` (single day) → 400.
-// - `from > to` → 400.
-// The 30-day floor is unusual — there's no `/api/sleep/<date>` per-night
-// endpoint (probed: 404), so to fetch a single night you must request the
-// surrounding ≥30-day window and filter the response client-side.
-// ### Auth gotchas
-// - Missing `X-Requested-With: XMLHttpRequest` → 401 (the CSRF guard differs
-// from `flow.polar.com`'s — there 403, here 401).
-// - The cross-origin CORS check requires `Origin: https://flow.polar.com`,
-// which browsers set automatically when the calling page is on
-// `flow.polar.com`. Non-browser clients must send it explicitly.
-// - Empty body (`[]`) is the normal response on accounts with no synced
-// sleep-capable Polar device.
+//
+// # Range constraints (probed empirically 2026-05-26)
+//
+//   - `to - from` must be ≥ 30 days and ≤ 365 days. Shorter or longer ranges return `400` with an
+//     empty body.
+//   - `from == to` (single day) → 400.
+//   - `from > to` → 400.
+//
+// The 30-day floor is unusual — there's no `/api/sleep/<date>` per-night endpoint (probed: 404), so
+// to fetch a single night you must request the surrounding ≥30-day window and filter the response
+// client-side.
+//
+// # Auth gotchas
+//
+//   - Missing `X-Requested-With: XMLHttpRequest` → 401 (the CSRF guard differs from
+//     `flow.polar.com`'s — there 403, here 401).
+//   - The cross-origin CORS check requires `Origin: https://flow.polar.com`, which browsers set
+//     automatically when the calling page is on `flow.polar.com`. Non-browser clients must send it
+//     explicitly.
+//   - Empty body (`[]`) is the normal response on accounts with no synced sleep-capable Polar device.
 //
 // GET /api/sleep/report
 func (UnimplementedHandler) GetSleepReport(ctx context.Context, params GetSleepReportParams) (r GetSleepReportRes, _ error) {
@@ -385,13 +384,12 @@ func (UnimplementedHandler) GetSleepReport(ctx context.Context, params GetSleepR
 // GetSportProfile implements getSportProfile operation.
 //
 // Returns one sport profile by its UUID.
-// **Not exercised against a real profile.** The test account has no synced
-// sport profiles, so this could not be observed returning `200`. Probing
-// with arbitrary UUIDs returned `400` with a plain-text
-// `Invalid request: Invalid UUID: <value>` body — meaning either the id
-// must match an existing profile, or Polar uses a stricter/custom id
-// encoding than a canonical v4 UUID. # TODO: verify the success shape and the
-// exact id format using an account with a device-synced profile.
+//
+// Not exercised against a real profile. The test account has no synced sport profiles, so this could
+// not be observed returning `200`. Probing with arbitrary UUIDs returned `400` with a plain-text
+// `Invalid request: Invalid UUID: <value>` body — meaning either the id must match an existing
+// profile, or Polar uses a stricter/custom id encoding than a canonical v4 UUID. # TODO: verify the
+// success shape and the exact id format using an account with a device-synced profile.
 //
 // GET /api/sports/profiles/{id}
 func (UnimplementedHandler) GetSportProfile(ctx context.Context, params GetSportProfileParams) (r GetSportProfileRes, _ error) {
@@ -400,10 +398,9 @@ func (UnimplementedHandler) GetSportProfile(ctx context.Context, params GetSport
 
 // GetSports implements getSports operation.
 //
-// Returns a flat object mapping numeric sport ID (as string key) to the
-// internal sport name constant. Use these IDs as `sportId` in training
-// target requests. This endpoint requires no auth — observed to load
-// without a session cookie during form initialisation.
+// Returns a flat object mapping numeric sport ID (as string key) to the internal sport name constant.
+// Use these IDs as `sportId` in training target requests. This endpoint requires no auth — observed
+// to load without a session cookie during form initialisation.
 //
 // GET /api/sports/sports
 func (UnimplementedHandler) GetSports(ctx context.Context) (r GetSportsRes, _ error) {
@@ -412,17 +409,18 @@ func (UnimplementedHandler) GetSports(ctx context.Context) (r GetSportsRes, _ er
 
 // GetSummaryData implements getSummaryData operation.
 //
-// Identical request/response shape to
-// [POST /progress/getProgressViewSummaryAsJson](#operations-progress-getProgressViewSummary).
-// The Polar Flow JS bundle routes Coach users to this URL via:
-// ```js
-// CommonHelpers.context.coach
-// ? "/progress/getSummaryDataAsJson"
-// : "/progress/getProgressViewSummaryAsJson"
-// ```
-// On the free test account, both URLs return the same payload, so the
-// server-side ACL (if any) is permissive. This alias is documented for
-// completeness; clients should prefer `getProgressViewSummaryAsJson`.
+// Identical request/response shape to [POST /progress/getProgressViewSummaryAsJson]. The Polar Flow JS
+// bundle routes Coach users to this URL via:
+//
+//	CommonHelpers.context.coach
+//	  ? "/progress/getSummaryDataAsJson"
+//	  : "/progress/getProgressViewSummaryAsJson"
+//
+// On the free test account, both URLs return the same payload, so the server-side ACL (if any) is
+// permissive. This alias is documented for completeness; clients should prefer
+// `getProgressViewSummaryAsJson`.
+//
+// [POST /progress/getProgressViewSummaryAsJson]: #operations-progress-getProgressViewSummary
 //
 // POST /progress/getSummaryDataAsJson
 func (UnimplementedHandler) GetSummaryData(ctx context.Context, req *GetSummaryDataReq, params GetSummaryDataParams) (r GetSummaryDataRes, _ error) {
@@ -431,14 +429,14 @@ func (UnimplementedHandler) GetSummaryData(ctx context.Context, req *GetSummaryD
 
 // GetTrainingDisplayItems implements getTrainingDisplayItems operation.
 //
-// Returns the **catalog** of display fields the given device (`productId`)
-// can show for the given sport profile, grouped by category — the palette
-// the watch-screen layout editor offers. The user's actual chosen layout is
-// in `GET /settings/sports/training-display-lists/{productId}/{sportProfileId}`.
-// Served by the legacy `/settings/*` controller (not under `/api/*`).
-// Requires `X-Requested-With: XMLHttpRequest`. Observed to return the
-// product/sport default catalog even from an account that does not own the
-// profile (not strictly owner-scoped).
+// Returns the catalog of display fields the given device (`productId`) can show for the given sport
+// profile, grouped by category — the palette the watch-screen layout editor offers. The user's
+// actual chosen layout is in
+// `GET /settings/sports/training-display-lists/{productId}/{sportProfileId}`.
+//
+// Served by the legacy `/settings/*` controller (not under `/api/*`). Requires
+// `X-Requested-With: XMLHttpRequest`. Observed to return the product/sport default catalog even from
+// an account that does not own the profile (not strictly owner-scoped).
 //
 // GET /settings/sports/training-display-items/{productId}/{sportProfileId}
 func (UnimplementedHandler) GetTrainingDisplayItems(ctx context.Context, params GetTrainingDisplayItemsParams) (r GetTrainingDisplayItemsRes, _ error) {
@@ -447,14 +445,13 @@ func (UnimplementedHandler) GetTrainingDisplayItems(ctx context.Context, params 
 
 // GetTrainingDisplayLists implements getTrainingDisplayLists operation.
 //
-// Returns the user's current **watch-screen layout** for this profile: an
-// array of display sets, each holding `displays` (the ordered screens, where
-// each screen is a list of field ids from the catalog).
-// Served by the legacy `/settings/*` controller. Requires
-// `X-Requested-With: XMLHttpRequest`.
-// **Read-only path.** This layout is *saved* via `POST /settings/sports/save`
-// (as a `TrainingDisplays` block), not by writing back here — `PUT`/`POST`
-// to this path return 404 (verified 2026-06-01).
+// Returns the user's current watch-screen layout for this profile: an array of display sets, each
+// holding `displays` (the ordered screens, where each screen is a list of field ids from the catalog).
+//
+// Served by the legacy `/settings/*` controller. Requires `X-Requested-With: XMLHttpRequest`.
+//
+// Read-only path. This layout is saved via `POST /settings/sports/save` (as a `TrainingDisplays`
+// block), not by writing back here — `PUT`/`POST` to this path return 404 (verified 2026-06-01).
 //
 // GET /settings/sports/training-display-lists/{productId}/{sportProfileId}
 func (UnimplementedHandler) GetTrainingDisplayLists(ctx context.Context, params GetTrainingDisplayListsParams) (r GetTrainingDisplayListsRes, _ error) {
@@ -463,9 +460,8 @@ func (UnimplementedHandler) GetTrainingDisplayLists(ctx context.Context, params 
 
 // GetTrainingSessionDetails implements getTrainingSessionDetails operation.
 //
-// Time-series sample data (HR, GPS, power, …), laps, zones, and
-// per-exercise diagnostics used to draw the analysis charts. For a
-// manually-entered session, all `samples[*][METRIC]` are null.
+// Time-series sample data (HR, GPS, power, …), laps, zones, and per-exercise diagnostics used to
+// draw the analysis charts. For a manually-entered session, all `samples[*][METRIC]` are null.
 //
 // GET /api/training/analysis/{id}/details
 func (UnimplementedHandler) GetTrainingSessionDetails(ctx context.Context, params GetTrainingSessionDetailsParams) (r GetTrainingSessionDetailsRes, _ error) {
@@ -474,9 +470,8 @@ func (UnimplementedHandler) GetTrainingSessionDetails(ctx context.Context, param
 
 // GetTrainingSessionSummary implements getTrainingSessionSummary operation.
 //
-// Headline metrics and per-exercise statistics for the session-analysis
-// page. Schema captured from a manual-entry session (many fields null
-// without device upload).
+// Headline metrics and per-exercise statistics for the session-analysis page. Schema captured from a
+// manual-entry session (many fields null without device upload).
 //
 // GET /api/training/analysis/{id}/summary
 func (UnimplementedHandler) GetTrainingSessionSummary(ctx context.Context, params GetTrainingSessionSummaryParams) (r GetTrainingSessionSummaryRes, _ error) {
@@ -485,12 +480,10 @@ func (UnimplementedHandler) GetTrainingSessionSummary(ctx context.Context, param
 
 // GetTrainingTarget implements getTrainingTarget operation.
 //
-// Returns the server-normalized training-target object. Discovered during
-// update-endpoint probing 2026-05-26 — same URL as `updateTrainingTarget`.
-// Server normalizes the stored shape: each `exerciseTargets[].duration`
-// is rolled up from its phases (e.g. `"00:03:00"` for a phase loop), and
-// PHASE-leaf phases carry `duration: "00:00:00"` even when
-// `goalType: DISTANCE`.
+// Returns the server-normalized training-target object. Discovered during update-endpoint probing
+// 2026-05-26 — same URL as `updateTrainingTarget`. Server normalizes the stored shape: each
+// `exerciseTargets[].duration` is rolled up from its phases (e.g. `"00:03:00"` for a phase loop), and
+// PHASE-leaf phases carry `duration: "00:00:00"` even when `goalType: DISTANCE`.
 //
 // GET /api/trainingtarget/{id}
 func (UnimplementedHandler) GetTrainingTarget(ctx context.Context, params GetTrainingTargetParams) (r GetTrainingTargetRes, _ error) {
@@ -499,13 +492,12 @@ func (UnimplementedHandler) GetTrainingTarget(ctx context.Context, params GetTra
 
 // ImportRoute implements importRoute operation.
 //
-// Creates a route favorite (`type: "ROUTE"`) from a parsed GPX/TCX
-// file. ⚠ The GPX/TCX is **parsed client-side**, not uploaded as
-// multipart — the request body is JSON with the trackpoints already
+// Creates a route favorite (`type: "ROUTE"`) from a parsed GPX/TCX file. ⚠ The GPX/TCX is parsed
+// client-side, not uploaded as multipart — the request body is JSON with the trackpoints already
 // extracted. See `docs/endpoints/routes.md` for the parsing recipe.
-// Note the unusual path shape (`trainingTargets` camelCased and
-// plural, `importRoute` as a verb) — distinct from every other
-// favorite endpoint.
+//
+// Note the unusual path shape (`trainingTargets` camelCased and plural, `importRoute` as a verb) —
+// distinct from every other favorite endpoint.
 //
 // POST /api/favorites/trainingTargets/importRoute
 func (UnimplementedHandler) ImportRoute(ctx context.Context, req *RouteImport, params ImportRouteParams) (r ImportRouteRes, _ error) {
@@ -514,9 +506,8 @@ func (UnimplementedHandler) ImportRoute(ctx context.Context, req *RouteImport, p
 
 // ListDeviceFavorites implements listDeviceFavorites operation.
 //
-// Returns the user's devices and the favorites assigned to each.
-// Empty `{devices: []}` for accounts without any paired device.
-// Populated shape TBD.
+// Returns the user's devices and the favorites assigned to each. Empty `{devices: []}` for accounts
+// without any paired device. Populated shape TBD.
 //
 // GET /api/devices/favoriteTargets
 func (UnimplementedHandler) ListDeviceFavorites(ctx context.Context) (r ListDeviceFavoritesRes, _ error) {
@@ -525,8 +516,7 @@ func (UnimplementedHandler) ListDeviceFavorites(ctx context.Context) (r ListDevi
 
 // ListFavorites implements listFavorites operation.
 //
-// Returns favorites plus third-party integration link status. Used
-// by the `/favorites` page.
+// Returns favorites plus third-party integration link status. Used by the `/favorites` page.
 //
 // GET /api/favorites
 func (UnimplementedHandler) ListFavorites(ctx context.Context) (r ListFavoritesRes, _ error) {
@@ -535,9 +525,8 @@ func (UnimplementedHandler) ListFavorites(ctx context.Context) (r ListFavoritesR
 
 // ListFavoritesSimple implements listFavoritesSimple operation.
 //
-// Returns a simpler array used by the diary's "Add training target"
-// picker. **Note:** `duration` is `HH:MM:SS` here vs milliseconds
-// in `GET /api/favorites`. The embedded `sport` is a full sport
+// Returns a simpler array used by the diary's "Add training target" picker. Note: `duration` is
+// `HH:MM:SS` here vs milliseconds in `GET /api/favorites`. The embedded `sport` is a full sport
 // object, not just an id.
 //
 // GET /api/favorites/favoriteTargetsJson
@@ -547,25 +536,24 @@ func (UnimplementedHandler) ListFavoritesSimple(ctx context.Context) (r ListFavo
 
 // ListSportProfiles implements listSportProfiles operation.
 //
-// Returns the signed-in user's **sport profiles** ("Profils sportifs",
-// reached in the web UI via *Compte → Profils sportifs*, served by the
-// server-rendered `/settings/sports` page).
-// Sport profiles are the per-sport device configuration (training views,
-// auto-lap, zones, sensor/GPS settings). **Create/update is NOT on this
-// `/api/sports/*` resource** (`POST`/`PUT`/`PATCH` here all 404). It lives on
-// the legacy `/settings/sports/*` controller instead:
-// **create = `POST /settings/sports/add`**, **update =
-// `POST /settings/sports/save`** (verified 2026-06-01 from a device-paired
-// account — see `docs/endpoints/sport-profiles.md`).
-// Note those settings endpoints key profiles by a **numeric** id, whereas
-// this `/api/sports/profiles/{id}` resource validates a **UUID** — the two id
-// systems are not yet reconciled.
-// **Empty on a device-less account.** On the free test account this returns
-// `[]`, and `GET /api/account/users/current/user` likewise reports
-// `sportProfiles: []`. A populated element shape could not be captured — see
-// `SportProfile` for the partially-inferred element schema and TODOs.
-// A `sportId` query parameter is accepted but had no visible effect on the
-// empty account (still `[]`).
+// Returns the signed-in user's sport profiles ("Profils sportifs", reached in the web UI via Compte
+// → Profils sportifs, served by the server-rendered `/settings/sports` page).
+//
+// Sport profiles are the per-sport device configuration (training views, auto-lap, zones, sensor/GPS
+// settings). Create/update is NOT on this `/api/sports/*` resource (`POST`/`PUT`/`PATCH` here all
+// 404). It lives on the legacy `/settings/sports/*` controller instead: create =
+// `POST /settings/sports/add`, update = `POST /settings/sports/save` (verified 2026-06-01 from a
+// device-paired account — see `docs/endpoints/sport-profiles.md`).
+//
+// Note those settings endpoints key profiles by a numeric id, whereas this `/api/sports/profiles/{id}`
+// resource validates a UUID — the two id systems are not yet reconciled.
+//
+// Empty on a device-less account. On the free test account this returns `[]`, and
+// `GET /api/account/users/current/user` likewise reports `sportProfiles: []`. A populated element
+// shape could not be captured — see `SportProfile` for the partially-inferred element schema and
+// TODOs.
+//
+// A `sportId` query parameter is accepted but had no visible effect on the empty account (still `[]`).
 //
 // GET /api/sports/profiles
 func (UnimplementedHandler) ListSportProfiles(ctx context.Context, params ListSportProfilesParams) (r ListSportProfilesRes, _ error) {
@@ -574,13 +562,13 @@ func (UnimplementedHandler) ListSportProfiles(ctx context.Context, params ListSp
 
 // ListTrainingSessions implements listTrainingSessions operation.
 //
-// Return completed training sessions for a user within an inclusive date
-// range. Despite being a read, it is a **POST** with a JSON body.
-// Each row's `duration` is in **milliseconds** (1800000 = 30 min) and
-// `sportName` is the user-locale display string (e.g. `"Course à pied"`),
-// unlike the favorites endpoints which return the uppercase sport enum. Use a
-// row's `id` to fetch full analysis via
-// `GET /api/training/analysis/{id}/summary` and `/details`.
+// Return completed training sessions for a user within an inclusive date range. Despite being a read,
+// it is a POST with a JSON body.
+//
+// Each row's `duration` is in milliseconds (1800000 = 30 min) and `sportName` is the user-locale
+// display string (e.g. `"Course à pied"`), unlike the favorites endpoints which return the uppercase
+// sport enum. Use a row's `id` to fetch full analysis via `GET /api/training/analysis/{id}/summary`
+// and `/details`.
 //
 // POST /api/training/history
 func (UnimplementedHandler) ListTrainingSessions(ctx context.Context, req *ListTrainingSessionsReq, params ListTrainingSessionsParams) (r ListTrainingSessionsRes, _ error) {
@@ -589,26 +577,27 @@ func (UnimplementedHandler) ListTrainingSessions(ctx context.Context, req *ListT
 
 // RenameFavorite implements renameFavorite operation.
 //
-// Updates only the favorite's `name`. Distinct from
-// `POST /api/favoritetarget/{id}` (full update) — this endpoint takes a
-// tiny `{favoriteId, favoriteName}` body and is the route Polar's React UI
-// uses when the user edits the rename field.
-// ### Method gotcha
-// The verb is **`PUT`**, not POST. Sending POST returns **404** (Play
-// binds the route to PUT only). This contrasts with most other
-// `/api/favorites/*` write endpoints which use POST.
-// ### Validation
-// - `favoriteId` accepts both integer and string forms (`"81388912"`
-// works the same as `81388912`).
-// - Empty `favoriteName` → 400.
-// - Missing fields → 400.
-// - Unknown `favoriteId` → **500** (not 404). Worse, all error bodies
-// carry the same boilerplate French/English message about a "route"
-// (`"Un problème est survenu lors de l'enregistrement de l'itinéraire.
-// Réessayez."`) regardless of which favorite type you're updating —
-// that's a Polar copy/paste bug in the error catalog.
-// Missing `X-Requested-With: XMLHttpRequest` → 403 (standard CSRF guard,
-// same as the rest of `/api/*` writes).
+// Updates only the favorite's `name`. Distinct from `POST /api/favoritetarget/{id}` (full update) —
+// this endpoint takes a tiny `{favoriteId, favoriteName}` body and is the route Polar's React UI uses
+// when the user edits the rename field.
+//
+// # Method gotcha
+//
+// The verb is `PUT`, not POST. Sending POST returns 404 (Play binds the route to PUT only). This
+// contrasts with most other `/api/favorites/*` write endpoints which use POST.
+//
+// # Validation
+//
+//   - `favoriteId` accepts both integer and string forms (`"81388912"` works the same as `81388912`).
+//   - Empty `favoriteName` → 400.
+//   - Missing fields → 400.
+//   - Unknown `favoriteId` → 500 (not 404). Worse, all error bodies carry the same boilerplate
+//     French/English message about a "route"
+//     (`"Un problème est survenu lors de l'enregistrement de l'itinéraire. Réessayez."`) regardless
+//     of which favorite type you're updating — that's a Polar copy/paste bug in the error catalog.
+//
+// Missing `X-Requested-With: XMLHttpRequest` → 403 (standard CSRF guard, same as the rest of
+// `/api/*` writes).
 //
 // PUT /api/favorites/saveName
 func (UnimplementedHandler) RenameFavorite(ctx context.Context, req *RenameFavoriteReq, params RenameFavoriteParams) (r RenameFavoriteRes, _ error) {
@@ -617,17 +606,17 @@ func (UnimplementedHandler) RenameFavorite(ctx context.Context, req *RenameFavor
 
 // SaveSportProfile implements saveSportProfile operation.
 //
-// Updates one or more sport profiles' general device settings
-// (`TrainingSettings`) and/or watch-screen layout (`TrainingDisplays`). This
-// is the **update endpoint** that was previously missing — the layout save
-// issued after editing a profile in *Compte → Profils sportifs*. Captured
-// 2026-06-01 from a device-paired account.
-// Body is **JSON** with a `sports` map keyed by profile id; each value is an
-// array of config blocks discriminated by `name` (`TrainingSettings`,
-// `TrainingDisplays`). Requires `X-Requested-With: XMLHttpRequest`.
-// Returns **200** with a `text/plain` body containing a JSON success
-// message reminding the user to sync their device (changes apply on the
-// watch only after the next sync).
+// Updates one or more sport profiles' general device settings (`TrainingSettings`) and/or watch-screen
+// layout (`TrainingDisplays`). This is the update endpoint that was previously missing — the layout
+// save issued after editing a profile in Compte → Profils sportifs. Captured 2026-06-01 from a
+// device-paired account.
+//
+// Body is JSON with a `sports` map keyed by profile id; each value is an array of config blocks
+// discriminated by `name` (`TrainingSettings`, `TrainingDisplays`). Requires
+// `X-Requested-With: XMLHttpRequest`.
+//
+// Returns 200 with a `text/plain` body containing a JSON success message reminding the user to sync
+// their device (changes apply on the watch only after the next sync).
 //
 // POST /settings/sports/save
 func (UnimplementedHandler) SaveSportProfile(ctx context.Context, req *SportProfileSaveRequest, params SaveSportProfileParams) (r SaveSportProfileRes, _ error) {
@@ -636,9 +625,8 @@ func (UnimplementedHandler) SaveSportProfile(ctx context.Context, req *SportProf
 
 // UpdateFavorite implements updateFavorite operation.
 //
-// Full-body update (no PUT/PATCH). Send the same shape as create plus
-// the existing `exerciseTargets[i].id` value from GET. Returns 200
-// with empty body on success.
+// Full-body update (no PUT/PATCH). Send the same shape as create plus the existing
+// `exerciseTargets[i].id` value from GET. Returns 200 with empty body on success.
 //
 // POST /api/favoritetarget/{id}
 func (UnimplementedHandler) UpdateFavorite(ctx context.Context, req *Favorite, params UpdateFavoriteParams) (r UpdateFavoriteRes, _ error) {
@@ -647,21 +635,21 @@ func (UnimplementedHandler) UpdateFavorite(ctx context.Context, req *Favorite, p
 
 // UpdateTrainingTarget implements updateTrainingTarget operation.
 //
-// Replaces the training target with the supplied body. **POST**, not PUT
-// or PATCH — sending PUT returns 404. The body shape is identical to
-// `POST /api/trainingtarget` (create), with two requirements for
+// Replaces the training target with the supplied body. POST, not PUT or PATCH — sending PUT returns
+// 404. The body shape is identical to `POST /api/trainingtarget` (create), with two requirements for
 // successful field updates:
-// 1. Include the **existing `exerciseTargets[].id`** from
-// `GET /api/trainingtarget/{id}`. Sending `id: null` is accepted
-// (returns 200) but **silently no-ops the exerciseTarget update** —
-// only top-level fields (`name`, `description`, `datetime`) land.
-// 2. Same field semantics as create (distance in metres, datetime without
-// timezone, phaseType `PHASE`/`REPEAT`, etc.).
-// Returns **200 with an empty body** on success — note this differs from
-// `POST /api/trainingtarget` (create), which returns the new id as a
-// bare string.
-// Re-read via `GET /api/trainingtarget/{id}` to confirm the change
-// landed (especially when modifying exerciseTargets).
+//
+//  1. Include the existing `exerciseTargets[].id` from `GET /api/trainingtarget/{id}`. Sending
+//     `id: null` is accepted (returns 200) but silently no-ops the exerciseTarget update — only
+//     top-level fields (`name`, `description`, `datetime`) land.
+//  2. Same field semantics as create (distance in metres, datetime without timezone, phaseType
+//     `PHASE`/`REPEAT`, etc.).
+//
+// Returns 200 with an empty body on success — note this differs from `POST /api/trainingtarget`
+// (create), which returns the new id as a bare string.
+//
+// Re-read via `GET /api/trainingtarget/{id}` to confirm the change landed (especially when modifying
+// exerciseTargets).
 //
 // POST /api/trainingtarget/{id}
 func (UnimplementedHandler) UpdateTrainingTarget(ctx context.Context, req *TrainingTargetCreate, params UpdateTrainingTargetParams) (r UpdateTrainingTargetRes, _ error) {

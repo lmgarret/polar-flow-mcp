@@ -14,11 +14,10 @@ import (
 // SecurityHandler is handler for security parameters.
 type SecurityHandler interface {
 	// HandleSessionCookie handles sessionCookie security.
-	// RS256 JWT session token issued by auth.polar.com after a successful
-	// SSO login. This is the **only** load-bearing cookie — PLAY_SESSION_FLOW,
-	// AWSALB, AWSALBCORS, timezone, PLAY_LANG are all optional (probed
-	// 2026-05-25). JWT TTL ≈ 1h; refresh by following the silent OAuth
-	// re-auth flow documented in docs/auth.md.
+	// RS256 JWT session token issued by auth.polar.com after a successful SSO login. This is the only
+	// load-bearing cookie — PLAY_SESSION_FLOW, AWSALB, AWSALBCORS, timezone, PLAY_LANG are all optional
+	// (probed 2026-05-25). JWT TTL ≈ 1h; refresh by following the silent OAuth re-auth flow documented
+	// in docs/auth.md.
 	HandleSessionCookie(ctx context.Context, operationName OperationName, t SessionCookie) (context.Context, error)
 }
 
@@ -125,11 +124,10 @@ func (s *Server) securitySessionCookie(ctx context.Context, operationName Operat
 // SecuritySource is provider of security values (tokens, passwords, etc.).
 type SecuritySource interface {
 	// SessionCookie provides sessionCookie security value.
-	// RS256 JWT session token issued by auth.polar.com after a successful
-	// SSO login. This is the **only** load-bearing cookie — PLAY_SESSION_FLOW,
-	// AWSALB, AWSALBCORS, timezone, PLAY_LANG are all optional (probed
-	// 2026-05-25). JWT TTL ≈ 1h; refresh by following the silent OAuth
-	// re-auth flow documented in docs/auth.md.
+	// RS256 JWT session token issued by auth.polar.com after a successful SSO login. This is the only
+	// load-bearing cookie — PLAY_SESSION_FLOW, AWSALB, AWSALBCORS, timezone, PLAY_LANG are all optional
+	// (probed 2026-05-25). JWT TTL ≈ 1h; refresh by following the silent OAuth re-auth flow documented
+	// in docs/auth.md.
 	SessionCookie(ctx context.Context, operationName OperationName) (SessionCookie, error)
 }
 

@@ -18,11 +18,9 @@ import (
 
 // AddRouteToFavoritesParams is parameters of addRouteToFavorites operation.
 type AddRouteToFavoritesParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -91,11 +89,9 @@ func decodeAddRouteToFavoritesParams(args [0]string, argsEscaped bool, r *http.R
 
 // AddSportProfileParams is parameters of addSportProfile operation.
 type AddSportProfileParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -164,11 +160,9 @@ func decodeAddSportProfileParams(args [0]string, argsEscaped bool, r *http.Reque
 
 // ChangeFavoriteSportParams is parameters of changeFavoriteSport operation.
 type ChangeFavoriteSportParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -237,11 +231,9 @@ func decodeChangeFavoriteSportParams(args [0]string, argsEscaped bool, r *http.R
 
 // CreateFavoriteParams is parameters of createFavorite operation.
 type CreateFavoriteParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -310,11 +302,9 @@ func decodeCreateFavoriteParams(args [0]string, argsEscaped bool, r *http.Reques
 
 // CreateTrainingSessionParams is parameters of createTrainingSession operation.
 type CreateTrainingSessionParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -383,11 +373,9 @@ func decodeCreateTrainingSessionParams(args [0]string, argsEscaped bool, r *http
 
 // CreateTrainingTargetParams is parameters of createTrainingTarget operation.
 type CreateTrainingTargetParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -456,14 +444,12 @@ func decodeCreateTrainingTargetParams(args [0]string, argsEscaped bool, r *http.
 
 // DeleteFavoriteParams is parameters of deleteFavorite operation.
 type DeleteFavoriteParams struct {
-	// Numeric favorite id (the `favoriteId` field in
-	// `GET /api/favorites.targets[]`). Distinct from `exerciseTargetId`.
+	// Numeric favorite id (the `favoriteId` field in `GET /api/favorites.targets[]`). Distinct from
+	// `exerciseTargetId`.
 	ID int64
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -584,15 +570,12 @@ func decodeDeleteFavoriteParams(args [1]string, argsEscaped bool, r *http.Reques
 
 // DeleteSportProfileParams is parameters of deleteSportProfile operation.
 type DeleteSportProfileParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
-	// The sport profile's **UUID** (the `id` field from
-	// `GET /api/sports/profiles`, **not** the numeric `sportId`). A non-UUID
-	// value returns `400 Invalid UUID: <value>` (plain text).
+	// The sport profile's UUID (the `id` field from `GET /api/sports/profiles`, not the numeric
+	// `sportId`). A non-UUID value returns `400 Invalid UUID: <value>` (plain text).
 	ID uuid.UUID
 }
 
@@ -715,11 +698,9 @@ func decodeDeleteSportProfileParams(args [1]string, argsEscaped bool, r *http.Re
 type DeleteTrainingSessionParams struct {
 	// Training session numeric ID (e.g. 8346808740).
 	ID int64
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -908,9 +889,8 @@ func decodeDeleteTrainingTargetParams(args [1]string, argsEscaped bool, r *http.
 type GetActivityTimelineParams struct {
 	// Target day in `YYYY-MM-DD` (server interprets in the user's timezone).
 	Day time.Time
-	// Maximum number of timeline samples returned per array
-	// (`activityTimelineSamples`, `heartRateTimelineSamples`). Server
-	// downsamples beyond this. Defaults appear to be 200 in the UI.
+	// Maximum number of timeline samples returned per array (`activityTimelineSamples`,
+	// `heartRateTimelineSamples`). Server downsamples beyond this. Defaults appear to be 200 in the UI.
 	MaxSampleCount OptInt `json:",omitempty,omitzero"`
 }
 
@@ -1264,11 +1244,9 @@ func decodeGetCalendarEventsParams(args [0]string, argsEscaped bool, r *http.Req
 
 // GetCalendarWeekSummaryParams is parameters of getCalendarWeekSummary operation.
 type GetCalendarWeekSummaryParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -1337,8 +1315,8 @@ func decodeGetCalendarWeekSummaryParams(args [0]string, argsEscaped bool, r *htt
 
 // GetFavoriteParams is parameters of getFavorite operation.
 type GetFavoriteParams struct {
-	// Numeric favorite id (the `favoriteId` field in
-	// `GET /api/favorites.targets[]`). Distinct from `exerciseTargetId`.
+	// Numeric favorite id (the `favoriteId` field in `GET /api/favorites.targets[]`). Distinct from
+	// `exerciseTargetId`.
 	ID int64
 }
 
@@ -1404,8 +1382,7 @@ func decodeGetFavoriteParams(args [1]string, argsEscaped bool, r *http.Request) 
 
 // GetFavoriteExerciseTargetParams is parameters of getFavoriteExerciseTarget operation.
 type GetFavoriteExerciseTargetParams struct {
-	// Inner exerciseTargetId (NOT favoriteId). Source:
-	// `GET /api/favorites.targets[].exerciseTargetId`.
+	// Inner exerciseTargetId (NOT favoriteId). Source: `GET /api/favorites.targets[].exerciseTargetId`.
 	ID int64
 }
 
@@ -1529,11 +1506,9 @@ func decodeGetFeaturesAvailableParams(args [0]string, argsEscaped bool, r *http.
 
 // GetProgressViewSummaryParams is parameters of getProgressViewSummary operation.
 type GetProgressViewSummaryParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -1606,11 +1581,9 @@ type GetSleepReportParams struct {
 	From time.Time
 	// Inclusive end date (`YYYY-MM-DD`). Must be ≥ 30 days and ≤ 365 days after `from`.
 	To time.Time
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -1766,9 +1739,8 @@ func decodeGetSleepReportParams(args [0]string, argsEscaped bool, r *http.Reques
 
 // GetSportProfileParams is parameters of getSportProfile operation.
 type GetSportProfileParams struct {
-	// The sport profile's **UUID** (the `id` field from
-	// `GET /api/sports/profiles`, **not** the numeric `sportId`). A non-UUID
-	// value returns `400 Invalid UUID: <value>` (plain text).
+	// The sport profile's UUID (the `id` field from `GET /api/sports/profiles`, not the numeric
+	// `sportId`). A non-UUID value returns `400 Invalid UUID: <value>` (plain text).
 	ID uuid.UUID
 }
 
@@ -1834,11 +1806,9 @@ func decodeGetSportProfileParams(args [1]string, argsEscaped bool, r *http.Reque
 
 // GetSummaryDataParams is parameters of getSummaryData operation.
 type GetSummaryDataParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -1907,18 +1877,15 @@ func decodeGetSummaryDataParams(args [0]string, argsEscaped bool, r *http.Reques
 
 // GetTrainingDisplayItemsParams is parameters of getTrainingDisplayItems operation.
 type GetTrainingDisplayItemsParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 	// Polar device/watch model id (e.g. 268).
 	ProductId int
-	// **Numeric** sport-profile id (e.g. 987654321). Note this is a plain
-	// integer — distinct from the UUID-style id used by the separate
-	// `/api/sports/profiles/{id}` resource (the two id systems have not been
-	// reconciled; see `docs/endpoints/sport-profiles.md`).
+	// Numeric sport-profile id (e.g. 987654321). Note this is a plain integer — distinct from the
+	// UUID-style id used by the separate `/api/sports/profiles/{id}` resource (the two id systems have not
+	// been reconciled; see `docs/endpoints/sport-profiles.md`).
 	SportProfileId int
 }
 
@@ -2091,16 +2058,14 @@ func decodeGetTrainingDisplayItemsParams(args [2]string, argsEscaped bool, r *ht
 
 // GetTrainingDisplayListsParams is parameters of getTrainingDisplayLists operation.
 type GetTrainingDisplayListsParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 	// Polar device/watch model id (e.g. 268).
 	ProductId int
-	// **Numeric** sport-profile id (e.g. 987654321) — see the note on the
-	// sibling `training-display-items` path about the two id systems.
+	// Numeric sport-profile id (e.g. 987654321) — see the note on the sibling `training-display-items`
+	// path about the two id systems.
 	SportProfileId int
 }
 
@@ -2471,11 +2436,9 @@ func decodeGetTrainingTargetParams(args [1]string, argsEscaped bool, r *http.Req
 
 // ImportRouteParams is parameters of importRoute operation.
 type ImportRouteParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -2544,9 +2507,8 @@ func decodeImportRouteParams(args [0]string, argsEscaped bool, r *http.Request) 
 
 // ListSportProfilesParams is parameters of listSportProfiles operation.
 type ListSportProfilesParams struct {
-	// Optional sport filter (same id space as `GET /api/sports/sports`).
-	// Accepted on the empty test account but its filtering effect could not
-	// be confirmed. # TODO: verify against a populated account.
+	// Optional sport filter (same id space as `GET /api/sports/sports`). Accepted on the empty test
+	// account but its filtering effect could not be confirmed. # TODO: verify against a populated account.
 	SportId OptInt `json:",omitempty,omitzero"`
 }
 
@@ -2611,11 +2573,9 @@ func decodeListSportProfilesParams(args [0]string, argsEscaped bool, r *http.Req
 
 // ListTrainingSessionsParams is parameters of listTrainingSessions operation.
 type ListTrainingSessionsParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -2684,11 +2644,9 @@ func decodeListTrainingSessionsParams(args [0]string, argsEscaped bool, r *http.
 
 // RenameFavoriteParams is parameters of renameFavorite operation.
 type RenameFavoriteParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -2757,11 +2715,9 @@ func decodeRenameFavoriteParams(args [0]string, argsEscaped bool, r *http.Reques
 
 // SaveSportProfileParams is parameters of saveSportProfile operation.
 type SaveSportProfileParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -2830,14 +2786,12 @@ func decodeSaveSportProfileParams(args [0]string, argsEscaped bool, r *http.Requ
 
 // UpdateFavoriteParams is parameters of updateFavorite operation.
 type UpdateFavoriteParams struct {
-	// Numeric favorite id (the `favoriteId` field in
-	// `GET /api/favorites.targets[]`). Distinct from `exerciseTargetId`.
+	// Numeric favorite id (the `favoriteId` field in `GET /api/favorites.targets[]`). Distinct from
+	// `exerciseTargetId`.
 	ID int64
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 }
 
@@ -2958,11 +2912,9 @@ func decodeUpdateFavoriteParams(args [1]string, argsEscaped bool, r *http.Reques
 
 // UpdateTrainingTargetParams is parameters of updateTrainingTarget operation.
 type UpdateTrainingTargetParams struct {
-	// CSRF defense on /api/* write operations. Play's CSRF filter is
-	// configured to whitelist requests carrying this header (browsers
-	// cannot set it on cross-origin form submissions). Without it: 403
-	// with an "Unauthorized" HTML body — easy to mistake for an auth
-	// failure. Must equal `XMLHttpRequest`.
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
 	XRequestedWith XRequestedWith
 	// Training target numeric ID (e.g. 1454046259), as returned in the create response body.
 	ID int64
