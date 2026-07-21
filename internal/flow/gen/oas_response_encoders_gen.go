@@ -16,14 +16,12 @@ func encodeAddRouteToFavoritesResponse(response AddRouteToFavoritesRes, w http.R
 	switch response := response.(type) {
 	case *AddRouteToFavoritesOK:
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		return nil
 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -56,7 +54,6 @@ func encodeAddSportProfileResponse(response AddSportProfileRes, w http.ResponseW
 	case *SportProfileAddResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -69,7 +66,6 @@ func encodeAddSportProfileResponse(response AddSportProfileRes, w http.ResponseW
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -89,7 +85,6 @@ func encodeChangeFavoriteSportResponse(response ChangeFavoriteSportRes, w http.R
 	case *ChangeFavoriteSportOK:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -101,7 +96,6 @@ func encodeChangeFavoriteSportResponse(response ChangeFavoriteSportRes, w http.R
 
 	case *ChangeFavoriteSportBadRequest:
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		return nil
 
@@ -115,7 +109,6 @@ func encodeCreateFavoriteResponse(response CreateFavoriteRes, w http.ResponseWri
 	case *CreateFavoriteCreated:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(201)
-		span.SetStatus(codes.Ok, http.StatusText(201))
 
 		writer := w
 		if closer, ok := response.Data.(io.Closer); ok {
@@ -130,7 +123,6 @@ func encodeCreateFavoriteResponse(response CreateFavoriteRes, w http.ResponseWri
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -149,20 +141,17 @@ func encodeCreateTrainingSessionResponse(response CreateTrainingSessionRes, w ht
 	switch response := response.(type) {
 	case *CreateTrainingSessionOK:
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		return nil
 
 	case *CreateTrainingSessionBadRequest:
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		return nil
 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -182,7 +171,6 @@ func encodeCreateTrainingTargetResponse(response CreateTrainingTargetRes, w http
 	case *CreateTrainingTargetCreated:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(201)
-		span.SetStatus(codes.Ok, http.StatusText(201))
 
 		writer := w
 		if closer, ok := response.Data.(io.Closer); ok {
@@ -197,7 +185,6 @@ func encodeCreateTrainingTargetResponse(response CreateTrainingTargetRes, w http
 	case *ValidationError:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -210,7 +197,6 @@ func encodeCreateTrainingTargetResponse(response CreateTrainingTargetRes, w http
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -230,7 +216,6 @@ func encodeDeleteFavoriteResponse(response DeleteFavoriteRes, w http.ResponseWri
 	case *DeleteFavoriteOK:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -243,7 +228,6 @@ func encodeDeleteFavoriteResponse(response DeleteFavoriteRes, w http.ResponseWri
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -255,7 +239,6 @@ func encodeDeleteFavoriteResponse(response DeleteFavoriteRes, w http.ResponseWri
 
 	case *DeleteFavoriteNotFound:
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		return nil
 
@@ -268,14 +251,12 @@ func encodeDeleteSportProfileResponse(response DeleteSportProfileRes, w http.Res
 	switch response := response.(type) {
 	case *DeleteSportProfileOK:
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		return nil
 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -300,14 +281,12 @@ func encodeDeleteTrainingSessionResponse(response DeleteTrainingSessionRes, w ht
 	switch response := response.(type) {
 	case *DeleteTrainingSessionOK:
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		return nil
 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -319,7 +298,6 @@ func encodeDeleteTrainingSessionResponse(response DeleteTrainingSessionRes, w ht
 
 	case *DeleteTrainingSessionNotFound:
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		return nil
 
@@ -332,14 +310,12 @@ func encodeDeleteTrainingTargetResponse(response DeleteTrainingTargetRes, w http
 	switch response := response.(type) {
 	case *DeleteTrainingTargetOK:
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		return nil
 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -359,7 +335,6 @@ func encodeGetActivityTimelineResponse(response GetActivityTimelineRes, w http.R
 	case *ActivityTimelineByDate:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -371,14 +346,12 @@ func encodeGetActivityTimelineResponse(response GetActivityTimelineRes, w http.R
 
 	case *GetActivityTimelineBadRequest:
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		return nil
 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -398,7 +371,6 @@ func encodeGetActivityTimelineFourResponse(response GetActivityTimelineFourRes, 
 	case *ActivityTimelineByDate:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -410,14 +382,12 @@ func encodeGetActivityTimelineFourResponse(response GetActivityTimelineFourRes, 
 
 	case *GetActivityTimelineFourBadRequest:
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		return nil
 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -437,7 +407,6 @@ func encodeGetCalendarEventsResponse(response GetCalendarEventsRes, w http.Respo
 	case *GetCalendarEventsOKApplicationJSON:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -450,7 +419,6 @@ func encodeGetCalendarEventsResponse(response GetCalendarEventsRes, w http.Respo
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -470,7 +438,6 @@ func encodeGetCalendarWeekSummaryResponse(response GetCalendarWeekSummaryRes, w 
 	case *GetCalendarWeekSummaryOKApplicationJSON:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -483,7 +450,6 @@ func encodeGetCalendarWeekSummaryResponse(response GetCalendarWeekSummaryRes, w 
 	case *GetCalendarWeekSummaryBadRequest:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		writer := w
 		if closer, ok := response.Data.(io.Closer); ok {
@@ -498,7 +464,6 @@ func encodeGetCalendarWeekSummaryResponse(response GetCalendarWeekSummaryRes, w 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -518,7 +483,6 @@ func encodeGetCurrentUserResponse(response GetCurrentUserRes, w http.ResponseWri
 	case *CurrentUserResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -531,7 +495,6 @@ func encodeGetCurrentUserResponse(response GetCurrentUserRes, w http.ResponseWri
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -551,7 +514,6 @@ func encodeGetFavoriteResponse(response GetFavoriteRes, w http.ResponseWriter, s
 	case *Favorite:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -564,7 +526,6 @@ func encodeGetFavoriteResponse(response GetFavoriteRes, w http.ResponseWriter, s
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -576,7 +537,6 @@ func encodeGetFavoriteResponse(response GetFavoriteRes, w http.ResponseWriter, s
 
 	case *GetFavoriteNotFound:
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		return nil
 
@@ -590,7 +550,6 @@ func encodeGetFavoriteExerciseTargetResponse(response GetFavoriteExerciseTargetR
 	case *FavoriteExerciseTarget:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -603,7 +562,6 @@ func encodeGetFavoriteExerciseTargetResponse(response GetFavoriteExerciseTargetR
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -615,13 +573,11 @@ func encodeGetFavoriteExerciseTargetResponse(response GetFavoriteExerciseTargetR
 
 	case *GetFavoriteExerciseTargetForbidden:
 		w.WriteHeader(403)
-		span.SetStatus(codes.Error, http.StatusText(403))
 
 		return nil
 
 	case *GetFavoriteExerciseTargetNotFound:
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		return nil
 
@@ -635,7 +591,6 @@ func encodeGetFeaturesAvailableResponse(response GetFeaturesAvailableRes, w http
 	case *GetFeaturesAvailableOKApplicationJSON:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -648,7 +603,6 @@ func encodeGetFeaturesAvailableResponse(response GetFeaturesAvailableRes, w http
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -668,7 +622,6 @@ func encodeGetProgressViewSummaryResponse(response GetProgressViewSummaryRes, w 
 	case *ProgressViewSummary:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -681,7 +634,6 @@ func encodeGetProgressViewSummaryResponse(response GetProgressViewSummaryRes, w 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -701,7 +653,6 @@ func encodeGetSleepReportResponse(response GetSleepReportRes, w http.ResponseWri
 	case *GetSleepReportOKApplicationJSON:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -713,13 +664,11 @@ func encodeGetSleepReportResponse(response GetSleepReportRes, w http.ResponseWri
 
 	case *GetSleepReportBadRequest:
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		return nil
 
 	case *GetSleepReportUnauthorized:
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		return nil
 
@@ -733,7 +682,6 @@ func encodeGetSportProfileResponse(response GetSportProfileRes, w http.ResponseW
 	case *SportProfile:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -746,7 +694,6 @@ func encodeGetSportProfileResponse(response GetSportProfileRes, w http.ResponseW
 	case *GetSportProfileBadRequest:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		writer := w
 		if closer, ok := response.Data.(io.Closer); ok {
@@ -761,7 +708,6 @@ func encodeGetSportProfileResponse(response GetSportProfileRes, w http.ResponseW
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -781,7 +727,6 @@ func encodeGetSportsResponse(response GetSportsRes, w http.ResponseWriter, span 
 	case *SportsMap:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -793,7 +738,6 @@ func encodeGetSportsResponse(response GetSportsRes, w http.ResponseWriter, span 
 
 	case *GetSportsNotFound:
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		return nil
 
@@ -813,7 +757,6 @@ func encodeGetSummaryDataResponse(response GetSummaryDataRes, w http.ResponseWri
 	case *ProgressViewSummary:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -826,7 +769,6 @@ func encodeGetSummaryDataResponse(response GetSummaryDataRes, w http.ResponseWri
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -846,7 +788,6 @@ func encodeGetTrainingDisplayItemsResponse(response GetTrainingDisplayItemsRes, 
 	case *TrainingDisplayCatalog:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -859,7 +800,6 @@ func encodeGetTrainingDisplayItemsResponse(response GetTrainingDisplayItemsRes, 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -879,7 +819,6 @@ func encodeGetTrainingDisplayListsResponse(response GetTrainingDisplayListsRes, 
 	case *GetTrainingDisplayListsOKApplicationJSON:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -892,7 +831,6 @@ func encodeGetTrainingDisplayListsResponse(response GetTrainingDisplayListsRes, 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -912,7 +850,6 @@ func encodeGetTrainingSessionDetailsResponse(response GetTrainingSessionDetailsR
 	case *SessionDetails:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -925,7 +862,6 @@ func encodeGetTrainingSessionDetailsResponse(response GetTrainingSessionDetailsR
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -937,7 +873,6 @@ func encodeGetTrainingSessionDetailsResponse(response GetTrainingSessionDetailsR
 
 	case *GetTrainingSessionDetailsNotFound:
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		return nil
 
@@ -951,7 +886,6 @@ func encodeGetTrainingSessionSummaryResponse(response GetTrainingSessionSummaryR
 	case *SessionSummary:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -964,7 +898,6 @@ func encodeGetTrainingSessionSummaryResponse(response GetTrainingSessionSummaryR
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -976,7 +909,6 @@ func encodeGetTrainingSessionSummaryResponse(response GetTrainingSessionSummaryR
 
 	case *GetTrainingSessionSummaryNotFound:
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		return nil
 
@@ -990,7 +922,6 @@ func encodeGetTrainingTargetResponse(response GetTrainingTargetRes, w http.Respo
 	case *GetTrainingTargetOK:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1003,7 +934,6 @@ func encodeGetTrainingTargetResponse(response GetTrainingTargetRes, w http.Respo
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1015,7 +945,6 @@ func encodeGetTrainingTargetResponse(response GetTrainingTargetRes, w http.Respo
 
 	case *GetTrainingTargetNotFound:
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		return nil
 
@@ -1028,14 +957,12 @@ func encodeImportRouteResponse(response ImportRouteRes, w http.ResponseWriter, s
 	switch response := response.(type) {
 	case *ImportRouteOK:
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		return nil
 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1055,7 +982,6 @@ func encodeListDeviceFavoritesResponse(response ListDeviceFavoritesRes, w http.R
 	case *ListDeviceFavoritesOK:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1068,7 +994,6 @@ func encodeListDeviceFavoritesResponse(response ListDeviceFavoritesRes, w http.R
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1088,7 +1013,6 @@ func encodeListFavoritesResponse(response ListFavoritesRes, w http.ResponseWrite
 	case *FavoritesListing:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1101,7 +1025,6 @@ func encodeListFavoritesResponse(response ListFavoritesRes, w http.ResponseWrite
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1121,7 +1044,6 @@ func encodeListFavoritesSimpleResponse(response ListFavoritesSimpleRes, w http.R
 	case *ListFavoritesSimpleOKApplicationJSON:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1134,7 +1056,6 @@ func encodeListFavoritesSimpleResponse(response ListFavoritesSimpleRes, w http.R
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1154,7 +1075,6 @@ func encodeListSportProfilesResponse(response ListSportProfilesRes, w http.Respo
 	case *ListSportProfilesOKApplicationJSON:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1167,7 +1087,6 @@ func encodeListSportProfilesResponse(response ListSportProfilesRes, w http.Respo
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1187,7 +1106,6 @@ func encodeListTrainingSessionsResponse(response ListTrainingSessionsRes, w http
 	case *ListTrainingSessionsOKApplicationJSON:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1200,7 +1118,6 @@ func encodeListTrainingSessionsResponse(response ListTrainingSessionsRes, w http
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1220,7 +1137,6 @@ func encodeRenameFavoriteResponse(response RenameFavoriteRes, w http.ResponseWri
 	case *RenameFavoriteOK:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1232,7 +1148,6 @@ func encodeRenameFavoriteResponse(response RenameFavoriteRes, w http.ResponseWri
 
 	case *RenameFavoriteBadRequest:
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		return nil
 
@@ -1252,7 +1167,6 @@ func encodeSaveSportProfileResponse(response SaveSportProfileRes, w http.Respons
 	case *SaveSportProfileOK:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1265,7 +1179,6 @@ func encodeSaveSportProfileResponse(response SaveSportProfileRes, w http.Respons
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1284,14 +1197,12 @@ func encodeUpdateFavoriteResponse(response UpdateFavoriteRes, w http.ResponseWri
 	switch response := response.(type) {
 	case *UpdateFavoriteOK:
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		return nil
 
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1303,7 +1214,6 @@ func encodeUpdateFavoriteResponse(response UpdateFavoriteRes, w http.ResponseWri
 
 	case *UpdateFavoriteNotFound:
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		return nil
 
@@ -1316,14 +1226,12 @@ func encodeUpdateTrainingTargetResponse(response UpdateTrainingTargetRes, w http
 	switch response := response.(type) {
 	case *UpdateTrainingTargetOK:
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		return nil
 
 	case *ValidationError:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -1336,7 +1244,6 @@ func encodeUpdateTrainingTargetResponse(response UpdateTrainingTargetRes, w http
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)

@@ -359,19 +359,18 @@ paths:
     - $ref: '#/components/parameters/TrainingTargetId'
     get:
       summary: Read a training target
-      description: 'Returns the server-normalized training-target object. Discovered during
-
-        update-endpoint probing 2026-05-26 — same URL as `updateTrainingTarget`.
-
-        Server normalizes the stored shape: each `exerciseTargets[].duration`
-
-        is rolled up from its phases (e.g. `"00:03:00"` for a phase loop), and
-
-        PHASE-leaf phases carry `duration: "00:00:00"` even when
-
-        `goalType: DISTANCE`.
-
-        '
+      description: "Returns the server-normalized training-target object. Discovered during\nupdate-endpoint probing 2026-05-26\
+        \ — same URL as `updateTrainingTarget`.\n\n**The read-back shape is NOT identical to the create payload.** The server\n\
+        normalizes the stored shape, and a client that feeds this body back into\n`updateTrainingTarget` must account for\
+        \ these read/send asymmetries\n(all verified 2026-06-08, probe-E-roundtrip-update.json):\n\n- `exerciseTargets[].duration`\
+        \ / `.distance` are **rolled up** from the\n  phases on PHASED targets (e.g. a 4×3-min loop → `duration: \"00:12:00\"\
+        `),\n  so they are non-null on read even though create sends them null.\n- `exerciseTargets[].index` is server-assigned\
+        \ (0, 1, …) and read-only.\n- Each PHASE leaf reads back with `goalType` as the **authoritative** goal\n  discriminator.\
+        \ A `goalType: DISTANCE` leaf reads back with BOTH its real\n  `distance` AND a phantom `duration: \"00:00:00\"`;\
+        \ a `goalType: DURATION`\n  leaf omits `distance`. Do not infer the goal from field presence.\n- `intensityType: NONE`\
+        \ phases read back `lowerZone`/`upperZone` as `0`\n  (zero-sentinel), not the `null` that create sends.\n\nNone of\
+        \ these break a round-trip — the server tolerates all of them on\nupdate (see `updateTrainingTarget`). They only break\
+        \ a *client* that\nre-derives goal/volume from field presence instead of the explicit\n`goalType` / `type` fields.\n"
       operationId: getTrainingTarget
       tags:
       - training-targets
@@ -521,8 +520,17 @@ paths:
         \ `id: null` is accepted\n   (returns 200) but **silently no-ops the exerciseTarget update** —\n   only top-level\
         \ fields (`name`, `description`, `datetime`) land.\n2. Same field semantics as create (distance in metres, datetime\
         \ without\n   timezone, phaseType `PHASE`/`REPEAT`, etc.).\n\nReturns **200 with an empty body** on success — note\
-        \ this differs from\n`POST /api/trainingtarget` (create), which returns the new id as a\nbare string.\n\nRe-read via\
-        \ `GET /api/trainingtarget/{id}` to confirm the change\nlanded (especially when modifying exerciseTargets).\n"
+        \ this differs from\n`POST /api/trainingtarget` (create), which returns the new id as a\nbare string.\n\n**The GET\
+        \ read-back round-trips safely.** You can take the\n`GET /api/trainingtarget/{id}` body, change what you want, and\
+        \ POST it\nstraight back — the server tolerates every field the read adds that create\nomits: the rolled-up `exerciseTargets[].duration`/`.distance`,\
+        \ the\nread-only `index`, the phantom `duration: \"00:00:00\"` on DISTANCE phases,\nthe `0` zone-sentinels on NONE\
+        \ phases, and the server-assigned phase `id`s\n(all verified 2026-06-08). The **only** hard requirement is keeping\
+        \ each\n`exerciseTargets[].id` (sending `id: null` no-ops that entry — see below).\nA client should NOT add pre-flight\
+        \ validation that rejects these fields;\ndoing so produces a \"valid request refused before it is sent\" bug while\
+        \ the\nAPI would have accepted it.\n\n**No date validation on update.** A `datetime` in the past or future is\naccepted\
+        \ (200) — unlike `POST /api/training/create` (a *different*\nendpoint) which 400s on future dates. Do not guard update\
+        \ calls on the\nclock.\n\nRe-read via `GET /api/trainingtarget/{id}` to confirm the change\nlanded (especially when\
+        \ modifying exerciseTargets).\n"
       operationId: updateTrainingTarget
       tags:
       - training-targets
@@ -2440,17 +2448,31 @@ components:
           enum:
           - DISTANCE
           - DURATION
-          description: Drives which of `distance` / `duration` is non-null on this phase.
+          description: '**Authoritative discriminator** for the phase goal. A client MUST read `goalType` to decide whether
+            the phase is distance- or duration-based — do NOT infer it from "which of `distance`/`duration` is non-null".
+            On `GET /api/trainingtarget/{id}` a `goalType: DISTANCE` leaf reads back with BOTH `distance` AND a phantom `duration:
+            "00:00:00"` set (see those fields), so the field-presence heuristic gives the wrong answer and is the root cause
+            of round-trip update bugs (verified 2026-06-08, probe-E-roundtrip-update.json).
+
+            '
         distance:
           type: number
-          description: Phase distance in **metres** (not km). Non-null iff `goalType=DISTANCE`.
+          description: 'Phase distance in **metres** (not km). On **create** it is non-null iff `goalType: DISTANCE` (null
+            otherwise). On **read-back** the asymmetry is: `goalType: DURATION` leaves OMIT this field entirely, while `goalType:
+            DISTANCE` leaves carry it. Always trust `goalType`, not this field''s presence.
+
+            '
           example: 5000
           nullable: true
         duration:
           type: string
-          description: 'Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the UI validator). Non-null
-            iff `goalType=DURATION`. A zero value `"00:00:00"` is accepted by the server and preserved on read-back (verified
-            via probe-B-zero-duration.json) — though it has no practical training meaning.
+          description: 'Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the UI validator). On **create**
+            it is non-null iff `goalType: DURATION`. **Read-back asymmetry:** a `goalType: DISTANCE` leaf reads back with
+            a phantom `duration: "00:00:00"` *in addition to* its real `distance` (verified 2026-06-08, probe-E-roundtrip-update.json)
+            — so a phase can have both `distance` and a non-null `duration` on read. The server ignores this phantom value
+            when the body is fed back into an update (`distance` is preserved), so the GET body round-trips safely; just never
+            use it to infer the goal. A genuine zero `"00:00:00"` on a `goalType: DURATION` leaf is also accepted and preserved
+            (probe-B-zero-duration.json).
 
             '
           example: 00:45:00
@@ -2633,14 +2655,19 @@ components:
           example: 1
         duration:
           type: string
-          description: Target duration in HH:MM:SS format. Null when not duration-based.
+          description: 'Target duration in HH:MM:SS format. On **create**: null for PHASED targets (each phase carries its
+            own). On **read-back**: for PHASED targets the server **rolls up** the phase durations into this field, so it
+            is non-null even though you sent null. Send it back unchanged on update — the server recomputes it and ignores
+            what you send.
+
+            '
           example: 01:00:00
           nullable: true
         distance:
           type: number
-          description: 'Target distance in **metres** (the UI shows km but the wire value is metres —
-
-            UI 5 km → payload 5000). Null when not distance-based.
+          description: 'Target distance in **metres** (the UI shows km but the wire value is metres — UI 5 km → payload 5000).
+            Null when not distance-based on **create**; for PHASED targets the server **rolls up** the phase distances into
+            this field on **read-back** (same as `duration`).
 
             '
           example: 5000
@@ -2687,11 +2714,10 @@ components:
           description: Display name shown in the diary
         description:
           type: string
-          nullable: true
+          description: Free-text notes. The create form sends an empty string when not provided, but the server stores and
+            returns `null` on read-back — so this must be nullable to decode a target created without a description.
           default: ''
-          description: Free-text notes. The create form sends an empty string when not
-            provided, but the server stores and returns `null` on read-back — so this
-            must be nullable to decode a target created without a description.
+          nullable: true
         datetime:
           type: string
           description: 'Local date-time of the planned workout, ISO 8601 without timezone offset
@@ -2758,7 +2784,9 @@ components:
           example: 60 min easy run
         description:
           type: string
-          description: Free-text notes on the event; empty string when none.
+          description: Free-text notes on the event. `TRAININGTARGET` events send an empty string when blank; `EXERCISE` (recorded
+            session) events send `null` when absent — so nullable, not just empty (observed live 2026-07).
+          nullable: true
         start:
           description: 'Event start. Polymorphic by event type: TRAININGTARGET events send an ISO 8601 UTC datetime string,
             while EXERCISE events send a numeric epoch (seconds, e.g. 1779872400). Left untyped (free-form) to accept either.'
@@ -3682,11 +3710,11 @@ components:
           nullable: true
         hrAvg:
           type: integer
-          description: Average HR (bpm). Note the camelCase differs from create's `hrAverage`.
+          description: Average HR (bpm), or null. Note the camelCase differs from create's `hrAverage`.
           nullable: true
         calories:
           type: integer
-          description: Kilocalories. Note the field name differs from create's `kiloCalories`.
+          description: Kilocalories, or null. Note the field name differs from create's `kiloCalories`.
           nullable: true
         note:
           type: string
@@ -3713,7 +3741,7 @@ components:
           example: '2026-05-25 08:48:00.000'
         recoveryTime:
           type: integer
-          description: Recovery time. Unit TODO (likely seconds).
+          description: Recovery time, or null. Unit TODO (likely seconds).
           nullable: true
         iconUrl:
           type: string
