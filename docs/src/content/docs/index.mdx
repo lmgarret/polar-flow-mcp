@@ -4,8 +4,11 @@ description: Single-user MCP server that drives the reverse-engineered Polar Flo
 template: splash
 hero:
   tagline: Schedule structured workouts in your Polar Flow diary from a Claude conversation — no app, no UI navigation.
+  # hero.image.html instead of hero.image.file: Starlight pipes `file` images
+  # through astro:assets at a fixed 400×400, which centre-crops a wide
+  # screenshot. Raw HTML keeps the full 780px frame (2x for the 25rem slot).
   image:
-    file: ../../assets/claude-tool-call.webp
+    html: '<img src="/sessions-cards.webp" width="780" height="292" style="max-width:100%;height:auto" alt="Completed training sessions rendered as cards by the bundled MCP app UI">'
   actions:
     - text: Get started
       link: /tutorials/getting-started/
