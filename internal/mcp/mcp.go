@@ -255,7 +255,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 	bindUI(&gtt, "ui://polar-flow/targets.html")
 	s.AddTool(gtt, withLogging("get_training_target", GetTrainingTargetHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("update_training_target",
+	utt := mcpgo.NewTool("update_training_target",
 		mcpgo.WithDescription(
 			"Full-replace edit of an existing training target. The whole target is overwritten "+
 				"by the supplied fields, so always call get_training_target first, modify the "+
@@ -264,8 +264,10 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"(distances in metres, durations in seconds, intensity as HR zones 1–5). "+
 				"You do not need to manage server-side ids: the tool reads the live target and "+
 				"carries its exercise-target id over for you, so the edit lands on the existing "+
-				"target rather than colliding with it. Succeeds with a confirmation; re-read "+
-				"with get_training_target to confirm the change landed.",
+				"target rather than colliding with it. On success it returns the same "+
+				"server-normalized view as get_training_target (name, datetime, and the "+
+				"rolled-up exercise-target phases), so you do not need a follow-up "+
+				"get_training_target to confirm the change landed.",
 		),
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
 			mcpgo.Description("Numeric id of the target to update (from list_training_targets).")),
@@ -292,7 +294,9 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"Omit (and set duration_s or distance_m) to replace with a VOLUME target."),
 			mcpgo.Items(phaseItemSchema()),
 		),
-	), withLogging("update_training_target", UpdateTrainingTargetHandler(fc)))
+	)
+	bindUI(&utt, "ui://polar-flow/targets.html")
+	s.AddTool(utt, withLogging("update_training_target", UpdateTrainingTargetHandler(fc)))
 
 	cws := mcpgo.NewTool("get_calendar_week_summary",
 		mcpgo.WithDescription(

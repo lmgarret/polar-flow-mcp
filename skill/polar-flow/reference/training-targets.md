@@ -98,8 +98,9 @@ fields you omit are cleared, not preserved. Always:
 
 1. `get_training_target(target_id)` to read the current body.
 2. Modify the part you want to change in that body.
-3. `update_training_target(target_id, …complete body…)`.
-4. Re-read with `get_training_target` to confirm the change landed.
+3. `update_training_target(target_id, …complete body…)`. On success it returns
+   the same server-normalized view as `get_training_target`, so you can confirm
+   the change landed from that result without a separate re-read.
 
 **Example — move a session to a different day** (keep everything else):
 

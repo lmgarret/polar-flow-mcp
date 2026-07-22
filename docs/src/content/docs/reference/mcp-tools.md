@@ -148,6 +148,11 @@ All other arguments (`time`, `sport_id`, `description`, `duration_s`,
 manage server-side ids — the tool reads the live target and carries its
 exercise-target id over so the edit lands on the existing target.
 
+On success it reads the target back and returns the same server-normalized
+view as `get_training_target` (name, datetime, and the rolled-up
+exercise-target phases), so a follow-up `get_training_target` to confirm the
+change landed is unnecessary.
+
 ## `get_calendar_events`
 
 Raw calendar events (training targets, completed exercises, etc.) in a date
