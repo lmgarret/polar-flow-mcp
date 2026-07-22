@@ -67,7 +67,19 @@ func UpdateTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 			}
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		return mcpgo.NewToolResultText(fmt.Sprintf("Updated target %d.", id)), nil
+		// Read the target back so the result carries the same server-normalized
+		// view as get_training_target — the model (and the MCP-app UI) get the
+		// full post-update state without a follow-up get_training_target call.
+		// The update itself already succeeded, so a failed read-back is not fatal:
+		// fall back to the plain confirmation.
+		updated, err := fc.GetTrainingTarget(ctx, id)
+		if err != nil {
+			return mcpgo.NewToolResultText(fmt.Sprintf("Updated target %d.", id)), nil
+		}
+		return widgetResultText(fmt.Sprintf("Updated target %d.", id), map[string]any{
+			"type": "target_detail", "id": id, "target": updated,
+			"sport_category": convert.SportCategory(updated.Name, 0),
+		}), nil
 	}
 }
 
