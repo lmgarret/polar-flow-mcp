@@ -179,7 +179,8 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"a type-derived label (\"Warm-up\", \"Work\", \"Recovery\", \"Cool-down\") when omitted.",
 		),
 		mcpgo.WithString("name", mcpgo.Required(),
-			mcpgo.Description("Display name shown in the diary (e.g. \"5x1km Threshold\").")),
+			mcpgo.Description("Display name shown in the diary (e.g. \"5x1km Threshold\"). If the call fails "+
+				"on trainingSessionTarget.name (Polar's content filter), prefix or reword the name and retry.")),
 		mcpgo.WithString("date", mcpgo.Required(),
 			mcpgo.Description("Scheduled local date, ISO 8601 YYYY-MM-DD (e.g. 2026-06-02). "+
 				"The server applies the account's timezone.")),
@@ -269,7 +270,8 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
 			mcpgo.Description("Numeric id of the target to update (from list_training_targets).")),
 		mcpgo.WithString("name", mcpgo.Required(),
-			mcpgo.Description("Display name shown in the diary.")),
+			mcpgo.Description("Display name shown in the diary. If the call fails on "+
+				"trainingSessionTarget.name (Polar's content filter), prefix or reword the name and retry.")),
 		mcpgo.WithString("date", mcpgo.Required(),
 			mcpgo.Description("Scheduled local date, ISO 8601 YYYY-MM-DD.")),
 		mcpgo.WithString("time", mcpgo.DefaultString("18:00"),

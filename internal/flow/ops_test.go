@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/go-faster/jx"
@@ -65,5 +66,23 @@ func TestFormatValidationError(t *testing.T) {
 				t.Fatalf("formatValidationError() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestFormatValidationErrorNameContentFilterHint guards that a rejection on the
+// trainingSessionTarget.name field (Polar's server-side content filter) is
+// annotated with an actionable reword/prefix hint — the raw localized body is
+// otherwise opaque about how to recover. See the name-filter note in
+// internal/flow/openapi.yaml (TrainingTargetCreate.name).
+func TestFormatValidationErrorNameContentFilterHint(t *testing.T) {
+	in := &gen.ValidationError{
+		nameContentFilterField: {"Un problème inattendu est survenu. Réessayez."},
+	}
+	got := formatValidationError(in)
+	if !strings.Contains(got, nameContentFilterField) {
+		t.Fatalf("expected message to name the field, got %q", got)
+	}
+	if !strings.Contains(got, "content filter") || !strings.Contains(got, "prefix") {
+		t.Fatalf("expected reword/prefix hint, got %q", got)
 	}
 }

@@ -2997,7 +2997,10 @@ type GetTrainingTargetOK struct {
 	//    null (each phase carries its own). All three values verified from captured POST bodies
 	//    (2026-05-25).
 	Type GetTrainingTargetOKType `json:"type"`
-	// Display name shown in the diary.
+	// Display name shown in the diary. A server-side content filter (libinjection-style SQL-injection
+	// heuristic, whole-string and prefix-sensitive) rejects some innocuous names with a 400 ValidationError
+	// on field `trainingSessionTarget.name`, on both create and update. Don't pre-filter client-side; on that
+	// rejection, prefix or reword the name and retry (probed 2026-07-22).
 	Name string `json:"name"`
 	// Free-text notes. The create form sends an empty string when not provided, but the server stores and
 	// returns `null` on read-back — so this must be nullable to decode a target created without a
@@ -10723,7 +10726,10 @@ type TrainingTargetCreate struct {
 	//    null (each phase carries its own). All three values verified from captured POST bodies
 	//    (2026-05-25).
 	Type TrainingTargetCreateType `json:"type"`
-	// Display name shown in the diary.
+	// Display name shown in the diary. A server-side content filter (libinjection-style SQL-injection
+	// heuristic, whole-string and prefix-sensitive) rejects some innocuous names with a 400 ValidationError
+	// on field `trainingSessionTarget.name`, on both create and update. Don't pre-filter client-side; on that
+	// rejection, prefix or reword the name and retry (probed 2026-07-22).
 	Name string `json:"name"`
 	// Free-text notes. The create form sends an empty string when not provided, but the server stores and
 	// returns `null` on read-back — so this must be nullable to decode a target created without a

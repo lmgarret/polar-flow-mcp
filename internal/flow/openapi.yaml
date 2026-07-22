@@ -352,6 +352,11 @@ paths:
                   value:
                     time:
                     - error.trainingTarget.twoTargetsForSameTime
+                nameContentFilter:
+                  summary: '`name` tripped the content filter — prefix/reword and retry (see `TrainingTargetCreate.name`).'
+                  value:
+                    trainingSessionTarget.name:
+                    - Un problème inattendu est survenu. Réessayez.
         '401':
           $ref: '#/components/responses/Unauthorized'
   /api/trainingtarget/{id}:
@@ -558,7 +563,8 @@ paths:
         '200':
           description: Updated successfully. Empty body.
         '400':
-          description: Validation error (e.g. time conflict). Same envelope as create.
+          description: Validation error (e.g. time conflict). Same envelope as create. A `trainingSessionTarget.name` rejection
+            is the name content filter — see `TrainingTargetCreate.name`.
           content:
             application/json:
               schema:
@@ -2711,7 +2717,10 @@ components:
             \ (each phase carries its own).\nAll three values verified from captured POST bodies (2026-05-25).\n"
         name:
           type: string
-          description: Display name shown in the diary
+          description: Display name shown in the diary. A server-side content filter (libinjection-style SQL-injection heuristic,
+            whole-string and prefix-sensitive) rejects some innocuous names with a `400` `ValidationError` on field `trainingSessionTarget.name`,
+            on both create and update. Don't pre-filter client-side; on that rejection, prefix or reword the name and retry
+            (probed 2026-07-22).
         description:
           type: string
           description: Free-text notes. The create form sends an empty string when not provided, but the server stores and
