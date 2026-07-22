@@ -2997,13 +2997,10 @@ type GetTrainingTargetOK struct {
 	//    null (each phase carries its own). All three values verified from captured POST bodies
 	//    (2026-05-25).
 	Type GetTrainingTargetOKType `json:"type"`
-	// Display name shown in the diary.
-	//
-	// Server-side content filter (observed 2026-07-22): some free-text names are rejected with 400
-	// ValidationError on field `trainingSessionTarget.name` (generic localized message) on both create and
-	// update. It is a libinjection-style SQL-injection heuristic over the whole string, NOT a prefix/character
-	// rule — e.g. "5x(3min course / 2min marche) - si RAS vendredi" is rejected but each fragment alone, and
-	// any prefixed form, is accepted. Don't pre-filter client-side; on rejection, reword/prefix and retry.
+	// Display name shown in the diary. A server-side content filter (libinjection-style SQL-injection
+	// heuristic, whole-string and prefix-sensitive) rejects some innocuous names with a 400 ValidationError
+	// on field `trainingSessionTarget.name`, on both create and update. Don't pre-filter client-side; on that
+	// rejection, prefix or reword the name and retry (probed 2026-07-22).
 	Name string `json:"name"`
 	// Free-text notes. The create form sends an empty string when not provided, but the server stores and
 	// returns `null` on read-back — so this must be nullable to decode a target created without a
@@ -10729,13 +10726,10 @@ type TrainingTargetCreate struct {
 	//    null (each phase carries its own). All three values verified from captured POST bodies
 	//    (2026-05-25).
 	Type TrainingTargetCreateType `json:"type"`
-	// Display name shown in the diary.
-	//
-	// Server-side content filter (observed 2026-07-22): some free-text names are rejected with 400
-	// ValidationError on field `trainingSessionTarget.name` (generic localized message) on both create and
-	// update. It is a libinjection-style SQL-injection heuristic over the whole string, NOT a prefix/character
-	// rule — e.g. "5x(3min course / 2min marche) - si RAS vendredi" is rejected but each fragment alone, and
-	// any prefixed form, is accepted. Don't pre-filter client-side; on rejection, reword/prefix and retry.
+	// Display name shown in the diary. A server-side content filter (libinjection-style SQL-injection
+	// heuristic, whole-string and prefix-sensitive) rejects some innocuous names with a 400 ValidationError
+	// on field `trainingSessionTarget.name`, on both create and update. Don't pre-filter client-side; on that
+	// rejection, prefix or reword the name and retry (probed 2026-07-22).
 	Name string `json:"name"`
 	// Free-text notes. The create form sends an empty string when not provided, but the server stores and
 	// returns `null` on read-back — so this must be nullable to decode a target created without a
