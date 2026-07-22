@@ -41,12 +41,32 @@ func formatValidationError(v *gen.ValidationError) string {
 		return "validation rejected (no detail in response body)"
 	}
 	parts := make([]string, 0, len(*v))
+	nameFilterHit := false
 	for field, codes := range *v {
+		if field == nameContentFilterField {
+			nameFilterHit = true
+		}
 		parts = append(parts, fmt.Sprintf("%s: %s", field, strings.Join(codes, ", ")))
 	}
 	sort.Strings(parts)
-	return "validation rejected — " + strings.Join(parts, "; ")
+	msg := "validation rejected — " + strings.Join(parts, "; ")
+	if nameFilterHit {
+		// Polar runs the target name through a libinjection-style content filter
+		// that rejects some innocuous free-text names (e.g. "5x(3min / 2min) - si
+		// RAS") with this opaque generic message. The trigger is a whole-string,
+		// prefix-sensitive fingerprint, so there is no reliable client-side
+		// pre-filter — the fix is to reword or prefix the name and retry. Surface
+		// that hint rather than leaving the caller with the untranslatable body.
+		msg += " (hint: the workout name tripped Polar's server-side content " +
+			"filter — reword it or add a leading prefix, e.g. \"Session - <name>\", and retry)"
+	}
+	return msg
 }
+
+// nameContentFilterField is the field key Polar returns when a training-target
+// name is rejected by its server-side content filter (observed 2026-07-22 on
+// both create and update). See internal/flow/openapi.yaml TrainingTargetCreate.name.
+const nameContentFilterField = "trainingSessionTarget.name"
 
 // UserInfo is the trimmed-down identity payload returned by GetUserInfo.
 type UserInfo struct {

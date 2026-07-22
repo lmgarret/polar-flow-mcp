@@ -352,6 +352,13 @@ paths:
                   value:
                     time:
                     - error.trainingTarget.twoTargetsForSameTime
+                nameContentFilter:
+                  summary: '`name` tripped the server-side content filter (libinjection-style heuristic). Prefix/reword the
+                    name and retry — see `TrainingTargetCreate.name`. Field key is `trainingSessionTarget.name`.'
+                  value:
+                    trainingSessionTarget.name:
+                    - Un problème inattendu est survenu. Réessayez. Si l'erreur persiste, veuillez contacter le Service client
+                      Polar.
         '401':
           $ref: '#/components/responses/Unauthorized'
   /api/trainingtarget/{id}:
@@ -558,7 +565,9 @@ paths:
         '200':
           description: Updated successfully. Empty body.
         '400':
-          description: Validation error (e.g. time conflict). Same envelope as create.
+          description: 'Validation error (e.g. time conflict). Same envelope as create. Note the `name` content-filter quirk:
+            certain free-text names are rejected here on field `trainingSessionTarget.name` (a libinjection-style heuristic,
+            prefix-sensitive) — see `TrainingTargetCreate.name` for the full note and the reword/prefix workaround.'
           content:
             application/json:
               schema:
@@ -2711,7 +2720,21 @@ components:
             \ (each phase carries its own).\nAll three values verified from captured POST bodies (2026-05-25).\n"
         name:
           type: string
-          description: Display name shown in the diary
+          description: 'Display name shown in the diary.
+
+
+            **Server-side content filter on `name` (observed 2026-07-22).** Some free-text values are rejected with `400`
+            `ValidationError`, field `trainingSessionTarget.name`, and a generic localized message ("Un problème inattendu
+            est survenu. Réessayez…") — on BOTH create (`POST /api/trainingtarget`) and update (`POST /api/trainingtarget/{id}`;
+            same backend model, same field path). The trigger is a SQL-injection detection heuristic (libinjection-style token
+            fingerprint), NOT a simple character or prefix rule. Verified by probing: `5x(3min course / 2min marche) - si
+            RAS vendredi` is rejected, yet each fragment on its own — `5x(3min course / 2min marche)`, `si RAS vendredi`,
+            `(a / b) - c`, `3min course / 2min marche - si RAS vendredi` — is accepted, so it is the whole-string fold that
+            matches, not any one token. Because the heuristic is prefix-sensitive, adding ANY leading text (e.g. `Test - 5x(3min
+            course / 2min marche) - si RAS vendredi`) makes the same value pass. There is no reliable client-side pre-filter
+            — reproducing the fingerprint would inherit its false positives — so a client should send the name as-is and,
+            on a `trainingSessionTarget.name` rejection, surface a hint to reword or prefix the name and retry rather than
+            silently mangling it.'
         description:
           type: string
           description: Free-text notes. The create form sends an empty string when not provided, but the server stores and
