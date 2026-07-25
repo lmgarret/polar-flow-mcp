@@ -5,7 +5,7 @@ go 1.26.2
 require (
 	github.com/Noooste/azuretls-client v1.13.2
 	github.com/Noooste/fhttp v1.0.15
-	github.com/go-faster/errors v0.7.1
+	github.com/go-faster/errors v0.8.0
 	github.com/go-faster/jx v1.2.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
