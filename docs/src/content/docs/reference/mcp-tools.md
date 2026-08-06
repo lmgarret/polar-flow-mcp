@@ -81,9 +81,15 @@ Each entry in `phases` is an object with `type` ∈ {`warmup`, `repeat`,
   seconds), an optional `intensity`, and an optional `recovery` (`duration_s`,
   inserted between reps). A single continuous effort with no intervals is not a
   `repeat` — use a VOLUME target instead.
-- `intensity` accepts either an `hr_zone` integer (1–5) or a `label`
-  (`easy`→Z1–2, `aerobic`→Z2, `tempo`→Z3, `threshold`→Z4, `vo2max`→Z5). If both
-  are given, `hr_zone` wins.
+- `intensity` accepts at most one of: an `hr_zone` integer (1–5), a `label`
+  (`easy`→Z1–2, `aerobic`→Z2, `tempo`→Z3, `threshold`→Z4, `vo2max`→Z5), a
+  `power_zone` integer (1–5), or a `speed_zone` integer (1–5). Precedence when
+  several are given: `hr_zone` > `power_zone` > `speed_zone` > `label`.
+  `power_zone` and `speed_zone` are Polar zone **indices**, not raw watts or
+  km/h/min-per-km — Polar Flow computes each zone's physical range from the
+  athlete's Sport Profile thresholds (max HR, FTP, threshold pace), which this
+  server does not read or expose. `power_zone` needs a power-capable sport
+  (e.g. cycling, `sport_id` `2`).
 - Each phase (and a `recovery`) accepts an optional `name`, persisted verbatim
   by Polar; it defaults to a type-derived label (`Warm-up`, `Work`, `Recovery`,
   `Cool-down`).

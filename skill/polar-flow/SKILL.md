@@ -94,9 +94,9 @@ Full per-tool parameter reference: **`reference/tools.md`**.
 
 ## Intensity shorthand
 
-A `repeat` phase's `intensity` accepts a `label` (mapped to a Polar HR zone) or
-an explicit `hr_zone` (1–5). The mapping is a fact of the API, not a coaching
-opinion:
+A `repeat` phase's `intensity` accepts a `label` (mapped to a Polar HR zone),
+an explicit `hr_zone` (1–5), a `power_zone` (1–5), or a `speed_zone` (1–5).
+The mapping is a fact of the API, not a coaching opinion:
 
 | Label | HR zone |
 |-------|---------|
@@ -106,6 +106,16 @@ opinion:
 | `threshold` | 4 |
 | `vo2max` | 5 |
 
-`hr_zone` wins if both are given. Pass `label` through verbatim; use `hr_zone`
-only when the user names a number ("zone 4"). What each zone *means for
-training* is the coaching skill's job.
+Precedence when more than one is given: `hr_zone` > `power_zone` >
+`speed_zone` > `label`. Pass `label` through verbatim; use `hr_zone` only when
+the user names a number ("zone 4"). What each zone *means for training* is
+the coaching skill's job.
+
+`power_zone` and `speed_zone` are the same kind of value as `hr_zone` — a
+Polar zone **index** 1–5, not a raw watt or km/h (or min/km) number. The
+API has no field for a literal physical threshold on a phase; each zone's
+actual range is computed server-side from the athlete's Sport Profile (max
+HR, FTP, threshold pace) and this server does not read or expose that
+mapping. If someone gives you a wattage or pace, ask what zone it falls in
+rather than converting it yourself. `power_zone` also needs a power-capable
+sport (e.g. cycling) to be meaningful. See `reference/training-targets.md`.

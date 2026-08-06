@@ -13,10 +13,24 @@ shape right and everything round-trips.
 | `time` | 24h `HH:MM` | `09:00` |
 | `distance_m` | **metres** (the Flow UI shows km) | `5000` = 5 km |
 | `duration_s` | **seconds** | `600` = 10 min |
-| `intensity.hr_zone` | integer 1–5 | `4` |
+| `intensity.hr_zone` | integer 1–5 (heart-rate zone index) | `4` |
+| `intensity.power_zone` | integer 1–5 (power zone index) | `4` |
+| `intensity.speed_zone` | integer 1–5 (speed/pace zone index) | `4` |
 | `sport_id` | Polar sport id | `1` = running; e.g. `2` cycling, `23` swimming. `list_sports` for all ids |
 
 The tools never accept km, miles, or `HH:MM:SS`. Convert before calling.
+
+**`hr_zone` / `power_zone` / `speed_zone` are all zone INDICES 1–5, never raw
+units.** Polar Flow does not accept a literal bpm, watt, or km/h (or min/km)
+threshold on a phase — only a zone number. Each zone's actual physical range
+(e.g. what "power zone 4" means in watts) is computed server-side from the
+athlete's Sport Profile thresholds (max HR, FTP, threshold pace), which this
+server does not read or expose. If a user asks for "220 watts" or "4:30/km",
+ask them which zone number that corresponds to (or check the Polar Flow app)
+rather than guessing a conversion — there is no tool-side way to send a raw
+value through. `power_zone` additionally requires a power-capable sport (e.g.
+cycling, `sport_id` `2`) to mean anything on the device/app side, though the
+API itself does not reject it on other sports.
 
 ## Two target shapes
 
@@ -57,9 +71,10 @@ An interval block repeated `reps` times, with an optional recovery between reps.
 
 - `reps` **required**, **≥ 2**.
 - `goal` **required** — set **exactly one** of `distance_m` or `duration_s`.
-- `intensity` optional — `{ "label": … }` or `{ "hr_zone": 1-5 }`. `hr_zone`
-  wins if both are given. Omit for open intensity. Label→zone mapping is in
-  `SKILL.md`.
+- `intensity` optional — `{ "label": … }`, `{ "hr_zone": 1-5 }`,
+  `{ "power_zone": 1-5 }`, or `{ "speed_zone": 1-5 }`. Set at most one; if
+  several are given the precedence is `hr_zone` > `power_zone` > `speed_zone`
+  > `label`. Omit for open intensity. Label→zone mapping is in `SKILL.md`.
 - `recovery` optional — `{ "duration_s": … }`, an easy block inserted between
   reps.
 

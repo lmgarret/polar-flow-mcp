@@ -100,6 +100,67 @@ func TestBuildTrainingTargetCreate_PhaseNames(t *testing.T) {
 	}
 }
 
+// Power and speed intensity share the HR-zone wire representation
+// (lowerZone/upperZone as a 1-5 zone index, not a raw watts/km-h threshold), so
+// power_zone / speed_zone must set intensityType and both zone bounds exactly
+// like hr_zone does, and precedence must run hr_zone > power_zone > speed_zone.
+func TestBuildTrainingTargetCreate_PowerAndSpeedIntensity(t *testing.T) {
+	body, errMsg := buildTrainingTargetCreate(req(map[string]any{
+		"name":     "Bike intervals",
+		"date":     "2026-06-10",
+		"time":     "09:00",
+		"sport_id": float64(2),
+		"phases": []any{
+			map[string]any{
+				"type": "repeat", "reps": float64(4),
+				"goal":      map[string]any{"duration_s": float64(180)},
+				"intensity": map[string]any{"power_zone": float64(4)},
+			},
+			map[string]any{
+				"type": "repeat", "reps": float64(3),
+				"goal":      map[string]any{"duration_s": float64(120)},
+				"intensity": map[string]any{"speed_zone": float64(5)},
+			},
+			map[string]any{
+				"type": "repeat", "reps": float64(2),
+				"goal":      map[string]any{"duration_s": float64(60)},
+				"intensity": map[string]any{"hr_zone": float64(3), "power_zone": float64(5)},
+			},
+		},
+	}))
+	if errMsg != "" {
+		t.Fatalf("unexpected build error: %s", errMsg)
+	}
+	phases := body.ExerciseTargets[0].Phases
+
+	power := phases[0].PhaseRepeat.Phases[0]
+	if string(power.IntensityType) != "POWER_ZONES" {
+		t.Fatalf("power work intensityType = %q, want POWER_ZONES", power.IntensityType)
+	}
+	if lo, ok := power.LowerZone.Get(); !ok || lo != 4 {
+		t.Fatalf("power work lowerZone = (%v, ok=%v), want (4, true)", lo, ok)
+	}
+	if hi, ok := power.UpperZone.Get(); !ok || hi != 4 {
+		t.Fatalf("power work upperZone = (%v, ok=%v), want (4, true)", hi, ok)
+	}
+
+	speed := phases[1].PhaseRepeat.Phases[0]
+	if string(speed.IntensityType) != "SPEED_ZONES" {
+		t.Fatalf("speed work intensityType = %q, want SPEED_ZONES", speed.IntensityType)
+	}
+	if lo, ok := speed.LowerZone.Get(); !ok || lo != 5 {
+		t.Fatalf("speed work lowerZone = (%v, ok=%v), want (5, true)", lo, ok)
+	}
+
+	precedence := phases[2].PhaseRepeat.Phases[0]
+	if string(precedence.IntensityType) != "HEART_RATE_ZONES" {
+		t.Fatalf("hr_zone+power_zone work intensityType = %q, want HEART_RATE_ZONES (hr_zone wins)", precedence.IntensityType)
+	}
+	if lo, ok := precedence.LowerZone.Get(); !ok || lo != 3 {
+		t.Fatalf("hr_zone+power_zone work lowerZone = (%v, ok=%v), want (3, true)", lo, ok)
+	}
+}
+
 func TestPreserveExerciseTargetIDs(t *testing.T) {
 	var existingID gen.OptNilFloat64
 	existingID.SetTo(1454144110)

@@ -222,9 +222,29 @@ func buildWorkLeaf(goal, intensityCtx map[string]any) (gen.PhaseLeaf, error) {
 	return leaf, nil
 }
 
+// applyIntensity sets a phase leaf's intensityType and lowerZone/upperZone from
+// the caller's intensity object. All three zone metrics (HR, power, speed) share
+// the same wire representation — a 1-5 zone index in lowerZone/upperZone, not a
+// raw bpm/watts/km-h threshold (see PhaseLeaf in the vendored spec) — so each
+// case below just picks the discriminator (intensityType) and copies the zone
+// number(s) through. Precedence when multiple keys are set: hr_zone, then
+// power_zone, then speed_zone, then label — matching the pre-existing "hr_zone
+// wins over label" rule extended to the two new metrics.
 func applyIntensity(leaf *gen.PhaseLeaf, intensity map[string]any) {
 	if zone, ok := intensity["hr_zone"].(float64); ok && zone >= 1 && zone <= 5 {
 		leaf.IntensityType = "HEART_RATE_ZONES"
+		leaf.LowerZone.SetTo(zone)
+		leaf.UpperZone.SetTo(zone)
+		return
+	}
+	if zone, ok := intensity["power_zone"].(float64); ok && zone >= 1 && zone <= 5 {
+		leaf.IntensityType = "POWER_ZONES"
+		leaf.LowerZone.SetTo(zone)
+		leaf.UpperZone.SetTo(zone)
+		return
+	}
+	if zone, ok := intensity["speed_zone"].(float64); ok && zone >= 1 && zone <= 5 {
+		leaf.IntensityType = "SPEED_ZONES"
 		leaf.LowerZone.SetTo(zone)
 		leaf.UpperZone.SetTo(zone)
 		return
