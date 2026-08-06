@@ -20,8 +20,10 @@ language rather than tool arguments.
 
 ## Intensity vocabulary
 
-Polar Flow uses five heart-rate zones (Z1–Z5). When creating training targets,
-you specify intensity using either a **label** (preferred) or a numeric zone.
+Polar Flow uses five zones (Z1–Z5) on each of three metrics: heart rate,
+power, and speed/pace. When creating training targets, you specify HR
+intensity using either a **label** (preferred) or a numeric zone; power and
+speed intensity use a numeric zone only.
 
 | Label | HR zone | Coaching meaning |
 |-------|---------|-----------------|
@@ -33,8 +35,17 @@ you specify intensity using either a **label** (preferred) or a numeric zone.
 
 The label → zone mapping is a fact of the API, not a coaching opinion. Prefer
 labels in conversation — they are more readable. Use a numeric zone
-(`hr_zone: 4`) only when someone explicitly says "zone 4"; `hr_zone` wins if both
-are supplied.
+(`hr_zone: 4`) only when someone explicitly says "zone 4"; precedence when
+more than one intensity key is given is `hr_zone` > `power_zone` >
+`speed_zone` > `label`.
+
+For cycling (or another power-capable sport) and pace-based work, use
+`power_zone` (1–5) or `speed_zone` (1–5) instead. **Both are zone indices,
+not raw watts or km/h/min-per-km values** — Polar Flow has no field for a
+literal physical threshold on a phase. Each zone's actual range is computed
+from the athlete's Sport Profile (FTP, threshold pace), which this server
+doesn't read; if someone gives you a wattage or pace target, ask which zone
+it falls in rather than converting it.
 
 ## Create a workout
 
@@ -161,6 +172,32 @@ and a cooldown, scheduled for that Thursday.
 }
 ```
 
+### Power-zone cycling intervals
+
+> "5x4 minutes at power zone 4, 3 minutes easy between, on the bike Sunday"
+
+```json
+{
+  "name": "5x4min Power Z4",
+  "date": "2026-05-17",
+  "sport_id": 2,
+  "phases": [
+    { "type": "warmup", "duration_s": 600 },
+    {
+      "type": "repeat", "reps": 5,
+      "goal": { "duration_s": 240 },
+      "intensity": { "power_zone": 4 },
+      "recovery": { "duration_s": 180 }
+    },
+    { "type": "cooldown", "duration_s": 300 }
+  ]
+}
+```
+
+`power_zone` is a Polar zone index (1–5), not a wattage — see
+[Intensity vocabulary](#intensity-vocabulary) above. Use `speed_zone` the same
+way for pace-based work on foot or bike.
+
 ### Building a marathon plan iteratively
 
 > "Build me a 12-week marathon plan starting in three weeks"
@@ -172,11 +209,9 @@ accidental calendar pollution.
 
 ## What the tools do not support (yet)
 
-- **Pace targets** — `create_training_target` supports HR zones (Z1–Z5) and
-  unstructured phases. Pace-based phases exist in the underlying API but aren't
-  wired through to the MCP layer yet.
-- **Power targets** — same. The OpenAPI spec covers `POWER_ZONES` for cycling but
-  the current MCP tool only emits `HEART_RATE_ZONES` / `NONE`.
+- **Raw power/pace thresholds** — `power_zone` and `speed_zone` only accept a
+  Polar zone index (1–5); there's no way to target a literal wattage or
+  min/km pace, on this server or in the underlying Polar Flow API itself.
 - **Manual phase transitions** — every phase defaults to `AUTOMATIC` change type.
   The underlying API also supports `MANUAL` (wait for user input) but the MCP
   tool doesn't expose this yet.

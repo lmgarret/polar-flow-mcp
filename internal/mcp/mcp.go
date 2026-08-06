@@ -162,9 +162,12 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"  • PHASED target (with phases): omit duration_s/distance_m and provide an "+
 				"ordered phases list of warmup / repeat / cooldown blocks.\n\n"+
 				"Units: distances are METRES (the Flow UI shows km — 5 km = 5000), durations "+
-				"are SECONDS. Intensity is expressed as HR zones 1–5, either directly "+
-				"(intensity.hr_zone) or via an effort label that maps to a zone "+
-				"(easy→1–2, aerobic→2, tempo→3, threshold→4, vo2max→5).\n\n"+
+				"are SECONDS. Intensity is a Polar zone 1–5 on one of three metrics: heart "+
+				"rate (intensity.hr_zone, or an effort label: easy→1–2, aerobic→2, tempo→3, "+
+				"threshold→4, vo2max→5), power (intensity.power_zone; needs a power-capable "+
+				"sport such as cycling), or speed/pace (intensity.speed_zone). All three are "+
+				"zone INDICES, not raw bpm/watts/km-h values — Polar computes each zone's "+
+				"physical range server-side from the athlete's Sport Profile thresholds.\n\n"+
 				"Example A — 35-minute easy run (VOLUME):\n"+
 				"  name: \"Easy 35 min\", date: \"2026-06-14\", duration_s: 2100, sport_id: 1\n\n"+
 				"Example B — 10 min warmup, 5×1 km @ threshold with 2 min jog recovery, 10 min cooldown:\n"+
@@ -261,7 +264,8 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"by the supplied fields, so always call get_training_target first, modify the "+
 				"result, then send the complete body — anything omitted is cleared.\n\n"+
 				"Same field semantics, units, and phases shape as create_training_target "+
-				"(distances in metres, durations in seconds, intensity as HR zones 1–5). "+
+				"(distances in metres, durations in seconds, intensity as a Polar zone 1–5 "+
+				"on heart rate, power, or speed/pace). "+
 				"You do not need to manage server-side ids: the tool reads the live target and "+
 				"carries its exercise-target id over for you, so the edit lands on the existing "+
 				"target rather than colliding with it. On success it returns the same "+
@@ -479,11 +483,23 @@ func phaseItemSchema() map[string]any {
 				},
 			},
 			"intensity": map[string]any{
-				"type":        "object",
-				"description": "Target intensity for the work portion of a repeat. Set hr_zone or label; hr_zone wins if both given. Omit for no zone (open intensity).",
+				"type": "object",
+				"description": "Target intensity for the work portion of a repeat, on exactly one metric: " +
+					"heart rate, power, or speed/pace. Set at most one of hr_zone, power_zone, speed_zone, " +
+					"or label; if more than one is given the precedence is hr_zone > power_zone > " +
+					"speed_zone > label. Omit entirely for no zone (open intensity).\n\n" +
+					"All three zone numbers (hr_zone, power_zone, speed_zone) are Polar zone INDICES " +
+					"1–5, NOT raw bpm/watts/km-h thresholds — Polar Flow does not accept literal " +
+					"physical-unit bounds on a phase. Each zone's actual bpm / watt / km-h range is " +
+					"computed server-side from the athlete's Sport Profile thresholds (max HR, FTP, " +
+					"threshold pace), which this server does not read or expose; ask the user which " +
+					"zone number they mean (or use an hr_zone label) rather than converting a pace or " +
+					"wattage yourself.",
 				"properties": map[string]any{
-					"label":   map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}, "description": "Effort label, mapped to an HR zone."},
-					"hr_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar HR zone 1–5, used as both lower and upper bound."},
+					"label":      map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}, "description": "Effort label, mapped to an HR zone."},
+					"hr_zone":    map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar heart-rate zone 1–5, used as both lower and upper bound."},
+					"power_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar power zone 1–5 (index, not watts), used as both lower and upper bound. Requires a power-capable sport (e.g. cycling, sport_id 2) — Polar accepts the value on other sports but it won't display meaningfully."},
+					"speed_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar speed/pace zone 1–5 (index, not km/h or min/km), used as both lower and upper bound."},
 				},
 			},
 			"recovery": map[string]any{
