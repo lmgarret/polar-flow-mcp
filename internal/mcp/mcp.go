@@ -205,12 +205,16 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description(
 				"Ordered list of workout phases. Omit (and set duration_s or distance_m) for a VOLUME target. Each phase "+
 					"is one of three types:\n"+
-					"  • warmup / cooldown — needs duration_s (seconds, > 0); run at easy intensity.\n"+
+					"  • warmup / cooldown — needs duration_s (seconds, > 0); optional intensity "+
+					"(hr_zone / power_zone / speed_zone 1–5, or a label) — omit for open/easy intensity.\n"+
 					"  • repeat — an interval block repeated reps times (reps ≥ 2). Needs goal "+
-					"(distance_m OR duration_s), optional intensity (hr_zone 1–5 or label), and "+
-					"optional recovery (duration_s) inserted between reps.\n"+
-					"Note: structured work is only expressible via repeat (reps must be ≥ 2). For a "+
-					"single continuous effort with no intervals, omit phases and use a VOLUME target."),
+					"(distance_m OR duration_s), optional intensity (hr_zone / power_zone / speed_zone "+
+					"1–5, or a label), and optional recovery (duration_s) inserted between reps.\n"+
+					"A single continuous zoned effort with a duration goal (e.g. \"40 min at threshold\", "+
+					"no warmup/cooldown structure) can be a lone warmup or cooldown phase with intensity "+
+					"set and a custom name — it does not need to be wrapped in a repeat. warmup/cooldown "+
+					"only take a duration goal; a single continuous effort with a distance goal still "+
+					"needs repeat (reps must be ≥ 2)."),
 			mcpgo.Items(phaseItemSchema()),
 		),
 	)
@@ -484,10 +488,12 @@ func phaseItemSchema() map[string]any {
 			},
 			"intensity": map[string]any{
 				"type": "object",
-				"description": "Target intensity for the work portion of a repeat, on exactly one metric: " +
-					"heart rate, power, or speed/pace. Set at most one of hr_zone, power_zone, speed_zone, " +
-					"or label; if more than one is given the precedence is hr_zone > power_zone > " +
-					"speed_zone > label. Omit entirely for no zone (open intensity).\n\n" +
+				"description": "Target intensity for this phase — warmup, cooldown, or a repeat's work " +
+					"interval — on exactly one metric: heart rate, power, or speed/pace. Set at most one " +
+					"of hr_zone, power_zone, speed_zone, or label; if more than one is given the " +
+					"precedence is hr_zone > power_zone > speed_zone > label. Omit entirely for open " +
+					"intensity (no zone). Applies to every phase type — a zoned warmup/cooldown or a " +
+					"single continuous zoned block doesn't need to be wrapped in a repeat.\n\n" +
 					"All three zone numbers (hr_zone, power_zone, speed_zone) are Polar zone INDICES " +
 					"1–5, NOT raw bpm/watts/km-h thresholds — Polar Flow does not accept literal " +
 					"physical-unit bounds on a phase. Each zone's actual bpm / watt / km-h range is " +

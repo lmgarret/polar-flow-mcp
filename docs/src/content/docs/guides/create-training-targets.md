@@ -81,8 +81,13 @@ the target ID so you can reference it later.
 
 Two things worth knowing about the structure:
 
-- `repeat` blocks need **at least 2 reps**. A single continuous effort is a
-  *simple run* (see below), not a `repeat`.
+- `repeat` blocks need **at least 2 reps**. A single continuous *distance*-goaled
+  effort still needs `repeat`; an unzoned single continuous effort with no
+  structure is a *simple run* (see below). A single continuous *duration*-goaled
+  effort that needs a zone — "40 minutes at threshold", no intervals — is a
+  lone `warmup`/`cooldown` phase with `intensity` set and a custom `name`
+  (see [Zoned steady effort](#zoned-steady-effort-no-intervals) below), not a
+  `repeat`.
 - Warm-up and cool-down are **not** added automatically — they're a coaching
   choice. The only defaults the tool itself applies are `time` = `18:00` and
   `sport_id` = `1` (running).
@@ -107,7 +112,33 @@ a total duration or distance:
 ```
 
 This is a **VOLUME** target: set `duration_s` **or** `distance_m` at the top
-level and omit `phases`. (A VOLUME target with neither is rejected.)
+level and omit `phases`. (A VOLUME target with neither is rejected.) A VOLUME
+target has no `intensity` field at all — if the effort needs a zone, use a
+`phases` list instead (see below).
+
+## Zoned steady effort (no intervals)
+
+For a single continuous *zoned* effort with a duration goal and no
+warm-up/cool-down/interval structure, use one `warmup` or `cooldown` phase
+with `intensity` set and a custom `name` — it does not need to be wrapped in
+a `repeat`:
+
+> "40-minute tempo run tomorrow, no warmup"
+
+```json
+{
+  "name": "Tempo run",
+  "date": "2026-06-15",
+  "sport_id": 1,
+  "phases": [
+    { "type": "warmup", "name": "Tempo run", "duration_s": 2400,
+      "intensity": { "label": "tempo" } }
+  ]
+}
+```
+
+A distance-goaled single continuous effort still needs `repeat` — only
+`repeat` accepts a `distance_m` goal.
 
 ## List upcoming workouts
 

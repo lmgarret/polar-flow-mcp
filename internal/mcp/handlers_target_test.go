@@ -161,6 +161,80 @@ func TestBuildTrainingTargetCreate_PowerAndSpeedIntensity(t *testing.T) {
 	}
 }
 
+// Regression test: intensity was previously only wired on a repeat's work
+// leaf (buildWorkLeaf); a warmup/cooldown's intensity was silently dropped
+// (buildSimpleLeaf always hardcoded IntensityType "NONE"), even though the
+// call succeeded — the server just came back with intensityType NONE,
+// lowerZone/upperZone 0. warmup/cooldown must map intensity exactly like a
+// repeat's work leaf does, so a single zoned block doesn't need to be
+// artificially split into a repeat.
+func TestBuildTrainingTargetCreate_WarmupCooldownIntensity(t *testing.T) {
+	body, errMsg := buildTrainingTargetCreate(req(map[string]any{
+		"name":     "Zoned warmup and cooldown",
+		"date":     "2026-06-10",
+		"time":     "09:00",
+		"sport_id": float64(1),
+		"phases": []any{
+			map[string]any{
+				"type": "warmup", "duration_s": float64(600),
+				"intensity": map[string]any{"hr_zone": float64(3)},
+			},
+			map[string]any{
+				"type": "cooldown", "duration_s": float64(300),
+				"intensity": map[string]any{"power_zone": float64(2)},
+			},
+		},
+	}))
+	if errMsg != "" {
+		t.Fatalf("unexpected build error: %s", errMsg)
+	}
+	phases := body.ExerciseTargets[0].Phases
+
+	warmup := phases[0].PhaseLeaf
+	if string(warmup.IntensityType) != "HEART_RATE_ZONES" {
+		t.Fatalf("warmup intensityType = %q, want HEART_RATE_ZONES", warmup.IntensityType)
+	}
+	if lo, ok := warmup.LowerZone.Get(); !ok || lo != 3 {
+		t.Fatalf("warmup lowerZone = (%v, ok=%v), want (3, true)", lo, ok)
+	}
+	if hi, ok := warmup.UpperZone.Get(); !ok || hi != 3 {
+		t.Fatalf("warmup upperZone = (%v, ok=%v), want (3, true)", hi, ok)
+	}
+
+	cooldown := phases[1].PhaseLeaf
+	if string(cooldown.IntensityType) != "POWER_ZONES" {
+		t.Fatalf("cooldown intensityType = %q, want POWER_ZONES", cooldown.IntensityType)
+	}
+	if lo, ok := cooldown.LowerZone.Get(); !ok || lo != 2 {
+		t.Fatalf("cooldown lowerZone = (%v, ok=%v), want (2, true)", lo, ok)
+	}
+}
+
+// Warmup/cooldown without an intensity object must still default to open
+// intensity (NONE, null zones) — the fix must not force a zone onto every
+// warmup/cooldown.
+func TestBuildTrainingTargetCreate_WarmupWithoutIntensityStaysNone(t *testing.T) {
+	body, errMsg := buildTrainingTargetCreate(req(map[string]any{
+		"name":     "Easy warmup",
+		"date":     "2026-06-10",
+		"time":     "09:00",
+		"sport_id": float64(1),
+		"phases": []any{
+			map[string]any{"type": "warmup", "duration_s": float64(600)},
+		},
+	}))
+	if errMsg != "" {
+		t.Fatalf("unexpected build error: %s", errMsg)
+	}
+	warmup := body.ExerciseTargets[0].Phases[0].PhaseLeaf
+	if string(warmup.IntensityType) != "NONE" {
+		t.Fatalf("warmup intensityType = %q, want NONE", warmup.IntensityType)
+	}
+	if _, ok := warmup.LowerZone.Get(); ok {
+		t.Fatalf("warmup lowerZone should be unset when no intensity is given")
+	}
+}
+
 func TestPreserveExerciseTargetIDs(t *testing.T) {
 	var existingID gen.OptNilFloat64
 	existingID.SetTo(1454144110)

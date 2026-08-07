@@ -48,13 +48,25 @@ API itself does not reject it on other sports.
 `phases` is an ordered list. Each element has a `type` and type-specific fields.
 
 ### `warmup` / `cooldown`
-A single easy block.
+A single block, duration-goaled only (no `distance_m`/`goal`).
 
 ```json
 { "type": "warmup", "duration_s": 600 }
 ```
 
-- `duration_s` **required**, > 0. Run at easy intensity automatically.
+```json
+{ "type": "warmup", "duration_s": 2400, "name": "Tempo run",
+  "intensity": { "label": "tempo" } }
+```
+
+- `duration_s` **required**, > 0.
+- `intensity` optional — same shape as `repeat`'s (see below). Omit for open
+  intensity (no zone), which is what the "easy warmup" example above does.
+  Setting it turns the block into a zoned effort — this is also how you model
+  a single continuous zoned block with a duration goal (e.g. "40 min at
+  threshold"): give it a custom `name` and set `intensity`, without wrapping
+  it in `repeat`. (A distance-goaled single block still needs `repeat` — see
+  below.)
 
 ### `repeat`
 An interval block repeated `reps` times, with an optional recovery between reps.
@@ -78,9 +90,11 @@ An interval block repeated `reps` times, with an optional recovery between reps.
 - `recovery` optional — `{ "duration_s": … }`, an easy block inserted between
   reps.
 
-**There is no standalone "main" phase.** Structured work is only expressible via
-`repeat` (`reps ≥ 2`). For a single continuous effort with no intervals, omit
-`phases` and use a VOLUME target.
+**There is no standalone "main" phase type.** A single continuous *duration*-goaled
+effort (zoned or not) is a lone `warmup`/`cooldown` phase (see above) — use a
+custom `name` if "Warm-up"/"Cool-down" doesn't fit. A single continuous
+*distance*-goaled effort still needs `repeat` (`reps ≥ 2`); for no structure
+at all, omit `phases` and use a VOLUME target instead.
 
 ## Worked example — full session
 
