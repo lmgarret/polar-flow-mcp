@@ -94,9 +94,12 @@ Full per-tool parameter reference: **`reference/tools.md`**.
 
 ## Intensity shorthand
 
-A `repeat` phase's `intensity` accepts a `label` (mapped to a Polar HR zone),
-an explicit `hr_zone` (1–5), a `power_zone` (1–5), or a `speed_zone` (1–5).
-The mapping is a fact of the API, not a coaching opinion:
+Any phase's (`warmup` / `cooldown` / `repeat`) `intensity` accepts a `label`
+(mapped to a Polar HR zone), an explicit `hr_zone` (1–5), a `power_zone`
+(1–5), or a `speed_zone` (1–5) — it's not repeat-only, so a single continuous
+zoned block (duration goal) is a lone `warmup`/`cooldown` phase with a custom
+`name`, not an artificial `repeat`. The mapping is a fact of the API, not a
+coaching opinion:
 
 | Label | HR zone |
 |-------|---------|

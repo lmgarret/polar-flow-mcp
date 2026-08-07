@@ -142,7 +142,12 @@ func phaseName(p map[string]any, fallback string) string {
 	return fallback
 }
 
-// buildSimpleLeaf constructs a duration-goal warm-up / cool-down leaf.
+// buildSimpleLeaf constructs a duration-goal warm-up / cool-down leaf. Polar's
+// PhaseLeaf carries intensityType/lowerZone/upperZone regardless of phase
+// role — a bare leaf (no REPEAT wrapper) is the idiomatic way to model a
+// zoned continuous block — so intensity is applied here exactly like it is on
+// a repeat's work leaf (buildWorkLeaf). Defaults to open intensity (NONE)
+// when the caller omits intensity, same as before.
 func buildSimpleLeaf(p map[string]any, name, changeType string) (gen.PhaseLeaf, error) {
 	dur, ok := goalDuration(p, "duration_s")
 	if !ok {
@@ -156,7 +161,9 @@ func buildSimpleLeaf(p map[string]any, name, changeType string) (gen.PhaseLeaf, 
 		IntensityType:   "NONE",
 	}
 	leaf.Duration.SetTo(dur)
-	// Distance / LowerZone / UpperZone left at null defaults.
+	if intensity, ok := p["intensity"].(map[string]any); ok {
+		applyIntensity(&leaf, intensity)
+	}
 	return leaf, nil
 }
 

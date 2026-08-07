@@ -74,13 +74,17 @@ Each entry in `phases` is an object with `type` ∈ {`warmup`, `repeat`,
 { "type": "cooldown", "duration_s": 600 }
 ```
 
-- `warmup` / `cooldown` require `duration_s` (seconds, > 0) and run at easy
-  intensity.
+- `warmup` / `cooldown` require `duration_s` (seconds, > 0) and take an
+  optional `intensity` (no `distance_m`/`goal` — duration-goaled only). Omit
+  `intensity` for open/easy intensity. A single continuous *zoned* effort with
+  a duration goal and no interval structure is one `warmup`/`cooldown` phase
+  with `intensity` set and a custom `name` — it does not need `repeat`.
 - `repeat` is an interval block repeated `reps` times (**`reps` must be ≥ 2**).
   It needs a `goal` (exactly one of `distance_m` metres **or** `duration_s`
   seconds), an optional `intensity`, and an optional `recovery` (`duration_s`,
-  inserted between reps). A single continuous effort with no intervals is not a
-  `repeat` — use a VOLUME target instead.
+  inserted between reps). A single continuous *distance*-goaled effort still
+  needs `repeat` (only `repeat` accepts `distance_m`); an unzoned effort with
+  no structure at all is a VOLUME target instead.
 - `intensity` accepts at most one of: an `hr_zone` integer (1–5), a `label`
   (`easy`→Z1–2, `aerobic`→Z2, `tempo`→Z3, `threshold`→Z4, `vo2max`→Z5), a
   `power_zone` integer (1–5), or a `speed_zone` integer (1–5). Precedence when
