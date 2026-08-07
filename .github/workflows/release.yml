@@ -67,7 +67,6 @@ jobs:
               emojis: true
           context_files: README.md
           max_commits: 50
-          temperature: 0.2
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
