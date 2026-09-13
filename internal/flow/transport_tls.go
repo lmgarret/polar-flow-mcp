@@ -30,7 +30,7 @@ func newBrowserTransport() (http.RoundTripper, error) {
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
 	}
-	return &http2.Transport{
+	return &http2.Transport{ //nolint:staticcheck // http.Transport can't be handed a *utls.UConn (see comment above)
 		DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
 			host, _, err := net.SplitHostPort(addr)
 			if err != nil {
