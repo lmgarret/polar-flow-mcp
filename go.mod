@@ -13,9 +13,9 @@ require (
 	github.com/mark3labs/mcp-go v0.58.0
 	github.com/ogen-go/ogen v1.24.0
 	github.com/refraction-networking/utls v1.8.2
-	go.opentelemetry.io/otel v1.45.0
-	go.opentelemetry.io/otel/metric v1.45.0
-	go.opentelemetry.io/otel/trace v1.45.0
+	go.opentelemetry.io/otel v1.46.0
+	go.opentelemetry.io/otel/metric v1.46.0
+	go.opentelemetry.io/otel/trace v1.46.0
 	golang.org/x/net v0.58.0
 )
 
@@ -28,7 +28,6 @@ require (
 	github.com/bdandy/go-errors v1.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dlclark/regexp2 v1.12.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/gaukas/clienthellod v0.4.2 // indirect
@@ -42,7 +41,6 @@ require (
 	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
