@@ -16,7 +16,7 @@ is enabled** (`OAUTH_PUBLIC_URL` set).
 | Path | Method | Auth | Purpose |
 |------|--------|------|---------|
 | `/healthz` | GET | none | Liveness probe. Returns `200 ok` if the process is up. |
-| `/mcp`, `/mcp/` | POST + SSE | Bearer if OAuth enabled, else none | Streamable HTTP MCP endpoint. When OAuth is enabled, requires a valid `Authorization: Bearer` access token (an EdDSA JWT this server signed). |
+| `/mcp`, `/mcp/` | POST + SSE | Bearer if auth enabled, else none | Streamable HTTP MCP endpoint. With `MCP_API_KEY` set, requires that exact key as the Bearer token. With OAuth enabled, requires a valid `Authorization: Bearer` access token (an EdDSA JWT this server signed). |
 | `/.well-known/oauth-protected-resource` | GET | none | RFC 9728 protected-resource metadata. Advertises `resource` and `authorization_servers` (which point back at this server). |
 | `/.well-known/oauth-authorization-server` | GET | none | RFC 8414 authorization-server metadata: the authorize/token/registration endpoints and `S256` PKCE support. |
 | `/mcp/oauth/register` | POST | none | RFC 7591 Dynamic Client Registration. Issues a stateless `client_id` for a public PKCE client; redirect URIs are restricted to the Claude callbacks + loopback. |
@@ -32,13 +32,22 @@ is no per-user OAuth handshake to host.
 
 ## Authentication
 
-There are two supported postures:
+There are three supported postures. The two authenticated ones are mutually
+exclusive — setting both `MCP_API_KEY` and `OAUTH_PUBLIC_URL` is a startup error.
 
-- **Local / trusted-network (default).** With `OAUTH_PUBLIC_URL` unset, `/mcp` has
+- **Local / trusted-network (default).** With neither `MCP_API_KEY` nor
+  `OAUTH_PUBLIC_URL` set, `/mcp` has
   no built-in auth. Run it on `127.0.0.1` for Claude Code / Claude Desktop on the
   same machine, or behind a trusted-network barrier (Tailscale, VPN). If
-  `BIND_ADDRESS` is non-localhost **and** OAuth is off, the server logs a warning
-  at startup.
+  `BIND_ADDRESS` is non-localhost **and** inbound auth is off, the server logs a
+  warning at startup.
+- **Public, API-key-protected.** Set `MCP_API_KEY` to a secret of at least 24
+  characters. Every `/mcp` request must present it as
+  `Authorization: Bearer <key>`; the comparison is constant-time and anything
+  else gets `401` with a bare `WWW-Authenticate: Bearer` challenge. No
+  additional endpoints are mounted — there is nothing for a client to discover,
+  the key is configured out of band. Suits a single-operator deployment where
+  standing up a forward-auth proxy is more machinery than the situation needs.
 - **Public, OAuth-protected.** Set `OAUTH_PUBLIC_URL` (+ `OAUTH_ALLOWED_EMAIL` +
   `OAUTH_TRUSTED_PROXIES`) to turn the server into its own OAuth 2.1 Authorization
   Server. Unauthenticated requests get `401` with a `WWW-Authenticate: Bearer

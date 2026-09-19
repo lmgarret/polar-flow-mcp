@@ -28,6 +28,35 @@ start with a descriptive error.
 | `LOG_LEVEL` | `info` | `info` or `debug`. |
 | `LOG_FILE` | *(empty — stderr)* | If set, slog output is appended to this file (chmod 0600). Useful when stderr is unavailable, e.g. when running under Claude Code's stdio transport. |
 
+## Inbound API key (static shared secret)
+
+Setting `MCP_API_KEY` requires every `/mcp` request to carry that exact key as
+`Authorization: Bearer <key>`. It is the lightweight alternative to inbound
+OAuth: no issuer, no signing key, no forward-auth proxy, no browser round-trip —
+one secret on the server, the same secret in the client. The comparison is
+constant-time, and the key is never logged or echoed in a response.
+
+`MCP_API_KEY` and `OAUTH_PUBLIC_URL` are **mutually exclusive** — the server
+refuses to start with both set. Pick the one that fits the deployment.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_API_KEY` | *(unset → auth off)* | Fixed pre-shared secret required as a Bearer token on `/mcp`. Minimum 24 characters; generate one with `openssl rand -base64 32`. |
+
+:::caution
+The key is long-lived and shared by every caller: there is no per-client
+identity, no expiry, and revoking means restarting with a new key. Always
+serve it over TLS. Use OAuth instead when several people need access or when
+connecting Claude.ai's connector UI, which expects a full OAuth flow.
+:::
+
+Claude Code, for example, connects with:
+
+```bash
+claude mcp add --transport http polar-flow https://polar.example.com/mcp \
+  --header "Authorization: Bearer $MCP_API_KEY"
+```
+
 ## Inbound OAuth (app-as-Authorization-Server + DCR)
 
 Setting `OAUTH_PUBLIC_URL` turns the server into its **own** OAuth 2.1
@@ -35,7 +64,7 @@ Authorization Server. Clients self-register via Dynamic Client Registration
 (RFC 7591) — nothing to pre-create — and every `/mcp` request must carry a valid
 `Authorization: Bearer` access token the server itself signed (EdDSA JWT,
 validated locally). Browser login on `/mcp/oauth/authorize` is delegated to a
-forward-auth proxy. When `OAUTH_PUBLIC_URL` is unset, none of these apply and
+forward-auth proxy. When neither `OAUTH_PUBLIC_URL` nor `MCP_API_KEY` is set,
 `/mcp` is unauthenticated (the historical behaviour). See
 [Expose the server securely](/guides/expose-securely/) for the full Caddy +
 Authelia + Claude.ai walkthrough.
