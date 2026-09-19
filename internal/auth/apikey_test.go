@@ -39,7 +39,7 @@ func TestAPIKeyGuard(t *testing.T) {
 			var reached bool
 			h := apiKeyHandler(t, &reached)
 
-			req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/mcp", nil)
 			if tc.authHeader != "" {
 				req.Header.Set("Authorization", tc.authHeader)
 			}
@@ -67,7 +67,7 @@ func TestAPIKeyGuardDoesNotLeakKey(t *testing.T) {
 	var reached bool
 	h := apiKeyHandler(t, &reached)
 
-	req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/mcp", nil)
 	req.Header.Set("Authorization", "Bearer wrong")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
