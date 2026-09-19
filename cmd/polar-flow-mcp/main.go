@@ -113,22 +113,27 @@ func runStdio(ctx context.Context, mcpServer *server.MCPServer) {
 }
 
 func runHTTP(ctx context.Context, cfg *config.Config, mcpServer *server.MCPServer) {
-	if !cfg.OAuth.Enabled && cfg.BindAddress != "127.0.0.1" && cfg.BindAddress != "::1" {
+	if !cfg.OAuth.Enabled && cfg.APIKey == "" && cfg.BindAddress != "127.0.0.1" && cfg.BindAddress != "::1" {
 		slog.Warn(
-			"BIND_ADDRESS is not localhost and inbound OAuth is disabled — /mcp is unauthenticated; "+
-				"set OAUTH_PUBLIC_URL to enable OAuth or front the server with a trusted proxy",
+			"BIND_ADDRESS is not localhost and inbound auth is disabled — /mcp is unauthenticated; "+
+				"set MCP_API_KEY for static-key auth, OAUTH_PUBLIC_URL for OAuth, or front the "+
+				"server with a trusted proxy",
 			"bind_address", cfg.BindAddress,
 		)
 	}
 
 	httpMCPServer := server.NewStreamableHTTPServer(mcpServer)
 
-	// Wrap the MCP handler with the OAuth middleware when configured, and mount
-	// the authorization-server endpoints. When disabled this is the bare handler
-	// (historical behaviour).
+	// Wrap the MCP handler with inbound auth when configured. The two mechanisms
+	// are mutually exclusive (config.Load enforces it): OAuth also mounts the
+	// authorization-server endpoints, the static API key needs no extra routes.
+	// With neither, this is the bare handler (historical behaviour).
 	var mcpHandler http.Handler = httpMCPServer
 	mux := http.NewServeMux()
-	if cfg.OAuth.Enabled {
+	switch {
+	case cfg.APIKey != "":
+		mcpHandler = auth.NewAPIKeyGuard(cfg.APIKey, slog.Default()).Middleware(httpMCPServer)
+	case cfg.OAuth.Enabled:
 		authn, err := auth.New(auth.Config{
 			Issuer:            cfg.OAuth.PublicURL,
 			Resource:          cfg.OAuth.Resource,

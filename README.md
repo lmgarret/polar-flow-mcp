@@ -183,13 +183,33 @@ Optional:
 - `TRANSPORT` — `stdio` or `http` (default `http`)
 - `BIND_ADDRESS`, `PORT` — HTTP listen address
 - `LOG_LEVEL`, `LOG_FILE`
+- `MCP_API_KEY` — enable inbound auth with a fixed pre-shared key (see below)
 - `OAUTH_PUBLIC_URL` (+ `OAUTH_ALLOWED_EMAIL`, `OAUTH_TRUSTED_PROXIES`) — enable inbound OAuth (see below)
 
 ## Exposing to the internet (Claude.ai)
 
 By default the HTTP transport has **no inbound auth** — run it on localhost or a
-trusted network. To use it as a **Claude.ai custom connector** over the public
-internet, set `OAUTH_PUBLIC_URL` to turn the server into its **own OAuth 2.1
+trusted network. Two mutually-exclusive mechanisms secure a public deployment.
+
+### Static API key (simplest)
+
+Set `MCP_API_KEY` to a secret of at least 24 characters (`openssl rand -base64 32`)
+and every `/mcp` request must carry it as `Authorization: Bearer <key>`. Nothing
+else to run — no issuer, no signing key, no forward-auth proxy. Works with
+Claude Code:
+
+```bash
+claude mcp add --transport http polar-flow https://polar.example.com/mcp \
+  --header "Authorization: Bearer $MCP_API_KEY"
+```
+
+The trade-off: one long-lived secret shared by every caller, no per-client
+identity, and revoking it means restarting with a new key. Serve it over TLS.
+Claude.ai's connector UI expects a full OAuth flow, so use OAuth for that.
+
+### OAuth 2.1 (Claude.ai connectors)
+
+Set `OAUTH_PUBLIC_URL` to turn the server into its **own OAuth 2.1
 Authorization Server**: clients self-register via Dynamic Client Registration
 (nothing to paste), browser login on the consent step is delegated to a
 forward-auth proxy (Authelia), and an email allowlist decides who may connect.

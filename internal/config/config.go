@@ -44,6 +44,11 @@ type Config struct {
 	// Defaults to "./polar-cookies.json".
 	CookieJarPath string
 
+	// APIKey is the optional fixed pre-shared secret (MCP_API_KEY). When set,
+	// every /mcp request must carry it as "Authorization: Bearer <key>". It is
+	// the lightweight alternative to OAuth and is mutually exclusive with it.
+	APIKey string
+
 	// OAuth holds the optional inbound OAuth 2.1 settings. It is disabled
 	// (OAuth.Enabled == false) unless OAUTH_PUBLIC_URL is set, in which case the
 	// server becomes its own OAuth 2.1 Authorization Server: it issues tokens
@@ -174,7 +179,43 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	if err := loadAPIKey(cfg); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
+}
+
+// minAPIKeyLength is the shortest accepted MCP_API_KEY. A fixed shared secret
+// is the only thing standing between the internet and the MCP surface, so
+// anything a human would plausibly type by hand is refused at startup.
+const minAPIKeyLength = 24
+
+// loadAPIKey populates and validates the optional static API key. The two
+// inbound auth mechanisms are mutually exclusive: OAuth issues per-client
+// tokens it can scope and expire, the API key is one long-lived shared secret,
+// and running both would silently weaken the stronger one to the weaker one's
+// guarantees.
+func loadAPIKey(cfg *Config) error {
+	key := strings.TrimSpace(os.Getenv("MCP_API_KEY"))
+	if key == "" {
+		return nil
+	}
+	if cfg.OAuth.Enabled {
+		return errors.New(
+			"MCP_API_KEY and OAUTH_PUBLIC_URL are mutually exclusive: pick either the static " +
+				"API key or inbound OAuth, not both",
+		)
+	}
+	if len(key) < minAPIKeyLength {
+		return fmt.Errorf(
+			"MCP_API_KEY must be at least %d characters (it is the only thing protecting /mcp); "+
+				"generate one with: openssl rand -base64 32",
+			minAPIKeyLength,
+		)
+	}
+	cfg.APIKey = key
+	return nil
 }
 
 // loadOAuth populates and validates the optional OAuth config. Auth is enabled
@@ -347,7 +388,9 @@ func LogStartupBanner(cfg *Config) {
 			"origin_allowlist", len(cfg.OAuth.AllowedOrigins) > 0,
 			"signing_key", cfg.OAuth.SigningKeyPath,
 		)
+	} else if cfg.APIKey != "" {
+		slog.Info("inbound API-key auth enabled — /mcp requires Authorization: Bearer <MCP_API_KEY>")
 	} else if cfg.Transport == "http" {
-		slog.Info("inbound OAuth disabled — /mcp is unauthenticated; bind to localhost or front with a trusted proxy")
+		slog.Info("inbound auth disabled — /mcp is unauthenticated; bind to localhost or front with a trusted proxy")
 	}
 }

@@ -30,6 +30,7 @@ func clearConfigEnv(t *testing.T) {
 		"OAUTH_SIGNING_KEY_PATH",
 		"OAUTH_ACCESS_TTL_MINUTES",
 		"OAUTH_REFRESH_TTL_HOURS",
+		"MCP_API_KEY",
 	} {
 		t.Setenv(key, "")
 	}
@@ -262,4 +263,56 @@ func TestLoad_Overrides(t *testing.T) {
 	if cfg.Port != "9000" {
 		t.Errorf("Port: got %q", cfg.Port)
 	}
+}
+
+func TestLoad_APIKey(t *testing.T) {
+	const goodKey = "0123456789abcdef0123456789abcdef"
+
+	t.Run("unset leaves auth off", func(t *testing.T) {
+		clearConfigEnv(t)
+		withCreds(t)
+		cfg, err := config.Load()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.APIKey != "" {
+			t.Errorf("APIKey = %q, want empty", cfg.APIKey)
+		}
+	})
+
+	t.Run("accepted and trimmed", func(t *testing.T) {
+		clearConfigEnv(t)
+		withCreds(t)
+		t.Setenv("MCP_API_KEY", "  "+goodKey+"\n")
+		cfg, err := config.Load()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.APIKey != goodKey {
+			t.Errorf("APIKey = %q, want %q", cfg.APIKey, goodKey)
+		}
+	})
+
+	t.Run("too short is rejected", func(t *testing.T) {
+		clearConfigEnv(t)
+		withCreds(t)
+		t.Setenv("MCP_API_KEY", "hunter2")
+		_, err := config.Load()
+		if err == nil || !strings.Contains(err.Error(), "MCP_API_KEY") {
+			t.Fatalf("error = %v, want one naming MCP_API_KEY", err)
+		}
+	})
+
+	t.Run("mutually exclusive with OAuth", func(t *testing.T) {
+		clearConfigEnv(t)
+		withCreds(t)
+		t.Setenv("MCP_API_KEY", goodKey)
+		t.Setenv("OAUTH_PUBLIC_URL", "https://polar.example.com")
+		t.Setenv("OAUTH_ALLOWED_EMAIL", "me@example.com")
+		t.Setenv("OAUTH_TRUSTED_PROXIES", "10.0.0.0/8")
+		_, err := config.Load()
+		if err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+			t.Fatalf("error = %v, want a mutual-exclusion error", err)
+		}
+	})
 }
