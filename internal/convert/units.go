@@ -94,6 +94,28 @@ func SecondsToClock(secs int) string {
 	return fmt.Sprintf("%02d:%02d:%02d", secs/3600, (secs%3600)/60, secs%60)
 }
 
+// HumanDuration formats a whole-second duration as prose ("1 h 5 min",
+// "45 min", "30 s") for text a user reads rather than a machine parses — the
+// confirmation prompts in internal/mcp, where SecondsToClock's "01:05:00" wire
+// form reads like a stopwatch readout. Seconds are dropped once the duration
+// reaches a minute, since no prompt needs that precision.
+func HumanDuration(secs int) string {
+	if secs <= 0 {
+		return "0 s"
+	}
+	h, m, s := secs/3600, (secs%3600)/60, secs%60
+	switch {
+	case h > 0 && m > 0:
+		return fmt.Sprintf("%d h %d min", h, m)
+	case h > 0:
+		return fmt.Sprintf("%d h", h)
+	case m > 0:
+		return fmt.Sprintf("%d min", m)
+	default:
+		return fmt.Sprintf("%d s", s)
+	}
+}
+
 // MillisToSeconds converts an integer-millisecond duration (as returned by
 // TrainingSessionSummary.duration and StandardDuration.millis) to whole seconds.
 func MillisToSeconds(ms int64) int {

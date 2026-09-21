@@ -240,7 +240,10 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithDescription(
 			"Permanently delete a scheduled training target by its numeric id. Irreversible. "+
 				"Use list_training_targets to find the id. No-ops (reports \"no target with id\") "+
-				"if the id does not exist or belongs to another account.",
+				"if the id does not exist or belongs to another account.\n\n"+
+				"Hosts that support elicitation put the deletion to the user for confirmation "+
+				"first; a result saying the user did not confirm means the target is still "+
+				"there, and is not an error to retry around.",
 		),
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
 			mcpgo.Description("Numeric target id from create_training_target or list_training_targets.")),
@@ -403,6 +406,9 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"explicitly asks to log a session; never to fabricate history.\n\n"+
 				"This logs an actual session (past). To plan a future workout, use "+
 				"create_training_target instead.\n\n"+
+				"Hosts that support elicitation put the write to the user for confirmation "+
+				"first; a result saying the user did not confirm means nothing was written, "+
+				"and is not an error to retry around.\n\n"+
 				"Units: duration_s in SECONDS, distance_m in METRES, speed_kmh in km/h, "+
 				"hr_avg / hr_max in bpm.\n\n"+
 				"Example — a 30 min, 5 km easy run at avg 142 bpm on 25 May 2026 08:48:\n"+

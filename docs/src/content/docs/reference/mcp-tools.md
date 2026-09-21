@@ -14,6 +14,38 @@ Authentication failures (`401 NotAuthenticated`) trigger a transparent
 silent-refresh-then-retry — callers will not see a 401 unless the credentials
 themselves are bad.
 
+## User confirmation on writes
+
+Two tools touch real diary data and ask the user to confirm before they run:
+[`create_training_session`](#create_training_session), which writes a session
+that counts toward Polar's training-load model, and
+[`delete_training_target`](#delete_training_target), which is irreversible.
+
+The mechanism is an MCP [elicitation](https://modelcontextprotocol.io/): the
+tool answers the first call with "I need confirmation", the host puts the
+question to the user, and then retries the same call with the answer attached.
+On protocol `2026-07-28` and later this is a
+[multi round-trip request](https://modelcontextprotocol.io/); on earlier
+versions the server issues the `elicitation/create` those clients understand.
+Either way the handler is the same code.
+
+The delete prompt names the target it is about to remove (`Permanently delete
+the training target "5x1km Threshold" scheduled for 2026-06-02T09:00 (id
+7286431)?`), so the ask costs one extra read on the first leg only.
+
+If the user declines or cancels, the tool returns a plain text result saying so
+and nothing is written — that is a normal outcome, not a tool error to retry
+around.
+
+:::caution[Not every host can be asked]
+Confirmation requires the connected client to declare the `elicitation`
+capability. **Against a client that does not, the gate is skipped and the call
+proceeds unconfirmed** — the tool descriptions remain the only thing keeping a
+coach model from firing these unprompted. The gate is skipped deliberately:
+asking a client that cannot answer fails the entire tool call instead of
+protecting anything.
+:::
+
 ## `get_user_info`
 
 Returns the identity of the linked Polar Flow account.
@@ -125,6 +157,9 @@ Delete a target by numeric ID.
 
 **Response:** `Deleted target <id>.` or `No target with id <id>.`
 
+Asks the user to confirm first where the host supports it — see
+[User confirmation on writes](#user-confirmation-on-writes).
+
 ## `get_training_target`
 
 Return the full server-normalized view of a single target. Use this before
@@ -228,6 +263,9 @@ training-load model. Intended for user-initiated logging of sessions that
 weren't recorded on a watch — not for synthesizing test data on a production
 account. Coach skills should only call this when the user explicitly asks to log
 a session.
+
+Asks the user to confirm first where the host supports it — see
+[User confirmation on writes](#user-confirmation-on-writes).
 :::
 
 | Argument | Type | Required | Description |

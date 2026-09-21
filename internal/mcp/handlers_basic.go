@@ -104,6 +104,15 @@ func DeleteTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 		if !ok {
 			return mcpgo.NewToolResultError("target_id is required and must be a positive integer"), nil
 		}
+		// Irreversible, so ask first where the client can be asked. The ask leg
+		// reads the target back to name it in the prompt; the retry leg skips
+		// straight past this to the delete.
+		if result, proceed := requireConfirm(ctx, req, "delete_training_target", func() string {
+			return fmt.Sprintf("Permanently delete %s? This cannot be undone.",
+				describeTarget(ctx, fc, id))
+		}); !proceed {
+			return result, nil
+		}
 		if err := fc.DeleteTrainingTarget(ctx, id); err != nil {
 			if errors.Is(err, flow.ErrTargetNotFound) {
 				return mcpgo.NewToolResultText(fmt.Sprintf("No target with id %d.", id)), nil
@@ -255,6 +264,17 @@ func CreateTrainingSessionHandler(fc *flow.Client) func(context.Context, mcpgo.C
 		}
 		body.Feeling.SetToNull()
 
+		// Confirm after validating the arguments, so a malformed call still
+		// fails fast instead of prompting the user about a session that was
+		// never going to be created.
+		if result, proceed := requireConfirm(ctx, req, "create_training_session", func() string {
+			return fmt.Sprintf(
+				"Log %q as a completed training session on %s at %s (%s)? "+
+					"This writes real data to your Polar diary and counts toward your training stats.",
+				name, dateStr, timeStr, convert.HumanDuration(duration))
+		}); !proceed {
+			return result, nil
+		}
 		if err := fc.CreateTrainingSession(ctx, body); err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}

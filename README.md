@@ -171,6 +171,11 @@ The server reads `/.env` on startup via `godotenv` — credentials are in memory
 | `get_progress_summary` | Aggregated training totals over a range |
 | `create_training_session` | Log a manually-entered completed session (writes real data — coach must only call on explicit user request) |
 
+`create_training_session` and `delete_training_target` ask the user to confirm
+before they run, on hosts that support MCP elicitation. Where the client cannot
+be asked, the call proceeds unconfirmed — see
+[User confirmation on writes](https://lmgarret.github.io/polar-flow-mcp/reference/mcp-tools/#user-confirmation-on-writes).
+
 ## Configuration
 
 See [`.env.example`](.env.example). Required:
