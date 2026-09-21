@@ -105,7 +105,7 @@ and parameter docs rich enough that a caller never needs to read the spec:
 - **Always state units and give an example.** Spell out metres/seconds/bpm/km/h
   in each parameter description. For any tool with non-trivial inputs (e.g.
   `create_training_target`, `create_training_session`), embed a concrete worked
-  example in the tool-level description — `mcp-go` v0.50.0 has no per-parameter
+  example in the tool-level description — `mcp-go` v1.1.0 has no per-parameter
   `examples` schema helper, so examples live in description text.
 - **Encode constraints structurally** where it documents the param: `mcp.Enum`
   for fixed value sets, `mcp.DefaultString`/`DefaultNumber` for advertised
