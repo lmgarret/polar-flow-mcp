@@ -95,6 +95,37 @@ introspection). Browser login on `/authorize` is delegated to a forward-auth
 proxy. See [Expose the server securely](/guides/expose-securely/) and the
 [security model](/explanation/security-model/) for the trust boundaries.
 
+## Confirm-before-write, but only where it works
+
+`create_training_session` and `delete_training_target` ask the user to confirm
+before they run, via an MCP elicitation the client answers and retries with (see
+[User confirmation on writes](/reference/mcp-tools/#user-confirmation-on-writes)). Before this
+the only thing standing between a coach model and an irreversible delete was
+prose in the tool description — a hint, not a gate.
+
+The subtlety is on the other side of it. mcp-go's bridge for pre-`2026-07-28`
+clients answers an input request by sending the client a server-initiated
+`elicitation/create`, and both the stdio and streamable-HTTP session types
+implement `SessionWithElicitation` unconditionally — so it will send that
+request to a client that never declared the capability, and then fail the whole
+tool call with `ErrElicitationNotSupported` or block until it times out. So the
+server probes the client itself (`canElicit` in `internal/mcp/confirm.go`,
+reading the declared capability from the session for legacy clients and from the
+request `_meta` for modern ones) and **skips the gate entirely when the client
+cannot answer**. An unconfirmable call behaves exactly as it did before the gate
+existed. A confirmation that breaks the tool on half the hosts protects nothing.
+
+## Cacheable catalogues
+
+Every catalogue this server serves is fixed at build time: tools are registered
+once at startup with no tool filter and no per-session set, and the MCP-app UI
+resources are `go:embed`ed into the binary. So `WithCacheHints` advertises them
+as `public`, cacheable for five minutes — identical for every caller, changing
+only when the binary does. The hint rides on protocol `2026-07-28` and later
+only; older clients revalidate exactly as they always did. The TTL is short on
+purpose, so a client holding a stale catalogue across a redeploy recovers in
+minutes rather than for the life of its connection.
+
 ## The request lifecycle
 
 What the server does on every Polar API request:

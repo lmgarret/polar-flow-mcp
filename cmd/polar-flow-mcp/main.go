@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/lmgarret/polar-flow-mcp/internal/auth"
@@ -35,6 +36,13 @@ var (
 	commit  = "none"
 	date    = "unknown"
 )
+
+// catalogueCacheTTL is how long a client may reuse this server's tool, prompt,
+// and resource catalogues before revalidating. They only change when the binary
+// does, so this trades nothing for a round-trip saved per call; it is kept short
+// enough that a client holding a stale catalogue across a redeploy recovers in
+// minutes rather than for the life of its connection.
+const catalogueCacheTTL = 5 * time.Minute
 
 func main() {
 	initLogging()
@@ -71,6 +79,17 @@ func main() {
 		version,
 		server.WithToolCapabilities(true),
 		server.WithResourceCapabilities(false, false),
+		// The write tools ask the user to confirm before they touch the diary
+		// (see internal/mcp/confirm.go).
+		server.WithElicitation(),
+		// Every catalogue this server serves is fixed at build time: the tools
+		// are registered once at startup with no tool filter and no per-session
+		// set, and the MCP-app UI resources are go:embed'ed into the binary. So
+		// the list and read results are identical for every caller and change
+		// only when the binary does — public scope, not private. The hint is
+		// only emitted to clients on protocol 2026-07-28 or later; everyone
+		// else revalidates exactly as before.
+		server.WithCacheHints(catalogueCacheTTL.Milliseconds(), mcpgo.CacheScopePublic),
 	)
 	mcp.RegisterTools(mcpServer, flowClient)
 	mcp.RegisterResources(mcpServer)

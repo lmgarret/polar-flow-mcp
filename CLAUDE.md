@@ -53,6 +53,8 @@ and silent refresh.
 | **Browser-fingerprint TLS + HTTP/2 for the login chain** (`azuretls` Chrome preset) and **for stdlib http.Client API calls** (`utls` Chrome ClientHello over `http2.Transport`) | `flow.polar.com` is behind a CloudFront WAF that inspects JA3/JA4 **and** HTTP/2 framing. Default Go net/http gets `403 X-Cache: Error from cloudfront` on `/flowSso/redirect`. uTLS alone (TLS only) is insufficient. |
 | **3-hop silent refresh on `401 {"error":"NotAuthenticated"}`** | Standard Polar Flow session-rotation path; falls back to full login if `session_id` on `auth.polar.com` has also expired. |
 | **Bind-first / deferred login** (`flow.New` never logs in; `EnsureSession` runs lazily from `transport.Do`, warmed up in a background goroutine) | A full login takes seconds (CloudFront WAF + redirect chain). Blocking startup on it blocks the listener from binding, which races the MCP client's `initialize` and times it out at 60s. Binding first makes the handshake instant. |
+| **Confirm-before-write via elicitation, gated on a capability probe** (`internal/mcp/confirm.go`) | `create_training_session` and `delete_training_target` ask the user before they run — prose in a tool description is a hint, not a gate. The footgun: mcp-go's legacy bridge answers an input request with a server-initiated `elicitation/create`, and `stdioSession` / `streamableHttpSession` implement `SessionWithElicitation` unconditionally — so it sends that request to clients that never declared the capability and then fails the whole tool call. `canElicit` probes first (session capabilities for legacy, request `_meta` for `2026-07-28`+) and **skips the gate when the client cannot answer**, rather than breaking the tool. |
+| **`WithCacheHints(5 min, public)` on the catalogues** | Tools are registered once at startup — no `ToolFilter`, no per-session set — and the UI resources are `go:embed`ed, so every list/read result is identical for every caller and changes only with the binary. Short TTL so a stale catalogue survives a redeploy by minutes, not for the life of a connection. Emitted to `2026-07-28`+ clients only. |
 | **Custom `ht.Client` transport wraps ogen's `gen.Client`** | Lets us inject `X-Requested-With`, the cookie jar, and the 401-retry without touching generated code. |
 | **Two mutually-exclusive inbound auth mechanisms** (`MCP_API_KEY` static key; `OAUTH_PUBLIC_URL` OAuth) | The OAuth path is the only one Claude.ai's connector UI can drive, but it needs a forward-auth proxy — too much machinery for a one-operator Claude Code deployment. `MCP_API_KEY` (≥24 chars, SHA-256 + constant-time compare in `internal/auth/apikey.go`) is the low-ceremony alternative: one secret, no extra routes, no signing key. Refusing both at once (`config.loadAPIKey`) keeps the weaker mechanism from answering for the stronger one. |
 | **App-as-Authorization-Server + Dynamic Client Registration** (`internal/auth`, enabled by `OAUTH_PUBLIC_URL`; off by default) | Lets the server be exposed publicly as a Claude.ai connector **and** work with Claude Code — both speak DCR (RFC 7591), so clients self-register with no client to pre-create. The server signs/validates its **own** EdDSA JWT access tokens locally (no DB, no introspection). Browser login on `/mcp/oauth/authorize` only is delegated to a **forward-auth proxy** (Authelia); the authenticated email arrives in `Remote-Email`, trusted **only** from `OAUTH_TRUSTED_PROXIES` (the spoofing footgun — header is honoured only from those peers). `OAUTH_ALLOWED_EMAIL` gates who may consent; redirect URIs are restricted to Claude callbacks + loopback. Revocation is coarse: short access TTL or rotate `OAUTH_SIGNING_KEY_PATH`. Dep: `golang-jwt/jwt/v5`. See `docs/src/content/docs/guides/expose-securely.md`. |
@@ -76,7 +78,7 @@ and silent refresh.
 | `list_sports` | Full Polar sport-id → name catalogue (the `sport_id` values for targets/sessions) |
 | `create_training_target` | Create a scheduled target (warmup / repeat / cooldown) |
 | `list_training_targets` | Targets in a date range (filtered from calendar) |
-| `delete_training_target` | Delete a target by ID |
+| `delete_training_target` | Delete a target by ID — confirms with the user first where the host supports elicitation |
 | `get_training_target` | Read one target by ID (full server-normalized view) |
 | `update_training_target` | Full-replace edit of one target by ID |
 | `get_calendar_events` | Raw calendar events in a date range |
@@ -85,7 +87,7 @@ and silent refresh.
 | `get_training_session_summary` | Summary view of one session |
 | `get_training_session_details` | Lap / sample detail of one session |
 | `get_progress_summary` | Aggregated training totals over a range |
-| `create_training_session` | Log a manually-entered completed session — writes real data; coach must only call on explicit user request |
+| `create_training_session` | Log a manually-entered completed session — writes real data; coach must only call on explicit user request; confirms with the user first where the host supports elicitation |
 
 ## Documenting tools (descriptions & examples)
 
@@ -105,7 +107,7 @@ and parameter docs rich enough that a caller never needs to read the spec:
 - **Always state units and give an example.** Spell out metres/seconds/bpm/km/h
   in each parameter description. For any tool with non-trivial inputs (e.g.
   `create_training_target`, `create_training_session`), embed a concrete worked
-  example in the tool-level description — `mcp-go` v0.50.0 has no per-parameter
+  example in the tool-level description — `mcp-go` v1.1.0 has no per-parameter
   `examples` schema helper, so examples live in description text.
 - **Encode constraints structurally** where it documents the param: `mcp.Enum`
   for fixed value sets, `mcp.DefaultString`/`DefaultNumber` for advertised
