@@ -14,6 +14,13 @@ which the official AccessLink API does not allow.
 📖 **Full documentation:** <https://lmgarret.github.io/polar-flow-mcp/> — tutorials,
 how-to guides, reference, and explanation (built with [Astro Starlight](https://starlight.astro.build/)).
 
+<p align="center">
+  <img src="docs/src/assets/mcp-apps/session-summary.webp" alt="A training session summary rendered inline by the bundled MCP app UI" width="760">
+  <img src="docs/src/assets/mcp-apps/target-detail.webp" alt="An interval training target broken into phases" width="760">
+</p>
+
+More in the [MCP app UIs](https://lmgarret.github.io/polar-flow-mcp/reference/mcp-apps/) reference.
+
 ## Quickstart
 
 ```bash

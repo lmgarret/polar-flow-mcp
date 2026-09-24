@@ -2,7 +2,7 @@
 title: Units & dates
 description: The one canonical unit and date contract every MCP tool speaks, and how the adapter reconciles the many encodings the Polar Flow web API uses under the hood.
 sidebar:
-  order: 4
+  order: 5
 ---
 
 The Polar Flow web API is internally inconsistent: the same concept arrives in
