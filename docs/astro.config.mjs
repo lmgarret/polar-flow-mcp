@@ -1,5 +1,6 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import { unified } from '@astrojs/markdown-remark';
 import starlight from '@astrojs/starlight';
 import astroD2 from 'astro-d2';
 
@@ -10,7 +11,7 @@ export default defineConfig({
 	markdown: {
 		// Make D2's baked-in dark palette follow Starlight's in-page theme toggle
 		// instead of only the OS `prefers-color-scheme`.
-		rehypePlugins: [rehypeD2DarkMode],
+		processor: unified({ rehypePlugins: [rehypeD2DarkMode] }),
 	},
 	integrations: [
 		starlight({

@@ -18,6 +18,14 @@ header, and an **email allowlist** decides who may connect. Access tokens are
 short-lived EdDSA JWTs the server signs and validates itself — no database, no
 introspection round-trip.
 
+:::tip[Only using Claude Code?]
+If Claude.ai's connector UI is not in the picture and you are the only caller,
+the [static API key](/reference/environment-variables/#inbound-api-key-static-shared-secret)
+(`MCP_API_KEY`) secures the deployment with one env var and no Authelia — just
+put a TLS reverse proxy in front. This guide's OAuth path is what you want when
+several people connect, or when Claude.ai must drive the login itself.
+:::
+
 :::note[Which Claude clients work]
 - **Claude.ai web + mobile** — yes.
 - **Claude Desktop** — yes (same remote-connector path).

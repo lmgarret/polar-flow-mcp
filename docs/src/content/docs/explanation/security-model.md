@@ -80,10 +80,40 @@ untrusted.others -> trusted.jar: blocked by file perms {
   filesystem permissions and back it up only encrypted.
 - **The `.env` file is whatever you make it.** It contains the Polar password in
   plaintext by design. Use restrictive permissions and avoid committing it.
-- **The HTTP transport has no auth *by default*.** With `OAUTH_PUBLIC_URL` unset,
+- **The HTTP transport has no auth *by default*.** With neither `MCP_API_KEY` nor
+  `OAUTH_PUBLIC_URL` set,
   bind to localhost or put it behind a trusted-network barrier (Tailscale, VPN).
-  A warning is logged at startup if `BIND_ADDRESS` is non-localhost and OAuth is
-  off. To expose it publicly, enable the OAuth Authorization Server (below).
+  A warning is logged at startup if `BIND_ADDRESS` is non-localhost and inbound
+  auth is off. To expose it publicly, enable either the static API key or the
+  OAuth Authorization Server (below).
+
+## Exposing publicly: static API key
+
+The low-ceremony option. Set `MCP_API_KEY` to a secret of at least 24 characters
+and every `/mcp` request must present it as `Authorization: Bearer <key>`. The
+server stores only the SHA-256 of the configured key and compares digests in
+constant time, so neither the value nor its length leaks through timing; the key
+never appears in a log line or a response body.
+
+What this posture does **not** give you, and the reason OAuth still exists here:
+
+- **No identity.** Every caller is the same anonymous holder of one secret. Logs
+  cannot attribute a request to a person.
+- **No expiry, coarse revocation.** The key lives until you change it, and
+  changing it means a restart that breaks every existing client at once. OAuth's
+  access tokens expire on their own and can be cut off by rotating the signing key.
+- **Full compromise on leak.** A key pasted into the wrong shell history, CI log,
+  or client config grants everything the MCP surface exposes — including the write
+  tools. OAuth confines a leaked access token to its TTL.
+- **Not a Claude.ai connector.** Claude.ai's connector UI drives an OAuth flow;
+  it has nowhere to put a static header. This posture is for Claude Code and
+  scripted clients.
+
+It is a reasonable trade when you are the only caller, the deployment is behind
+TLS, and standing up Authelia is more machinery than the situation warrants.
+`MCP_API_KEY` and `OAUTH_PUBLIC_URL` are mutually exclusive: running both would
+let the weaker mechanism answer for the stronger one, so the server refuses to
+start.
 
 ## Exposing publicly: app-as-Authorization-Server
 
@@ -148,8 +178,9 @@ data and settings. This is **strictly worse** than a cookie-jar leak. Protect
   read.
 - For local/private use, bind the HTTP transport to `127.0.0.1` and consume via
   SSH tunnel or Tailscale.
-- For public use (Claude.ai), enable the OAuth Authorization Server and front it
-  with a TLS reverse proxy — see
+- For public use, front the server with a TLS reverse proxy and enable inbound
+  auth: `MCP_API_KEY` when you are the only caller, or the OAuth Authorization
+  Server for Claude.ai and multi-user access — see
   [Expose the server securely](/guides/expose-securely/).
 - Use a Polar account dedicated to MCP use, not your main one.
 

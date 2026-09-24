@@ -24,6 +24,29 @@ func TestSecondsToClock(t *testing.T) {
 	}
 }
 
+func TestHumanDuration(t *testing.T) {
+	tests := []struct {
+		secs int
+		want string
+	}{
+		{0, "0 s"},
+		{-5, "0 s"},
+		{30, "30 s"},
+		{59, "59 s"},
+		{60, "1 min"},
+		{2100, "35 min"},
+		{3600, "1 h"},
+		{3660, "1 h 1 min"},
+		{3661, "1 h 1 min"}, // seconds dropped past the minute mark
+		{9000, "2 h 30 min"},
+	}
+	for _, tt := range tests {
+		if got := HumanDuration(tt.secs); got != tt.want {
+			t.Errorf("HumanDuration(%d) = %q, want %q", tt.secs, got, tt.want)
+		}
+	}
+}
+
 func TestMillisToSeconds(t *testing.T) {
 	tests := []struct {
 		ms   int64

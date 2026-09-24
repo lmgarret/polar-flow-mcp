@@ -74,7 +74,12 @@ Full per-tool parameter reference: **`reference/tools.md`**.
    ("log the 5k I ran yesterday"). Never to fabricate or backfill data. See
    `reference/logging-sessions.md`.
 3. **Confirm before any destructive or write action** (`delete_*`, `create_*`,
-   `update_*`) unless the user already gave a direct instruction.
+   `update_*`) unless the user already gave a direct instruction. On hosts that
+   support elicitation, `create_training_session` and `delete_training_target`
+   also ask the user themselves — a result saying the user did not confirm means
+   nothing was written or deleted. Report that back; do not retry around it. Not
+   every host can be asked, so this backstops your own confirmation, it does not
+   replace it.
 4. **Units are fixed:** distances in **metres**, durations in **seconds**,
    dates in **ISO YYYY-MM-DD**, times in **24h HH:MM**, heart rate in **bpm**,
    speed in **km/h**. The tools never take km or HH:MM:SS. See
