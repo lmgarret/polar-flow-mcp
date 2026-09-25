@@ -20,7 +20,7 @@ introspection round-trip.
 
 :::tip[Only using Claude Code?]
 If Claude.ai's connector UI is not in the picture and you are the only caller,
-the [static API key](/reference/environment-variables/#inbound-api-key-static-shared-secret)
+the [static API key](/polar-flow-mcp/reference/environment-variables/#inbound-api-key-static-shared-secret)
 (`MCP_API_KEY`) secures the deployment with one env var and no Authelia — just
 put a TLS reverse proxy in front. This guide's OAuth path is what you want when
 several people connect, or when Claude.ai must drive the login itself.
@@ -80,7 +80,7 @@ claude -> server: 6. POST /mcp  Bearer <jwt> → tools
 Setting `OAUTH_PUBLIC_URL` turns auth on. `OAUTH_ALLOWED_EMAIL` and
 `OAUTH_TRUSTED_PROXIES` are then mandatory (the server refuses to start without
 them — see the
-[environment variables reference](/reference/environment-variables/)).
+[environment variables reference](/polar-flow-mcp/reference/environment-variables/)).
 
 ```bash
 OAUTH_PUBLIC_URL=https://polar.example.com    # public origin = OAuth issuer
@@ -213,5 +213,5 @@ Tokens are self-issued and stateless, so revocation is coarse-grained:
 - [ ] An Authelia rule locks `/authorize` to you (two_factor + subject).
 - [ ] `OAUTH_SIGNING_KEY_PATH` is on a persistent, chmod-600 volume.
 - [ ] A **dedicated** Polar account (not your main one) — see the
-      [security model](/explanation/security-model/).
+      [security model](/polar-flow-mcp/explanation/security-model/).
 - [ ] Container bound to localhost/private, reachable only through the proxy.

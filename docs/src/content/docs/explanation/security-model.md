@@ -132,7 +132,7 @@ Authorization Server*:
   validates every Bearer token **locally** (EdDSA JWT it signed).
 
 The full walkthrough — including why forward-auth goes on `/authorize` only — is
-in [Expose the server securely](/guides/expose-securely/).
+in [Expose the server securely](/polar-flow-mcp/guides/expose-securely/).
 
 ### The controls that matter
 
@@ -181,7 +181,7 @@ data and settings. This is **strictly worse** than a cookie-jar leak. Protect
 - For public use, front the server with a TLS reverse proxy and enable inbound
   auth: `MCP_API_KEY` when you are the only caller, or the OAuth Authorization
   Server for Claude.ai and multi-user access — see
-  [Expose the server securely](/guides/expose-securely/).
+  [Expose the server securely](/polar-flow-mcp/guides/expose-securely/).
 - Use a Polar account dedicated to MCP use, not your main one.
 
 ## Reporting issues
