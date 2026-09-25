@@ -11,6 +11,10 @@ on:
         required: false
         type: string
 
+# Least privilege by default; jobs that push images or releases widen it.
+permissions:
+  contents: read
+
 jobs:
   resolve-version:
     name: Resolve release version
