@@ -55,7 +55,7 @@ jobs:
       - name: Generate AI changelog
         if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
         id: changelog
-        uses: lmgarret/llm-release-action@5410cbe86a62eb5acc66d3812aa55b978d0e9638 # v1.0.0
+        uses: lmgarret/llm-release-action@f5931e54cb2c65a2a098227331a92453988854ea # v1.0.1
         with:
           model: anthropic/claude-sonnet-5
           model_analysis: anthropic/claude-haiku-4-5
