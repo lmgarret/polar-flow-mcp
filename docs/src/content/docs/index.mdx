@@ -1,9 +1,9 @@
 ---
 title: polar-flow-mcp
-description: Single-user MCP server that drives the reverse-engineered Polar Flow web API from Claude — create, list, and delete training targets in plain language.
+description: Single-user MCP server that drives the reverse-engineered Polar Flow web API from any MCP client — create, list, and delete training targets in plain language.
 template: splash
 hero:
-  tagline: Schedule structured workouts in your Polar Flow diary from a Claude conversation — no app, no UI navigation.
+  tagline: Schedule structured workouts in your Polar Flow diary from a conversation with your AI assistant — no app, no UI navigation.
   # hero.image.html instead of hero.image.file: Starlight pipes `file` images
   # through astro:assets at a fixed 400×400, which centre-crops a wide
   # screenshot. Raw HTML keeps the full 780px frame (2x for the 25rem slot).
@@ -22,13 +22,13 @@ hero:
 
 import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-**"Schedule a 5×1km threshold session for Thursday."** Claude calls
+**"Schedule a 5×1km threshold session for Thursday."** Your assistant calls
 `create_training_target` and the workout appears in your Polar Flow diary.
 
 polar-flow-mcp is a single-user [MCP](https://modelcontextprotocol.io) server
 that drives the reverse-engineered **Polar Flow web API** (`flow.polar.com`) —
-the same API the browser app uses — so Claude can perform *write* operations the
-official read-only AccessLink API cannot.
+the same API the browser app uses — so any MCP client can perform *write*
+operations the official read-only AccessLink API cannot.
 
 ## Find your way around
 
@@ -39,7 +39,7 @@ documentation for four kinds of need.
 	<LinkCard
 		title="Tutorials"
 		href="/polar-flow-mcp/tutorials/getting-started/"
-		description="Learning-oriented. Go from a fresh checkout to talking to Claude in about five minutes."
+		description="Learning-oriented. Go from a fresh checkout to talking to your MCP client in about five minutes."
 	/>
 	<LinkCard
 		title="How-to Guides"
@@ -74,8 +74,8 @@ documentation for four kinds of need.
 		chmod-600 cookie jar for session persistence.
 	</Card>
 	<Card title="Public or private" icon="setting">
-		Run it on localhost for Claude Code, or expose it as a Claude.ai custom
-		connector behind its own OAuth 2.1 server.
+		Run it locally over stdio or HTTP, or expose it publicly as a remote
+		connector (e.g. Claude.ai) behind its own OAuth 2.1 server.
 	</Card>
 </CardGrid>
 

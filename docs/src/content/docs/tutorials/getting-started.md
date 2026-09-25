@@ -1,12 +1,12 @@
 ---
 title: Getting started
-description: A five-minute walkthrough from a fresh checkout to a running polar-flow-mcp that Claude can talk to.
+description: A five-minute walkthrough from a fresh checkout to a running polar-flow-mcp that your MCP client can talk to.
 sidebar:
   order: 1
 ---
 
 This walkthrough takes you from a fresh checkout to a running polar-flow-mcp
-that Claude can talk to. Allow about five minutes.
+that your MCP client can talk to. Allow about five minutes.
 
 :::caution[Use a Polar test account if you can]
 This server drives the unofficial, reverse-engineered Polar Flow web API — your
@@ -22,8 +22,8 @@ for what that means.
   - **Go 1.26+** if you want to run from source.
   - **Docker** if you prefer the container path (recommended for anything
     long-running).
-- A Claude client (Claude Code CLI, Claude Desktop, or another MCP-capable
-  client).
+- An MCP-capable client. The examples below use Claude Code and Claude Desktop;
+  any client that speaks stdio or streamable HTTP works the same way.
 
 ## 1. Clone
 
@@ -86,7 +86,7 @@ docker compose up -d
 See the [Docker Compose guide](/polar-flow-mcp/guides/deploy-with-docker-compose/) for the
 compose file structure and volume layout.
 
-## 4. Wire it into Claude
+## 4. Connect an MCP client
 
 ### Claude Code (stdio)
 
@@ -110,7 +110,7 @@ Add to `~/.claude/mcp_servers.json` (or per-project `.mcp.json`):
 
 ### Claude Desktop / HTTP MCP
 
-Run with `TRANSPORT=http` (the default) and point Claude at
+Run with `TRANSPORT=http` (the default) and point your client at
 `http://127.0.0.1:8080/mcp`.
 
 To reach it from **Claude.ai web/mobile (and Claude Code)** over the public
@@ -120,7 +120,7 @@ Authorization Server, and front it with a TLS reverse proxy — see
 
 ## 5. Try it out
 
-In a Claude conversation:
+In a conversation with your client (Claude shown here):
 
 ```text
 You: who's linked to polar-flow?
