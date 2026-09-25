@@ -1,8 +1,13 @@
 # polar-flow-mcp
 
 Single-user MCP server that drives the **reverse-engineered Polar Flow web API**
-(`flow.polar.com`) from Claude — including creating and deleting training targets,
-which the official AccessLink API does not allow.
+(`flow.polar.com`) from any MCP client — including creating and deleting training
+targets, which the official AccessLink API does not allow.
+
+It speaks standard MCP over **stdio** and **streamable HTTP**, so it works with any
+MCP-capable client or agent. The setup examples below use Claude clients
+(Claude Code, Claude Desktop, Claude.ai) because those are the ones it is tested
+with; other clients take the same command or URL.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/lmgarret/polar-flow-mcp/ci.yml?branch=main&label=CI)](https://github.com/lmgarret/polar-flow-mcp/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/lmgarret/polar-flow-mcp)](LICENSE)
@@ -78,9 +83,9 @@ docker run -d \
 
 Then point your MCP client at `http://127.0.0.1:8080/mcp`.
 
-### stdio transport (Claude Desktop / Claude Code)
+### stdio transport (e.g. Claude Desktop / Claude Code)
 
-Pass `docker run` as the MCP command so Claude spawns the container itself:
+Pass `docker run` as the MCP command so the client spawns the container itself:
 
 ```json
 {
