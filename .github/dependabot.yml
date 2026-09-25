@@ -11,3 +11,19 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+
+  # Docs site (Astro Starlight). Minor/patch bumps grouped into one PR.
+  - package-ecosystem: npm
+    directory: /docs
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      docs:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
