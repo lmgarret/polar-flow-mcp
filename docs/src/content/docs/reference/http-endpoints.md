@@ -54,7 +54,7 @@ exclusive — setting both `MCP_API_KEY` and `OAUTH_PUBLIC_URL` is a startup err
   resource_metadata="…"` header; valid Bearer tokens (EdDSA JWTs the server
   signed) are verified locally on every call. This path serves **Claude.ai
   web/mobile and Claude Code** — see
-  [Expose the server securely](/guides/expose-securely/).
+  [Expose the server securely](/polar-flow-mcp/guides/expose-securely/).
 
 Because the server provides Dynamic Client Registration, **Claude Code (CLI)
 works over the public OAuth path too** — no separate transport needed.

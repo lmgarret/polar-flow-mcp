@@ -4,10 +4,11 @@ import { unified } from '@astrojs/markdown-remark';
 import starlight from '@astrojs/starlight';
 import astroD2 from 'astro-d2';
 
-// Site is served from the domain root (no base path). `site` only affects
-// absolute URLs (sitemap/canonical) and is overridable via env.
+// Served as a GitHub Pages project site under /polar-flow-mcp/, so every
+// root-absolute link in the content must carry the base prefix.
 export default defineConfig({
-	site: process.env.DOCS_SITE ?? 'https://polar-flow-mcp.dev',
+	site: process.env.DOCS_SITE ?? 'https://lmgarret.github.io',
+	base: '/polar-flow-mcp',
 	markdown: {
 		// Make D2's baked-in dark palette follow Starlight's in-page theme toggle
 		// instead of only the OS `prefers-color-scheme`.

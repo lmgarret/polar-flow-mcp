@@ -249,7 +249,7 @@ object), `total_distance_m`, `total_kcal`, `total_ascent_m` / `total_descent_m`,
 plus `from_date` / `to_date` echoing the range. The `sport_breakdown`,
 `heart_rate_zones`, and `training_benefit_breakdown` lists are passed through
 from the wire (their element shapes are only partly pinned upstream). See
-[Units & dates](/reference/units-and-dates/).
+[Units & dates](/polar-flow-mcp/reference/units-and-dates/).
 
 ## `create_training_session`
 
@@ -301,7 +301,7 @@ so no `user_id` parameter is needed.
 **Response:** JSON array of canonical session objects (`id`, `sport_id`,
 `sport_name`, `start_time`, `session_duration_s`, `distance_m`, `hr_avg`,
 `calories`, …). Durations are seconds, distances metres, dates ISO 8601 — see
-[Units & dates](/reference/units-and-dates/). Absent values are omitted rather
+[Units & dates](/polar-flow-mcp/reference/units-and-dates/). Absent values are omitted rather
 than sent as `-1` / `""`.
 
 ## `get_training_session_summary`
@@ -315,7 +315,7 @@ averages, sport, etc.
 
 **Response:** canonical session object — `session_duration_s` (seconds, decoded
 from the wire's ISO-8601 `PTxxM`), `distance_m`, `hr_avg` / `hr_max` (bpm),
-`calories`, `start_time` (ISO 8601). See [Units & dates](/reference/units-and-dates/).
+`calories`, `start_time` (ISO 8601). See [Units & dates](/polar-flow-mcp/reference/units-and-dates/).
 
 ## `get_training_session_details`
 
@@ -332,7 +332,7 @@ user asks about pace splits, HR zone time, or per-lap stats.
   seconds (`*_s`), distances in metres (`*_m`), speed in km/h (`*_kmh`), heart
   rate in bpm, ISO 8601 dates — regardless of the many encodings the underlying
   Flow endpoints use. The adapter (`internal/convert`) does the conversion. See
-  [Units & dates](/reference/units-and-dates/) for the full table.
+  [Units & dates](/polar-flow-mcp/reference/units-and-dates/) for the full table.
 - **Time zones.** `create_training_target` sends a local ISO datetime
   (`YYYY-MM-DDTHH:MM` with no offset). The Polar server applies the user's
   configured timezone. Make sure your test account's timezone matches your

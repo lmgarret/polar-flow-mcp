@@ -11,7 +11,7 @@ that Claude can talk to. Allow about five minutes.
 :::caution[Use a Polar test account if you can]
 This server drives the unofficial, reverse-engineered Polar Flow web API — your
 credentials are sent to `auth.polar.com` on every cold start and persisted as
-session cookies on disk. See the [security model](/explanation/security-model/)
+session cookies on disk. See the [security model](/polar-flow-mcp/explanation/security-model/)
 for what that means.
 :::
 
@@ -58,7 +58,7 @@ PORT=8080
 LOG_LEVEL=info                    # info | debug
 ```
 
-See the [environment variables reference](/reference/environment-variables/)
+See the [environment variables reference](/polar-flow-mcp/reference/environment-variables/)
 for the full list.
 
 ## 3. Run
@@ -83,7 +83,7 @@ use, so an actively-used server never re-prompts.
 docker compose up -d
 ```
 
-See the [Docker Compose guide](/guides/deploy-with-docker-compose/) for the
+See the [Docker Compose guide](/polar-flow-mcp/guides/deploy-with-docker-compose/) for the
 compose file structure and volume layout.
 
 ## 4. Wire it into Claude
@@ -116,7 +116,7 @@ Run with `TRANSPORT=http` (the default) and point Claude at
 To reach it from **Claude.ai web/mobile (and Claude Code)** over the public
 internet, set `OAUTH_PUBLIC_URL` to turn the server into its own OAuth 2.1
 Authorization Server, and front it with a TLS reverse proxy — see
-[Expose the server securely](/guides/expose-securely/).
+[Expose the server securely](/polar-flow-mcp/guides/expose-securely/).
 
 ## 5. Try it out
 
@@ -138,12 +138,12 @@ If something failed, check `LOG_LEVEL=debug` for the request / refresh trace.
 
 ## What's next
 
-- [Create and manage training targets](/guides/create-training-targets/) — phase
+- [Create and manage training targets](/polar-flow-mcp/guides/create-training-targets/) — phase
   vocabulary and worked examples.
-- [Install the polar-flow skill](/guides/install-the-skill/) — teach Claude
+- [Install the polar-flow skill](/polar-flow-mcp/guides/install-the-skill/) — teach Claude
   which tool to call and the exact parameter shapes.
-- [MCP tools reference](/reference/mcp-tools/) — full argument schemas.
-- [Expose the server securely](/guides/expose-securely/) — public access for
+- [MCP tools reference](/polar-flow-mcp/reference/mcp-tools/) — full argument schemas.
+- [Expose the server securely](/polar-flow-mcp/guides/expose-securely/) — public access for
   Claude.ai (Caddy + Authelia).
-- [Security model](/explanation/security-model/) — what's protected and what
+- [Security model](/polar-flow-mcp/explanation/security-model/) — what's protected and what
   isn't.

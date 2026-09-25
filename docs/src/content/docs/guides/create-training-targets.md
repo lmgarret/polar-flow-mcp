@@ -13,7 +13,7 @@ examples.
 ![Claude calling create_training_target](../../../assets/claude-tool-call.webp)
 
 :::tip
-Install the [polar-flow skill](/guides/install-the-skill/) first. It teaches Claude
+Install the [polar-flow skill](/polar-flow-mcp/guides/install-the-skill/) first. It teaches Claude
 which tool to call and the exact parameter shapes, so you can speak in plain
 language rather than tool arguments.
 :::
@@ -92,7 +92,7 @@ Two things worth knowing about the structure:
   choice. The only defaults the tool itself applies are `time` = `18:00` and
   `sport_id` = `1` (running).
 
-See the [`create_training_target` reference](/reference/mcp-tools/#create_training_target)
+See the [`create_training_target` reference](/polar-flow-mcp/reference/mcp-tools/#create_training_target)
 for the full argument schema.
 
 ## Create a simple run (VOLUME target)
@@ -249,5 +249,5 @@ accidental calendar pollution.
 - **Activity uploads** — this server can read completed sessions (summary +
   details), but it does not create them from device data. Polar's app/watch is
   the source of truth. (You *can* log a manual result — see
-  [`create_training_session`](/reference/mcp-tools/#create_training_session).)
+  [`create_training_session`](/polar-flow-mcp/reference/mcp-tools/#create_training_session).)
 - **Polar account creation or device sync** — outside this server's scope.

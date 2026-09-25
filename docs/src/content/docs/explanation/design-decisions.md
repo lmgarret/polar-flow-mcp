@@ -13,7 +13,7 @@ that shape how it behaves and that shouldn't be revisited without discussion.
 The server logs into exactly one Polar account (`POLAR_EMAIL` /
 `POLAR_PASSWORD`). To serve more than one account, run more than one instance
 (e.g. one container per user — see
-[Deploy with Docker Compose](/guides/deploy-with-docker-compose/#multiple-accounts)).
+[Deploy with Docker Compose](/polar-flow-mcp/guides/deploy-with-docker-compose/#multiple-accounts)).
 
 The Flow web API requires email + password. Storing per-user passwords is a step
 up in risk over OAuth tokens — passwords are often reused and can't be revoked
@@ -53,7 +53,7 @@ seconds, metres, km/h, bpm, ISO 8601, real nulls — and does all wire conversio
 in one place. `internal/flow` stays a thin transport; `internal/convert` holds
 the pure primitives (`units.go`) and the response DTOs and their mappers
 (`dto.go`). The full contract lives in
-[Units & dates](/reference/units-and-dates/).
+[Units & dates](/polar-flow-mcp/reference/units-and-dates/).
 
 This keeps a single seam for the divergences: every tool argument, tool result,
 and MCP-app payload speaks the same language, and the messiness is quarantined to
@@ -92,14 +92,14 @@ OAuth 2.1 Authorization Server with Dynamic Client Registration — so it can be
 Claude.ai connector *and* work with Claude Code, both of which speak DCR. It
 signs and validates its own EdDSA JWT access tokens locally (no database, no
 introspection). Browser login on `/authorize` is delegated to a forward-auth
-proxy. See [Expose the server securely](/guides/expose-securely/) and the
-[security model](/explanation/security-model/) for the trust boundaries.
+proxy. See [Expose the server securely](/polar-flow-mcp/guides/expose-securely/) and the
+[security model](/polar-flow-mcp/explanation/security-model/) for the trust boundaries.
 
 ## Confirm-before-write, but only where it works
 
 `create_training_session` and `delete_training_target` ask the user to confirm
 before they run, via an MCP elicitation the client answers and retries with (see
-[User confirmation on writes](/reference/mcp-tools/#user-confirmation-on-writes)). Before this
+[User confirmation on writes](/polar-flow-mcp/reference/mcp-tools/#user-confirmation-on-writes)). Before this
 the only thing standing between a coach model and an irreversible delete was
 prose in the tool description — a hint, not a gate.
 

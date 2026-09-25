@@ -19,8 +19,8 @@ and silent refresh.
    site lives in `docs/` — an [Astro Starlight](https://starlight.astro.build/)
    project organised by the [Diátaxis](https://diataxis.fr/) framework
    (`src/content/docs/{tutorials,guides,reference,explanation}/`). It is served
-   from the domain root (no `base`), so cross-page links are root-absolute
-   (`/<group>/<page>/`). Theme + icon live in `src/styles/theme.css` and
+   as a GitHub Pages project site (`base: '/polar-flow-mcp'`), so cross-page
+   links are root-absolute *with* the base (`/polar-flow-mcp/<group>/<page>/`). Theme + icon live in `src/styles/theme.css` and
    `public/favicon.svg` / `src/assets/logo.svg`. Architecture diagrams are
    fenced `d2` code blocks rendered by [astro-d2](https://github.com/wobsoriano/astro-d2),
    which needs the D2 binary on `PATH` (`go install oss.terrastruct.com/d2@v0.7.0`,
