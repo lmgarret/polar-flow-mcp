@@ -160,11 +160,22 @@ function fmtDist(m) {
 function fmtDistFlat(m) {
   const d = fmtDist(m); return typeof d === "string" ? d : d.n + d.u;
 }
-function fmtPace(dist, secs) {
+function fmtPace(dist, secs, per = 1000) {
   if (!dist || !secs || dist < 100) return null;
-  const secPer = (Number(secs) / Number(dist)) * 1000;
-  const m = Math.floor(secPer/60), s = Math.round(secPer%60);
+  const secPer = Math.round((Number(secs) / Number(dist)) * per);
+  const m = Math.floor(secPer/60), s = secPer%60;
   return `${m}:${String(s).padStart(2,"0")}`;
+}
+// Sport-appropriate speed metric: pace per km on foot, pace per 100 m in the
+// water, km/h for everything else. An unknown category (the details payload
+// carries none) keeps the per-km pace.
+const PACE_KM_CATS = new Set(["run", "walk", "hike"]);
+function speedStat(dist, secs, cat) {
+  if (!dist || !secs || dist < 100) return null;
+  if (cat === "swim") { const v = fmtPace(dist, secs, 100); return { v, unit: "min/100m", short: `${v}/100m`, label: "Pace" }; }
+  if (!cat || PACE_KM_CATS.has(cat)) { const v = fmtPace(dist, secs); return { v, unit: "min/km", short: `${v}/km`, label: "Pace" }; }
+  const v = (Number(dist) / Number(secs) * 3.6).toFixed(1);
+  return { v, unit: "km/h", short: `${v}\u00a0km/h`, label: "Speed" };
 }
 function fmtDateLong(iso) {
   if (!iso) return "";
@@ -276,12 +287,12 @@ function renderDayList(sc) {
     const name = s.sport_name ?? s.sportName ?? sportInfo(s).label;
     const dur = s.session_duration_s ?? durToSecs(s.duration);
     const dist = s.distance_m ?? s.distance ?? 0;
-    const pace = fmtPace(dist, dur);
+    const spd = speedStat(dist, dur, s.sport_category);
     return `<div class="sess-card" onclick="openSession('${esc(id)}')">
       <div class="sc-top">${sportTile(s, true)}<span class="sc-date">${esc(fmtDayShort(sessionDate(s)))}</span></div>
       <div class="sc-name">${esc(name)}</div>
       <div class="sc-dur">${esc(fmtDur(dur))}</div>
-      <div class="sc-stats">${esc(fmtTime(s.start_time))}${dist ? ` · ${esc(fmtDistFlat(dist))}` : ""}${pace ? ` · ${esc(pace)}/km` : ""}</div>
+      <div class="sc-stats">${esc(fmtTime(s.start_time))}${dist ? ` · ${esc(fmtDistFlat(dist))}` : ""}${spd ? ` · ${esc(spd.short)}` : ""}</div>
     </div>`;
   }).join("")}</div>`;
 }
@@ -320,13 +331,13 @@ function summaryHTML(s, fallback, withHeader, withBack) {
   const hrMax = s.hr_max ?? s.hrMax ?? hr.max;
   const kcal = s.calories ?? s.kiloCalories ?? ex?.calories ?? fallback?.calories;
   const load = s.training_load ?? s.trainingLoad;
-  const pace = fmtPace(dist, dur);
+  const spd = speedStat(dist, dur, s.sport_category ?? fallback?.sport_category);
   const distF = dist ? fmtDist(dist) : null;
 
   const cells = [];
   cells.push(heroCell("duration", fmtDur(dur), "", "Duration", null));
   if (distF) cells.push(heroCell("distance", distF.n, distF.u, "Distance", null));
-  if (pace)  cells.push(heroCell("gauge", pace, "min/km", "Pace", "Avg"));
+  if (spd)   cells.push(heroCell("gauge", spd.v, spd.unit, spd.label, "Avg"));
   if (hrAvg) cells.push(heroCell("heart", hrAvg, "bpm", "Heart Rate", "Avg"));
   if (hrMax) cells.push(heroCell("heart", hrMax, "bpm", "Heart Rate", "Max"));
   if (kcal)  cells.push(heroCell("flame", Math.round(kcal), "kcal", "Calories", null));
@@ -374,12 +385,12 @@ function renderDirectDetails(sc) {
   const hrStat = ex?.trainingStatistic?.HEART_RATE ?? {};
   const dur = durToSecs(ex?.duration);
   const dist = ex?.distance ?? 0;
-  const pace = fmtPace(dist, dur);
+  const spd = speedStat(dist, dur, ex?.sport_category);
   const distF = dist ? fmtDist(dist) : null;
   const cells = [];
   if (dur) cells.push(heroCell("duration", fmtDur(dur), "", "Duration", null));
   if (distF) cells.push(heroCell("distance", distF.n, distF.u, "Distance", null));
-  if (pace) cells.push(heroCell("gauge", pace, "min/km", "Pace", "Avg"));
+  if (spd) cells.push(heroCell("gauge", spd.v, spd.unit, spd.label, "Avg"));
   if (hrStat.avg) cells.push(heroCell("heart", hrStat.avg, "bpm", "Heart Rate", "Avg"));
   if (hrStat.max) cells.push(heroCell("heart", hrStat.max, "bpm", "Heart Rate", "Max"));
   if (ex?.calories) cells.push(heroCell("flame", Math.round(ex.calories), "kcal", "Calories", null));
