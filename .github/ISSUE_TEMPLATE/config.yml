@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://lmgarret.github.io/polar-flow-mcp/
+    about: Setup, tool reference, and troubleshooting.
+  - name: Report a security vulnerability
+    url: https://github.com/lmgarret/polar-flow-mcp/security/advisories/new
+    about: Please report security issues privately, not as a public issue.
