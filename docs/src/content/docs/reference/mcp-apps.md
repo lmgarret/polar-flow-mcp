@@ -23,7 +23,7 @@ The list renders one card per session, newest first:
 ![Training sessions rendered as cards](../../../assets/mcp-apps/sessions.webp)
 
 Clicking a card calls `get_training_session_summary` from inside the widget
-and drills into the summary — duration, distance, pace, heart rate, calories,
+and drills into the summary — duration, distance, pace or speed (per sport), heart rate, calories,
 training load and time in each heart-rate zone:
 
 ![One session's summary with its heart-rate zone bar](../../../assets/mcp-apps/session-summary.webp)
