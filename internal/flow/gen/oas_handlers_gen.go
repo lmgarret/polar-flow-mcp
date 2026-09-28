@@ -2161,6 +2161,10 @@ func (s *Server) handleDeleteTrainingSessionRequest(args [1]string, argsEscaped 
 // Returns 200 with an empty body. Idempotent in practice — deleting an already-gone id still returns
 // 200.
 //
+// Requires `X-Requested-With: XMLHttpRequest` even though the path sits outside `/api/*`: Play's CSRF
+// filter guards every mutation, not just `/api/*` writes. Without it: `403` with an HTML body
+// (observed by the polar-flow-mcp client, which sends the header on every non-GET request).
+//
 // DELETE /training/target/{id}
 func (s *Server) handleDeleteTrainingTargetRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -2304,6 +2308,10 @@ func (s *Server) handleDeleteTrainingTargetRequest(args [1]string, argsEscaped b
 					Name: "id",
 					In:   "path",
 				}: params.ID,
+				{
+					Name: "X-Requested-With",
+					In:   "header",
+				}: params.XRequestedWith,
 			},
 			Raw: r,
 		}

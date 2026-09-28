@@ -835,6 +835,9 @@ func decodeDeleteTrainingTargetResponse(resp *http.Response) (res DeleteTraining
 		default:
 			return res, validate.InvalidContentType(ct)
 		}
+	case 403:
+		// Code 403.
+		return &DeleteTrainingTargetForbidden{}, nil
 	}
 	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
@@ -1719,6 +1722,9 @@ func decodeGetProgressViewSummaryResponse(resp *http.Response) (res GetProgressV
 		default:
 			return res, validate.InvalidContentType(ct)
 		}
+	case 404:
+		// Code 404.
+		return &GetProgressViewSummaryNotFound{}, nil
 	}
 	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }

@@ -209,6 +209,10 @@ type Handler interface {
 	// Returns 200 with an empty body. Idempotent in practice — deleting an already-gone id still returns
 	// 200.
 	//
+	// Requires `X-Requested-With: XMLHttpRequest` even though the path sits outside `/api/*`: Play's CSRF
+	// filter guards every mutation, not just `/api/*` writes. Without it: `403` with an HTML body
+	// (observed by the polar-flow-mcp client, which sends the header on every non-GET request).
+	//
 	// DELETE /training/target/{id}
 	DeleteTrainingTarget(ctx context.Context, params DeleteTrainingTargetParams) (DeleteTrainingTargetRes, error)
 	// EditTrainingSession implements editTrainingSession operation.

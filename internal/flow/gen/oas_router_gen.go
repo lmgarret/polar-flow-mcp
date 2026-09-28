@@ -83,6 +83,9 @@ var (
 	rn8AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Requested-With",
 	}
+	rn22AllowedHeaders = map[string]string{
+		"DELETE": "X-Requested-With",
+	}
 )
 
 func (s *Server) cutPrefix(path string) (string, bool) {
@@ -1552,7 +1555,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "DELETE",
-								allowedHeaders: nil,
+								allowedHeaders: rn22AllowedHeaders,
 								acceptPost:     "",
 								acceptPatch:    "",
 							})

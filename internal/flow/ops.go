@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -136,9 +135,9 @@ func (c *Client) CreateTrainingTarget(ctx context.Context, body *gen.TrainingTar
 	}
 }
 
-// extractTargetID parses {"id": <number>} (or a bare numeric body) from the
-// create-target response. The spec doesn't pin this format down; observed
-// payloads have been either form.
+// extractTargetID parses the new id from the create-target response. The spec
+// pins it as a bare numeric string; the {"id": <number>} object form is also
+// accepted defensively in case Polar changes the shape.
 func extractTargetID(body []byte) (int64, error) {
 	trimmed := strings.TrimSpace(string(body))
 	if trimmed == "" {
@@ -243,8 +242,9 @@ func (c *Client) GetCalendarWeekSummary(ctx context.Context, from, to time.Time)
 
 // GetProgressViewSummary returns aggregated training totals (sessions, distance,
 // duration, zone time, sport distribution, training-benefit distribution) for the
-// supplied [from, to] range. `group` filters to a single sportId (use 0 for all
-// sports). `timeFrame` is the bucket size for breakdowns: "6w", "3m", or "1y".
+// supplied [from, to] range. `group` is the time-bucket granularity (e.g.
+// "MONTH") — not a sport filter. `timeFrame` is the bucket size for breakdowns:
+// "6w", "3m", or "1y".
 func (c *Client) GetProgressViewSummary(ctx context.Context, from, to time.Time, group, timeFrame string) (*gen.ProgressViewSummary, error) {
 	// Progress endpoints want DD-MM-YYYY (dashes, zero-padded) — distinct from
 	// the D.M.YYYY dot form the calendar endpoints use. Sending the dot form
@@ -263,16 +263,14 @@ func (c *Client) GetProgressViewSummary(ctx context.Context, from, to time.Time,
 		gen.GetProgressViewSummaryParams{XRequestedWith: gen.XRequestedWithXMLHttpRequest},
 	)
 	if err != nil {
-		var sce *validate.UnexpectedStatusCodeError
-		if errors.As(err, &sce) && sce.StatusCode == http.StatusNotFound {
-			// Account has no progress data in this range — return zeros per the tool contract.
-			return &gen.ProgressViewSummary{}, nil
-		}
 		return nil, wrapFlowError("progress view summary", err)
 	}
 	switch v := res.(type) {
 	case *gen.ProgressViewSummary:
 		return v, nil
+	case *gen.GetProgressViewSummaryNotFound:
+		// Account has no progress data in this range — return zeros per the tool contract.
+		return &gen.ProgressViewSummary{}, nil
 	case *gen.Unauthorized:
 		return nil, ErrLoginFailed
 	default:
@@ -280,13 +278,16 @@ func (c *Client) GetProgressViewSummary(ctx context.Context, from, to time.Time,
 	}
 }
 
-// DeleteTrainingTarget deletes the target with the given numeric id.
-// Returns ErrTargetNotFound on 404.
+// DeleteTrainingTarget deletes the target with the given numeric id. Polar
+// returns 200 even for an already-gone id, so this never yields ErrTargetNotFound.
 func (c *Client) DeleteTrainingTarget(ctx context.Context, id int64) error {
 	if id <= 0 {
 		return fmt.Errorf("flow: delete training target: id must be > 0")
 	}
-	res, err := c.API.DeleteTrainingTarget(ctx, gen.DeleteTrainingTargetParams{ID: id})
+	res, err := c.API.DeleteTrainingTarget(ctx, gen.DeleteTrainingTargetParams{
+		ID:             id,
+		XRequestedWith: gen.XRequestedWithXMLHttpRequest,
+	})
 	if err != nil {
 		return fmt.Errorf("flow: delete training target: %w", err)
 	}
@@ -295,12 +296,11 @@ func (c *Client) DeleteTrainingTarget(ctx context.Context, id int64) error {
 		return nil
 	case *gen.Unauthorized:
 		return ErrLoginFailed
+	case *gen.DeleteTrainingTargetForbidden:
+		return fmt.Errorf("flow: delete training target: 403 CSRF rejection (X-Requested-With missing)")
 	default:
-		// ogen surfaces 404 by returning an *ogenerrors.UnexpectedStatusCode
-		// from the call itself, not via the Res sum-type. Map the type-default
-		// case to ErrTargetNotFound is therefore not strictly correct — but the
-		// generated DeleteTrainingTargetRes set is {OK, Unauthorized} only, so
-		// anything else here means a genuine surprise.
+		// Polar returns 200 even for an already-gone id, so there is no 404
+		// case to map; anything else here means a genuine surprise.
 		return fmt.Errorf("flow: delete training target: unexpected response %T", res)
 	}
 }
