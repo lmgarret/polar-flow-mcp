@@ -23,7 +23,7 @@ and silent refresh.
    links are root-absolute *with* the base (`/polar-flow-mcp/<group>/<page>/`). Theme + icon live in `src/styles/theme.css` and
    `public/favicon.svg` / `src/assets/logo.svg`. Architecture diagrams are
    fenced `d2` code blocks rendered by [astro-d2](https://github.com/wobsoriano/astro-d2),
-   which needs the D2 binary on `PATH` (`go install oss.terrastruct.com/d2@v0.7.0`,
+   which needs the D2 binary on `PATH` (`go install oss.terrastruct.com/d2@v0.9.0`,
    or the release tarball — CI installs it). Build/preview with
    `cd docs && npm ci && npm run build` (or `npm run dev`).
 
