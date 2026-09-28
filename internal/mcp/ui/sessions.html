@@ -97,6 +97,14 @@ body{padding:7px 14px;overflow-x:hidden}
   .det-cols .zones{flex:1 1 auto;max-width:none;width:100%}
   .laps-strip{flex-wrap:wrap;overflow-x:visible}
 }
+
+/* Feeling + note (summary) */
+.note-row{display:flex;align-items:baseline;gap:12px;margin-top:10px;flex-wrap:wrap}
+.feel{display:inline-flex;align-items:center;gap:6px;font-size:.7rem;font-weight:700;color:#d0d0d0;flex-shrink:0}
+.feel-dots{display:inline-flex;gap:3px}
+.feel-dots i{width:7px;height:7px;border-radius:50%;background:#2a2a2a}
+.feel-dots i.on{background:#e4002b}
+.note-txt{font-size:.76rem;color:#8a8a8a;font-style:italic;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -352,7 +360,18 @@ function summaryHTML(s, fallback, withHeader, withBack) {
       <div class="sh-txt"><div class="sh-name">${esc(name)}</div>${dateStr?`<div class="sh-date">${esc(fmtDateLong(dateStr))}</div>`:""}</div>
     </div>` : "";
 
-  return `<div class="fade-in">${header}<div class="hero">${cells.join("")}</div>${zonesHTML}</div>`;
+  return `<div class="fade-in">${header}<div class="hero">${cells.join("")}</div>${zonesHTML}${noteHTML(s)}</div>`;
+}
+
+// Feeling (1 = bad … 5 = great, from the canonical summary) and the free-text
+// note. Shown when set, so an edit_training_session result reflects the change.
+const FEELING = {1:"Bad",2:"Not so good",3:"Average",4:"Good",5:"Great"};
+function noteHTML(s) {
+  const f = Number(s.feeling);
+  const note = typeof s.note === "string" ? s.note.trim() : "";
+  if (!FEELING[f] && !note) return "";
+  const dots = FEELING[f] ? `<span class="feel"><span class="feel-dots">${[1,2,3,4,5].map(i => `<i class="${i<=f?"on":""}"></i>`).join("")}</span>${esc(FEELING[f])}</span>` : "";
+  return `<div class="note-row">${dots}${note ? `<span class="note-txt">${esc(note)}</span>` : ""}</div>`;
 }
 
 // ── Direct summary (single tool call, no list) ─────────

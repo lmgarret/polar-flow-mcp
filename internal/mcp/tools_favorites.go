@@ -7,6 +7,16 @@ import (
 	"github.com/lmgarret/polar-flow-mcp/internal/flow"
 )
 
+// favoritesUI is the MCP-app page rendering favorite_list / favorite_detail /
+// favorite_scheduled payloads.
+const favoritesUI = "ui://polar-flow/favorites.html"
+
+// addWithUI registers a tool bound to an MCP-app UI resource (see bindUI).
+func addWithUI(s *server.MCPServer, uri string, t mcpgo.Tool, h server.ToolHandlerFunc) {
+	bindUI(&t, uri)
+	s.AddTool(t, h)
+}
+
 // registerFavoriteAndSessionEditTools registers the favorites, route and
 // session-edit tools. Descriptions follow the RegisterTools convention: the
 // behaviour, limits and quirks come from internal/flow/openapi.yaml (probed
@@ -17,7 +27,7 @@ func registerFavoriteAndSessionEditTools(s *server.MCPServer, fc *flow.Client) {
 	sportIDDesc := "Polar sport id — must exist in list_sports (Polar itself accepts unknown ids " +
 		"silently, so they are rejected here). Common: 1=running, 2=cycling, 23=swimming, 11=hiking."
 
-	s.AddTool(mcpgo.NewTool("list_favorites",
+	addWithUI(s, favoritesUI, mcpgo.NewTool("list_favorites",
 		mcpgo.WithDescription(
 			"List the account's favorites: reusable training-target templates (type VOLUME, "+
 				"STEADY_RACE_PACE or PHASED) and imported GPS routes (type ROUTE). Each entry has a "+
@@ -30,7 +40,7 @@ func registerFavoriteAndSessionEditTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Filter: \"all\" (default), \"templates\" (training-target favorites) or \"routes\".")),
 	), withLogging("list_favorites", ListFavoritesHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("get_favorite",
+	addWithUI(s, favoritesUI, mcpgo.NewTool("get_favorite",
 		mcpgo.WithDescription(
 			"Return one favorite by favorite_id: name, description, type and its exercise targets "+
 				"(sport_id, duration_s in seconds, distance_m in metres, calories, and the raw phase "+
@@ -78,7 +88,7 @@ func registerFavoriteAndSessionEditTools(s *server.MCPServer, fc *flow.Client) {
 			"\"recovery\": {\"duration_s\": 90}},\n" +
 			"  {\"type\": \"cooldown\", \"duration_s\": 600}]}",
 	)}, favoriteGoalOpts(true)...)
-	s.AddTool(mcpgo.NewTool("create_favorite", createOpts...),
+	addWithUI(s, favoritesUI, mcpgo.NewTool("create_favorite", createOpts...),
 		withLogging("create_favorite", CreateFavoriteHandler(fc)))
 
 	updateOpts := append([]mcpgo.ToolOption{
@@ -95,7 +105,7 @@ func registerFavoriteAndSessionEditTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithInteger("favorite_id", mcpgo.Required(), mcpgo.Min(1),
 			mcpgo.Description("favorite_id from list_favorites.")),
 	}, favoriteGoalOpts(true)...)
-	s.AddTool(mcpgo.NewTool("update_favorite", updateOpts...),
+	addWithUI(s, favoritesUI, mcpgo.NewTool("update_favorite", updateOpts...),
 		withLogging("update_favorite", UpdateFavoriteHandler(fc)))
 
 	s.AddTool(mcpgo.NewTool("delete_favorite",
@@ -111,7 +121,7 @@ func registerFavoriteAndSessionEditTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("favorite_id from list_favorites.")),
 	), withLogging("delete_favorite", DeleteFavoriteHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("rename_favorite",
+	addWithUI(s, favoritesUI, mcpgo.NewTool("rename_favorite",
 		mcpgo.WithDescription(
 			"Rename a favorite or route without touching anything else. The name must be 1–45 "+
 				"characters and not blank (Polar would otherwise accept a whitespace-only name, or "+
@@ -124,7 +134,7 @@ func registerFavoriteAndSessionEditTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("New name, 1–45 characters.")),
 	), withLogging("rename_favorite", RenameFavoriteHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("set_favorite_sport",
+	addWithUI(s, favoritesUI, mcpgo.NewTool("set_favorite_sport",
 		mcpgo.WithDescription(
 			"Change the sport of a favorite (or route) without touching anything else. Polar's endpoint "+
 				"validates nothing — it accepts unknown sport ids and exercise-target ids with a success "+
@@ -141,7 +151,7 @@ func registerFavoriteAndSessionEditTools(s *server.MCPServer, fc *flow.Client) {
 				"favorite has exactly one.")),
 	), withLogging("set_favorite_sport", SetFavoriteSportHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("save_target_as_favorite",
+	addWithUI(s, favoritesUI, mcpgo.NewTool("save_target_as_favorite",
 		mcpgo.WithDescription(
 			"Save an existing scheduled training target as a new favorite (the \"Add to favorites\" "+
 				"button in the Flow target editor). Copies the name, description, type, sport and phases; "+
@@ -156,7 +166,7 @@ func registerFavoriteAndSessionEditTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Favorite name (1–45 characters); defaults to the target's name.")),
 	), withLogging("save_target_as_favorite", SaveTargetAsFavoriteHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("schedule_favorite",
+	addWithUI(s, favoritesUI, mcpgo.NewTool("schedule_favorite",
 		mcpgo.WithDescription(
 			"Schedule a favorite as a training target on a date (the diary's \"Add → Favorites\" "+
 				"picker). Copies the favorite's name, description, sport and phases into a new target and "+
@@ -233,7 +243,7 @@ func registerFavoriteAndSessionEditTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Numeric session id from list_training_sessions.")),
 	), withLogging("delete_training_session", DeleteTrainingSessionHandler(fc)))
 
-	s.AddTool(mcpgo.NewTool("edit_training_session",
+	addWithUI(s, "ui://polar-flow/sessions.html", mcpgo.NewTool("edit_training_session",
 		mcpgo.WithDescription(
 			"Edit a completed training session — what the Flow diary's \"Edit session\" form allows. "+
 				"Pass only the fields to change; everything else keeps its current value. The date/time "+
