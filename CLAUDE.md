@@ -14,6 +14,10 @@ and silent refresh.
 
 1. **Lint**: `~/go/bin/golangci-lint run ./...` — fix all errors.
 2. **Tests**: `CGO_ENABLED=0 go test -count=1 ./...` — fix all failures. (`-race` requires CGO and is skipped here.)
+   Handler tests run against `httptest` fakes of Flow built with `flow.NewForTesting`
+   (`internal/mcp/fakeflow_test.go`). Live round-trips against a test account are
+   build-tagged: `POLAR_LIVE_JAR=<cookie jar> go test -tags live -run Live ./internal/mcp/`
+   (never logs in with a password; writes and then deletes real data).
 3. **Docs**: keep `README.md`, `internal/flow/README.md`, and this file in sync
    when adding or removing tools, env vars, or persistence behaviour. The docs
    site lives in `docs/` — an [Astro Starlight](https://starlight.astro.build/)
@@ -53,7 +57,7 @@ and silent refresh.
 | **Browser-fingerprint TLS + HTTP/2 for the login chain** (`azuretls` Chrome preset) and **for stdlib http.Client API calls** (`utls` Chrome ClientHello over `http2.Transport`) | `flow.polar.com` is behind a CloudFront WAF that inspects JA3/JA4 **and** HTTP/2 framing. Default Go net/http gets `403 X-Cache: Error from cloudfront` on `/flowSso/redirect`. uTLS alone (TLS only) is insufficient. |
 | **3-hop silent refresh on `401 {"error":"NotAuthenticated"}`** | Standard Polar Flow session-rotation path; falls back to full login if `session_id` on `auth.polar.com` has also expired. |
 | **Bind-first / deferred login** (`flow.New` never logs in; `EnsureSession` runs lazily from `transport.Do`, warmed up in a background goroutine) | A full login takes seconds (CloudFront WAF + redirect chain). Blocking startup on it blocks the listener from binding, which races the MCP client's `initialize` and times it out at 60s. Binding first makes the handshake instant. |
-| **Confirm-before-write via elicitation, gated on a capability probe** (`internal/mcp/confirm.go`) | `create_training_session` and `delete_training_target` ask the user before they run — prose in a tool description is a hint, not a gate. The footgun: mcp-go's legacy bridge answers an input request with a server-initiated `elicitation/create`, and `stdioSession` / `streamableHttpSession` implement `SessionWithElicitation` unconditionally — so it sends that request to clients that never declared the capability and then fails the whole tool call. `canElicit` probes first (session capabilities for legacy, request `_meta` for `2026-07-28`+) and **skips the gate when the client cannot answer**, rather than breaking the tool. |
+| **Confirm-before-write via elicitation, gated on a capability probe** (`internal/mcp/confirm.go`) | `create_training_session` and the three deletes (`delete_training_target`, `delete_training_session`, `delete_favorite`) ask the user before they run — prose in a tool description is a hint, not a gate. The footgun: mcp-go's legacy bridge answers an input request with a server-initiated `elicitation/create`, and `stdioSession` / `streamableHttpSession` implement `SessionWithElicitation` unconditionally — so it sends that request to clients that never declared the capability and then fails the whole tool call. `canElicit` probes first (session capabilities for legacy, request `_meta` for `2026-07-28`+) and **skips the gate when the client cannot answer**, rather than breaking the tool. |
 | **`WithCacheHints(5 min, public)` on the catalogues** | Tools are registered once at startup — no `ToolFilter`, no per-session set — and the UI resources are `go:embed`ed, so every list/read result is identical for every caller and changes only with the binary. Short TTL so a stale catalogue survives a redeploy by minutes, not for the life of a connection. Emitted to `2026-07-28`+ clients only. |
 | **Custom `ht.Client` transport wraps ogen's `gen.Client`** | Lets us inject `X-Requested-With`, the cookie jar, and the 401-retry without touching generated code. |
 | **Two mutually-exclusive inbound auth mechanisms** (`MCP_API_KEY` static key; `OAUTH_PUBLIC_URL` OAuth) | The OAuth path is the only one Claude.ai's connector UI can drive, but it needs a forward-auth proxy — too much machinery for a one-operator Claude Code deployment. `MCP_API_KEY` (≥24 chars, SHA-256 + constant-time compare in `internal/auth/apikey.go`) is the low-ceremony alternative: one secret, no extra routes, no signing key. Refusing both at once (`config.loadAPIKey`) keeps the weaker mechanism from answering for the stronger one. |
@@ -88,6 +92,32 @@ and silent refresh.
 | `get_training_session_details` | Lap / sample detail of one session |
 | `get_progress_summary` | Aggregated training totals over a range |
 | `create_training_session` | Log a manually-entered completed session — writes real data; coach must only call on explicit user request; confirms with the user first where the host supports elicitation |
+| `edit_training_session` | Edit a completed session — note/feeling via the partial endpoint (any session); name/sport/duration/distance/HR/kcal/speed via the full form (manual single-exercise sessions only) |
+| `delete_training_session` | Delete a completed session — pre-checks existence (Flow's delete answers 200 for unknown ids), confirms where the host supports elicitation |
+| `list_favorites` | Favorites (templates) and ROUTE favorites, with `favorite_id` + `exercise_target_id` |
+| `get_favorite` | Read one favorite |
+| `create_favorite` | Create a favorite (duration / distance / phases goal) |
+| `update_favorite` | Full-replace edit of a single-sport, non-route favorite |
+| `rename_favorite` | Rename a favorite or route |
+| `set_favorite_sport` | Change a favorite's sport — validated against the catalogue and verified by read-back |
+| `delete_favorite` | Delete a favorite or route — confirms where the host supports elicitation |
+| `save_target_as_favorite` | Copy a scheduled target into a new favorite (client-side, like the web UI) |
+| `schedule_favorite` | Schedule a favorite on a date (`createTargetFromFavourite`) |
+| `import_route` | Parse GPX/TCX in Go (`convert/route.go`) and upload trackpoints as JSON |
+| `get_route` | Route geometry by exercise_target_id (or favorite_id, resolved) |
+
+## Validating tool input
+
+Flow validates little on the favorite/route endpoints (unknown sport ids and
+whitespace names are stored, route names silently truncated, bad points
+silently dropped) and answers the session edit's bad values with a bare 500.
+New write tools therefore reject bad input **before any request goes out**:
+read arguments with the strict accessors in `internal/mcp/args.go`
+(`idArg`, `intArgRange`, `floatArgRange`, `textArg` — wrong types, non-integers
+and out-of-range values become errors naming the argument), check sport ids with
+`fc.SportName` (cached catalogue), and cover every rule with a
+`runValidationCases` table that also asserts nothing reached the fake server.
+The probed limits are recorded in the vendored spec.
 
 ## Documenting tools (descriptions & examples)
 

@@ -83,19 +83,45 @@ func encodeAddSportProfileResponse(response AddSportProfileRes, w http.ResponseW
 func encodeChangeFavoriteSportResponse(response ChangeFavoriteSportRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
 	case *ChangeFavoriteSportOK:
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(200)
 
-		e := new(jx.Encoder)
-		response.Encode(e)
-		if _, err := e.WriteTo(w); err != nil {
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
 			return errors.Wrap(err, "write")
 		}
 
 		return nil
 
 	case *ChangeFavoriteSportBadRequest:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(400)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ChangeFavoriteSportInternalServerError:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(500)
+		span.SetStatus(codes.Error, http.StatusText(500))
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -120,6 +146,18 @@ func encodeCreateFavoriteResponse(response CreateFavoriteRes, w http.ResponseWri
 
 		return nil
 
+	case *ValidationError:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(400)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
@@ -129,6 +167,77 @@ func encodeCreateFavoriteResponse(response CreateFavoriteRes, w http.ResponseWri
 		if _, err := e.WriteTo(w); err != nil {
 			return errors.Wrap(err, "write")
 		}
+
+		return nil
+
+	case *CreateFavoriteInternalServerError:
+		w.WriteHeader(500)
+		span.SetStatus(codes.Error, http.StatusText(500))
+
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
+}
+
+func encodeCreateTargetFromFavoriteResponse(response CreateTargetFromFavoriteRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *TargetFromFavorite:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(200)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CreateTargetFromFavoriteOKTextPlain:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(200)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CreateTargetFromFavoriteBadRequest:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(400)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(401)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CreateTargetFromFavoriteInternalServerError:
+		w.WriteHeader(500)
+		span.SetStatus(codes.Error, http.StatusText(500))
 
 		return nil
 
@@ -214,12 +323,28 @@ func encodeCreateTrainingTargetResponse(response CreateTrainingTargetRes, w http
 func encodeDeleteFavoriteResponse(response DeleteFavoriteRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
 	case *DeleteFavoriteOK:
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(200)
 
-		e := new(jx.Encoder)
-		response.Encode(e)
-		if _, err := e.WriteTo(w); err != nil {
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *DeleteFavoriteBadRequest:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(400)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
 			return errors.Wrap(err, "write")
 		}
 
@@ -238,7 +363,16 @@ func encodeDeleteFavoriteResponse(response DeleteFavoriteRes, w http.ResponseWri
 		return nil
 
 	case *DeleteFavoriteNotFound:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(404)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -284,6 +418,11 @@ func encodeDeleteTrainingSessionResponse(response DeleteTrainingSessionRes, w ht
 
 		return nil
 
+	case *DeleteTrainingSessionBadRequest:
+		w.WriteHeader(400)
+
+		return nil
+
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
@@ -298,6 +437,12 @@ func encodeDeleteTrainingSessionResponse(response DeleteTrainingSessionRes, w ht
 
 	case *DeleteTrainingSessionNotFound:
 		w.WriteHeader(404)
+
+		return nil
+
+	case *DeleteTrainingSessionInternalServerError:
+		w.WriteHeader(500)
+		span.SetStatus(codes.Error, http.StatusText(500))
 
 		return nil
 
@@ -322,6 +467,46 @@ func encodeDeleteTrainingTargetResponse(response DeleteTrainingTargetRes, w http
 		if _, err := e.WriteTo(w); err != nil {
 			return errors.Wrap(err, "write")
 		}
+
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
+}
+
+func encodeEditTrainingSessionResponse(response EditTrainingSessionRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *EditTrainingSessionOK:
+		w.WriteHeader(200)
+
+		return nil
+
+	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(401)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *EditTrainingSessionForbidden:
+		w.WriteHeader(403)
+
+		return nil
+
+	case *EditTrainingSessionNotFound:
+		w.WriteHeader(404)
+
+		return nil
+
+	case *EditTrainingSessionInternalServerError:
+		w.WriteHeader(500)
+		span.SetStatus(codes.Error, http.StatusText(500))
 
 		return nil
 
@@ -535,8 +720,31 @@ func encodeGetFavoriteResponse(response GetFavoriteRes, w http.ResponseWriter, s
 
 		return nil
 
+	case *GetFavoriteForbidden:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(403)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	case *GetFavoriteNotFound:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(404)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -573,11 +781,6 @@ func encodeGetFavoriteExerciseTargetResponse(response GetFavoriteExerciseTargetR
 
 	case *GetFavoriteExerciseTargetForbidden:
 		w.WriteHeader(403)
-
-		return nil
-
-	case *GetFavoriteExerciseTargetNotFound:
-		w.WriteHeader(404)
 
 		return nil
 
@@ -907,6 +1110,11 @@ func encodeGetTrainingSessionSummaryResponse(response GetTrainingSessionSummaryR
 
 		return nil
 
+	case *GetTrainingSessionSummaryForbidden:
+		w.WriteHeader(403)
+
+		return nil
+
 	case *GetTrainingSessionSummaryNotFound:
 		w.WriteHeader(404)
 
@@ -960,6 +1168,20 @@ func encodeImportRouteResponse(response ImportRouteRes, w http.ResponseWriter, s
 
 		return nil
 
+	case *ImportRouteBadRequest:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(400)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
@@ -969,6 +1191,12 @@ func encodeImportRouteResponse(response ImportRouteRes, w http.ResponseWriter, s
 		if _, err := e.WriteTo(w); err != nil {
 			return errors.Wrap(err, "write")
 		}
+
+		return nil
+
+	case *ImportRouteInternalServerError:
+		w.WriteHeader(500)
+		span.SetStatus(codes.Error, http.StatusText(500))
 
 		return nil
 
@@ -1048,6 +1276,20 @@ func encodeListFavoritesSimpleResponse(response ListFavoritesSimpleRes, w http.R
 		e := new(jx.Encoder)
 		response.Encode(e)
 		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *ListFavoritesSimpleOKTextPlain:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(200)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
 			return errors.Wrap(err, "write")
 		}
 
@@ -1135,25 +1377,45 @@ func encodeListTrainingSessionsResponse(response ListTrainingSessionsRes, w http
 func encodeRenameFavoriteResponse(response RenameFavoriteRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
 	case *RenameFavoriteOK:
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(200)
 
-		e := new(jx.Encoder)
-		response.Encode(e)
-		if _, err := e.WriteTo(w); err != nil {
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
 			return errors.Wrap(err, "write")
 		}
 
 		return nil
 
 	case *RenameFavoriteBadRequest:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(400)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
 	case *RenameFavoriteInternalServerError:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(500)
 		span.SetStatus(codes.Error, http.StatusText(500))
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -1200,6 +1462,18 @@ func encodeUpdateFavoriteResponse(response UpdateFavoriteRes, w http.ResponseWri
 
 		return nil
 
+	case *ValidationError:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(400)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
@@ -1212,7 +1486,64 @@ func encodeUpdateFavoriteResponse(response UpdateFavoriteRes, w http.ResponseWri
 
 		return nil
 
+	case *UpdateFavoriteForbidden:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(403)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	case *UpdateFavoriteNotFound:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(404)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
+}
+
+func encodeUpdateTrainingSessionDataResponse(response UpdateTrainingSessionDataRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *UpdateTrainingSessionDataOK:
+		w.WriteHeader(200)
+
+		return nil
+
+	case *UpdateTrainingSessionDataBadRequest:
+		w.WriteHeader(400)
+
+		return nil
+
+	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(401)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *UpdateTrainingSessionDataNotFound:
 		w.WriteHeader(404)
 
 		return nil

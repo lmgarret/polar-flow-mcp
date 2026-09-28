@@ -300,6 +300,77 @@ func decodeCreateFavoriteParams(args [0]string, argsEscaped bool, r *http.Reques
 	return params, nil
 }
 
+// CreateTargetFromFavoriteParams is parameters of createTargetFromFavorite operation.
+type CreateTargetFromFavoriteParams struct {
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
+	XRequestedWith XRequestedWith
+}
+
+func unpackCreateTargetFromFavoriteParams(packed middleware.Parameters) (params CreateTargetFromFavoriteParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-Requested-With",
+			In:   "header",
+		}
+		params.XRequestedWith = packed[key].(XRequestedWith)
+	}
+	return params
+}
+
+func decodeCreateTargetFromFavoriteParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateTargetFromFavoriteParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Set default value for header: X-Requested-With.
+	{
+		val := XRequestedWith("XMLHttpRequest")
+		params.XRequestedWith = val
+	}
+	// Decode header: X-Requested-With.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XRequestedWith = XRequestedWith(c)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.XRequestedWith.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-Requested-With",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // CreateTrainingSessionParams is parameters of createTrainingSession operation.
 type CreateTrainingSessionParams struct {
 	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
@@ -879,6 +950,131 @@ func decodeDeleteTrainingTargetParams(args [1]string, argsEscaped bool, r *http.
 		return params, &ogenerrors.DecodeParamError{
 			Name: "id",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// EditTrainingSessionParams is parameters of editTrainingSession operation.
+type EditTrainingSessionParams struct {
+	// Training session numeric ID (e.g. 8346808740).
+	ID int64
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
+	XRequestedWith XRequestedWith
+}
+
+func unpackEditTrainingSessionParams(packed middleware.Parameters) (params EditTrainingSessionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(int64)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "X-Requested-With",
+			In:   "header",
+		}
+		params.XRequestedWith = packed[key].(XRequestedWith)
+	}
+	return params
+}
+
+func decodeEditTrainingSessionParams(args [1]string, argsEscaped bool, r *http.Request) (params EditTrainingSessionParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt64(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Set default value for header: X-Requested-With.
+	{
+		val := XRequestedWith("XMLHttpRequest")
+		params.XRequestedWith = val
+	}
+	// Decode header: X-Requested-With.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XRequestedWith = XRequestedWith(c)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.XRequestedWith.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-Requested-With",
+			In:   "header",
 			Err:  err,
 		}
 	}
@@ -2814,6 +3010,131 @@ func unpackUpdateFavoriteParams(packed middleware.Parameters) (params UpdateFavo
 }
 
 func decodeUpdateFavoriteParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateFavoriteParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt64(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Set default value for header: X-Requested-With.
+	{
+		val := XRequestedWith("XMLHttpRequest")
+		params.XRequestedWith = val
+	}
+	// Decode header: X-Requested-With.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XRequestedWith = XRequestedWith(c)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.XRequestedWith.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-Requested-With",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// UpdateTrainingSessionDataParams is parameters of updateTrainingSessionData operation.
+type UpdateTrainingSessionDataParams struct {
+	// Training session numeric ID (e.g. 8346808740).
+	ID int64
+	// CSRF defense on /api/* write operations. Play's CSRF filter is configured to whitelist requests
+	// carrying this header (browsers cannot set it on cross-origin form submissions). Without it: 403 with
+	// an "Unauthorized" HTML body — easy to mistake for an auth failure. Must equal `XMLHttpRequest`.
+	XRequestedWith XRequestedWith
+}
+
+func unpackUpdateTrainingSessionDataParams(packed middleware.Parameters) (params UpdateTrainingSessionDataParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(int64)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "X-Requested-With",
+			In:   "header",
+		}
+		params.XRequestedWith = packed[key].(XRequestedWith)
+	}
+	return params
+}
+
+func decodeUpdateTrainingSessionDataParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateTrainingSessionDataParams, _ error) {
 	h := uri.NewHeaderDecoder(r.Header)
 	// Decode path: id.
 	if err := func() error {

@@ -17,6 +17,10 @@ type CreateFavoriteRes interface {
 	createFavoriteRes()
 }
 
+type CreateTargetFromFavoriteRes interface {
+	createTargetFromFavoriteRes()
+}
+
 type CreateTrainingSessionRes interface {
 	createTrainingSessionRes()
 }
@@ -39,6 +43,10 @@ type DeleteTrainingSessionRes interface {
 
 type DeleteTrainingTargetRes interface {
 	deleteTrainingTargetRes()
+}
+
+type EditTrainingSessionRes interface {
+	editTrainingSessionRes()
 }
 
 type GetActivityTimelineFourRes interface {
@@ -147,6 +155,10 @@ type SaveSportProfileRes interface {
 
 type UpdateFavoriteRes interface {
 	updateFavoriteRes()
+}
+
+type UpdateTrainingSessionDataRes interface {
+	updateTrainingSessionDataRes()
 }
 
 type UpdateTrainingTargetRes interface {

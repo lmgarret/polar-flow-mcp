@@ -21,6 +21,8 @@ import (
 // sensitiveArgKeys holds arg names whose values must not appear in logs.
 var sensitiveArgKeys = map[string]bool{
 	"name": true, "note": true, "description": true, "phases": true,
+	// Route files: large, and a GPS trace reveals where the user trains.
+	"content": true,
 }
 
 func safeArgs(args map[string]any) map[string]any {
@@ -453,6 +455,8 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 	)
 	bindUI(&gsd, "ui://polar-flow/sessions.html")
 	s.AddTool(gsd, withLogging("get_training_session_details", GetTrainingSessionDetailsHandler(fc)))
+
+	registerFavoriteAndSessionEditTools(s, fc)
 }
 
 // phaseItemSchema returns the JSON-schema for one entry of the `phases` array.

@@ -61,6 +61,21 @@ The `-tags=polartest` flag is required — it enables test-only code that allows
 redirecting HTTP requests to test servers. Omitting the flag will cause test
 failures. All tests must pass before submitting a PR; CI runs the same command.
 
+### Live round-trips (optional)
+
+The favorites, route and session-edit tools also have end-to-end tests that
+create, read back, update and delete real data on a Polar **test account**.
+They are behind a build tag and never run in CI:
+
+```bash
+POLAR_LIVE_JAR=/path/to/polar-cookies.json \
+  CGO_ENABLED=0 go test -tags live -run Live -v ./internal/mcp/
+```
+
+`POLAR_LIVE_JAR` is a cookie jar in the `COOKIE_JAR_PATH` format holding a
+valid `FLOW_SESSION`; the tests never log in with a password and clean up
+everything they create.
+
 ## Run the linter
 
 ```bash

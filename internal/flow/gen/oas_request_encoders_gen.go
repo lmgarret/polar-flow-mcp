@@ -82,6 +82,20 @@ func encodeCreateFavoriteRequest(
 	return nil
 }
 
+func encodeCreateTargetFromFavoriteRequest(
+	req *TargetFromFavoriteRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeCreateTrainingSessionRequest(
 	req *TrainingSessionCreate,
 	r *http.Request,
@@ -98,6 +112,20 @@ func encodeCreateTrainingSessionRequest(
 
 func encodeCreateTrainingTargetRequest(
 	req *TrainingTargetCreate,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeEditTrainingSessionRequest(
+	req *TrainingSessionEdit,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -210,6 +238,20 @@ func encodeSaveSportProfileRequest(
 
 func encodeUpdateFavoriteRequest(
 	req *Favorite,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateTrainingSessionDataRequest(
+	req *TrainingSessionDataUpdate,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

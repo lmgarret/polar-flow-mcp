@@ -39,6 +39,9 @@ type Client struct {
 	refreshing  bool
 	lastRefresh time.Time
 
+	// sports caches the sport catalogue for id validation (see SportName).
+	sports sportCatalog
+
 	// API is the generated ogen client. Use it for raw access if a method on
 	// Client doesn't cover an operation.
 	API *gen.Client

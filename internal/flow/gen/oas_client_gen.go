@@ -89,11 +89,12 @@ type Invoker interface {
 	// Polar's server is dangerously lenient here. Probed 2026-05-26:
 	//
 	// 	Body                                                                 | Status
-	// 	---------------------------------------------------------------------+-------------------------------------------------------------------------
+	// 	---------------------------------------------------------------------+---------------------------------------------------------------------------
 	// 	Missing `exerciseTargetId`                                           | 400
 	// 	Unknown `exerciseTargetId`                                           | 200 (silent no-op — favorite not actually updated server-side)
 	// 	Unknown `favoriteSportId` (e.g. `9999`, not in `/api/sports/sports`) | 200 (sport id is accepted unchecked, then presumably 404s on watch sync)
-	// 	Missing other fields                                                 | 400
+	// 	⚠ Missing `favoriteSportId`                                        | 200 — clears the sport (`sportId: null` on read-back; probed 2026-09-28)
+	// 	Unknown `favoriteId`                                                 | 500
 	//
 	// Verify your changes by re-reading the favorite via `GET /api/favoritetarget/{id}` rather than
 	// trusting the 200.
@@ -107,8 +108,36 @@ type Invoker interface {
 	// Creates a reusable training-target template. Body shape is identical to POST /api/trainingtarget
 	// minus the `datetime` field.
 	//
+	// Saving an existing training target as a favorite (target editor → "Ajouter aux favoris") has no
+	// endpoint of its own: the UI reads `GET /api/trainingtarget/{id}`, drops `datetime`, nulls each
+	// `exerciseTargets[].id` and the rolled-up `duration`, and POSTs the result here. The server assigns
+	// fresh phase ids; the source target is not linked to the favorite. Captured 2026-09-28.
+	//
+	// Validation (probed 2026-09-28): `name` 1–45 chars, `description` ≤ 500 chars (400
+	// `ValidationError` otherwise). ⚠ Lenient spots: `exerciseTargets` missing or `[]` → 201 with a
+	// `FREE`-type favorite; an unknown or missing `sportId` → 201 stored verbatim / null. Invalid `type`
+	// enum → 500.
+	//
 	// POST /api/favoritetarget
 	CreateFavorite(ctx context.Context, request *FavoriteCreate, params CreateFavoriteParams) (CreateFavoriteRes, error)
+	// CreateTargetFromFavorite invokes createTargetFromFavorite operation.
+	//
+	// Creates a training target on a date from a favorite (template) — the diary's + Ajouter → Favoris
+	// picker. Note the British spelling (`Favourite`) and the non-`/api` prefix. Captured 2026-09-28.
+	//
+	// The new target copies the favorite's name, description, type, sport(s) and phases. The response is
+	// the new target in the `favoriteTargetsJson` element shape, served as `text/plain` — parse the body
+	// as JSON (`TargetFromFavorite`).
+	//
+	// Time handling (see `TargetFromFavoriteRequest.to`): the offset in `to` is ignored, exact midnight
+	// schedules at the default 18:00, and a clash with an existing target shifts the new one by +1 minute
+	// instead of failing.
+	//
+	// Requires `X-Requested-With` (403 without) and a JSON body (form-encoded → 400
+	// `Expecting Json data`).
+	//
+	// POST /training/target/createTargetFromFavourite
+	CreateTargetFromFavorite(ctx context.Context, request *TargetFromFavoriteRequest, params CreateTargetFromFavoriteParams) (CreateTargetFromFavoriteRes, error)
 	// CreateTrainingSession invokes createTrainingSession operation.
 	//
 	// Records a completed workout entered manually via the "Manual training result" form
@@ -157,7 +186,8 @@ type Invoker interface {
 	//
 	// Verb-in-path REST violation (Polar's choice, not ours). Note the `/favorites/delete/{id}` shape —
 	// distinct from create/get/update which all use `/favoritetarget/{id}`. The response body is non-empty
-	// (a localized success message).
+	// (a localized success message) and — like every `/api/favorites/*` write — is JSON served as
+	// `text/plain`. Also deletes ROUTE favorites.
 	//
 	// DELETE /api/favorites/delete/{id}
 	DeleteFavorite(ctx context.Context, params DeleteFavoriteParams) (DeleteFavoriteRes, error)
@@ -180,7 +210,12 @@ type Invoker interface {
 	// DeleteTrainingSession invokes deleteTrainingSession operation.
 	//
 	// ⚠ The path must end with a trailing slash — Polar's app sends
-	// `/api/training/deleteTrainingSession/{id}/`. Sending without the trailing slash may 404.
+	// `/api/training/deleteTrainingSession/{id}/`. Without it the route is not matched (404 HTML page).
+	// Requires `X-Requested-With` (403 without).
+	//
+	// ⚠ A non-existent id also returns 200 (silent no-op), so a 200 does not prove anything was deleted.
+	// To report "no such session", pre-check with `GET /api/training/analysis/{id}/summary`: 404 = does
+	// not exist, 403 = another user's session, 200 = deletable. Probed 2026-09-28.
 	//
 	// DELETE /api/training/deleteTrainingSession/{id}/
 	DeleteTrainingSession(ctx context.Context, params DeleteTrainingSessionParams) (DeleteTrainingSessionRes, error)
@@ -197,6 +232,26 @@ type Invoker interface {
 	//
 	// DELETE /training/target/{id}
 	DeleteTrainingTarget(ctx context.Context, params DeleteTrainingTargetParams) (DeleteTrainingTargetRes, error)
+	// EditTrainingSession invokes editTrainingSession operation.
+	//
+	// Backs the "Modifier la séance" form (`/training/edit/{id}`, reached from the session page via
+	// Modifier → Modifier la séance). Edits sport, duration, distance, avg/max HR, calories, average
+	// speed, feeling, note and title. The start date/time is not editable. Captured 2026-09-28.
+	//
+	// Method is PUT (POST → 404); no trailing slash. Requires `X-Requested-With` (403 without).
+	//
+	// ⚠ Validation failures return a bare `500` with an empty body — no field, no code. See
+	// `TrainingSessionEdit` for every accepted range. Null/missing handling is per-field: most fields stay
+	// unchanged, but a missing/null `trainingSessionName` is reset to the localized sport name and a null
+	// `note` is stored as the string `"null"`. Read the summary, merge, and send every field.
+	//
+	// Verified on manual sessions only. For a device-recorded session prefer
+	// `PUT /api/training/analysis/updateTrainingData/{id}` for note/feeling.
+	//
+	// # TODO: verify on a device-recorded session
+	//
+	// PUT /api/training/editTraining/{id}
+	EditTrainingSession(ctx context.Context, request *TrainingSessionEdit, params EditTrainingSessionParams) (EditTrainingSessionRes, error)
 	// GetActivityTimeline invokes getActivityTimeline operation.
 	//
 	// Returns the activity / steps / HR / inactivity breakdown for a single calendar day, keyed by date in
@@ -448,6 +503,11 @@ type Invoker interface {
 	// Note the unusual path shape (`trainingTargets` camelCased and plural, `importRoute` as a verb) —
 	// distinct from every other favorite endpoint.
 	//
+	// ⚠ Server-side leniency (probed 2026-09-28): names longer than 45 chars are silently truncated;
+	// points with an out-of-range latitude/longitude are silently dropped; an unknown `sport` id is stored
+	// as null; the top-level `distance` is not checked against the points; a single point with a non-zero
+	// `distance` is accepted. Validate client-side.
+	//
 	// POST /api/favorites/trainingTargets/importRoute
 	ImportRoute(ctx context.Context, request *RouteImport, params ImportRouteParams) (ImportRouteRes, error)
 	// ListDeviceFavorites invokes listDeviceFavorites operation.
@@ -468,6 +528,9 @@ type Invoker interface {
 	// Returns a simpler array used by the diary's "Add training target" picker. Note: `duration` is
 	// `HH:MM:SS` here vs milliseconds in `GET /api/favorites`. The embedded `sport` is a full sport
 	// object, not just an id.
+	//
+	// ⚠ Served as `text/plain; charset=UTF-8` despite the JSON body (observed 2026-09-28). Both media
+	// types are declared so generated clients accept the real response and still get the typed model.
 	//
 	// GET /api/favorites/favoriteTargetsJson
 	ListFavoritesSimple(ctx context.Context) (ListFavoritesSimpleRes, error)
@@ -520,8 +583,9 @@ type Invoker interface {
 	// # Validation
 	//
 	//  - `favoriteId` accepts both integer and string forms (`"81388912"` works the same as `81388912`).
-	//  - Empty `favoriteName` → 400.
-	//  - Missing fields → 400.
+	//  - `favoriteName` limited to 45 characters (46 → 400); empty → 400. ⚠ Whitespace-only (`"  "`)
+	//    is accepted and stored.
+	//  - Missing fields → 400. Another user's favorite → 400.
 	//  - Unknown `favoriteId` → 500 (not 404). Worse, all error bodies carry the same boilerplate
 	//    French/English message about a "route"
 	//    (`"Un problème est survenu lors de l'enregistrement de l'itinéraire. Réessayez."`) regardless
@@ -550,11 +614,27 @@ type Invoker interface {
 	SaveSportProfile(ctx context.Context, request *SportProfileSaveRequest, params SaveSportProfileParams) (SaveSportProfileRes, error)
 	// UpdateFavorite invokes updateFavorite operation.
 	//
-	// Full-body update (no PUT/PATCH). Send the same shape as create plus the existing
+	// Full-body update (no PUT/PATCH — PUT → 404). Send the same shape as create plus the existing
 	// `exerciseTargets[i].id` value from GET. Returns 200 with empty body on success.
+	//
+	// ⚠ An entry sent with `id: null` returns 200 but its changes are silently dropped (same quirk as
+	// training targets) — always carry the ids from GET. Same limits as create (`name` ≤ 45,
+	// `description` ≤ 500); a too-long name is reported under `templateTrainingSessionTarget.name`.
 	//
 	// POST /api/favoritetarget/{id}
 	UpdateFavorite(ctx context.Context, request *Favorite, params UpdateFavoriteParams) (UpdateFavoriteRes, error)
+	// UpdateTrainingSessionData invokes updateTrainingSessionData operation.
+	//
+	// Partial update used by the session page's inline note box (`textarea.note-text` → Enregistrer).
+	// Only `note` and `feeling` are honoured; other keys are ignored. Captured 2026-09-28.
+	//
+	// Better behaved than `editTraining`: 4xx instead of 500 on bad input, and it never touches the other
+	// fields — the safe choice for any session, including device-recorded ones.
+	//
+	// Method is PUT (POST → 404).
+	//
+	// PUT /api/training/analysis/updateTrainingData/{id}
+	UpdateTrainingSessionData(ctx context.Context, request *TrainingSessionDataUpdate, params UpdateTrainingSessionDataParams) (UpdateTrainingSessionDataRes, error)
 	// UpdateTrainingTarget invokes updateTrainingTarget operation.
 	//
 	// Replaces the training target with the supplied body. POST, not PUT or PATCH — sending PUT returns
@@ -939,11 +1019,12 @@ func (c *Client) sendAddSportProfile(ctx context.Context, request *AddSportProfi
 // Polar's server is dangerously lenient here. Probed 2026-05-26:
 //
 //	Body                                                                 | Status
-//	---------------------------------------------------------------------+-------------------------------------------------------------------------
+//	---------------------------------------------------------------------+---------------------------------------------------------------------------
 //	Missing `exerciseTargetId`                                           | 400
 //	Unknown `exerciseTargetId`                                           | 200 (silent no-op — favorite not actually updated server-side)
 //	Unknown `favoriteSportId` (e.g. `9999`, not in `/api/sports/sports`) | 200 (sport id is accepted unchecked, then presumably 404s on watch sync)
-//	Missing other fields                                                 | 400
+//	⚠ Missing `favoriteSportId`                                        | 200 — clears the sport (`sportId: null` on read-back; probed 2026-09-28)
+//	Unknown `favoriteId`                                                 | 500
 //
 // Verify your changes by re-reading the favorite via `GET /api/favoritetarget/{id}` rather than
 // trusting the 200.
@@ -1081,6 +1162,16 @@ func (c *Client) sendChangeFavoriteSport(ctx context.Context, request *ChangeFav
 // Creates a reusable training-target template. Body shape is identical to POST /api/trainingtarget
 // minus the `datetime` field.
 //
+// Saving an existing training target as a favorite (target editor → "Ajouter aux favoris") has no
+// endpoint of its own: the UI reads `GET /api/trainingtarget/{id}`, drops `datetime`, nulls each
+// `exerciseTargets[].id` and the rolled-up `duration`, and POSTs the result here. The server assigns
+// fresh phase ids; the source target is not linked to the favorite. Captured 2026-09-28.
+//
+// Validation (probed 2026-09-28): `name` 1–45 chars, `description` ≤ 500 chars (400
+// `ValidationError` otherwise). ⚠ Lenient spots: `exerciseTargets` missing or `[]` → 201 with a
+// `FREE`-type favorite; an unknown or missing `sportId` → 201 stored verbatim / null. Invalid `type`
+// enum → 500.
+//
 // POST /api/favoritetarget
 func (c *Client) CreateFavorite(ctx context.Context, request *FavoriteCreate, params CreateFavoriteParams) (CreateFavoriteRes, error) {
 	res, err := c.sendCreateFavorite(ctx, request, params)
@@ -1200,6 +1291,148 @@ func (c *Client) sendCreateFavorite(ctx context.Context, request *FavoriteCreate
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateFavoriteResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateTargetFromFavorite invokes createTargetFromFavorite operation.
+//
+// Creates a training target on a date from a favorite (template) — the diary's + Ajouter → Favoris
+// picker. Note the British spelling (`Favourite`) and the non-`/api` prefix. Captured 2026-09-28.
+//
+// The new target copies the favorite's name, description, type, sport(s) and phases. The response is
+// the new target in the `favoriteTargetsJson` element shape, served as `text/plain` — parse the body
+// as JSON (`TargetFromFavorite`).
+//
+// Time handling (see `TargetFromFavoriteRequest.to`): the offset in `to` is ignored, exact midnight
+// schedules at the default 18:00, and a clash with an existing target shifts the new one by +1 minute
+// instead of failing.
+//
+// Requires `X-Requested-With` (403 without) and a JSON body (form-encoded → 400
+// `Expecting Json data`).
+//
+// POST /training/target/createTargetFromFavourite
+func (c *Client) CreateTargetFromFavorite(ctx context.Context, request *TargetFromFavoriteRequest, params CreateTargetFromFavoriteParams) (CreateTargetFromFavoriteRes, error) {
+	res, err := c.sendCreateTargetFromFavorite(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendCreateTargetFromFavorite(ctx context.Context, request *TargetFromFavoriteRequest, params CreateTargetFromFavoriteParams) (res CreateTargetFromFavoriteRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createTargetFromFavorite"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/training/target/createTargetFromFavourite"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateTargetFromFavoriteOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/training/target/createTargetFromFavourite"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateTargetFromFavoriteRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, CreateTargetFromFavoriteOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateTargetFromFavoriteResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -1503,7 +1736,8 @@ func (c *Client) sendCreateTrainingTarget(ctx context.Context, request *Training
 //
 // Verb-in-path REST violation (Polar's choice, not ours). Note the `/favorites/delete/{id}` shape —
 // distinct from create/get/update which all use `/favoritetarget/{id}`. The response body is non-empty
-// (a localized success message).
+// (a localized success message) and — like every `/api/favorites/*` write — is JSON served as
+// `text/plain`. Also deletes ROUTE favorites.
 //
 // DELETE /api/favorites/delete/{id}
 func (c *Client) DeleteFavorite(ctx context.Context, params DeleteFavoriteParams) (DeleteFavoriteRes, error) {
@@ -1804,7 +2038,12 @@ func (c *Client) sendDeleteSportProfile(ctx context.Context, params DeleteSportP
 // DeleteTrainingSession invokes deleteTrainingSession operation.
 //
 // ⚠ The path must end with a trailing slash — Polar's app sends
-// `/api/training/deleteTrainingSession/{id}/`. Sending without the trailing slash may 404.
+// `/api/training/deleteTrainingSession/{id}/`. Without it the route is not matched (404 HTML page).
+// Requires `X-Requested-With` (403 without).
+//
+// ⚠ A non-existent id also returns 200 (silent no-op), so a 200 does not prove anything was deleted.
+// To report "no such session", pre-check with `GET /api/training/analysis/{id}/summary`: 404 = does
+// not exist, 403 = another user's session, 200 = deletable. Probed 2026-09-28.
 //
 // DELETE /api/training/deleteTrainingSession/{id}/
 func (c *Client) DeleteTrainingSession(ctx context.Context, params DeleteTrainingSessionParams) (DeleteTrainingSessionRes, error) {
@@ -2079,6 +2318,168 @@ func (c *Client) sendDeleteTrainingTarget(ctx context.Context, params DeleteTrai
 
 	stage = "DecodeResponse"
 	result, err := decodeDeleteTrainingTargetResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// EditTrainingSession invokes editTrainingSession operation.
+//
+// Backs the "Modifier la séance" form (`/training/edit/{id}`, reached from the session page via
+// Modifier → Modifier la séance). Edits sport, duration, distance, avg/max HR, calories, average
+// speed, feeling, note and title. The start date/time is not editable. Captured 2026-09-28.
+//
+// Method is PUT (POST → 404); no trailing slash. Requires `X-Requested-With` (403 without).
+//
+// ⚠ Validation failures return a bare `500` with an empty body — no field, no code. See
+// `TrainingSessionEdit` for every accepted range. Null/missing handling is per-field: most fields stay
+// unchanged, but a missing/null `trainingSessionName` is reset to the localized sport name and a null
+// `note` is stored as the string `"null"`. Read the summary, merge, and send every field.
+//
+// Verified on manual sessions only. For a device-recorded session prefer
+// `PUT /api/training/analysis/updateTrainingData/{id}` for note/feeling.
+//
+// # TODO: verify on a device-recorded session
+//
+// PUT /api/training/editTraining/{id}
+func (c *Client) EditTrainingSession(ctx context.Context, request *TrainingSessionEdit, params EditTrainingSessionParams) (EditTrainingSessionRes, error) {
+	res, err := c.sendEditTrainingSession(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendEditTrainingSession(ctx context.Context, request *TrainingSessionEdit, params EditTrainingSessionParams) (res EditTrainingSessionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("editTrainingSession"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/api/training/editTraining/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, EditTrainingSessionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/api/training/editTraining/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.Int64ToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeEditTrainingSessionRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, EditTrainingSessionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	stage = "DecodeResponse"
+	result, err := decodeEditTrainingSessionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -4659,6 +5060,11 @@ func (c *Client) sendGetTrainingTarget(ctx context.Context, params GetTrainingTa
 // Note the unusual path shape (`trainingTargets` camelCased and plural, `importRoute` as a verb) —
 // distinct from every other favorite endpoint.
 //
+// ⚠ Server-side leniency (probed 2026-09-28): names longer than 45 chars are silently truncated;
+// points with an out-of-range latitude/longitude are silently dropped; an unknown `sport` id is stored
+// as null; the top-level `distance` is not checked against the points; a single point with a non-zero
+// `distance` is accepted. Validate client-side.
+//
 // POST /api/favorites/trainingTargets/importRoute
 func (c *Client) ImportRoute(ctx context.Context, request *RouteImport, params ImportRouteParams) (ImportRouteRes, error) {
 	res, err := c.sendImportRoute(ctx, request, params)
@@ -5017,6 +5423,9 @@ func (c *Client) sendListFavorites(ctx context.Context) (res ListFavoritesRes, e
 // Returns a simpler array used by the diary's "Add training target" picker. Note: `duration` is
 // `HH:MM:SS` here vs milliseconds in `GET /api/favorites`. The embedded `sport` is a full sport
 // object, not just an id.
+//
+// ⚠ Served as `text/plain; charset=UTF-8` despite the JSON body (observed 2026-09-28). Both media
+// types are declared so generated clients accept the real response and still get the typed model.
 //
 // GET /api/favorites/favoriteTargetsJson
 func (c *Client) ListFavoritesSimple(ctx context.Context) (ListFavoritesSimpleRes, error) {
@@ -5428,8 +5837,9 @@ func (c *Client) sendListTrainingSessions(ctx context.Context, request *ListTrai
 // # Validation
 //
 //   - `favoriteId` accepts both integer and string forms (`"81388912"` works the same as `81388912`).
-//   - Empty `favoriteName` → 400.
-//   - Missing fields → 400.
+//   - `favoriteName` limited to 45 characters (46 → 400); empty → 400. ⚠ Whitespace-only (`"  "`)
+//     is accepted and stored.
+//   - Missing fields → 400. Another user's favorite → 400.
 //   - Unknown `favoriteId` → 500 (not 404). Worse, all error bodies carry the same boilerplate
 //     French/English message about a "route"
 //     (`"Un problème est survenu lors de l'enregistrement de l'itinéraire. Réessayez."`) regardless
@@ -5706,8 +6116,12 @@ func (c *Client) sendSaveSportProfile(ctx context.Context, request *SportProfile
 
 // UpdateFavorite invokes updateFavorite operation.
 //
-// Full-body update (no PUT/PATCH). Send the same shape as create plus the existing
+// Full-body update (no PUT/PATCH — PUT → 404). Send the same shape as create plus the existing
 // `exerciseTargets[i].id` value from GET. Returns 200 with empty body on success.
+//
+// ⚠ An entry sent with `id: null` returns 200 but its changes are silently dropped (same quirk as
+// training targets) — always carry the ids from GET. Same limits as create (`name` ≤ 45,
+// `description` ≤ 500); a too-long name is reported under `templateTrainingSessionTarget.name`.
 //
 // POST /api/favoritetarget/{id}
 func (c *Client) UpdateFavorite(ctx context.Context, request *Favorite, params UpdateFavoriteParams) (UpdateFavoriteRes, error) {
@@ -5846,6 +6260,160 @@ func (c *Client) sendUpdateFavorite(ctx context.Context, request *Favorite, para
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateFavoriteResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateTrainingSessionData invokes updateTrainingSessionData operation.
+//
+// Partial update used by the session page's inline note box (`textarea.note-text` → Enregistrer).
+// Only `note` and `feeling` are honoured; other keys are ignored. Captured 2026-09-28.
+//
+// Better behaved than `editTraining`: 4xx instead of 500 on bad input, and it never touches the other
+// fields — the safe choice for any session, including device-recorded ones.
+//
+// Method is PUT (POST → 404).
+//
+// PUT /api/training/analysis/updateTrainingData/{id}
+func (c *Client) UpdateTrainingSessionData(ctx context.Context, request *TrainingSessionDataUpdate, params UpdateTrainingSessionDataParams) (UpdateTrainingSessionDataRes, error) {
+	res, err := c.sendUpdateTrainingSessionData(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateTrainingSessionData(ctx context.Context, request *TrainingSessionDataUpdate, params UpdateTrainingSessionDataParams) (res UpdateTrainingSessionDataRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateTrainingSessionData"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/api/training/analysis/updateTrainingData/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateTrainingSessionDataOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/api/training/analysis/updateTrainingData/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.Int64ToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateTrainingSessionDataRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:SessionCookie"
+			switch err := c.securitySessionCookie(ctx, UpdateTrainingSessionDataOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"SessionCookie\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateTrainingSessionDataResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

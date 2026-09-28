@@ -182,9 +182,23 @@ The server reads `/.env` on startup via `godotenv` — credentials are in memory
 | `get_training_session_details` | Lap and sample detail of one session |
 | `get_progress_summary` | Aggregated training totals over a range |
 | `create_training_session` | Log a manually-entered completed session (writes real data — coach must only call on explicit user request) |
+| `edit_training_session` | Edit a completed session: note, feeling (1–5), and — on manual sessions — name, sport, duration, distance, HR, kcal, speed |
+| `delete_training_session` | Delete a completed session by ID |
+| `list_favorites` | Favorites (workout templates) and imported routes |
+| `get_favorite` | Read one favorite by ID |
+| `create_favorite` | Create a favorite (duration, distance or phased goal) |
+| `update_favorite` | Full-replace edit of one favorite |
+| `rename_favorite` | Rename a favorite or route |
+| `set_favorite_sport` | Change a favorite's or route's sport (validated and verified) |
+| `delete_favorite` | Delete a favorite or route |
+| `save_target_as_favorite` | Save a scheduled target as a new favorite |
+| `schedule_favorite` | Put a favorite in the diary as a training target on a date |
+| `import_route` | Import a GPX/TCX file (parsed server-side) as a route favorite |
+| `get_route` | Read a route's geometry (down-sampled waypoints) |
 
-`create_training_session` and `delete_training_target` ask the user to confirm
-before they run, on hosts that support MCP elicitation. Where the client cannot
+`create_training_session`, `delete_training_target`, `delete_training_session`
+and `delete_favorite` ask the user to confirm before they run, on hosts that
+support MCP elicitation. Where the client cannot
 be asked, the call proceeds unconfirmed — see
 [User confirmation on writes](https://lmgarret.github.io/polar-flow-mcp/reference/mcp-tools/#user-confirmation-on-writes).
 

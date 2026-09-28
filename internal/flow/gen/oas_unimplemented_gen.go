@@ -79,11 +79,12 @@ func (UnimplementedHandler) AddSportProfile(ctx context.Context, req *AddSportPr
 // Polar's server is dangerously lenient here. Probed 2026-05-26:
 //
 //	Body                                                                 | Status
-//	---------------------------------------------------------------------+-------------------------------------------------------------------------
+//	---------------------------------------------------------------------+---------------------------------------------------------------------------
 //	Missing `exerciseTargetId`                                           | 400
 //	Unknown `exerciseTargetId`                                           | 200 (silent no-op — favorite not actually updated server-side)
 //	Unknown `favoriteSportId` (e.g. `9999`, not in `/api/sports/sports`) | 200 (sport id is accepted unchecked, then presumably 404s on watch sync)
-//	Missing other fields                                                 | 400
+//	⚠ Missing `favoriteSportId`                                        | 200 — clears the sport (`sportId: null` on read-back; probed 2026-09-28)
+//	Unknown `favoriteId`                                                 | 500
 //
 // Verify your changes by re-reading the favorite via `GET /api/favoritetarget/{id}` rather than
 // trusting the 200.
@@ -100,8 +101,39 @@ func (UnimplementedHandler) ChangeFavoriteSport(ctx context.Context, req *Change
 // Creates a reusable training-target template. Body shape is identical to POST /api/trainingtarget
 // minus the `datetime` field.
 //
+// Saving an existing training target as a favorite (target editor → "Ajouter aux favoris") has no
+// endpoint of its own: the UI reads `GET /api/trainingtarget/{id}`, drops `datetime`, nulls each
+// `exerciseTargets[].id` and the rolled-up `duration`, and POSTs the result here. The server assigns
+// fresh phase ids; the source target is not linked to the favorite. Captured 2026-09-28.
+//
+// Validation (probed 2026-09-28): `name` 1–45 chars, `description` ≤ 500 chars (400
+// `ValidationError` otherwise). ⚠ Lenient spots: `exerciseTargets` missing or `[]` → 201 with a
+// `FREE`-type favorite; an unknown or missing `sportId` → 201 stored verbatim / null. Invalid `type`
+// enum → 500.
+//
 // POST /api/favoritetarget
 func (UnimplementedHandler) CreateFavorite(ctx context.Context, req *FavoriteCreate, params CreateFavoriteParams) (r CreateFavoriteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CreateTargetFromFavorite implements createTargetFromFavorite operation.
+//
+// Creates a training target on a date from a favorite (template) — the diary's + Ajouter → Favoris
+// picker. Note the British spelling (`Favourite`) and the non-`/api` prefix. Captured 2026-09-28.
+//
+// The new target copies the favorite's name, description, type, sport(s) and phases. The response is
+// the new target in the `favoriteTargetsJson` element shape, served as `text/plain` — parse the body
+// as JSON (`TargetFromFavorite`).
+//
+// Time handling (see `TargetFromFavoriteRequest.to`): the offset in `to` is ignored, exact midnight
+// schedules at the default 18:00, and a clash with an existing target shifts the new one by +1 minute
+// instead of failing.
+//
+// Requires `X-Requested-With` (403 without) and a JSON body (form-encoded → 400
+// `Expecting Json data`).
+//
+// POST /training/target/createTargetFromFavourite
+func (UnimplementedHandler) CreateTargetFromFavorite(ctx context.Context, req *TargetFromFavoriteRequest, params CreateTargetFromFavoriteParams) (r CreateTargetFromFavoriteRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -159,7 +191,8 @@ func (UnimplementedHandler) CreateTrainingTarget(ctx context.Context, req *Train
 //
 // Verb-in-path REST violation (Polar's choice, not ours). Note the `/favorites/delete/{id}` shape —
 // distinct from create/get/update which all use `/favoritetarget/{id}`. The response body is non-empty
-// (a localized success message).
+// (a localized success message) and — like every `/api/favorites/*` write — is JSON served as
+// `text/plain`. Also deletes ROUTE favorites.
 //
 // DELETE /api/favorites/delete/{id}
 func (UnimplementedHandler) DeleteFavorite(ctx context.Context, params DeleteFavoriteParams) (r DeleteFavoriteRes, _ error) {
@@ -188,7 +221,12 @@ func (UnimplementedHandler) DeleteSportProfile(ctx context.Context, params Delet
 // DeleteTrainingSession implements deleteTrainingSession operation.
 //
 // ⚠ The path must end with a trailing slash — Polar's app sends
-// `/api/training/deleteTrainingSession/{id}/`. Sending without the trailing slash may 404.
+// `/api/training/deleteTrainingSession/{id}/`. Without it the route is not matched (404 HTML page).
+// Requires `X-Requested-With` (403 without).
+//
+// ⚠ A non-existent id also returns 200 (silent no-op), so a 200 does not prove anything was deleted.
+// To report "no such session", pre-check with `GET /api/training/analysis/{id}/summary`: 404 = does
+// not exist, 403 = another user's session, 200 = deletable. Probed 2026-09-28.
 //
 // DELETE /api/training/deleteTrainingSession/{id}/
 func (UnimplementedHandler) DeleteTrainingSession(ctx context.Context, params DeleteTrainingSessionParams) (r DeleteTrainingSessionRes, _ error) {
@@ -208,6 +246,29 @@ func (UnimplementedHandler) DeleteTrainingSession(ctx context.Context, params De
 //
 // DELETE /training/target/{id}
 func (UnimplementedHandler) DeleteTrainingTarget(ctx context.Context, params DeleteTrainingTargetParams) (r DeleteTrainingTargetRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// EditTrainingSession implements editTrainingSession operation.
+//
+// Backs the "Modifier la séance" form (`/training/edit/{id}`, reached from the session page via
+// Modifier → Modifier la séance). Edits sport, duration, distance, avg/max HR, calories, average
+// speed, feeling, note and title. The start date/time is not editable. Captured 2026-09-28.
+//
+// Method is PUT (POST → 404); no trailing slash. Requires `X-Requested-With` (403 without).
+//
+// ⚠ Validation failures return a bare `500` with an empty body — no field, no code. See
+// `TrainingSessionEdit` for every accepted range. Null/missing handling is per-field: most fields stay
+// unchanged, but a missing/null `trainingSessionName` is reset to the localized sport name and a null
+// `note` is stored as the string `"null"`. Read the summary, merge, and send every field.
+//
+// Verified on manual sessions only. For a device-recorded session prefer
+// `PUT /api/training/analysis/updateTrainingData/{id}` for note/feeling.
+//
+// # TODO: verify on a device-recorded session
+//
+// PUT /api/training/editTraining/{id}
+func (UnimplementedHandler) EditTrainingSession(ctx context.Context, req *TrainingSessionEdit, params EditTrainingSessionParams) (r EditTrainingSessionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -516,6 +577,11 @@ func (UnimplementedHandler) GetTrainingTarget(ctx context.Context, params GetTra
 // Note the unusual path shape (`trainingTargets` camelCased and plural, `importRoute` as a verb) —
 // distinct from every other favorite endpoint.
 //
+// ⚠ Server-side leniency (probed 2026-09-28): names longer than 45 chars are silently truncated;
+// points with an out-of-range latitude/longitude are silently dropped; an unknown `sport` id is stored
+// as null; the top-level `distance` is not checked against the points; a single point with a non-zero
+// `distance` is accepted. Validate client-side.
+//
 // POST /api/favorites/trainingTargets/importRoute
 func (UnimplementedHandler) ImportRoute(ctx context.Context, req *RouteImport, params ImportRouteParams) (r ImportRouteRes, _ error) {
 	return r, ht.ErrNotImplemented
@@ -545,6 +611,9 @@ func (UnimplementedHandler) ListFavorites(ctx context.Context) (r ListFavoritesR
 // Returns a simpler array used by the diary's "Add training target" picker. Note: `duration` is
 // `HH:MM:SS` here vs milliseconds in `GET /api/favorites`. The embedded `sport` is a full sport
 // object, not just an id.
+//
+// ⚠ Served as `text/plain; charset=UTF-8` despite the JSON body (observed 2026-09-28). Both media
+// types are declared so generated clients accept the real response and still get the typed model.
 //
 // GET /api/favorites/favoriteTargetsJson
 func (UnimplementedHandler) ListFavoritesSimple(ctx context.Context) (r ListFavoritesSimpleRes, _ error) {
@@ -606,8 +675,9 @@ func (UnimplementedHandler) ListTrainingSessions(ctx context.Context, req *ListT
 // # Validation
 //
 //   - `favoriteId` accepts both integer and string forms (`"81388912"` works the same as `81388912`).
-//   - Empty `favoriteName` → 400.
-//   - Missing fields → 400.
+//   - `favoriteName` limited to 45 characters (46 → 400); empty → 400. ⚠ Whitespace-only (`"  "`)
+//     is accepted and stored.
+//   - Missing fields → 400. Another user's favorite → 400.
 //   - Unknown `favoriteId` → 500 (not 404). Worse, all error bodies carry the same boilerplate
 //     French/English message about a "route"
 //     (`"Un problème est survenu lors de l'enregistrement de l'itinéraire. Réessayez."`) regardless
@@ -642,11 +712,30 @@ func (UnimplementedHandler) SaveSportProfile(ctx context.Context, req *SportProf
 
 // UpdateFavorite implements updateFavorite operation.
 //
-// Full-body update (no PUT/PATCH). Send the same shape as create plus the existing
+// Full-body update (no PUT/PATCH — PUT → 404). Send the same shape as create plus the existing
 // `exerciseTargets[i].id` value from GET. Returns 200 with empty body on success.
+//
+// ⚠ An entry sent with `id: null` returns 200 but its changes are silently dropped (same quirk as
+// training targets) — always carry the ids from GET. Same limits as create (`name` ≤ 45,
+// `description` ≤ 500); a too-long name is reported under `templateTrainingSessionTarget.name`.
 //
 // POST /api/favoritetarget/{id}
 func (UnimplementedHandler) UpdateFavorite(ctx context.Context, req *Favorite, params UpdateFavoriteParams) (r UpdateFavoriteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateTrainingSessionData implements updateTrainingSessionData operation.
+//
+// Partial update used by the session page's inline note box (`textarea.note-text` → Enregistrer).
+// Only `note` and `feeling` are honoured; other keys are ignored. Captured 2026-09-28.
+//
+// Better behaved than `editTraining`: 4xx instead of 500 on bad input, and it never touches the other
+// fields — the safe choice for any session, including device-recorded ones.
+//
+// Method is PUT (POST → 404).
+//
+// PUT /api/training/analysis/updateTrainingData/{id}
+func (UnimplementedHandler) UpdateTrainingSessionData(ctx context.Context, req *TrainingSessionDataUpdate, params UpdateTrainingSessionDataParams) (r UpdateTrainingSessionDataRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

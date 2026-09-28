@@ -21,6 +21,19 @@ var ErrLoginFailed = errors.New("flow: Polar credentials rejected")
 // can distinguish 404 from other failures via errors.Is.
 var ErrTargetNotFound = errors.New("flow: training target not found")
 
+// ErrSessionNotFound is returned when a completed training session id does not
+// exist (the summary endpoint answers 404).
+var ErrSessionNotFound = errors.New("flow: training session not found")
+
+// ErrFavoriteNotFound is returned when a favorite (or a favorite's exercise
+// target) does not exist for this account.
+var ErrFavoriteNotFound = errors.New("flow: favorite not found")
+
+// ErrNotOwned is returned when the id exists but belongs to another Polar
+// account (Flow answers 403 on reads, and 400/403/404 on writes depending on
+// the endpoint).
+var ErrNotOwned = errors.New("flow: that id belongs to another Polar account")
+
 // isNotAuthenticatedBody returns true if the body matches the Polar Flow 401
 // shape: {"error":"NotAuthenticated","redirect":"/"} (docs/auth.md).
 func isNotAuthenticatedBody(body []byte) bool {
