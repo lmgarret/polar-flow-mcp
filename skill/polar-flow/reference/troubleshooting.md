@@ -21,6 +21,8 @@ tool list. If they don't, the server isn't connected:
 | "Polar credentials rejected" / "no Polar credentials configured" | `POLAR_EMAIL` / `POLAR_PASSWORD` wrong or missing | Tell the user to fix `.env` (or container env) and restart the server. |
 | `4xx` from the API | Malformed request body (bad units, missing field, time conflict) | Surface the message verbatim. Re-check units/required fields against `reference/training-targets.md`. Don't blindly retry. |
 | `5xx` or transport error | Server-side or Polar-side fault | Surface verbatim; ask the user to check server logs. Don't retry silently. |
+| Error naming an argument ("name is 46 characters; Polar's limit is 45", "sport_id 9999 is not a Polar sport", "only single-exercise, manually entered sessions can have their … edited") | The tool rejected the input itself, so nothing reached Polar | Fix that argument and retry, or tell the user why the change isn't possible. |
+| "Cancelled: the user did not confirm" | The user declined the confirmation prompt (elicitation) | Nothing was written. Report it and don't retry around it. |
 | `get_calendar_week_summary` range error | Span > 45 days or `from_date > to_date` | Shrink/flip the range and retry. |
 | Empty/zero `get_progress_summary` | No sessions in range (not an error) | Report "no data in that window", widen the range if appropriate. |
 

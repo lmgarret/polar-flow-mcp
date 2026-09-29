@@ -2,7 +2,8 @@
 
 Exact parameters and return shapes for every polar-flow-mcp tool. Names are
 case-sensitive. All dates are **ISO YYYY-MM-DD**, times **24h HH:MM**,
-distances **metres**, durations **seconds**, HR **bpm**, speed **km/h**.
+distances **metres**, durations **seconds**, HR **bpm**, speed **km/h**,
+pace **seconds per km**, power **watts**.
 
 Legend: **req** = required, everything else optional with the noted default.
 
@@ -133,7 +134,7 @@ zeros rather than an error.
 
 ---
 
-## Logging a completed session (write)
+## Completed sessions (writes)
 
 ### `create_training_session`
 ⚠ Writes real history. **User-initiated only.** Full detail and the unit
@@ -152,3 +153,116 @@ conventions are in `reference/logging-sessions.md`.
   `15` strength_training, `11` hiking, `68` triathlon. Call `list_sports` for
   the full catalogue.
 - `note` — free-text note
+
+### `edit_training_session`
+Changes a completed session in place. **User-initiated only.** See
+`reference/logging-sessions.md`.
+
+- `session_id` **req**
+- Pass only the fields to change. Everything else keeps its current value.
+- Any session: `note` (≤ 10 000 characters, `""` clears it) and `feeling`
+  (1 = bad … 5 = great; can't be removed once set).
+- Manual single-exercise sessions only: `name` (1–100 characters),
+  `sport_id`, `duration_s` (1–359 999), `distance_m` (0–9 999 000),
+  `hr_avg` / `hr_max` (0–240 bpm, 0 clears, `hr_max ≥ hr_avg`), `kcal`
+  (0–65 535), `speed_kmh` (0–399).
+- The date and time can't be changed.
+
+Returns the session summary as read back.
+
+### `delete_training_session`
+- `session_id` **req**
+
+Permanently deletes a completed session. **User-initiated only.** It first
+checks that the session exists and reports "no session" if not, because
+Polar's delete answers success for any id. Afterwards it checks the session is
+gone. It may ask the user to confirm (elicitation).
+
+---
+
+## Favorites (templates) & routes
+
+See `reference/favorites-and-routes.md` for the workflows.
+
+### `list_favorites`
+- `kind` — `all` (default), `templates` or `routes`
+
+Each entry: `favorite_id`, `exercise_target_id`, `name`, `type`
+(`VOLUME` / `STEADY_RACE_PACE` / `PHASED` / `ROUTE`), `sport_id`,
+`duration_s`, `distance_m`, `calories`.
+
+### `get_favorite`
+- `favorite_id` **req**
+
+Returns the name, description, type and `exercise_targets[]` (`sport_id`,
+`duration_s`, `distance_m`, and the raw `phases` of a PHASED favorite). For a
+route this is only the name, sport and distance. Use `get_route` for the
+geometry.
+
+### `create_favorite`
+- `name` **req** — 1–45 characters
+- `description` — ≤ 500 characters
+- `sport_id` — default `1`, must exist in `list_sports`
+- exactly one goal: `duration_s` (1–359 999), `distance_m` (≤ 9 999 000), or
+  `phases` (same shape as `create_training_target`)
+
+Returns the new favorite as read back.
+
+### `update_favorite`
+Same fields as `create_favorite`, plus `favorite_id` **req**. **Full
+replace**: call `get_favorite` first and send everything that should stay.
+Refused for route favorites and multi-sport favorites.
+
+### `rename_favorite`
+- `favorite_id` **req**
+- `name` **req** — 1–45 characters, not blank
+
+Works for templates and routes.
+
+### `set_favorite_sport`
+- `favorite_id` **req**
+- `sport_id` **req**
+- `exercise_target_id` — only needed for multi-sport favorites
+
+Checks that the sport exists, applies the change, and reads the favorite back
+to confirm it.
+
+### `delete_favorite`
+- `favorite_id` **req**
+
+Permanently deletes a template or route. Targets already scheduled from it are
+kept. It may ask the user to confirm (elicitation).
+
+### `save_target_as_favorite`
+- `target_id` **req**
+- `name` — 1–45 characters; defaults to the target's name
+
+Copies a scheduled target into a new favorite and drops the date. The copy
+isn't linked back to the target.
+
+### `schedule_favorite`
+- `favorite_id` **req** — a template, not a route
+- `date` **req**
+- `time` — default `18:00`; `00:00` is not allowed
+
+Creates a new training target and returns its `target_id`. If another target
+already starts at that minute, Polar shifts the new one +1 minute; the result
+says so.
+
+### `import_route`
+- `content` **req** — full GPX or TCX text
+- `format` — `auto` (default), `gpx`, `tcx`
+- `name` — 1–45 characters; defaults to the name in the file
+- `sport_id`
+
+Rejected before upload if the file has fewer than 2 points, invalid
+coordinates, zero length, or is over 25 MB. Returns `favorite_id`,
+`exercise_target_id`, the point count and the length in metres.
+
+### `get_route`
+- `exercise_target_id` or `favorite_id` — one is required
+- `max_points` — 2–100 000, default 500
+
+Returns the name, `distance_m`, `sport_id`, `point_count`, `returned_points`
+and `points[{lat, lon, altitude_m}]`. Long routes are thinned out evenly,
+always keeping the first and last point.

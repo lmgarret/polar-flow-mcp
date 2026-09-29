@@ -15,6 +15,9 @@ these tools are read-only and safe to call freely. Dates are ISO `YYYY-MM-DD`.
 | Weekly volume trend | `get_calendar_week_summary` | Per-ISO-week; ≤45-day range. |
 | Monthly/quarterly totals | `get_progress_summary` | Distributions; default last 90d. |
 | I need raw diary entries | `get_calendar_events` | Low-level fallback. |
+| What pace / HR / watts is zone N? | `get_training_zones` | Per sport; pass `sport_id`. |
+| What templates / routes do I have? | `list_favorites` | `kind` filters templates vs routes. |
+| Show me a route | `get_route` | Waypoints, down-sampled. |
 
 Prefer the typed list tools (`list_training_targets`, `list_training_sessions`)
 over `get_calendar_events` — reach for raw events only when the typed tools

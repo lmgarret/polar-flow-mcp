@@ -145,3 +145,9 @@ phases.
 
 `delete_training_target(target_id)` is permanent. Confirm with the user, then
 call it. A non-existent or foreign id is reported as a no-op, not an error.
+
+## Reusing a workout
+
+To keep a target as a reusable template, use `save_target_as_favorite`. To put
+an existing template in the diary, use `schedule_favorite`, which creates a
+new target. See `reference/favorites-and-routes.md`.
