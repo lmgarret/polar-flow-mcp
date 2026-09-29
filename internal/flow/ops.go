@@ -56,10 +56,20 @@ func formatValidationError(v *gen.ValidationError) string {
 		// prefix-sensitive fingerprint, so there is no reliable client-side
 		// pre-filter — the fix is to reword or prefix the name and retry. Surface
 		// that hint rather than leaving the caller with the untranslatable body.
-		msg += " (hint: the workout name tripped Polar's server-side content " +
-			"filter — reword it or add a leading prefix, e.g. \"Session - <name>\", and retry)"
+		msg += " (hint: if the name is within 45 characters it tripped Polar's server-side content " +
+			"filter — reword it or add a short leading prefix, e.g. \"S - <name>\", and retry)"
 	}
 	return msg
+}
+
+// textPlainTargetError maps the text/plain 400 that create/update answer for a
+// datetime already taken by another target. Anything else is surfaced as-is.
+func textPlainTargetError(op string, body io.Reader) error {
+	text := readSmall(body)
+	if strings.Contains(text, "twoTargetsForSameTime") {
+		return ErrTargetTimeClash
+	}
+	return fmt.Errorf("flow: %s: 400 %s", op, text)
 }
 
 // nameContentFilterField is the field key Polar returns when a training-target
@@ -128,6 +138,8 @@ func (c *Client) CreateTrainingTarget(ctx context.Context, body *gen.TrainingTar
 		return extractTargetID(raw)
 	case *gen.ValidationError:
 		return 0, fmt.Errorf("flow: create training target: %s", formatValidationError(v))
+	case *gen.CreateTrainingTargetBadRequestTextPlain:
+		return 0, textPlainTargetError("create training target", v.Data)
 	case *gen.Unauthorized:
 		return 0, ErrLoginFailed
 	default:
@@ -178,6 +190,8 @@ func (c *Client) GetTrainingTarget(ctx context.Context, id int64) (*gen.GetTrain
 		return v, nil
 	case *gen.GetTrainingTargetNotFound:
 		return nil, ErrTargetNotFound
+	case *gen.GetTrainingTargetForbidden:
+		return nil, ErrNotOwned
 	case *gen.Unauthorized:
 		return nil, ErrLoginFailed
 	default:
@@ -204,6 +218,8 @@ func (c *Client) UpdateTrainingTarget(ctx context.Context, id int64, body *gen.T
 		return nil
 	case *gen.ValidationError:
 		return fmt.Errorf("flow: update training target: %s", formatValidationError(v))
+	case *gen.UpdateTrainingTargetBadRequestTextPlain:
+		return textPlainTargetError("update training target", v.Data)
 	case *gen.Unauthorized:
 		return ErrLoginFailed
 	default:
@@ -291,16 +307,22 @@ func (c *Client) DeleteTrainingTarget(ctx context.Context, id int64) error {
 	if err != nil {
 		return fmt.Errorf("flow: delete training target: %w", err)
 	}
-	switch res.(type) {
+	switch v := res.(type) {
 	case *gen.DeleteTrainingTargetOK:
 		return nil
+	case *gen.DeleteTrainingTargetBadRequest:
+		// Not idempotent: an unknown or already-deleted id is 400 "deleteError";
+		// another account's target is 400 with a localized "not your target"
+		// sentence. Callers wanting the distinction pre-check with a GET.
+		if body := readSmall(v.Data); body != "deleteError" {
+			return fmt.Errorf("%w (Polar: %q)", ErrNotOwned, body)
+		}
+		return ErrTargetNotFound
 	case *gen.Unauthorized:
 		return ErrLoginFailed
 	case *gen.DeleteTrainingTargetForbidden:
 		return fmt.Errorf("flow: delete training target: 403 CSRF rejection (X-Requested-With missing)")
 	default:
-		// Polar returns 200 even for an already-gone id, so there is no 404
-		// case to map; anything else here means a genuine surprise.
 		return fmt.Errorf("flow: delete training target: unexpected response %T", res)
 	}
 }

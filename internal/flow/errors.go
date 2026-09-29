@@ -34,6 +34,13 @@ var ErrFavoriteNotFound = errors.New("flow: favorite not found")
 // the endpoint).
 var ErrNotOwned = errors.New("flow: that id belongs to another Polar account")
 
+// ErrTargetTimeClash is returned when a training target would land on the
+// same minute as another one: Flow refuses two targets at the same datetime
+// (400 text/plain {"time":["error.trainingTarget.twoTargetsForSameTime"]}).
+// The occupant may be invisible on the calendar — a create rejected for a
+// phase name still stores a half-created target (see openapi.yaml).
+var ErrTargetTimeClash = errors.New("flow: another training target is already scheduled at that exact time")
+
 // isNotAuthenticatedBody returns true if the body matches the Polar Flow 401
 // shape: {"error":"NotAuthenticated","redirect":"/"} (docs/auth.md).
 func isNotAuthenticatedBody(body []byte) bool {

@@ -97,6 +97,20 @@ type targetListItem struct {
 	SportCategory string `json:"sport_category,omitempty"`
 }
 
+// targetLookupError renders a failed read or delete of one target by id: a
+// missing id is a plain statement, another account's id and anything else a
+// tool error.
+func targetLookupError(err error, id int64) *mcpgo.CallToolResult {
+	switch {
+	case errors.Is(err, flow.ErrTargetNotFound):
+		return mcpgo.NewToolResultText(fmt.Sprintf("No target with id %d.", id))
+	case errors.Is(err, flow.ErrNotOwned):
+		return mcpgo.NewToolResultError(fmt.Sprintf("Target %d belongs to another Polar account.", id))
+	default:
+		return mcpgo.NewToolResultError(err.Error())
+	}
+}
+
 // DeleteTrainingTargetHandler deletes a training target by id.
 func DeleteTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 	return func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
@@ -104,20 +118,21 @@ func DeleteTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 		if !ok {
 			return mcpgo.NewToolResultError("target_id is required and must be a positive integer"), nil
 		}
-		// Irreversible, so ask first where the client can be asked. The ask leg
-		// reads the target back to name it in the prompt; the retry leg skips
-		// straight past this to the delete.
+		// Read it first: Flow's delete answers a missing and a foreign id with
+		// the same opaque 400, and there is nothing to confirm for a target that
+		// is not there. The read also names the target in the prompt.
+		t, err := fc.GetTrainingTarget(ctx, id)
+		if err != nil {
+			return targetLookupError(err, id), nil
+		}
+		// Irreversible, so ask first where the client can be asked.
 		if result, proceed := requireConfirm(ctx, req, "delete_training_target", func() string {
-			return fmt.Sprintf("Permanently delete %s? This cannot be undone.",
-				describeTarget(ctx, fc, id))
+			return fmt.Sprintf("Permanently delete %s? This cannot be undone.", describeTarget(t, id))
 		}); !proceed {
 			return result, nil
 		}
 		if err := fc.DeleteTrainingTarget(ctx, id); err != nil {
-			if errors.Is(err, flow.ErrTargetNotFound) {
-				return mcpgo.NewToolResultText(fmt.Sprintf("No target with id %d.", id)), nil
-			}
-			return mcpgo.NewToolResultError(err.Error()), nil
+			return targetLookupError(err, id), nil
 		}
 		result := mcpgo.NewToolResultText(fmt.Sprintf("Deleted target %d.", id))
 		result.StructuredContent = map[string]any{"type": "target_deleted", "data": map[string]any{"id": id}}

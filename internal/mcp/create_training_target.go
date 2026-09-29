@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
@@ -9,6 +10,17 @@ import (
 	"github.com/lmgarret/polar-flow-mcp/internal/convert"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
+)
+
+// Training-target text limits, probed 2026-09-29 and counted in UTF-16 code
+// units (convert.PolarTextLen). Flow answers an over-long name with the same
+// opaque message as its name content filter, and an over-long *phase* name
+// with a 400 that still stores a half-created, calendar-invisible target
+// holding the time slot — so all three are checked before sending.
+const (
+	maxTargetNameLen = 45
+	maxTargetDescLen = 500
+	maxPhaseNameLen  = 45
 )
 
 // CreateTrainingTargetHandler builds a TrainingTargetCreate from the Claude-
@@ -21,7 +33,7 @@ func CreateTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 		}
 		id, err := fc.CreateTrainingTarget(ctx, body)
 		if err != nil {
-			return mcpgo.NewToolResultError(err.Error()), nil
+			return targetWriteError(err, body.Datetime), nil
 		}
 		return widgetResultText(
 			fmt.Sprintf("Created training target %d (%q at %s).", id, body.Name, body.Datetime),
@@ -29,14 +41,31 @@ func CreateTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 	}
 }
 
+// targetWriteError renders a failed create/update. A time clash gets an
+// actionable message: Flow refuses two targets on the same minute, and the
+// occupant can be invisible (a half-created target left by an earlier create
+// that Flow rejected for a phase name).
+func targetWriteError(err error, datetime string) *mcpgo.CallToolResult {
+	if errors.Is(err, flow.ErrTargetTimeClash) {
+		return mcpgo.NewToolResultError(fmt.Sprintf("Polar already has a training target at %s and refuses two "+
+			"at the same minute — pick another time (even a minute later works). If list_training_targets "+
+			"shows nothing there, the slot is held by a hidden, half-created target from an earlier failed "+
+			"create; it can only be removed by id.", datetime))
+	}
+	return mcpgo.NewToolResultError(err.Error())
+}
+
 // buildTrainingTargetCreate parses the user-facing create/update arguments into
 // the wire-format TrainingTargetCreate body. On validation failure it returns
 // an empty body and a non-empty error message suitable for direct surfacing
 // via NewToolResultError.
 func buildTrainingTargetCreate(req mcpgo.CallToolRequest) (*gen.TrainingTargetCreate, string) {
-	name := req.GetString("name", "")
-	if name == "" {
-		return nil, "name is required"
+	name, hasName, err := textArg(req, "name", maxTargetNameLen, true)
+	if err != nil {
+		return nil, err.Error()
+	}
+	if !hasName {
+		return nil, "name is required (1–45 characters)"
 	}
 	date := req.GetString("date", "")
 	if date == "" {
@@ -50,7 +79,10 @@ func buildTrainingTargetCreate(req mcpgo.CallToolRequest) (*gen.TrainingTargetCr
 	if err != nil {
 		return nil, err.Error()
 	}
-	description := req.GetString("description", "")
+	description, _, err := textArg(req, "description", maxTargetDescLen, false)
+	if err != nil {
+		return nil, err.Error()
+	}
 
 	et, phased, errMsg := buildGoalExerciseTarget(req)
 	if errMsg != "" {
@@ -139,8 +171,26 @@ func buildPhases(args []any) ([]gen.Phase, error) {
 		default:
 			return nil, fmt.Errorf("phases[%d]: unknown type %q (want warmup|repeat|cooldown)", i, ptype)
 		}
+		if err := checkPhaseNames(out[len(out)-1]); err != nil {
+			return nil, fmt.Errorf("phases[%d] (%s): %w", i, ptype, err)
+		}
 	}
 	return out, nil
+}
+
+// checkPhaseNames enforces Flow's phase-name limit on a built phase (and a
+// repeat's nested work/recovery leaves).
+func checkPhaseNames(p gen.Phase) error {
+	leaves := []gen.PhaseLeaf{p.PhaseLeaf}
+	if p.Type == gen.PhaseRepeatPhase {
+		leaves = p.PhaseRepeat.Phases
+	}
+	for _, l := range leaves {
+		if n := convert.PolarTextLen(l.Name); n > maxPhaseNameLen {
+			return fmt.Errorf("phase name %q is %d characters; Polar's limit is %d", l.Name, n, maxPhaseNameLen)
+		}
+	}
+	return nil
 }
 
 // phaseName returns a caller-supplied phase name (p["name"]) when present and

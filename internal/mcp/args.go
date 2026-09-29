@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"unicode/utf8"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/lmgarret/polar-flow-mcp/internal/convert"
 )
 
 // Strict argument accessors for the write tools added alongside favorites,
@@ -108,7 +109,8 @@ func stringArg(req mcpgo.CallToolRequest, name string) (string, bool, error) {
 	return s, true, nil
 }
 
-// textArg reads an optional string of at most maxRunes characters. When
+// textArg reads an optional string of at most maxRunes characters, counted
+// the way Polar counts them (convert.PolarTextLen: an emoji is 2). When
 // nonBlank is set, a supplied value must contain a non-whitespace character.
 func textArg(req mcpgo.CallToolRequest, name string, maxRunes int, nonBlank bool) (string, bool, error) {
 	s, present, err := stringArg(req, name)
@@ -118,7 +120,7 @@ func textArg(req mcpgo.CallToolRequest, name string, maxRunes int, nonBlank bool
 	if nonBlank && strings.TrimSpace(s) == "" {
 		return "", true, fmt.Errorf("%s must not be empty or whitespace", name)
 	}
-	if n := utf8.RuneCountInString(s); n > maxRunes {
+	if n := convert.PolarTextLen(s); n > maxRunes {
 		return "", true, fmt.Errorf("%s is %d characters; Polar's limit is %d", name, n, maxRunes)
 	}
 	return s, true, nil

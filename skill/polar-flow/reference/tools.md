@@ -45,7 +45,7 @@ durations (a DISTANCE phase shows `"00:00:00"`) and rolls each exerciseTarget's
 duration up from its phases. **Always call this before `update_training_target`.**
 
 ### `create_training_target`
-- `name` **req** — diary display name
+- `name` **req** — diary display name, 1–45 characters (an emoji counts 2)
 - `date` **req** — scheduled local date
 - `time` — start time (default: `18:00`)
 - `sport_id` — Polar sport id (default: `1` = running). Common: `2` cycling,
@@ -66,7 +66,8 @@ the complete body. `name` and `date` are required. Returns a confirmation.
 - `target_id` **req**
 
 Permanently deletes the target. Irreversible. Reports "no target with id …" if
-it doesn't exist or belongs to another account. Confirm with the user first.
+it doesn't exist (or was already deleted); another account's id is an error.
+Confirm with the user first.
 
 ---
 
