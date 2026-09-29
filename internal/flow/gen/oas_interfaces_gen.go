@@ -17,6 +17,10 @@ type CreateFavoriteRes interface {
 	createFavoriteRes()
 }
 
+type CreateSportProfileRes interface {
+	createSportProfileRes()
+}
+
 type CreateTargetFromFavoriteRes interface {
 	createTargetFromFavoriteRes()
 }
@@ -89,6 +93,10 @@ type GetSleepReportRes interface {
 	getSleepReportRes()
 }
 
+type GetSportProfileListCatalogRes interface {
+	getSportProfileListCatalogRes()
+}
+
 type GetSportProfileRes interface {
 	getSportProfileRes()
 }
@@ -145,6 +153,10 @@ type ListTrainingSessionsRes interface {
 	listTrainingSessionsRes()
 }
 
+type RecalculateSportProfileRes interface {
+	recalculateSportProfileRes()
+}
+
 type RenameFavoriteRes interface {
 	renameFavoriteRes()
 }
@@ -155,6 +167,10 @@ type SaveSportProfileRes interface {
 
 type UpdateFavoriteRes interface {
 	updateFavoriteRes()
+}
+
+type UpdateSportProfileZonesRes interface {
+	updateSportProfileZonesRes()
 }
 
 type UpdateTrainingSessionDataRes interface {

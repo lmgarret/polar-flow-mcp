@@ -23,6 +23,18 @@ These ids are the `sport_id` values for `create_training_target` and
 The catalogue is a moving snapshot (Polar adds sports), so re-fetch rather than
 hard-coding ids.
 
+### `get_training_zones`
+Optional `sport_id` (integer). Returns what zones 1–5 mean for that sport:
+`heart_rate.zones[{zone, min_bpm, max_bpm}]`,
+`speed.zones[{zone, min_kmh, max_kmh, slowest_pace_s_per_km, fastest_pace_s_per_km}]`,
+`power.zones[{zone, min_w, max_w}]`, plus `thresholds` (MAS km/h, MAP / FTP W).
+Ranges are `[min, max)`; the top speed/power zone has `max_*: null` (no
+ceiling). A type the sport lacks is omitted (swimming: HR only). `source` is
+`profile` (the account's stored sport profile — `setting: "free"` means the
+user typed the limits) or `default` (Polar's defaults, computed without
+saving). Without `sport_id`: every stored profile, possibly none. Use it to
+turn "4:30/km" or "220 W" into a `speed_zone` / `power_zone` number.
+
 ---
 
 ## Planned training targets

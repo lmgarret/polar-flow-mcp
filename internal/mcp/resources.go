@@ -28,6 +28,9 @@ var progressHTML []byte
 //go:embed ui/favorites.html
 var favoritesHTML []byte
 
+//go:embed ui/zones.html
+var zonesHTML []byte
+
 // RegisterResources registers all MCP App UI resources with the server.
 func RegisterResources(s *server.MCPServer) {
 	addResource(s, "ui://polar-flow/user.html", "User Info UI", userHTML)
@@ -36,6 +39,7 @@ func RegisterResources(s *server.MCPServer) {
 	addResource(s, "ui://polar-flow/calendar.html", "Calendar UI", calendarHTML)
 	addResource(s, "ui://polar-flow/progress.html", "Progress Summary UI", progressHTML)
 	addResource(s, "ui://polar-flow/favorites.html", "Favorites UI", favoritesHTML)
+	addResource(s, "ui://polar-flow/zones.html", "Training Zones UI", zonesHTML)
 }
 
 func addResource(s *server.MCPServer, uri, name string, html []byte) {

@@ -170,6 +170,7 @@ The server reads `/.env` on startup via `godotenv` — credentials are in memory
 |------|-------------|
 | `get_user_info` | Linked Polar account identity + profile basics |
 | `list_sports` | Full Polar sport-id → name catalogue (the `sport_id` values for targets/sessions) |
+| `get_training_zones` | Heart-rate / speed (pace) / power zones 1–5 of a sport in bpm, km/h (min/km) and W — what the zone numbers on targets mean |
 | `create_training_target` | Schedule a target (warmup / repeat / cooldown phases) |
 | `list_training_targets` | Targets in a date range |
 | `delete_training_target` | Delete a target by ID |

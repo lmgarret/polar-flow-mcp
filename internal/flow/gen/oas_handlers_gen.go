@@ -908,6 +908,203 @@ func (s *Server) handleCreateFavoriteRequest(args [0]string, argsEscaped bool, w
 	}
 }
 
+// handleCreateSportProfileRequest handles createSportProfile operation.
+//
+// Creates a sport profile for `sportId` with default settings and default zones. No request body. 201
+// with the new profile (full shape, incl. `settings.zoneLimits` and a `legacyId`). Captured 2026-09-29
+// — the modern replacement for the legacy form-encoded `POST /settings/sports/add` (both write to
+// the same store).
+//
+// The profile uuid is deterministic per sport (`0f000000-0080-0000-0000-<sportId hex>`). Requires
+// `X-Requested-With: XMLHttpRequest`.
+//
+// POST /api/sports/profiles/create/{sportId}
+func (s *Server) handleCreateSportProfileRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createSportProfile"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/api/sports/profiles/create/{sportId}"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), CreateSportProfileOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(attrs...)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: CreateSportProfileOperation,
+			ID:   "createSportProfile",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securitySessionCookie(ctx, CreateSportProfileOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "SessionCookie",
+					Err:              err,
+				}
+				defer recordError("Security:SessionCookie", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeCreateSportProfileParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response CreateSportProfileRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    CreateSportProfileOperation,
+			OperationSummary: "Create a sport profile",
+			OperationID:      "createSportProfile",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "sportId",
+					In:   "path",
+				}: params.SportId,
+				{
+					Name: "X-Requested-With",
+					In:   "header",
+				}: params.XRequestedWith,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = CreateSportProfileParams
+			Response = CreateSportProfileRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackCreateSportProfileParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.CreateSportProfile(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.CreateSportProfile(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeCreateSportProfileResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleCreateTargetFromFavoriteRequest handles createTargetFromFavorite operation.
 //
 // Creates a training target on a date from a favorite (template) — the diary's + Ajouter → Favoris
@@ -1754,17 +1951,14 @@ func (s *Server) handleDeleteFavoriteRequest(args [1]string, argsEscaped bool, w
 
 // handleDeleteSportProfileRequest handles deleteSportProfile operation.
 //
-// Deletes a sport profile by its UUID. The route exists (verified 2026-06-01). Note create/update are
-// not on this `/api/sports/*` resource — they live on the legacy `/settings/sports/{add,save}`
-// controller (numeric ids); whether delete also has a `/settings/sports/*` equivalent is unknown.
+// Deletes a sport profile. 200, empty body (captured 2026-09-29).
 //
-// Could not reach the success path on the device-less test account: deleting a non-existent UUID
-// returned `500` with an empty body rather than a clean `404`, so the success status/body for an
-// existing profile is unconfirmed. # TODO: verify against a real profile (expect a 200, by analogy
-// with the other Polar delete endpoints). Note this is a genuinely destructive operation — only
-// exercise it on a throwaway profile.
+// ⚠ Idempotent on unknown ids: deleting a well-formed uuid that no longer exists also answers 200.
+// ⚠ The last profile cannot be deleted — 400 plain text
+// `Invalid delete sport profile request, status
+// INVALID_REQUEST, message 'Deleting the last active profile is not allowed. …'`.
 //
-// Like other `/api/*` writes this requires the `X-Requested-With: XMLHttpRequest` header.
+// Requires `X-Requested-With: XMLHttpRequest`.
 //
 // DELETE /api/sports/profiles/{id}
 func (s *Server) handleDeleteSportProfileRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -4559,13 +4753,12 @@ func (s *Server) handleGetSleepReportRequest(args [0]string, argsEscaped bool, w
 
 // handleGetSportProfileRequest handles getSportProfile operation.
 //
-// Returns one sport profile by its UUID.
+// Returns one sport profile with its full `settings`, including `settings.zoneLimits` — the 5
+// heart-rate (bpm), speed (km/h) and power (W) zones a Polar device uses for this sport, plus the
+// thresholds (`maximumAerobicSpeed` / `maximumAerobicPower` / `functionalThresholdPower`) default
+// zones derive from. Captured 2026-09-29.
 //
-// Not exercised against a real profile. The test account has no synced sport profiles, so this could
-// not be observed returning `200`. Probing with arbitrary UUIDs returned `400` with a plain-text
-// `Invalid request: Invalid UUID: <value>` body — meaning either the id must match an existing
-// profile, or Polar uses a stricter/custom id encoding than a canonical v4 UUID. # TODO: verify the
-// success shape and the exact id format using an account with a device-synced profile.
+// ⚠ `userId` reads back as `"0"` on this endpoint (the list and create responses carry the real id).
 //
 // GET /api/sports/profiles/{id}
 func (s *Server) handleGetSportProfileRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -4701,7 +4894,7 @@ func (s *Server) handleGetSportProfileRequest(args [1]string, argsEscaped bool, 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    GetSportProfileOperation,
-			OperationSummary: "Read a single sport profile",
+			OperationSummary: "Read a single sport profile (incl. training zones)",
 			OperationID:      "getSportProfile",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -4742,6 +4935,180 @@ func (s *Server) handleGetSportProfileRequest(args [1]string, argsEscaped bool, 
 	}
 
 	if err := encodeGetSportProfileResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleGetSportProfileListCatalogRequest handles getSportProfileListCatalog operation.
+//
+// The ordered list(s) of sport-profile uuids shown on the device. Created along with the account's
+// first profile. Captured 2026-09-29. A matching update route exists in the UI bundle
+// (`updateSportProfileListCatalog`) but was not exercised. # TODO: verify write.
+//
+// GET /api/sports/profile-list-catalog
+func (s *Server) handleGetSportProfileListCatalogRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getSportProfileListCatalog"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/api/sports/profile-list-catalog"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), GetSportProfileListCatalogOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(attrs...)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetSportProfileListCatalogOperation,
+			ID:   "getSportProfileListCatalog",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securitySessionCookie(ctx, GetSportProfileListCatalogOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "SessionCookie",
+					Err:              err,
+				}
+				defer recordError("Security:SessionCookie", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+
+	var rawBody []byte
+
+	var response GetSportProfileListCatalogRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetSportProfileListCatalogOperation,
+			OperationSummary: "Read the device's sport-profile list order",
+			OperationID:      "getSportProfileListCatalog",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = struct{}
+			Response = GetSportProfileListCatalogRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetSportProfileListCatalog(ctx)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetSportProfileListCatalog(ctx)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetSportProfileListCatalogResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -6811,24 +7178,19 @@ func (s *Server) handleListFavoritesSimpleRequest(args [0]string, argsEscaped bo
 
 // handleListSportProfilesRequest handles listSportProfiles operation.
 //
-// Returns the signed-in user's sport profiles ("Profils sportifs", reached in the web UI via Compte
-// → Profils sportifs, served by the server-rendered `/settings/sports` page).
+// Returns the signed-in user's sport profiles ("Profils sportifs") — the per-sport device
+// configuration, including the heart-rate / speed / power training zones. Captured populated
+// 2026-09-29.
 //
-// Sport profiles are the per-sport device configuration (training views, auto-lap, zones, sensor/GPS
-// settings). Create/update is NOT on this `/api/sports/*` resource (`POST`/`PUT`/`PATCH` here all
-// 404). It lives on the legacy `/settings/sports/*` controller instead: create =
-// `POST /settings/sports/add`, update = `POST /settings/sports/save` (verified 2026-06-01 from a
-// device-paired account — see `docs/endpoints/sport-profiles.md`).
+// ⚠ Elements are slim: `profile` carries only `sportId`, `productSettings` and `subProfileUuids` —
+// no `settings`, so no zones. Read each profile with `GET /api/sports/profiles/{id}` for its
+// `settings.zoneLimits`, or compute a sport's default zones without a profile via
+// `POST /api/sports/profiles/{id}/recalculate`.
 //
-// Note those settings endpoints key profiles by a numeric id, whereas this `/api/sports/profiles/{id}`
-// resource validates a UUID — the two id systems are not yet reconciled.
+// `[]` until the account's first profile is created (via `POST /api/sports/profiles/create/{sportId}`
+// or the legacy `POST /settings/sports/add`, which writes to this same store).
 //
-// Empty on a device-less account. On the free test account this returns `[]`, and
-// `GET /api/account/users/current/user` likewise reports `sportProfiles: []`. A populated element
-// shape could not be captured — see `SportProfile` for the partially-inferred element schema and
-// TODOs.
-//
-// A `sportId` query parameter is accepted but had no visible effect on the empty account (still `[]`).
+// A `sportId` query parameter is accepted but ignored (the full list is returned for any value).
 //
 // GET /api/sports/profiles
 func (s *Server) handleListSportProfilesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -6946,16 +7308,6 @@ func (s *Server) handleListSportProfilesRequest(args [0]string, argsEscaped bool
 			return
 		}
 	}
-	params, err := decodeListSportProfilesParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
 
 	var rawBody []byte
 
@@ -6968,18 +7320,13 @@ func (s *Server) handleListSportProfilesRequest(args [0]string, argsEscaped bool
 			OperationID:      "listSportProfiles",
 			Body:             nil,
 			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "sportId",
-					In:   "query",
-				}: params.SportId,
-			},
-			Raw: r,
+			Params:           middleware.Parameters{},
+			Raw:              r,
 		}
 
 		type (
 			Request  = struct{}
-			Params   = ListSportProfilesParams
+			Params   = struct{}
 			Response = ListSportProfilesRes
 		)
 		response, err = middleware.HookMiddleware[
@@ -6989,14 +7336,14 @@ func (s *Server) handleListSportProfilesRequest(args [0]string, argsEscaped bool
 		](
 			m,
 			mreq,
-			unpackListSportProfilesParams,
+			nil,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListSportProfiles(ctx, params)
+				response, err = s.h.ListSportProfiles(ctx)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.ListSportProfiles(ctx, params)
+		response, err = s.h.ListSportProfiles(ctx)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -7213,6 +7560,233 @@ func (s *Server) handleListTrainingSessionsRequest(args [0]string, argsEscaped b
 	}
 
 	if err := encodeListTrainingSessionsResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleRecalculateSportProfileRequest handles recalculateSportProfile operation.
+//
+// Pure computation — nothing is persisted (the stored profile's `modified` is unchanged afterwards).
+// The web UI calls it while the user edits zones/thresholds to preview the derived limits. Captured
+// 2026-09-29.
+//
+// Returns the posted envelope with `profile.settings.zoneLimits` filled in for every zone type whose
+// `*SettingSource` is `…_DEFAULT` (types with no source set come back `[]`), plus the thresholds the
+// defaults derive from (`maximumAerobicSpeed`, `maximumAerobicPower`, `functionalThresholdPower` —
+// only those relevant to the sport).
+//
+// Works without a stored profile: the `{id}` need not exist, only be a well-formed profile uuid
+// (domain `0f000000`, non-zero last group — the server rejects `…-000000000000` with
+// `UUID has invalid sport ID: 0`). This is the way to read a sport's default zones on an account that
+// has no profile for that sport. Minimal body that yields all three zone types:
+//
+//	{"userId": 11111111, "uuid": "0f000000-0080-0000-0000-000000000002",
+//	 "profile": {"sportId": 2, "settings": {"zoneLimits": {
+//	   "heartRateSettingSource": "HEART_RATE_ZONE_SETTING_SOURCE_DEFAULT",
+//	   "speedSettingSource": "SPEED_ZONE_SETTING_SOURCE_DEFAULT",
+//	   "powerSettingSource": "POWER_ZONE_SETTING_SOURCE_DEFAULT"}}}}
+//
+// `userId` must be the session user's (see `SportProfileWriteRequest`), so this cannot read another
+// account's thresholds. Requires `X-Requested-With: XMLHttpRequest`.
+//
+// POST /api/sports/profiles/{id}/recalculate
+func (s *Server) handleRecalculateSportProfileRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("recalculateSportProfile"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/api/sports/profiles/{id}/recalculate"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), RecalculateSportProfileOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(attrs...)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: RecalculateSportProfileOperation,
+			ID:   "recalculateSportProfile",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securitySessionCookie(ctx, RecalculateSportProfileOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "SessionCookie",
+					Err:              err,
+				}
+				defer recordError("Security:SessionCookie", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeRecalculateSportProfileParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeRecalculateSportProfileRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response RecalculateSportProfileRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    RecalculateSportProfileOperation,
+			OperationSummary: "Compute a sport's zones and thresholds (no write)",
+			OperationID:      "recalculateSportProfile",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "X-Requested-With",
+					In:   "header",
+				}: params.XRequestedWith,
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *SportProfileWriteRequest
+			Params   = RecalculateSportProfileParams
+			Response = RecalculateSportProfileRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackRecalculateSportProfileParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.RecalculateSportProfile(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.RecalculateSportProfile(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeRecalculateSportProfileResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -7859,6 +8433,227 @@ func (s *Server) handleUpdateFavoriteRequest(args [1]string, argsEscaped bool, w
 	}
 
 	if err := encodeUpdateFavoriteResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleUpdateSportProfileZonesRequest handles updateSportProfileZones operation.
+//
+// Persists the profile's zones — the UI's "Zones d'entraînement" editor. Send the full `profile`
+// read from `GET /api/sports/profiles/{id}` with `settings.zoneLimits` edited; set a list's
+// `*SettingSource` to `…_FREE` to keep hand-entered limits, or `…_DEFAULT` to go back to computed
+// ones. 200, empty body. Captured 2026-09-29. Changes reach the watch on its next sync.
+//
+// Server-side validation (400, plain text listing every error as
+// `profile.settings.zone_limits.<list>[i]: <reason>`):
+//
+//   - exactly 5 zones per non-empty list;
+//   - contiguous: zone i's `lowerLimit` = zone i-1's `higherLimit`;
+//   - each zone spans ≥ 2 units;
+//   - ranges: HR [15, 240] bpm, speed [1.0, 399.0] km/h, power [0, 2000] W.
+//
+// ⚠ `modified` must be newer than the stored profile's `modified`, else 409
+// `A newer profile exists: Incoming sport profile is older than what is stored`. `userId` must be the
+// session user. Requires `X-Requested-With: XMLHttpRequest`.
+//
+// POST /api/sports/profiles/{id}/update-zones
+func (s *Server) handleUpdateSportProfileZonesRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateSportProfileZones"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/api/sports/profiles/{id}/update-zones"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), UpdateSportProfileZonesOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(attrs...)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: UpdateSportProfileZonesOperation,
+			ID:   "updateSportProfileZones",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securitySessionCookie(ctx, UpdateSportProfileZonesOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "SessionCookie",
+					Err:              err,
+				}
+				defer recordError("Security:SessionCookie", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeUpdateSportProfileZonesParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeUpdateSportProfileZonesRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response UpdateSportProfileZonesRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    UpdateSportProfileZonesOperation,
+			OperationSummary: "Save a sport profile's training zones",
+			OperationID:      "updateSportProfileZones",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "X-Requested-With",
+					In:   "header",
+				}: params.XRequestedWith,
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *SportProfileWriteRequest
+			Params   = UpdateSportProfileZonesParams
+			Response = UpdateSportProfileZonesRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackUpdateSportProfileZonesParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.UpdateSportProfileZones(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.UpdateSportProfileZones(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeUpdateSportProfileZonesResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

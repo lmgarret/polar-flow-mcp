@@ -6,7 +6,7 @@ sidebar:
 ---
 
 Hosts that support [MCP Apps](https://modelcontextprotocol.io/) render most
-tool results as an inline widget instead of raw JSON. The six UIs are embedded
+tool results as an inline widget instead of raw JSON. The seven UIs are embedded
 in the binary and served as `ui://polar-flow/*.html` resources; each tool
 advertises its UI in `_meta.ui.resourceUri`. Hosts without MCP-app support get
 the same data as the usual text/JSON result.
@@ -76,3 +76,9 @@ Tool: `get_progress_summary`.
 Tool: `get_user_info`.
 
 ![Linked account card](../../../assets/mcp-apps/user.webp)
+
+## Training zones — `zones.html`
+
+Tool: `get_training_zones`.
+
+![Heart-rate, pace and power zones per sport](../../../assets/mcp-apps/zones.webp)

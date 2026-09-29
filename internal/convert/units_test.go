@@ -208,3 +208,48 @@ func TestNilIfSentinelID(t *testing.T) {
 		t.Errorf("NilIfSentinelID(42) = %v, want 42", got)
 	}
 }
+
+func TestKmhToPaceSeconds(t *testing.T) {
+	tests := []struct {
+		kmh  float64
+		want int
+		ok   bool
+	}{
+		{12, 300, true},
+		{9.451075, 381, true},
+		{19.761337, 182, true},
+		{0, 0, false},
+		{-3, 0, false},
+	}
+	for _, tt := range tests {
+		got, ok := KmhToPaceSeconds(tt.kmh)
+		if got != tt.want || ok != tt.ok {
+			t.Errorf("KmhToPaceSeconds(%v) = %d, %v; want %d, %v", tt.kmh, got, ok, tt.want, tt.ok)
+		}
+	}
+}
+
+func TestPaceClock(t *testing.T) {
+	for secs, want := range map[int]string{299: "4:59", 300: "5:00", 381: "6:21", 45: "0:45", 725: "12:05", -1: "0:00"} {
+		if got := PaceClock(secs); got != want {
+			t.Errorf("PaceClock(%d) = %q, want %q", secs, got, want)
+		}
+	}
+}
+
+func TestPolarEnumTail(t *testing.T) {
+	tests := []struct{ v, marker, want string }{
+		{"HEART_RATE_ZONE_SETTING_SOURCE_DEFAULT", "_SOURCE_", "default"},
+		{"SPEED_ZONE_SETTING_SOURCE_FREE", "_SOURCE_", "free"},
+		{"SPEED_ZONE_CALCULATION_METHOD_SPORT_SPECIFIC_PREDEFINED", "_METHOD_", "sport_specific_predefined"},
+		{"POWER_ZONE_CALCULATION_METHOD_UNKNOWN", "_METHOD_", ""},
+		{"FTP_SOURCE_ESTIMATED", "_SOURCE_", "estimated"},
+		{"SOMETHING_NEW", "_SOURCE_", "something_new"},
+		{"", "_SOURCE_", ""},
+	}
+	for _, tt := range tests {
+		if got := PolarEnumTail(tt.v, tt.marker); got != tt.want {
+			t.Errorf("PolarEnumTail(%q, %q) = %q, want %q", tt.v, tt.marker, got, tt.want)
+		}
+	}
+}

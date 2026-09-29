@@ -37,7 +37,7 @@ tags:
 - name: progress
   description: Aggregated progress / report totals (weekly, monthly, yearly)
 - name: sport-profiles
-  description: Per-sport device configuration ("Profils sportifs"); device-synced, read/delete only on the web API
+  description: Per-sport device configuration ("Profils sportifs") incl. HR/speed/power training zones
 paths:
   /api/trainingtarget:
     post:
@@ -693,69 +693,42 @@ paths:
   /api/sports/profiles:
     get:
       summary: List the user's sport profiles
-      description: 'Returns the signed-in user''s **sport profiles** ("Profils sportifs",
+      description: 'Returns the signed-in user''s **sport profiles** ("Profils sportifs") —
 
-        reached in the web UI via *Compte → Profils sportifs*, served by the
+        the per-sport device configuration, including the heart-rate / speed /
 
-        server-rendered `/settings/sports` page).
-
-
-        Sport profiles are the per-sport device configuration (training views,
-
-        auto-lap, zones, sensor/GPS settings). **Create/update is NOT on this
-
-        `/api/sports/*` resource** (`POST`/`PUT`/`PATCH` here all 404). It lives on
-
-        the legacy `/settings/sports/*` controller instead:
-
-        **create = `POST /settings/sports/add`**, **update =
-
-        `POST /settings/sports/save`** (verified 2026-06-01 from a device-paired
-
-        account — see `docs/endpoints/sport-profiles.md`).
+        power **training zones**. Captured populated 2026-09-29.
 
 
-        Note those settings endpoints key profiles by a **numeric** id, whereas
+        ⚠ **Elements are slim**: `profile` carries only `sportId`,
 
-        this `/api/sports/profiles/{id}` resource validates a **UUID** — the two id
+        `productSettings` and `subProfileUuids` — no `settings`, so **no zones**.
 
-        systems are not yet reconciled.
+        Read each profile with `GET /api/sports/profiles/{id}` for its
 
+        `settings.zoneLimits`, or compute a sport''s default zones without a
 
-        **Empty on a device-less account.** On the free test account this returns
-
-        `[]`, and `GET /api/account/users/current/user` likewise reports
-
-        `sportProfiles: []`. A populated element shape could not be captured — see
-
-        `SportProfile` for the partially-inferred element schema and TODOs.
+        profile via `POST /api/sports/profiles/{id}/recalculate`.
 
 
-        A `sportId` query parameter is accepted but had no visible effect on the
+        `[]` until the account''s first profile is created (via
 
-        empty account (still `[]`).
+        `POST /api/sports/profiles/create/{sportId}` or the legacy
+
+        `POST /settings/sports/add`, which writes to this same store).
+
+
+        A `sportId` query parameter is accepted but **ignored** (the full list is
+
+        returned for any value).
 
         '
       operationId: listSportProfiles
       tags:
       - sport-profiles
-      parameters:
-      - name: sportId
-        in: query
-        required: false
-        schema:
-          type: integer
-        description: 'Optional sport filter (same id space as `GET /api/sports/sports`).
-
-          Accepted on the empty test account but its filtering effect could not
-
-          be confirmed. # TODO: verify against a populated account.
-
-          '
-        example: 1
       responses:
         '200':
-          description: Array of the user's sport profiles (empty on a device-less account).
+          description: Array of the user's sport profiles (slim — no settings/zones).
           content:
             application/json:
               schema:
@@ -763,45 +736,42 @@ paths:
                 items:
                   $ref: '#/components/schemas/SportProfile'
               examples:
+                populated:
+                  summary: One running profile
+                  value:
+                  - uuid: 0f000000-0080-0000-0000-000000000001
+                    userId: '11111111'
+                    created: '2026-09-29T09:09:24Z'
+                    modified: '2026-09-29T09:09:24Z'
+                    profile:
+                      sportId: 1
+                      productSettings: []
+                      subProfileUuids: []
+                    legacyProfiles: {}
                 empty:
-                  summary: Device-less / free account
+                  summary: No profile created yet
                   value: []
         '401':
           $ref: '#/components/responses/Unauthorized'
   /api/sports/profiles/{id}:
     parameters:
-    - name: id
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-      description: 'The sport profile''s **UUID** (the `id` field from
-
-        `GET /api/sports/profiles`, **not** the numeric `sportId`). A non-UUID
-
-        value returns `400 Invalid UUID: <value>` (plain text).
-
-        '
-      example: 7ae78bae-6ee6-47aa-9128-a2ee5cd0a138
+    - $ref: '#/components/parameters/SportProfileUuid'
     get:
-      summary: Read a single sport profile
-      description: 'Returns one sport profile by its UUID.
+      summary: Read a single sport profile (incl. training zones)
+      description: 'Returns one sport profile with its full `settings`, including
+
+        `settings.zoneLimits` — the 5 heart-rate (bpm), speed (km/h) and power
+
+        (W) zones a Polar device uses for this sport, plus the thresholds
+
+        (`maximumAerobicSpeed` / `maximumAerobicPower` /
+
+        `functionalThresholdPower`) default zones derive from. Captured 2026-09-29.
 
 
-        **Not exercised against a real profile.** The test account has no synced
+        ⚠ `userId` reads back as `"0"` on this endpoint (the list and create
 
-        sport profiles, so this could not be observed returning `200`. Probing
-
-        with arbitrary UUIDs returned `400` with a plain-text
-
-        `Invalid request: Invalid UUID: <value>` body — meaning either the id
-
-        must match an existing profile, or Polar uses a stricter/custom id
-
-        encoding than a canonical v4 UUID. # TODO: verify the success shape and the
-
-        exact id format using an account with a device-synced profile.
+        responses carry the real id).
 
         '
       operationId: getSportProfile
@@ -809,51 +779,115 @@ paths:
       - sport-profiles
       responses:
         '200':
-          description: The sport profile (shape not yet captured — see `SportProfile`).
+          description: The sport profile.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SportProfile'
+              example:
+                uuid: 0f000000-0080-0000-0000-000000000002
+                userId: '0'
+                created: '2026-09-29T09:14:10Z'
+                modified: '2026-09-29T09:14:09Z'
+                profile:
+                  sportId: 2
+                  settings:
+                    sensorBroadcastingHr: false
+                    hrZoneLockAvailable: true
+                    speedZoneLockAvailable: false
+                    powerZoneLockAvailable: false
+                    volume:
+                      volume: 60
+                    speedView: SPEED_VIEW_SPEED
+                    zoneLimits:
+                      heartRateZones:
+                      - lowerLimit: 95
+                        higherLimit: 114
+                      - lowerLimit: 114
+                        higherLimit: 133
+                      - lowerLimit: 133
+                        higherLimit: 152
+                      - lowerLimit: 152
+                        higherLimit: 171
+                      - lowerLimit: 171
+                        higherLimit: 190
+                      speedZones:
+                      - lowerLimit: 10
+                        higherLimit: 20
+                      - lowerLimit: 20
+                        higherLimit: 30
+                      - lowerLimit: 30
+                        higherLimit: 40
+                      - lowerLimit: 40
+                        higherLimit: 50
+                      - lowerLimit: 50
+                        higherLimit: 399
+                      powerZones:
+                      - lowerLimit: 138
+                        higherLimit: 188
+                      - lowerLimit: 188
+                        higherLimit: 225
+                      - lowerLimit: 225
+                        higherLimit: 263
+                      - lowerLimit: 263
+                        higherLimit: 300
+                      - lowerLimit: 300
+                        higherLimit: 2000
+                      heartRateSettingSource: HEART_RATE_ZONE_SETTING_SOURCE_DEFAULT
+                      powerSettingSource: POWER_ZONE_SETTING_SOURCE_DEFAULT
+                      speedSettingSource: SPEED_ZONE_SETTING_SOURCE_DEFAULT
+                      powerZoneCalculationMethod: POWER_ZONE_CALCULATION_METHOD_FTP_BASED
+                      speedZoneCalculationMethod: SPEED_ZONE_CALCULATION_METHOD_SPORT_SPECIFIC_PREDEFINED
+                    trainingReminder:
+                      type: TRAINING_REMINDER_TYPE_OFF
+                      text: ''
+                    powerView: POWER_VIEW_WATT
+                    strideSpeedSource: STRIDE_SPEED_SOURCE_STRIDE
+                    swimmingUnits: SWIMMING_UNITS_METERS
+                    remoteButtonActions: []
+                  sportFactor: 0.9
+                  productSettings: []
+                  subProfileUuids: []
+                  functionalThresholdPower:
+                    power: 250
+                    source: FTP_SOURCE_ESTIMATED
+                legacyProfiles: {}
         '400':
-          description: 'Malformed id. Plain-text body, e.g.
+          description: 'Malformed uuid. Plain text, e.g.
 
-            `Invalid request: Invalid UUID: 1`.
+            `Invalid request: Invalid request: request.uuid: must be valid: Invalid UUID string: not-a-uuid`.
 
             '
           content:
             text/plain:
               schema:
                 type: string
-              example: 'Invalid request: Invalid UUID: 1'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No profile with this uuid. Plain text `Profile not found`.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Profile not found
     delete:
       summary: Delete a sport profile
-      description: 'Deletes a sport profile by its UUID. The route **exists** (verified
-
-        2026-06-01). Note create/update are not on this `/api/sports/*` resource —
-
-        they live on the legacy `/settings/sports/{add,save}` controller (numeric
-
-        ids); whether delete also has a `/settings/sports/*` equivalent is unknown.
+      description: 'Deletes a sport profile. **200, empty body** (captured 2026-09-29).
 
 
-        **Could not reach the success path** on the device-less test account:
+        ⚠ **Idempotent on unknown ids**: deleting a well-formed uuid that no
 
-        deleting a non-existent UUID returned `500` with an empty body rather than
+        longer exists also answers 200. ⚠ **The last profile cannot be
 
-        a clean `404`, so the success status/body for an existing profile is
+        deleted** — 400 plain text `Invalid delete sport profile request, status
 
-        unconfirmed. # TODO: verify against a real profile (expect a 200, by
+        INVALID_REQUEST, message ''Deleting the last active profile is not
 
-        analogy with the other Polar delete endpoints). Note this is a genuinely
-
-        destructive operation — only exercise it on a throwaway profile.
+        allowed. …''`.
 
 
-        Like other `/api/*` writes this requires the
-
-        `X-Requested-With: XMLHttpRequest` header.
+        Requires `X-Requested-With: XMLHttpRequest`.
 
         '
       operationId: deleteSportProfile
@@ -863,15 +897,257 @@ paths:
       - $ref: '#/components/parameters/XRequestedWith'
       responses:
         '200':
-          description: Profile deleted (status inferred — not captured against a real profile).
+          description: Deleted (or already absent). Empty body.
+        '400':
+          description: Malformed uuid, or this is the account's last profile. Plain text.
+          content:
+            text/plain:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '500':
-          description: 'Returned (empty body) when the id does not resolve to a profile on
+  /api/sports/profiles/{id}/recalculate:
+    parameters:
+    - $ref: '#/components/parameters/SportProfileUuid'
+    post:
+      summary: Compute a sport's zones and thresholds (no write)
+      description: "**Pure computation — nothing is persisted** (the stored profile's\n`modified` is unchanged afterwards).\
+        \ The web UI calls it while the user\nedits zones/thresholds to preview the derived limits. Captured 2026-09-29.\n\
+        \nReturns the posted envelope with `profile.settings.zoneLimits` filled in\nfor every zone type whose `*SettingSource`\
+        \ is `…_DEFAULT` (types with no\nsource set come back `[]`), plus the thresholds the defaults derive from\n(`maximumAerobicSpeed`,\
+        \ `maximumAerobicPower`,\n`functionalThresholdPower` — only those relevant to the sport).\n\n**Works without a stored\
+        \ profile**: the `{id}` need not exist, only be a\nwell-formed profile uuid (domain `0f000000`, non-zero last group\
+        \ — the\nserver rejects `…-000000000000` with `UUID has invalid sport ID: 0`).\nThis is the way to read a sport's\
+        \ **default zones** on an account that\nhas no profile for that sport. Minimal body that yields all three zone\ntypes:\n\
+        \n```json\n{\"userId\": 11111111, \"uuid\": \"0f000000-0080-0000-0000-000000000002\",\n \"profile\": {\"sportId\"\
+        : 2, \"settings\": {\"zoneLimits\": {\n   \"heartRateSettingSource\": \"HEART_RATE_ZONE_SETTING_SOURCE_DEFAULT\",\n\
+        \   \"speedSettingSource\": \"SPEED_ZONE_SETTING_SOURCE_DEFAULT\",\n   \"powerSettingSource\": \"POWER_ZONE_SETTING_SOURCE_DEFAULT\"\
+        }}}}\n```\n\n`userId` must be the session user's (see `SportProfileWriteRequest`), so\nthis cannot read another account's\
+        \ thresholds. Requires\n`X-Requested-With: XMLHttpRequest`.\n"
+      operationId: recalculateSportProfile
+      tags:
+      - sport-profiles
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SportProfileWriteRequest'
+      responses:
+        '200':
+          description: The envelope with computed zones/thresholds (no `created`/`modified`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SportProfile'
+              example:
+                uuid: 0f000000-0080-0000-0000-000000000001
+                userId: '11111111'
+                profile:
+                  sportId: 1
+                  settings:
+                    zoneLimits:
+                      heartRateZones:
+                      - lowerLimit: 95
+                        higherLimit: 114
+                      - lowerLimit: 114
+                        higherLimit: 133
+                      - lowerLimit: 133
+                        higherLimit: 152
+                      - lowerLimit: 152
+                        higherLimit: 171
+                      - lowerLimit: 171
+                        higherLimit: 190
+                      speedZones:
+                      - lowerLimit: 9.451075
+                        higherLimit: 12.02864
+                      - lowerLimit: 12.02864
+                        higherLimit: 14.606206
+                      - lowerLimit: 14.606206
+                        higherLimit: 17.183771
+                      - lowerLimit: 17.183771
+                        higherLimit: 19.761337
+                      - lowerLimit: 19.761337
+                        higherLimit: 399
+                      powerZones:
+                      - lowerLimit: 221
+                        higherLimit: 283
+                      - lowerLimit: 283
+                        higherLimit: 343
+                      - lowerLimit: 343
+                        higherLimit: 403
+                      - lowerLimit: 403
+                        higherLimit: 464
+                      - lowerLimit: 464
+                        higherLimit: 2000
+                      heartRateSettingSource: HEART_RATE_ZONE_SETTING_SOURCE_DEFAULT
+                      powerSettingSource: POWER_ZONE_SETTING_SOURCE_DEFAULT
+                      speedSettingSource: SPEED_ZONE_SETTING_SOURCE_DEFAULT
+                      powerZoneCalculationMethod: POWER_ZONE_CALCULATION_METHOD_MAP_BASED
+                      speedZoneCalculationMethod: SPEED_ZONE_CALCULATION_METHOD_MAS_BASED
+                    remoteButtonActions: []
+                  productSettings: []
+                  subProfileUuids: []
+                  maximumAerobicSpeed:
+                    speed: 17.183771
+                    source: MAS_SOURCE_ESTIMATED
+                  maximumAerobicPower:
+                    power: 403
+                    source: MAP_SOURCE_ESTIMATED
+                legacyProfiles: {}
+        '400':
+          description: 'Bad uuid (unknown domain / sport segment 0), body uuid ≠ URL uuid,
 
-            this account — observed in place of a clean 404 while probing.
+            or `userId` missing / not the session user. Plain text naming the field.
 
             '
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: Profile UUID in the request body does not match the UUID in the URL
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/sports/profiles/{id}/update-zones:
+    parameters:
+    - $ref: '#/components/parameters/SportProfileUuid'
+    post:
+      summary: Save a sport profile's training zones
+      description: 'Persists the profile''s zones — the UI''s "Zones d''entraînement" editor.
+
+        Send the full `profile` read from `GET /api/sports/profiles/{id}` with
+
+        `settings.zoneLimits` edited; set a list''s `*SettingSource` to `…_FREE`
+
+        to keep hand-entered limits, or `…_DEFAULT` to go back to computed ones.
+
+        **200, empty body.** Captured 2026-09-29. Changes reach the watch on its
+
+        next sync.
+
+
+        Server-side validation (400, plain text listing every error as
+
+        `profile.settings.zone_limits.<list>[i]: <reason>`):
+
+        - exactly **5** zones per non-empty list;
+
+        - contiguous: zone *i*''s `lowerLimit` = zone *i-1*''s `higherLimit`;
+
+        - each zone spans ≥ 2 units;
+
+        - ranges: HR [15, 240] bpm, speed [1.0, 399.0] km/h, power [0, 2000] W.
+
+
+        ⚠ `modified` must be **newer** than the stored profile''s `modified`,
+
+        else **409** `A newer profile exists: Incoming sport profile is older
+
+        than what is stored`. `userId` must be the session user. Requires
+
+        `X-Requested-With: XMLHttpRequest`.
+
+        '
+      operationId: updateSportProfileZones
+      tags:
+      - sport-profiles
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SportProfileWriteRequest'
+      responses:
+        '200':
+          description: Saved. Empty body — re-read the profile.
+        '400':
+          description: Validation failed (see above) or bad uuid/userId. Plain text.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: 'Invalid update sport profile request for user 11111111 with uuid 0f000000-0080-0000-0000-000000000002.
+                Service replied status INVALID_REQUEST with message ''Invalid request: Profile validation failed with 1 error(s):
+                profile.settings.zone_limits.speed_zones[1]: Speed zone lower limit should be equal to previous zone''s higher
+                limit. Previous zone higher limit: 20.0, current zone lower limit: 21.0'''
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: '`modified` is not newer than the stored profile. Plain text.'
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/sports/profiles/create/{sportId}:
+    post:
+      summary: Create a sport profile
+      description: 'Creates a sport profile for `sportId` with default settings and default
+
+        zones. No request body. **201** with the new profile (full shape, incl.
+
+        `settings.zoneLimits` and a `legacyId`). Captured 2026-09-29 — the
+
+        modern replacement for the legacy form-encoded
+
+        `POST /settings/sports/add` (both write to the same store).
+
+
+        The profile uuid is deterministic per sport
+
+        (`0f000000-0080-0000-0000-<sportId hex>`). Requires
+
+        `X-Requested-With: XMLHttpRequest`.
+
+        '
+      operationId: createSportProfile
+      tags:
+      - sport-profiles
+      parameters:
+      - name: sportId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Sport id (`GET /api/sports/sports`).
+        example: 2
+      - $ref: '#/components/parameters/XRequestedWith'
+      responses:
+        '201':
+          description: The created profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SportProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/sports/profile-list-catalog:
+    get:
+      summary: Read the device's sport-profile list order
+      description: 'The ordered list(s) of sport-profile uuids shown on the device. Created
+
+        along with the account''s first profile. Captured 2026-09-29. A matching
+
+        update route exists in the UI bundle (`updateSportProfileListCatalog`)
+
+        but was not exercised. # TODO: verify write
+
+        '
+      operationId: getSportProfileListCatalog
+      tags:
+      - sport-profiles
+      responses:
+        '200':
+          description: The catalogue.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SportProfileListCatalog'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /settings/sports/add:
     post:
       summary: Add (create) a sport profile
@@ -2796,6 +3072,21 @@ components:
         format: int64
         example: 1454046259
       description: Training target numeric ID (e.g. 1454046259), as returned in the create response body.
+    SportProfileUuid:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: 'The sport profile''s **uuid** (`uuid` from `GET /api/sports/profiles`), not
+
+        the numeric `sportId` nor the legacy numeric profile id. Polar''s
+
+        structured form: `0f000000-0080-0000-0000-<sportId as 12 hex digits>`.
+
+        '
+      example: 0f000000-0080-0000-0000-000000000001
     TrainingSessionId:
       name: id
       in: path
@@ -3510,86 +3801,419 @@ components:
         '203': RUCKING
         '204': CALISTHENICS
         '205': SKIERG
+    ZoneLimit:
+      type: object
+      description: "One training zone as a half-open range `[lowerLimit, higherLimit)`.\nZones are contiguous: each zone's\
+        \ `lowerLimit` equals the previous zone's\n`higherLimit` (the server rejects a gap or overlap with 400). Units depend\n\
+        on the list the zone sits in:\n\n- `heartRateZones` — **bpm**, integers. Valid range [15, 240]. The top\n  zone's\
+        \ `higherLimit` is the maximum heart rate the zones were derived from.\n- `speedZones` — **km/h**, floats (even on\
+        \ pace-view sports; `speedView`\n  only changes how the watch displays it). Valid range [1.0, 399.0]. The top\n  zone's\
+        \ `higherLimit` is the **sentinel `399.0`** (\"no ceiling\").\n- `powerZones` — **watts**, integers. Valid range [0,\
+        \ 2000]. The top zone's\n  `higherLimit` is the **sentinel `2000`** (\"no ceiling\").\n\nEvery zone must span at least\
+        \ 2 units (`higherLimit - lowerLimit >= 2`).\nNote the legacy `/settings/sports/edit` HTML renders the same zones\
+        \ with an\ninclusive upper bound (`95 - 113` for `[95, 114)`).\n"
+      required:
+      - lowerLimit
+      - higherLimit
+      properties:
+        lowerLimit:
+          type: number
+          description: Inclusive lower bound (bpm, km/h or W — see the containing list).
+          example: 133
+        higherLimit:
+          type: number
+          description: Exclusive upper bound (bpm, km/h or W — see the containing list).
+          example: 152
+    SportProfileZoneLimits:
+      type: object
+      description: 'The heart-rate, speed/pace and power **training zones** of one sport
+
+        profile — the zones a Polar device uses for that sport, and therefore what
+
+        `intensityType: HEART_RATE_ZONES | SPEED_ZONES | POWER_ZONES` +
+
+        `lowerZone`/`upperZone` (1–5) on a training-target phase resolve to.
+
+
+        Each list holds **exactly 5** zones, index 0 = zone 1 (lowest). A list is
+
+        `[]` when the sport does not support that zone type (e.g. SWIMMING and
+
+        STRENGTH_TRAINING only have heart-rate zones; CYCLING has all three).
+
+
+        **Default zones** (`*_SETTING_SOURCE_DEFAULT`) are derived server-side
+
+        (observed 2026-09-29, test account with no measured HRmax/MAS):
+
+
+        | Type | Basis | Zone boundaries |
+
+        |------|-------|-----------------|
+
+        | Heart rate | HRmax (age-estimated when `physicalInfo.maximumHeartRate` is null — 190 bpm at age 30) | 50 / 60 /
+        70 / 80 / 90 / 100 % HRmax |
+
+        | Speed, running-type sports | MAS (`maximumAerobicSpeed`) — `SPEED_ZONE_CALCULATION_METHOD_MAS_BASED` | 55 / 70 /
+        85 / 100 / 115 % MAS, top open (399) |
+
+        | Speed, other sports | fixed per-sport table — `SPEED_ZONE_CALCULATION_METHOD_SPORT_SPECIFIC_PREDEFINED` | CYCLING
+        10/20/30/40/50 km/h, HIKING 1/2/4/6/8 km/h |
+
+        | Power, running | MAP (`maximumAerobicPower`) — `POWER_ZONE_CALCULATION_METHOD_MAP_BASED` | 55 / 70 / 85 / 100 /
+        115 % MAP, top open (2000) |
+
+        | Power, cycling | FTP (`functionalThresholdPower`) — `POWER_ZONE_CALCULATION_METHOD_FTP_BASED` | 55 / 75 / 90 / 105
+        / 120 % FTP, top open (2000) |
+
+
+        `*_SETTING_SOURCE_FREE` means the user typed the limits in by hand.
+
+        '
+      properties:
+        heartRateZones:
+          type: array
+          items:
+            $ref: '#/components/schemas/ZoneLimit'
+          description: Heart-rate zones in **bpm** (5 entries, or `[]`).
+        speedZones:
+          type: array
+          items:
+            $ref: '#/components/schemas/ZoneLimit'
+          description: Speed zones in **km/h** (5 entries, or `[]` when the sport has no speed zones).
+        powerZones:
+          type: array
+          items:
+            $ref: '#/components/schemas/ZoneLimit'
+          description: Power zones in **watts** (5 entries, or `[]` when the sport has no power zones).
+        heartRateSettingSource:
+          type: string
+          description: 'Observed: `HEART_RATE_ZONE_SETTING_SOURCE_DEFAULT` (derived from HRmax),
+
+            `HEART_RATE_ZONE_SETTING_SOURCE_FREE` (user-entered limits). Left as an
+
+            open string: other values (e.g. threshold-based) may exist. # TODO: verify
+
+            '
+        speedSettingSource:
+          type: string
+          description: 'Observed: `SPEED_ZONE_SETTING_SOURCE_DEFAULT` (computed, see `speedZoneCalculationMethod`), `SPEED_ZONE_SETTING_SOURCE_FREE`
+            (user-entered). Open string.'
+        powerSettingSource:
+          type: string
+          description: 'Observed: `POWER_ZONE_SETTING_SOURCE_DEFAULT` (computed, see `powerZoneCalculationMethod`), `POWER_ZONE_SETTING_SOURCE_FREE`
+            (user-entered). Open string.'
+        speedZoneCalculationMethod:
+          type: string
+          description: 'How default speed zones were computed. Observed:
+
+            `SPEED_ZONE_CALCULATION_METHOD_MAS_BASED`,
+
+            `SPEED_ZONE_CALCULATION_METHOD_SPORT_SPECIFIC_PREDEFINED`,
+
+            `SPEED_ZONE_CALCULATION_METHOD_UNKNOWN` (sport has no speed zones).
+
+            Open string.
+
+            '
+        powerZoneCalculationMethod:
+          type: string
+          description: 'How default power zones were computed. Observed:
+
+            `POWER_ZONE_CALCULATION_METHOD_MAP_BASED`,
+
+            `POWER_ZONE_CALCULATION_METHOD_FTP_BASED`,
+
+            `POWER_ZONE_CALCULATION_METHOD_UNKNOWN` (sport has no power zones).
+
+            Open string.
+
+            '
+    SportProfileThreshold:
+      type: object
+      description: 'A per-sport threshold the default zones are derived from. Exactly one of
+
+        `speed` (km/h, for `maximumAerobicSpeed`) or `power` (W, for
+
+        `maximumAerobicPower` / `functionalThresholdPower`) is set.
+
+        '
+      properties:
+        speed:
+          type: number
+          description: Maximum aerobic speed (MAS) in **km/h**.
+          example: 17.183771
+        power:
+          type: integer
+          description: Power threshold (MAP or FTP) in **watts**.
+          example: 250
+        source:
+          type: string
+          description: 'Where the value comes from. Observed: `MAS_SOURCE_ESTIMATED`,
+
+            `MAP_SOURCE_ESTIMATED`, `FTP_SOURCE_ESTIMATED` (estimated from physical
+
+            info / the account''s `functionalThresholdPower`). Measured/user-set
+
+            variants likely exist. # TODO: verify
+
+            '
+          example: FTP_SOURCE_ESTIMATED
+    SportProfileBody:
+      type: object
+      description: 'The `profile` payload of a sport profile: the sport, its device settings
+
+        (including the **training zones** under `settings.zoneLimits`) and the
+
+        thresholds the default zones derive from.
+
+
+        On `GET /api/sports/profiles` (list) this is a **slim** object with only
+
+        `sportId`, `productSettings`, `subProfileUuids` — read the profile by uuid
+
+        (or call `recalculate`) to get `settings` and the thresholds.
+
+        '
+      additionalProperties: true
+      required:
+      - sportId
+      properties:
+        sportId:
+          type: integer
+          description: Sport id (same id space as `GET /api/sports/sports`).
+          example: 1
+        settings:
+          type: object
+          additionalProperties: true
+          description: 'Device settings for this sport. Only `zoneLimits` is modeled in detail;
+
+            the rest are passed through.
+
+            '
+          properties:
+            zoneLimits:
+              $ref: '#/components/schemas/SportProfileZoneLimits'
+            speedView:
+              type: string
+              description: 'How the watch shows speed: `SPEED_VIEW_PACE` (running-type sports
+
+                default) or `SPEED_VIEW_SPEED`. Display only — `speedZones` are
+
+                always km/h.
+
+                '
+              example: SPEED_VIEW_PACE
+            powerView:
+              type: string
+              example: POWER_VIEW_WATT
+            hrZoneLockAvailable:
+              type: boolean
+            speedZoneLockAvailable:
+              type: boolean
+            powerZoneLockAvailable:
+              type: boolean
+            sensorBroadcastingHr:
+              type: boolean
+            volume:
+              type: object
+              properties:
+                volume:
+                  type: integer
+                  example: 60
+            trainingReminder:
+              type: object
+              properties:
+                type:
+                  type: string
+                  example: TRAINING_REMINDER_TYPE_OFF
+                text:
+                  type: string
+            strideSpeedSource:
+              type: string
+              example: STRIDE_SPEED_SOURCE_STRIDE
+            swimmingUnits:
+              type: string
+              example: SWIMMING_UNITS_METERS
+            remoteButtonActions:
+              type: array
+              items: {}
+        sportFactor:
+          type: number
+          description: Per-sport energy/load factor (RUNNING 1.4, CYCLING 0.9 observed). Absent from `recalculate` output.
+          example: 1.4
+        productSettings:
+          type: array
+          description: Per-device settings. `[]` without a paired device.
+          items: {}
+        subProfileUuids:
+          type: array
+          items:
+            type: string
+        maximumAerobicSpeed:
+          $ref: '#/components/schemas/SportProfileThreshold'
+        maximumAerobicPower:
+          $ref: '#/components/schemas/SportProfileThreshold'
+        functionalThresholdPower:
+          $ref: '#/components/schemas/SportProfileThreshold'
     SportProfile:
       type: object
       description: 'A user''s **sport profile** ("Profil sportif") — the per-sport configuration
 
-        a Polar device uses when you start a training session in that sport (training
+        a Polar device uses when you start a session in that sport, including the
 
-        views / watch-screen layout, auto-lap, zones, GPS/sensor settings, etc.).
+        heart-rate / speed / power **training zones** (`profile.settings.zoneLimits`).
+
+        Captured 2026-09-29.
 
 
-        > **Element shape is only partially observed.** This `/api/sports/profiles`
+        Every account has at least one profile once any is created (the server
 
-        > resource returned `[]` on every account tried (incl. a device-paired one),
+        refuses to delete the last one). Creating a profile through either
 
-        > so a populated element could not be captured here. Note that profiles are
+        `POST /api/sports/profiles/create/{sportId}` or the legacy
 
-        > actually created/edited via the legacy `/settings/sports/*` controller
+        `POST /settings/sports/add` lands here; `legacyId` on the create response
 
-        > (`POST /settings/sports/add`, `POST /settings/sports/save`) which keys them
-
-        > by a **numeric** id — this UUID-based resource appears to be separate. The fields below are the ones that could
-        be
-
-        > justified from the `/settings/sports` page and the watch-display editor
-
-        > micro-frontend; everything marked `# TODO: verify` awaits a capture from an
-
-        > account with a paired device. `additionalProperties` is therefore left
-
-        > open.
+        is the numeric id the legacy `/settings/sports/*` controller uses.
 
         '
       additionalProperties: true
+      required:
+      - uuid
+      - profile
       properties:
-        id:
+        uuid:
           type: string
-          format: uuid
-          readOnly: true
-          description: 'Server-assigned profile identifier. **This is a UUID string**, not the
+          description: 'Profile id. Polar''s structured UUID, **not** a random v4: the first
 
-            numeric `sportId`. Used as `{id}` in
+            group is a domain (`0f000000`) and the last group is the **sport id in
 
-            `GET /api/sports/profiles/{id}` and `DELETE /api/sports/profiles/{id}`.
+            hex** (`0f000000-0080-0000-0000-000000000001` = RUNNING,
 
-            '
-          example: 7ae78bae-6ee6-47aa-9128-a2ee5cd0a138
-        sportId:
-          type: integer
-          description: 'Numeric sport this profile is for — the same id space as
+            `…-000000000002` = CYCLING). The server rejects uuids whose domain is
 
-            `GET /api/sports/sports` (e.g. 1 = RUNNING, 2 = CYCLING, 23 = SWIMMING,
-
-            15 = STRENGTH_TRAINING, 68 = TRIATHLON). The `/settings/sports` page
-
-            seeds these five as default template cards (each with an **empty**
-
-            `profileId` until a device persists one).
+            unknown or whose sport segment is 0.
 
             '
-          example: 1
-        name:
+          example: 0f000000-0080-0000-0000-000000000001
+        userId:
           type: string
-          description: 'Display name of the profile, localized to the account language on the
+          description: 'Owner''s numeric user id, **as a string**. ⚠ `GET /api/sports/profiles/{id}`
 
-            default templates (e.g. "Course à pied", "Cyclisme"). On device-created
-
-            profiles this is the user-editable profile name. # TODO: verify whether
-
-            the API returns the raw constant or the localized label.
+            returns `"0"` here while the list and create responses return the real id.
 
             '
-          example: Course à pied
+          example: '11111111'
         created:
           type: string
-          description: 'Creation timestamp shown on the profile card. Exact wire format
+          format: date-time
+          example: '2026-09-29T09:09:24Z'
+        modified:
+          type: string
+          format: date-time
+          description: Last-modified time. Writes must send a **newer** `modified` (else 409 OUTDATED).
+          example: '2026-09-29T09:09:24Z'
+        profile:
+          $ref: '#/components/schemas/SportProfileBody'
+        legacyProfiles:
+          type: object
+          additionalProperties: true
+          description: Legacy per-device profile blobs. `{}` without a paired device.
+        legacyId:
+          type: string
+          description: 'Numeric id of the same profile in the legacy `/settings/sports/*`
 
-            unconfirmed (the UI renders it as `D-M-YYYY HH:mm`). # TODO: verify
-
-            (ISO 8601 vs epoch ms).
+            controller. Only observed on the create response.
 
             '
+          example: '453171842'
+    SportProfileWriteRequest:
+      type: object
+      description: 'Body of `POST /api/sports/profiles/{id}/recalculate` and
+
+        `POST /api/sports/profiles/{id}/update-zones` — the web UI wraps the
+
+        profile''s `profile` object in the envelope below.
+
+        '
+      required:
+      - uuid
+      - userId
+      - profile
+      properties:
+        uuid:
+          type: string
+          description: 'Must equal the `{id}` in the URL (else 400 `Profile UUID in the request
+
+            body does not match the UUID in the URL`). Same structure rules as
+
+            `SportProfile.uuid`.
+
+            '
+          example: 0f000000-0080-0000-0000-000000000001
+        userId:
+          type: integer
+          description: 'The signed-in user''s id (`GET /api/account/users/current/user` →
+
+            `user.id`). Required (missing → 400 `must be >= 1`) and must match the
+
+            session user (else 400 `Profile userId (…) does not match request
+
+            userId (…)`). Sent as a number by the UI; a numeric string is accepted too.
+
+            '
+          example: 11111111
+        modified:
+          type: string
+          format: date-time
+          description: 'Client timestamp (the UI sends `new Date().toISOString()`). Required by
+
+            `update-zones`, where it must be newer than the stored profile''s
+
+            `modified` (else **409** OUTDATED). Ignored by `recalculate`.
+
+            '
+          example: '2026-09-29T09:14:28.000Z'
+        profile:
+          $ref: '#/components/schemas/SportProfileBody'
+    SportProfileListCatalog:
+      type: object
+      description: 'The ordered list(s) of sport profiles shown on the device. The account''s
+
+        first profile creates it; each list holds profile uuids in display order.
+
+        '
+      properties:
+        uuid:
+          type: string
+          example: 10000000-0080-0000-0000-000000a98ac7
+        userId:
+          type: string
+          example: '11111111'
+        created:
+          type: string
+          format: date-time
+        modified:
+          type: string
+          format: date-time
+        activeSportProfileListIndex:
+          type: integer
+          example: 1
+        lists:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+                example: 1
+              sportProfileUuids:
+                type: array
+                items:
+                  type: string
+                example:
+                - 0f000000-0080-0000-0000-000000000001
     SportProfileAddResponse:
       type: object
       description: 'Response of `POST /settings/sports/add` — the newly created sport profile''s

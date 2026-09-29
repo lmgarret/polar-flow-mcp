@@ -80,6 +80,7 @@ and silent refresh.
 |------|-------------|
 | `get_user_info` | Identity + country + profile basics |
 | `list_sports` | Full Polar sport-id → name catalogue (the `sport_id` values for targets/sessions) |
+| `get_training_zones` | HR / speed / power zones of a sport (bpm, km/h + pace, W): the stored sport profile, else Polar's defaults computed via the non-persisting `recalculate` endpoint |
 | `create_training_target` | Create a scheduled target (warmup / repeat / cooldown) |
 | `list_training_targets` | Targets in a date range (filtered from calendar) |
 | `delete_training_target` | Delete a target by ID — confirms with the user first where the host supports elicitation |

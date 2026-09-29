@@ -327,3 +327,31 @@ func TestLiveSessionEditRoundTrip(t *testing.T) {
 		t.Fatalf("second delete = %q", resultText(res))
 	}
 }
+
+// TestLiveTrainingZones reads zones for every stored profile and computes the
+// defaults for a sport the account has no profile for. Read-only: recalculate
+// persists nothing.
+func TestLiveTrainingZones(t *testing.T) {
+	fc := liveClient(t)
+	check := func(res *mcpgo.CallToolResult) []any {
+		sports := asArr(payload(t, res)["sports"])
+		for _, s := range sports {
+			hr := asArr(dig(asMap(s), "heart_rate", "zones"))
+			if len(hr) != 5 {
+				t.Fatalf("heart-rate zones = %v", hr)
+			}
+			for i := 1; i < 5; i++ {
+				if asMap(hr[i])["min_bpm"] != asMap(hr[i-1])["max_bpm"] {
+					t.Fatalf("zones not contiguous: %v", hr)
+				}
+			}
+		}
+		t.Logf("%s", resultText(res))
+		return sports
+	}
+	check(liveCall(t, GetTrainingZonesHandler(fc), map[string]any{}))
+	sports := check(liveCall(t, GetTrainingZonesHandler(fc), map[string]any{"sport_id": 2.0}))
+	if len(sports) != 1 || len(asArr(dig(asMap(sports[0]), "power", "zones"))) != 5 {
+		t.Fatalf("cycling should have power zones: %v", sports)
+	}
+}

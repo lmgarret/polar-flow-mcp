@@ -99,6 +99,18 @@ type Handler interface {
 	//
 	// POST /api/favoritetarget
 	CreateFavorite(ctx context.Context, req *FavoriteCreate, params CreateFavoriteParams) (CreateFavoriteRes, error)
+	// CreateSportProfile implements createSportProfile operation.
+	//
+	// Creates a sport profile for `sportId` with default settings and default zones. No request body. 201
+	// with the new profile (full shape, incl. `settings.zoneLimits` and a `legacyId`). Captured 2026-09-29
+	// — the modern replacement for the legacy form-encoded `POST /settings/sports/add` (both write to
+	// the same store).
+	//
+	// The profile uuid is deterministic per sport (`0f000000-0080-0000-0000-<sportId hex>`). Requires
+	// `X-Requested-With: XMLHttpRequest`.
+	//
+	// POST /api/sports/profiles/create/{sportId}
+	CreateSportProfile(ctx context.Context, params CreateSportProfileParams) (CreateSportProfileRes, error)
 	// CreateTargetFromFavorite implements createTargetFromFavorite operation.
 	//
 	// Creates a training target on a date from a favorite (template) — the diary's + Ajouter → Favoris
@@ -172,17 +184,14 @@ type Handler interface {
 	DeleteFavorite(ctx context.Context, params DeleteFavoriteParams) (DeleteFavoriteRes, error)
 	// DeleteSportProfile implements deleteSportProfile operation.
 	//
-	// Deletes a sport profile by its UUID. The route exists (verified 2026-06-01). Note create/update are
-	// not on this `/api/sports/*` resource — they live on the legacy `/settings/sports/{add,save}`
-	// controller (numeric ids); whether delete also has a `/settings/sports/*` equivalent is unknown.
+	// Deletes a sport profile. 200, empty body (captured 2026-09-29).
 	//
-	// Could not reach the success path on the device-less test account: deleting a non-existent UUID
-	// returned `500` with an empty body rather than a clean `404`, so the success status/body for an
-	// existing profile is unconfirmed. # TODO: verify against a real profile (expect a 200, by analogy
-	// with the other Polar delete endpoints). Note this is a genuinely destructive operation — only
-	// exercise it on a throwaway profile.
+	// ⚠ Idempotent on unknown ids: deleting a well-formed uuid that no longer exists also answers 200.
+	// ⚠ The last profile cannot be deleted — 400 plain text
+	// `Invalid delete sport profile request, status
+	// INVALID_REQUEST, message 'Deleting the last active profile is not allowed. …'`.
 	//
-	// Like other `/api/*` writes this requires the `X-Requested-With: XMLHttpRequest` header.
+	// Requires `X-Requested-With: XMLHttpRequest`.
 	//
 	// DELETE /api/sports/profiles/{id}
 	DeleteSportProfile(ctx context.Context, params DeleteSportProfileParams) (DeleteSportProfileRes, error)
@@ -377,16 +386,23 @@ type Handler interface {
 	GetSleepReport(ctx context.Context, params GetSleepReportParams) (GetSleepReportRes, error)
 	// GetSportProfile implements getSportProfile operation.
 	//
-	// Returns one sport profile by its UUID.
+	// Returns one sport profile with its full `settings`, including `settings.zoneLimits` — the 5
+	// heart-rate (bpm), speed (km/h) and power (W) zones a Polar device uses for this sport, plus the
+	// thresholds (`maximumAerobicSpeed` / `maximumAerobicPower` / `functionalThresholdPower`) default
+	// zones derive from. Captured 2026-09-29.
 	//
-	// Not exercised against a real profile. The test account has no synced sport profiles, so this could
-	// not be observed returning `200`. Probing with arbitrary UUIDs returned `400` with a plain-text
-	// `Invalid request: Invalid UUID: <value>` body — meaning either the id must match an existing
-	// profile, or Polar uses a stricter/custom id encoding than a canonical v4 UUID. # TODO: verify the
-	// success shape and the exact id format using an account with a device-synced profile.
+	// ⚠ `userId` reads back as `"0"` on this endpoint (the list and create responses carry the real id).
 	//
 	// GET /api/sports/profiles/{id}
 	GetSportProfile(ctx context.Context, params GetSportProfileParams) (GetSportProfileRes, error)
+	// GetSportProfileListCatalog implements getSportProfileListCatalog operation.
+	//
+	// The ordered list(s) of sport-profile uuids shown on the device. Created along with the account's
+	// first profile. Captured 2026-09-29. A matching update route exists in the UI bundle
+	// (`updateSportProfileListCatalog`) but was not exercised. # TODO: verify write.
+	//
+	// GET /api/sports/profile-list-catalog
+	GetSportProfileListCatalog(ctx context.Context) (GetSportProfileListCatalogRes, error)
 	// GetSports implements getSports operation.
 	//
 	// Returns a flat object mapping numeric sport ID (as string key) to the internal sport name constant.
@@ -519,27 +535,22 @@ type Handler interface {
 	ListFavoritesSimple(ctx context.Context) (ListFavoritesSimpleRes, error)
 	// ListSportProfiles implements listSportProfiles operation.
 	//
-	// Returns the signed-in user's sport profiles ("Profils sportifs", reached in the web UI via Compte
-	// → Profils sportifs, served by the server-rendered `/settings/sports` page).
+	// Returns the signed-in user's sport profiles ("Profils sportifs") — the per-sport device
+	// configuration, including the heart-rate / speed / power training zones. Captured populated
+	// 2026-09-29.
 	//
-	// Sport profiles are the per-sport device configuration (training views, auto-lap, zones, sensor/GPS
-	// settings). Create/update is NOT on this `/api/sports/*` resource (`POST`/`PUT`/`PATCH` here all
-	// 404). It lives on the legacy `/settings/sports/*` controller instead: create =
-	// `POST /settings/sports/add`, update = `POST /settings/sports/save` (verified 2026-06-01 from a
-	// device-paired account — see `docs/endpoints/sport-profiles.md`).
+	// ⚠ Elements are slim: `profile` carries only `sportId`, `productSettings` and `subProfileUuids` —
+	// no `settings`, so no zones. Read each profile with `GET /api/sports/profiles/{id}` for its
+	// `settings.zoneLimits`, or compute a sport's default zones without a profile via
+	// `POST /api/sports/profiles/{id}/recalculate`.
 	//
-	// Note those settings endpoints key profiles by a numeric id, whereas this `/api/sports/profiles/{id}`
-	// resource validates a UUID — the two id systems are not yet reconciled.
+	// `[]` until the account's first profile is created (via `POST /api/sports/profiles/create/{sportId}`
+	// or the legacy `POST /settings/sports/add`, which writes to this same store).
 	//
-	// Empty on a device-less account. On the free test account this returns `[]`, and
-	// `GET /api/account/users/current/user` likewise reports `sportProfiles: []`. A populated element
-	// shape could not be captured — see `SportProfile` for the partially-inferred element schema and
-	// TODOs.
-	//
-	// A `sportId` query parameter is accepted but had no visible effect on the empty account (still `[]`).
+	// A `sportId` query parameter is accepted but ignored (the full list is returned for any value).
 	//
 	// GET /api/sports/profiles
-	ListSportProfiles(ctx context.Context, params ListSportProfilesParams) (ListSportProfilesRes, error)
+	ListSportProfiles(ctx context.Context) (ListSportProfilesRes, error)
 	// ListTrainingSessions implements listTrainingSessions operation.
 	//
 	// Return completed training sessions for a user within an inclusive date range. Despite being a read,
@@ -552,6 +563,33 @@ type Handler interface {
 	//
 	// POST /api/training/history
 	ListTrainingSessions(ctx context.Context, req *ListTrainingSessionsReq, params ListTrainingSessionsParams) (ListTrainingSessionsRes, error)
+	// RecalculateSportProfile implements recalculateSportProfile operation.
+	//
+	// Pure computation — nothing is persisted (the stored profile's `modified` is unchanged afterwards).
+	// The web UI calls it while the user edits zones/thresholds to preview the derived limits. Captured
+	// 2026-09-29.
+	//
+	// Returns the posted envelope with `profile.settings.zoneLimits` filled in for every zone type whose
+	// `*SettingSource` is `…_DEFAULT` (types with no source set come back `[]`), plus the thresholds the
+	// defaults derive from (`maximumAerobicSpeed`, `maximumAerobicPower`, `functionalThresholdPower` —
+	// only those relevant to the sport).
+	//
+	// Works without a stored profile: the `{id}` need not exist, only be a well-formed profile uuid
+	// (domain `0f000000`, non-zero last group — the server rejects `…-000000000000` with
+	// `UUID has invalid sport ID: 0`). This is the way to read a sport's default zones on an account that
+	// has no profile for that sport. Minimal body that yields all three zone types:
+	//
+	// 	{"userId": 11111111, "uuid": "0f000000-0080-0000-0000-000000000002",
+	// 	 "profile": {"sportId": 2, "settings": {"zoneLimits": {
+	// 	   "heartRateSettingSource": "HEART_RATE_ZONE_SETTING_SOURCE_DEFAULT",
+	// 	   "speedSettingSource": "SPEED_ZONE_SETTING_SOURCE_DEFAULT",
+	// 	   "powerSettingSource": "POWER_ZONE_SETTING_SOURCE_DEFAULT"}}}}
+	//
+	// `userId` must be the session user's (see `SportProfileWriteRequest`), so this cannot read another
+	// account's thresholds. Requires `X-Requested-With: XMLHttpRequest`.
+	//
+	// POST /api/sports/profiles/{id}/recalculate
+	RecalculateSportProfile(ctx context.Context, req *SportProfileWriteRequest, params RecalculateSportProfileParams) (RecalculateSportProfileRes, error)
 	// RenameFavorite implements renameFavorite operation.
 	//
 	// Updates only the favorite's `name`. Distinct from `POST /api/favoritetarget/{id}` (full update) —
@@ -606,6 +644,27 @@ type Handler interface {
 	//
 	// POST /api/favoritetarget/{id}
 	UpdateFavorite(ctx context.Context, req *Favorite, params UpdateFavoriteParams) (UpdateFavoriteRes, error)
+	// UpdateSportProfileZones implements updateSportProfileZones operation.
+	//
+	// Persists the profile's zones — the UI's "Zones d'entraînement" editor. Send the full `profile`
+	// read from `GET /api/sports/profiles/{id}` with `settings.zoneLimits` edited; set a list's
+	// `*SettingSource` to `…_FREE` to keep hand-entered limits, or `…_DEFAULT` to go back to computed
+	// ones. 200, empty body. Captured 2026-09-29. Changes reach the watch on its next sync.
+	//
+	// Server-side validation (400, plain text listing every error as
+	// `profile.settings.zone_limits.<list>[i]: <reason>`):
+	//
+	//  - exactly 5 zones per non-empty list;
+	//  - contiguous: zone i's `lowerLimit` = zone i-1's `higherLimit`;
+	//  - each zone spans ≥ 2 units;
+	//  - ranges: HR [15, 240] bpm, speed [1.0, 399.0] km/h, power [0, 2000] W.
+	//
+	// ⚠ `modified` must be newer than the stored profile's `modified`, else 409
+	// `A newer profile exists: Incoming sport profile is older than what is stored`. `userId` must be the
+	// session user. Requires `X-Requested-With: XMLHttpRequest`.
+	//
+	// POST /api/sports/profiles/{id}/update-zones
+	UpdateSportProfileZones(ctx context.Context, req *SportProfileWriteRequest, params UpdateSportProfileZonesParams) (UpdateSportProfileZonesRes, error)
 	// UpdateTrainingSessionData implements updateTrainingSessionData operation.
 	//
 	// Partial update used by the session page's inline note box (`textarea.note-text` → Enregistrer).

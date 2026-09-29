@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training Zones</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0d0d0d;color:#f0f0f0;font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px}
+body{padding:12px 14px;overflow-x:hidden}
+.sport{background:#111;border:1px solid #1c1c1c;border-radius:14px;padding:12px 14px}
+.sport + .sport{margin-top:10px}
+.sp-hdr{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.sp-name{font-size:1.05rem;font-weight:800;letter-spacing:-.02em}
+.badge{font-size:.56rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;border-radius:6px;padding:3px 7px}
+.badge.profile{background:rgba(228,0,43,.14);color:#ff4d6d}
+.badge.default{background:#1a1a1a;color:#777}
+.th{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.th-chip{background:#161616;border:1px solid #1e1e1e;border-radius:8px;padding:3px 9px;font-size:.7rem;color:#bbb;font-family:'SF Mono','Fira Code',Consolas,monospace;white-space:nowrap}
+.th-chip i{font-style:normal;color:#555;margin-left:4px;font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:.62rem}
+.sets{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.set{background:#141414;border:1px solid #1e1e1e;border-radius:11px;padding:9px 11px}
+.set-hdr{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:7px;gap:8px}
+.set-lbl{font-size:.58rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a}
+.set-meta{font-size:.6rem;color:#4a4a4a;white-space:nowrap}
+.zrow{display:flex;align-items:center;gap:8px;padding:3px 0}
+.zpill{width:26px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.64rem;font-weight:800;color:#0d0d0d;flex-shrink:0}
+.z1{background:#9a9a9a}.z2{background:#3b8fd9}.z3{background:#57c46b}.z4{background:#f5a623}.z5{background:#e4002b;color:#fff}
+.zrange{font-size:.8rem;color:#ddd;font-variant-numeric:tabular-nums;font-family:'SF Mono','Fira Code',Consolas,monospace;white-space:nowrap}
+.zsub{font-size:.66rem;color:#555;margin-left:auto;font-variant-numeric:tabular-nums;white-space:nowrap}
+.empty-state{color:#4a4a4a;font-size:.8rem;font-style:italic;padding:12px 0}
+.loading{color:#4a4a4a;font-size:.8rem;font-style:italic}
+.fade-in{animation:fadeIn .22s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Portrait / narrow (mobile iframe) ── */
+@media (max-width:520px){
+  .th{margin-left:0;width:100%}
+  .sets{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="root" class="loading">Loading…</div>
+<script>
+const pending = new Map(); let msgId = 0;
+window.addEventListener("message", e => {
+  const m = e.data; if (!m || m.jsonrpc !== "2.0") return;
+  if (m.id != null && pending.has(m.id)) {
+    const {resolve,reject} = pending.get(m.id); pending.delete(m.id);
+    m.error ? reject(new Error(m.error?.message ?? "RPC error")) : resolve(m.result);
+  } else if (m.method === "ui/notifications/tool-result") render(extractPayload(m.params));
+});
+function rpc(method, params) {
+  const id = ++msgId;
+  return new Promise((resolve,reject) => { pending.set(id,{resolve,reject}); window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*"); });
+}
+// Current MCP-app hosts (Claude Desktop, 2026-07) drop structuredContent from
+// the tool-result they forward to the iframe, so the data is read from the
+// tagged {"type":...} JSON text block the server also emits. structuredContent
+// is still preferred for hosts that honour it.
+function extractPayload(params) {
+  if (params && params.structuredContent) return params.structuredContent;
+  const content = (params && params.content) || [];
+  for (let i = content.length - 1; i >= 0; i--) {
+    const c = content[i];
+    if (c && c.type === "text" && typeof c.text === "string" && c.text.trim()[0] === "{") {
+      try { const p = JSON.parse(c.text); if (p && typeof p.type === "string") return p; } catch (_) {}
+    }
+  }
+  return null;
+}
+rpc("ui/initialize",{protocolVersion:"2026-01-26",appInfo:{name:"polar-zones-ui",version:"1.0"},appCapabilities:{availableDisplayModes:["inline"]}})
+  .then(()=>window.parent.postMessage({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}},"*"));
+
+const esc = s => String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const title = s => String(s||"").toLowerCase().replace(/_/g," ").replace(/\b\w/g, c => c.toUpperCase());
+const pace = s => s == null ? null : `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+const num = v => Number.isInteger(v) ? String(v) : Number(v).toFixed(1);
+const method = m => ({mas_based:"% of MAS", map_based:"% of MAP", ftp_based:"% of FTP", sport_specific_predefined:"sport preset"})[m] || (m ? m.replace(/_/g," ") : "");
+const meta = s => [s.setting === "free" ? "custom" : s.setting, method(s.method)].filter(Boolean).join(" · ");
+
+// Rows highest zone first, like Polar's own zone graphs.
+function setHTML(label, set, rowFn) {
+  if (!set || !Array.isArray(set.zones) || !set.zones.length) return "";
+  const rows = set.zones.slice().reverse().map(z => {
+    const [range, sub] = rowFn(z);
+    return `<div class="zrow"><span class="zpill z${esc(z.zone)}">Z${esc(z.zone)}</span><span class="zrange">${esc(range)}</span>${sub ? `<span class="zsub">${esc(sub)}</span>` : ""}</div>`;
+  }).join("");
+  return `<div class="set"><div class="set-hdr"><span class="set-lbl">${esc(label)}</span><span class="set-meta">${esc(meta(set))}</span></div>${rows}</div>`;
+}
+
+function hrRow(z) { return [`${z.min_bpm}–${z.max_bpm} bpm`, ""]; }
+function powerRow(z) { return [z.max_w == null ? `≥ ${z.min_w} W` : `${z.min_w}–${z.max_w} W`, ""]; }
+function speedRows(asPace) {
+  return z => {
+    const kmh = z.max_kmh == null ? `≥ ${num(z.min_kmh)} km/h` : `${num(z.min_kmh)}–${num(z.max_kmh)} km/h`;
+    const slow = pace(z.slowest_pace_s_per_km), fast = pace(z.fastest_pace_s_per_km);
+    const p = slow == null ? "" : fast == null ? `< ${slow} /km` : `${slow}–${fast} /km`;
+    return asPace && p ? [p, kmh] : [kmh, ""];
+  };
+}
+
+function thresholdsHTML(t) {
+  if (!t) return "";
+  const chips = [];
+  const src = s => s ? `<i>${esc(s)}</i>` : "";
+  if (t.mas_kmh != null) chips.push(`MAS ${esc(num(t.mas_kmh))} km/h${src(t.mas_source)}`);
+  if (t.map_w != null) chips.push(`MAP ${esc(t.map_w)} W${src(t.map_source)}`);
+  if (t.ftp_w != null) chips.push(`FTP ${esc(t.ftp_w)} W${src(t.ftp_source)}`);
+  return chips.length ? `<div class="th">${chips.map(c => `<span class="th-chip">${c}</span>`).join("")}</div>` : "";
+}
+
+function sportHTML(s) {
+  const name = s.sport_name ? title(s.sport_name) : `Sport ${s.sport_id}`;
+  const src = s.source === "profile" ? "profile" : "default";
+  const badge = `<span class="badge ${src}">${src === "profile" ? "Sport profile" : "Polar defaults"}</span>`;
+  // Pace for running-type sports: the profile's own speed view when stored,
+  // otherwise MAS-based defaults (only running-type sports use MAS).
+  const sp = s.speed;
+  const asPace = sp ? (sp.speed_view ? sp.speed_view === "pace" : sp.method === "mas_based") : false;
+  const sets = [
+    setHTML("Heart rate", s.heart_rate, hrRow),
+    setHTML(asPace ? "Pace" : "Speed", sp, speedRows(asPace)),
+    setHTML("Power", s.power, powerRow),
+  ].join("");
+  return `<div class="sport fade-in"><div class="sp-hdr"><span class="sp-name">${esc(name)}</span>${badge}${thresholdsHTML(s.thresholds)}</div><div class="sets">${sets}</div></div>`;
+}
+
+function render(sc) {
+  if (!sc || sc.type !== "training_zones") return;
+  const root = document.getElementById("root");
+  root.className = "";
+  const sports = Array.isArray(sc.sports) ? sc.sports : [];
+  root.innerHTML = sports.length
+    ? sports.map(sportHTML).join("")
+    : `<div class="empty-state">No sport profiles stored — ask for a specific sport to see Polar's default zones.</div>`;
+}
+</script>
+</body>
+</html>

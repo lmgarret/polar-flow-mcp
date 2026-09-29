@@ -181,6 +181,37 @@ func encodeCreateFavoriteResponse(response CreateFavoriteRes, w http.ResponseWri
 	}
 }
 
+func encodeCreateSportProfileResponse(response CreateSportProfileRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *SportProfile:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(201)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(401)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
+}
+
 func encodeCreateTargetFromFavoriteResponse(response CreateTargetFromFavoriteRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
 	case *TargetFromFavorite:
@@ -388,6 +419,20 @@ func encodeDeleteSportProfileResponse(response DeleteSportProfileRes, w http.Res
 
 		return nil
 
+	case *DeleteSportProfileBadRequest:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(400)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
@@ -397,12 +442,6 @@ func encodeDeleteSportProfileResponse(response DeleteSportProfileRes, w http.Res
 		if _, err := e.WriteTo(w); err != nil {
 			return errors.Wrap(err, "write")
 		}
-
-		return nil
-
-	case *DeleteSportProfileInternalServerError:
-		w.WriteHeader(500)
-		span.SetStatus(codes.Error, http.StatusText(500))
 
 		return nil
 
@@ -930,6 +969,51 @@ func encodeGetSportProfileResponse(response GetSportProfileRes, w http.ResponseW
 
 		return nil
 
+	case *GetSportProfileNotFound:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(404)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
+}
+
+func encodeGetSportProfileListCatalogResponse(response GetSportProfileListCatalogRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *SportProfileListCatalog:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(200)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(401)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	default:
 		return errors.Errorf("unexpected response type: %T", response)
 	}
@@ -1384,6 +1468,51 @@ func encodeListTrainingSessionsResponse(response ListTrainingSessionsRes, w http
 	}
 }
 
+func encodeRecalculateSportProfileResponse(response RecalculateSportProfileRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *SportProfile:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(200)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *RecalculateSportProfileBadRequest:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(400)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(401)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
+}
+
 func encodeRenameFavoriteResponse(response RenameFavoriteRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
 	case *RenameFavoriteOK:
@@ -1513,6 +1642,58 @@ func encodeUpdateFavoriteResponse(response UpdateFavoriteRes, w http.ResponseWri
 	case *UpdateFavoriteNotFound:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(404)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
+}
+
+func encodeUpdateSportProfileZonesResponse(response UpdateSportProfileZonesRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *UpdateSportProfileZonesOK:
+		w.WriteHeader(200)
+
+		return nil
+
+	case *UpdateSportProfileZonesBadRequest:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(400)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *Unauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(401)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *UpdateSportProfileZonesConflict:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(409)
 
 		writer := w
 		if closer, ok := response.Data.(io.Closer); ok {
