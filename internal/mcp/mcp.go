@@ -59,9 +59,39 @@ func withLogging(name string, h func(context.Context, mcpgo.CallToolRequest) (*m
 			slog.Warn("tool: tool_error", "tool", name, "duration_ms", ms, "error", msg)
 		default:
 			slog.Info("tool: done", "tool", name, "duration_ms", ms)
+			ensureStructured(result)
 		}
 		return result, err
 	}
+}
+
+// ensureStructured gives a successful plain-text result (e.g. "No favorite
+// with favorite_id 7.", "Cancelled: …") a structured payload. UI-bound tools
+// advertise an outputSchema, and the MCP spec then requires structuredContent
+// on every non-error result — the TypeScript SDK client rejects the call with
+// "has an output schema but did not return structured content" otherwise.
+// Input requests (the confirmation leg) carry no content and are left alone.
+func ensureStructured(result *mcpgo.CallToolResult) {
+	if result == nil || result.StructuredContent != nil || result.ResultType == mcpgo.ResultTypeInputRequired {
+		return
+	}
+	msg := ""
+	for _, c := range result.Content {
+		if t, ok := c.(mcpgo.TextContent); ok {
+			msg = t.Text
+			break
+		}
+	}
+	result.StructuredContent = noticePayload("notice", msg)
+}
+
+// noticePayload is the widget payload for a result with no data to show. The
+// MCP-app UIs render it as a notice card; kind is "notice" (a plain statement
+// such as "No target with id 7.") or "cancelled" (the user declined a
+// confirmation). Tool errors need no payload — the UIs render isError results
+// as an "error" notice from their text.
+func noticePayload(kind, message string) map[string]any {
+	return map[string]any{"type": "notice", "kind": kind, "message": message}
 }
 
 func uiMeta(resourceURI string) *mcpgo.Meta {
@@ -214,8 +244,9 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"a type-derived label (\"Warm-up\", \"Work\", \"Recovery\", \"Cool-down\") when omitted.",
 		),
 		mcpgo.WithString("name", mcpgo.Required(),
-			mcpgo.Description("Display name shown in the diary (e.g. \"5x1km Threshold\"). If the call fails "+
-				"on trainingSessionTarget.name (Polar's content filter), prefix or reword the name and retry.")),
+			mcpgo.Description("Display name shown in the diary, 1–45 characters (an emoji counts 2) "+
+				"(e.g. \"5x1km Threshold\"). If a name within the limit fails on trainingSessionTarget.name "+
+				"(Polar's content filter), reword it or add a short prefix and retry.")),
 		mcpgo.WithString("date", mcpgo.Required(),
 			mcpgo.Description("Scheduled local date, ISO 8601 YYYY-MM-DD (e.g. 2026-06-02). "+
 				"The server applies the account's timezone.")),
@@ -226,7 +257,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"23=swimming, 15=strength_training, 11=hiking, 68=triathlon. "+
 				"Call list_sports for the full id→name catalogue.")),
 		mcpgo.WithString("description",
-			mcpgo.Description("Free-text notes for the workout (optional).")),
+			mcpgo.Description("Free-text notes for the workout (optional, ≤ 500 characters).")),
 		mcpgo.WithNumber("duration_s",
 			mcpgo.Description("VOLUME target total duration in seconds (e.g. 2100 = 35 min). "+
 				"Required when phases is omitted and distance_m is not set. Ignored when phases is provided.")),
@@ -315,8 +346,9 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithNumber("target_id", mcpgo.Required(),
 			mcpgo.Description("Numeric id of the target to update (from list_training_targets).")),
 		mcpgo.WithString("name", mcpgo.Required(),
-			mcpgo.Description("Display name shown in the diary. If the call fails on "+
-				"trainingSessionTarget.name (Polar's content filter), prefix or reword the name and retry.")),
+			mcpgo.Description("Display name shown in the diary, 1–45 characters (an emoji counts 2). If a "+
+				"name within the limit fails on trainingSessionTarget.name (Polar's content filter), reword "+
+				"it or add a short prefix and retry.")),
 		mcpgo.WithString("date", mcpgo.Required(),
 			mcpgo.Description("Scheduled local date, ISO 8601 YYYY-MM-DD.")),
 		mcpgo.WithString("time", mcpgo.DefaultString("18:00"),
@@ -326,7 +358,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"23=swimming, 15=strength_training, 11=hiking, 68=triathlon. "+
 				"Call list_sports for the full id→name catalogue.")),
 		mcpgo.WithString("description",
-			mcpgo.Description("Free-text notes for the workout (optional).")),
+			mcpgo.Description("Free-text notes for the workout (optional, ≤ 500 characters).")),
 		mcpgo.WithNumber("duration_s",
 			mcpgo.Description("VOLUME target total duration in seconds. Required when replacing with a VOLUME target (no phases) and distance_m is not set.")),
 		mcpgo.WithNumber("distance_m",
@@ -507,7 +539,7 @@ func phaseItemSchema() map[string]any {
 				"description": "Optional free-text label for this phase, persisted verbatim by Polar and " +
 					"shown per-phase in the workout breakdown. For a repeat phase this names the work " +
 					"interval (recovery has its own recovery.name). Defaults to a label derived from the " +
-					"phase type when omitted (\"Warm-up\", \"Work\", \"Cool-down\").",
+					"phase type when omitted (\"Warm-up\", \"Work\", \"Cool-down\"). At most 45 characters.",
 			},
 			"duration_s": map[string]any{
 				"type":        "integer",

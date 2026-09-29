@@ -59,7 +59,9 @@ Pre-built `linux/amd64` images are published to GHCR:
 | `sha-<short>` | Exact commit |
 
 Tagged releases (`vX.Y.Z`) also get AI-summarised release notes on the
-[Releases page](https://github.com/lmgarret/polar-flow-mcp/releases).
+[Releases page](https://github.com/lmgarret/polar-flow-mcp/releases). Every
+merge to `main` also refreshes a rolling `edge` pre-release there, listing the
+commits since the last tagged release.
 
 ### HTTP transport (recommended for persistent servers)
 

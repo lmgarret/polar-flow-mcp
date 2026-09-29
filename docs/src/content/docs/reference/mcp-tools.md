@@ -171,6 +171,12 @@ Each entry in `phases` is an object with `type` ∈ {`warmup`, `repeat`,
 - Each phase (and a `recovery`) accepts an optional `name`, persisted verbatim
   by Polar; it defaults to a type-derived label (`Warm-up`, `Work`, `Recovery`,
   `Cool-down`).
+- Length limits, checked before anything is sent and counted as Polar counts
+  them (UTF-16 code units — an emoji counts 2): `name` 1–45, `description`
+  ≤ 500, each phase name ≤ 45. An over-long phase name matters most: Polar
+  rejects it but still stores a hidden, half-created target on that time slot.
+- Polar refuses two targets on the same minute; the tool then says which
+  datetime is taken so you can pick another.
 
 **Response:** human-readable confirmation including the new target's numeric
 ID.
@@ -197,7 +203,10 @@ Delete a target by numeric ID.
 |----------|------|----------|
 | `target_id` | integer | yes |
 
-**Response:** `Deleted target <id>.` or `No target with id <id>.`
+**Response:** `Deleted target <id>.` or `No target with id <id>.` (also for an
+already-deleted id). Another account's id is an error. The target is read
+first — Polar's own delete answers missing and foreign ids with the same
+opaque 400.
 
 Asks the user to confirm first where the host supports it — see
 [User confirmation on writes](#user-confirmation-on-writes).

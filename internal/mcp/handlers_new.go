@@ -55,17 +55,14 @@ func UpdateTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 		}
 		existing, err := fc.GetTrainingTarget(ctx, id)
 		if err != nil {
-			if errors.Is(err, flow.ErrTargetNotFound) {
-				return mcpgo.NewToolResultText(fmt.Sprintf("No target with id %d.", id)), nil
-			}
-			return mcpgo.NewToolResultError(err.Error()), nil
+			return targetLookupError(err, id), nil
 		}
 		preserveExerciseTargetIDs(body, existing.ExerciseTargets)
 		if err := fc.UpdateTrainingTarget(ctx, id, body); err != nil {
 			if errors.Is(err, flow.ErrTargetNotFound) {
 				return mcpgo.NewToolResultText(fmt.Sprintf("No target with id %d.", id)), nil
 			}
-			return mcpgo.NewToolResultError(err.Error()), nil
+			return targetWriteError(err, body.Datetime), nil
 		}
 		// Read the target back so the result carries the same server-normalized
 		// view as get_training_target — the model (and the MCP-app UI) get the

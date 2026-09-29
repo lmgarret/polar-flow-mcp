@@ -153,6 +153,10 @@ func TestRequireConfirm_HonoursTheAnswer(t *testing.T) {
 		if result.NeedsInput() {
 			t.Errorf("action %q: asked again instead of giving up", tt.action)
 		}
+		// The MCP-app UIs render this as a "cancelled" notice card.
+		if sc, _ := result.StructuredContent.(map[string]any); sc["type"] != "notice" || sc["kind"] != "cancelled" {
+			t.Errorf("action %q: structuredContent = %#v, want a cancelled notice", tt.action, result.StructuredContent)
+		}
 	}
 }
 

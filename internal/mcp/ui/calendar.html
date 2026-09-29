@@ -47,6 +47,16 @@ body{padding:12px 14px;overflow-x:hidden;min-height:100vh;display:flex;flex-dire
   .chart{height:200px}
   .wk-col{min-width:30px}
 }
+/* Notice card — rejections, "nothing to show" statements, cancellations */
+.notice{display:flex;gap:12px;align-items:flex-start;background:#111;border:1px solid #1c1c1c;border-left:3px solid var(--nc);border-radius:12px;padding:12px 14px;animation:fadeIn .22s ease}
+.notice-ico{width:26px;height:26px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--nbg)}
+.notice-ico svg{width:15px;height:15px;stroke:var(--nc);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.notice-body{min-width:0}
+.notice-kind{font-size:.58rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--nc);margin-bottom:3px}
+.notice-msg{font-size:.8rem;line-height:1.4;color:#d0d0d0;white-space:pre-wrap;overflow-wrap:anywhere}
+.notice-error{--nc:#ff5566;--nbg:#2a0409}
+.notice-notice{--nc:#5aa0d8;--nbg:#0d2d42}
+.notice-cancelled{--nc:#8a8a8a;--nbg:#1c1c1c}
 </style>
 </head>
 <body>
@@ -59,7 +69,8 @@ window.addEventListener("message", e => {
   if (m.id != null && pending.has(m.id)) {
     const {resolve,reject} = pending.get(m.id); pending.delete(m.id);
     m.error ? reject(new Error(m.error?.message ?? "RPC error")) : resolve(m.result);
-  } else if (m.method === "ui/notifications/tool-result") render(extractPayload(m.params));
+  } else if (m.method === "ui/notifications/tool-result") dispatch(m.params, render);
+  else if (m.method === "ui/notifications/tool-cancelled") { gotResult = true; renderNotice("cancelled", "The tool call was cancelled."); }
 });
 function rpc(method, params) {
   const id = ++msgId;
@@ -79,6 +90,54 @@ function extractPayload(params) {
   }
   return null;
 }
+// ── Notices ────────────────────────────────────────────
+// A tool call that has no data to show — a rejected argument, "No target with
+// id 7.", a declined confirmation — used to leave this app on "Loading…".
+// Every result now renders: data payloads go to the view, everything else to a
+// notice card. Error results carry no payload (only text), plain statements get
+// a {"type":"notice"} payload from the server, and a host that drops
+// structuredContent still leaves the text block to read.
+const NOTICE_META = {
+  error:     {label: "Rejected",        icon: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><path d="M12 16.5h.01"/>'},
+  notice:    {label: "Nothing to show", icon: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.5h.01"/>'},
+  cancelled: {label: "Cancelled",       icon: '<circle cx="12" cy="12" r="9"/><path d="m8.5 8.5 7 7"/><path d="m15.5 8.5-7 7"/>'},
+};
+function resultText(params) {
+  const c = ((params && params.content) || []).find(c => c && c.type === "text" && typeof c.text === "string");
+  return c ? c.text : "";
+}
+function noticeHTML(kind, message) {
+  const m = NOTICE_META[kind] ?? NOTICE_META.notice;
+  const e = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return `<div class="notice notice-${kind in NOTICE_META ? kind : "notice"}" role="status">
+    <div class="notice-ico"><svg viewBox="0 0 24 24">${m.icon}</svg></div>
+    <div class="notice-body"><div class="notice-kind">${m.label}</div><div class="notice-msg">${e(message || "No data to display.")}</div></div>
+  </div>`;
+}
+function renderNotice(kind, message) {
+  const root = document.getElementById("root");
+  root.className = "";
+  root.innerHTML = noticeHTML(kind, message);
+}
+// noticeFor returns the notice a tool result should show instead of the view,
+// or null when it carries a data payload for the view.
+function noticeFor(params) {
+  if (params && params.isError) return {kind: "error", message: resultText(params)};
+  const p = extractPayload(params);
+  if (p && p.type === "notice") return {kind: p.kind ?? "notice", message: p.message ?? resultText(params)};
+  if (!p) return {kind: "notice", message: resultText(params)};
+  return null;
+}
+let gotResult = false;
+function dispatch(params, view) {
+  gotResult = true;
+  const n = noticeFor(params);
+  if (n) renderNotice(n.kind, n.message);
+  else view(extractPayload(params));
+}
+// Nothing arrived (host never forwarded the result): say so instead of a
+// spinner forever. A late result still replaces this.
+setTimeout(() => { if (!gotResult) renderNotice("notice", "No data received from the tool yet."); }, 20000);
 rpc("ui/initialize",{protocolVersion:"2026-01-26",appInfo:{name:"polar-calendar-ui",version:"3.0"},appCapabilities:{availableDisplayModes:["inline"]}})
   .then(()=>window.parent.postMessage({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}},"*"));
 

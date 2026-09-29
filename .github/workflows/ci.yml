@@ -84,6 +84,61 @@ jobs:
             COMMIT=${{ github.sha }}
             DATE=${{ github.event.repository.updated_at }}
 
+  edge-release:
+    name: Edge release
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Serialise so two quick merges can't race on deleting/recreating `edge`.
+    concurrency:
+      group: edge-release
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Compose release notes
+        run: |
+          IMAGE="ghcr.io/${{ github.repository }}"
+          SHORT="${GITHUB_SHA::7}"
+          # Only `v*` tags count as releases; `edge` itself must never match.
+          PREV=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
+          RANGE="${PREV:+${PREV}..}HEAD"
+          {
+            echo "Rolling pre-release of \`main\` at ${GITHUB_SHA}. Replaced on every merge — not a stable release."
+            echo ""
+            echo "### Docker image"
+            echo ""
+            echo '```'
+            echo "${IMAGE}:edge          # this build (moves with main)"
+            echo "${IMAGE}:sha-${SHORT}   # immutable, this exact commit"
+            echo '```'
+            echo ""
+            echo "### Changes since ${PREV:-the first commit}"
+            echo ""
+            echo '```'
+            git log --oneline --no-merges "$RANGE"
+            echo '```'
+          } > "$RUNNER_TEMP/notes.md"
+
+      - name: Publish rolling edge release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Drop the previous edge release and its tag, then recreate both at
+          # this commit. Tags pushed with GITHUB_TOKEN don't trigger workflows,
+          # and `edge` doesn't match release.yml's `v*` filter anyway.
+          gh release delete edge --yes --cleanup-tag 2>/dev/null || true
+          gh release create edge \
+            --target "$GITHUB_SHA" \
+            --title "edge" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --prerelease \
+            --latest=false
+
   docker-pr:
     name: Docker (PR preview)
     runs-on: ubuntu-latest

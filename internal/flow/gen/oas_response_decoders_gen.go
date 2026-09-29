@@ -640,6 +640,15 @@ func decodeCreateTrainingTargetResponse(resp *http.Response) (res CreateTraining
 				return res, errors.Wrap(err, "validate")
 			}
 			return &response, nil
+		case ct == "text/plain":
+			reader := resp.Body
+			b, err := io.ReadAll(reader)
+			if err != nil {
+				return res, err
+			}
+
+			response := CreateTrainingTargetBadRequestTextPlain{Data: bytes.NewReader(b)}
+			return &response, nil
 		default:
 			return res, validate.InvalidContentType(ct)
 		}
@@ -901,6 +910,25 @@ func decodeDeleteTrainingTargetResponse(resp *http.Response) (res DeleteTraining
 	case 200:
 		// Code 200.
 		return &DeleteTrainingTargetOK{}, nil
+	case 400:
+		// Code 400.
+		ct, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if err != nil {
+			return res, errors.Wrap(err, "parse media type")
+		}
+		switch {
+		case ct == "text/plain":
+			reader := resp.Body
+			b, err := io.ReadAll(reader)
+			if err != nil {
+				return res, err
+			}
+
+			response := DeleteTrainingTargetBadRequest{Data: bytes.NewReader(b)}
+			return &response, nil
+		default:
+			return res, validate.InvalidContentType(ct)
+		}
 	case 401:
 		// Code 401.
 		ct, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
@@ -2638,9 +2666,44 @@ func decodeGetTrainingTargetResponse(resp *http.Response) (res GetTrainingTarget
 		default:
 			return res, validate.InvalidContentType(ct)
 		}
+	case 403:
+		// Code 403.
+		ct, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if err != nil {
+			return res, errors.Wrap(err, "parse media type")
+		}
+		switch {
+		case ct == "text/plain":
+			reader := resp.Body
+			b, err := io.ReadAll(reader)
+			if err != nil {
+				return res, err
+			}
+
+			response := GetTrainingTargetForbidden{Data: bytes.NewReader(b)}
+			return &response, nil
+		default:
+			return res, validate.InvalidContentType(ct)
+		}
 	case 404:
 		// Code 404.
-		return &GetTrainingTargetNotFound{}, nil
+		ct, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if err != nil {
+			return res, errors.Wrap(err, "parse media type")
+		}
+		switch {
+		case ct == "text/plain":
+			reader := resp.Body
+			b, err := io.ReadAll(reader)
+			if err != nil {
+				return res, err
+			}
+
+			response := GetTrainingTargetNotFound{Data: bytes.NewReader(b)}
+			return &response, nil
+		default:
+			return res, validate.InvalidContentType(ct)
+		}
 	}
 	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
@@ -3691,6 +3754,15 @@ func decodeUpdateTrainingTargetResponse(resp *http.Response) (res UpdateTraining
 			}(); err != nil {
 				return res, errors.Wrap(err, "validate")
 			}
+			return &response, nil
+		case ct == "text/plain":
+			reader := resp.Body
+			b, err := io.ReadAll(reader)
+			if err != nil {
+				return res, err
+			}
+
+			response := UpdateTrainingTargetBadRequestTextPlain{Data: bytes.NewReader(b)}
 			return &response, nil
 		default:
 			return res, validate.InvalidContentType(ct)

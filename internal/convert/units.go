@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf16"
 )
 
 // ISODate is the canonical date-only layout (YYYY-MM-DD).
@@ -335,4 +336,17 @@ func PaceClock(secs int) string {
 		secs = 0
 	}
 	return fmt.Sprintf("%d:%02d", secs/60, secs%60)
+}
+
+// PolarTextLen is a string's length as Flow's length limits count it: UTF-16
+// code units (the backend is Java, String.length()). It equals the rune count
+// except that each character outside the Basic Multilingual Plane — most
+// emoji — counts 2 (probed 2026-09-29: 44 letters + "🏃" is rejected by a
+// 45-character limit).
+func PolarTextLen(s string) int {
+	n := 0
+	for _, r := range s {
+		n += utf16.RuneLen(r)
+	}
+	return n
 }

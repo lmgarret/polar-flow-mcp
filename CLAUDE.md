@@ -39,7 +39,8 @@ and silent refresh.
 - Logging: `log/slog` (stdlib)
 - Docker: `golang:1.26-alpine` builder → `FROM scratch` final; `CGO_ENABLED=0`,
   `-ldflags="-w -s"`, copy `ca-certificates.crt`
-- CI: `test` + `lint` → `docker` (ghcr.io; `edge` + `sha-` on main). Pushing a
+- CI: `test` + `lint` → `docker` (ghcr.io; `edge` + `sha-` on main) → `edge-release`
+  (rolling GitHub pre-release tagged `edge`, recreated per merge; commit log, no LLM). Pushing a
   `v*` tag runs `release.yml`: LLM-summarised release notes + the semver `latest`
   ladder (owned by releases, not CI)
 - No CGO. No SQLite. No database.
@@ -115,7 +116,8 @@ silently dropped) and answers the session edit's bad values with a bare 500.
 New write tools therefore reject bad input **before any request goes out**:
 read arguments with the strict accessors in `internal/mcp/args.go`
 (`idArg`, `intArgRange`, `floatArgRange`, `textArg` — wrong types, non-integers
-and out-of-range values become errors naming the argument), check sport ids with
+and out-of-range values become errors naming the argument; text lengths count
+UTF-16 code units via `convert.PolarTextLen`, like Flow's Java backend), check sport ids with
 `fc.SportName` (cached catalogue), and cover every rule with a
 `runValidationCases` table that also asserts nothing reached the fake server.
 The probed limits are recorded in the vendored spec.

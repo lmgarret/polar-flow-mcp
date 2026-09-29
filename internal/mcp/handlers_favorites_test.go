@@ -320,7 +320,7 @@ func TestSaveTargetAsFavorite(t *testing.T) {
 	})
 	t.Run("unknown target", func(t *testing.T) {
 		ff := newFakeFlow(t)
-		ff.on("GET", "/api/trainingtarget/2", 404, "", "")
+		ff.on("GET", "/api/trainingtarget/2", 404, textPlain, "trainingTarget.targetNotFound")
 		res := callTool(t, SaveTargetAsFavoriteHandler(ff.client()), map[string]any{"target_id": 2.0})
 		if res.IsError || !strings.Contains(resultText(res), "No target with id 2") {
 			t.Fatalf("got %q", resultText(res))

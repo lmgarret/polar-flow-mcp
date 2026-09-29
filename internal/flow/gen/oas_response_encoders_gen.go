@@ -334,6 +334,20 @@ func encodeCreateTrainingTargetResponse(response CreateTrainingTargetRes, w http
 
 		return nil
 
+	case *CreateTrainingTargetBadRequestTextPlain:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(400)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	case *Unauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
@@ -494,6 +508,20 @@ func encodeDeleteTrainingTargetResponse(response DeleteTrainingTargetRes, w http
 	switch response := response.(type) {
 	case *DeleteTrainingTargetOK:
 		w.WriteHeader(200)
+
+		return nil
+
+	case *DeleteTrainingTargetBadRequest:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(400)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -1245,8 +1273,31 @@ func encodeGetTrainingTargetResponse(response GetTrainingTargetRes, w http.Respo
 
 		return nil
 
+	case *GetTrainingTargetForbidden:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(403)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	case *GetTrainingTargetNotFound:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(404)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
 		return nil
 
@@ -1758,6 +1809,20 @@ func encodeUpdateTrainingTargetResponse(response UpdateTrainingTargetRes, w http
 		e := new(jx.Encoder)
 		response.Encode(e)
 		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *UpdateTrainingTargetBadRequestTextPlain:
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(400)
+
+		writer := w
+		if closer, ok := response.Data.(io.Closer); ok {
+			defer closer.Close()
+		}
+		if _, err := io.Copy(writer, response); err != nil {
 			return errors.Wrap(err, "write")
 		}
 

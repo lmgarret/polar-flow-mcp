@@ -82,3 +82,19 @@ Tool: `get_user_info`.
 Tool: `get_training_zones`.
 
 ![Heart-rate, pace and power zones per sport](../../../assets/mcp-apps/zones.webp)
+
+## Notices — every UI
+
+A call with no data to show renders a notice card instead of staying on
+"Loading…":
+
+- **Rejected** (red): the tool returned an error, e.g. an argument over
+  Polar's limit. The card shows the error text.
+- **Nothing to show** (blue): a plain statement such as
+  `No target with id 7.` These results carry a
+  `{"type": "notice", "kind": "notice", "message": …}` structured payload.
+- **Cancelled** (grey): the user declined a confirmation
+  (`"kind": "cancelled"`), or the host cancelled the call.
+
+If no result reaches the UI within 20 seconds, it says so; a result that
+arrives later still replaces the card.

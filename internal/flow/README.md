@@ -55,6 +55,18 @@ other semantic changes.
 - **Opaque 500s.** `editTraining` answers every out-of-range field with an empty
   500; `EditTrainingSession` turns it into an explanatory error, and the MCP
   tool validates the ranges before sending.
+- **Opaque 400s and a time clash.** Over-long target/phase names answer the
+  same generic message as the name content filter, and a create rejected for a
+  phase name still stores a half-created, calendar-invisible target that holds
+  its time slot — so the MCP tools validate name (≤ 45), description (≤ 500)
+  and phase names (≤ 45, UTF-16 code units, `convert.PolarTextLen`) first. A
+  create/update onto an occupied minute is a text/plain 400 mapped to
+  `ErrTargetTimeClash`.
+- **Non-idempotent target delete.** `DELETE /training/target/{id}` answers 400
+  text/plain for a missing (`deleteError` → `ErrTargetNotFound`) or foreign
+  (→ `ErrNotOwned`) id; `delete_training_target` reads the target first.
+- **Opaque fields.** `supportedDeviceIds` in `/api/favorites` is not an int
+  array on device-paired accounts; it is left untyped (`jx.Raw`).
 - **403 instead of 404.** The route-geometry endpoint answers 403 for any id
   that is not one of the account's exercise targets; it maps to
   `ErrFavoriteNotFound`. Reads of another account's session / favorite map to

@@ -253,8 +253,10 @@ func (UnimplementedHandler) DeleteTrainingSession(ctx context.Context, params De
 // `/api/trainingtarget/{id}` (which is used for create/read/update). There is no trailing slash
 // (unlike session delete, `DELETE /api/training/deleteTrainingSession/{id}/`, which requires one).
 //
-// Returns 200 with an empty body. Idempotent in practice — deleting an already-gone id still returns
-// 200.
+// Returns 200 with an empty body. Not idempotent (re-probed 2026-09-29; the earlier "already-gone id
+// → 200" note was wrong): an unknown or already-deleted id answers `400 text/plain` `deleteError`,
+// and another user's target `400 text/plain` `Ce n'est pas votre objectif.` (localized). Pre-check
+// with `GET /api/trainingtarget/{id}` (404 missing / 403 foreign) to tell the cases apart.
 //
 // Requires `X-Requested-With: XMLHttpRequest` even though the path sits outside `/api/*`: Play's CSRF
 // filter guards every mutation, not just `/api/*` writes. Without it: `403` with an HTML body

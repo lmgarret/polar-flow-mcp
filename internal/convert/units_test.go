@@ -253,3 +253,12 @@ func TestPolarEnumTail(t *testing.T) {
 		}
 	}
 }
+
+func TestPolarTextLen(t *testing.T) {
+	cases := map[string]int{"": 0, "abc": 3, "ééé": 3, "mcp–x": 5, "a🏃": 3, "🏃🏃": 4}
+	for in, want := range cases {
+		if got := PolarTextLen(in); got != want {
+			t.Errorf("PolarTextLen(%q) = %d, want %d", in, got, want)
+		}
+	}
+}

@@ -431,7 +431,7 @@ func SaveTargetAsFavoriteHandler(fc *flow.Client) toolHandler {
 		name := t.Name
 		if hasName {
 			name = override
-		} else if n := len([]rune(name)); n > maxFavoriteNameRunes {
+		} else if n := convert.PolarTextLen(name); n > maxFavoriteNameRunes {
 			return mcpgo.NewToolResultError(fmt.Sprintf("the target's name is %d characters but favorite names "+
 				"are limited to %d; pass a shorter name", n, maxFavoriteNameRunes)), nil
 		}
