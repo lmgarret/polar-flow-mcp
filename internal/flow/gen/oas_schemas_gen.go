@@ -1556,6 +1556,11 @@ type DeleteTrainingSessionOK struct{}
 
 func (*DeleteTrainingSessionOK) deleteTrainingSessionRes() {}
 
+// DeleteTrainingTargetForbidden is response for DeleteTrainingTarget operation.
+type DeleteTrainingTargetForbidden struct{}
+
+func (*DeleteTrainingTargetForbidden) deleteTrainingTargetRes() {}
+
 // DeleteTrainingTargetOK is response for DeleteTrainingTarget operation.
 type DeleteTrainingTargetOK struct{}
 
@@ -3003,6 +3008,11 @@ func (s *GetFeaturesAvailableOKItem) SetFeature(val string) {
 func (s *GetFeaturesAvailableOKItem) SetAvailable(val bool) {
 	s.Available = val
 }
+
+// GetProgressViewSummaryNotFound is response for GetProgressViewSummary operation.
+type GetProgressViewSummaryNotFound struct{}
+
+func (*GetProgressViewSummaryNotFound) getProgressViewSummaryRes() {}
 
 type GetProgressViewSummaryReq struct {
 	// Inclusive start date, `DD-MM-YYYY` (dashes, leading zeros).

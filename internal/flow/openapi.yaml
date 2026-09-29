@@ -590,17 +590,33 @@ paths:
 
         already-gone id still returns 200.
 
+
+        **Requires `X-Requested-With: XMLHttpRequest`** even though the path sits
+
+        outside `/api/*`: Play''s CSRF filter guards every mutation, not just
+
+        `/api/*` writes. Without it: `403` with an HTML body (observed by the
+
+        polar-flow-mcp client, which sends the header on every non-GET request).
+
         '
       operationId: deleteTrainingTarget
       tags:
       - training-targets
       parameters:
       - $ref: '#/components/parameters/TrainingTargetId'
+      - $ref: '#/components/parameters/XRequestedWith'
       responses:
         '200':
           description: Deleted successfully. Response body is empty.
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'CSRF rejection — `X-Requested-With` header missing. HTML body;
+
+            easy to mistake for an auth failure.
+
+            '
   /training/getCalendarEvents:
     get:
       summary: List calendar events (includes training targets)
@@ -2600,6 +2616,16 @@ paths:
                 $ref: '#/components/schemas/ProgressViewSummary'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 'No progress data for the range. Observed by the polar-flow-mcp client,
+
+            which treats it as an all-zero summary; the zero-session test account
+
+            got a 200 with zeros instead. Trigger condition and body shape not
+
+            pinned. # TODO: verify
+
+            '
   /progress/getSummaryDataAsJson:
     post:
       summary: Training summary totals (Coach variant — same shape as getProgressViewSummaryAsJson)
@@ -2748,7 +2774,9 @@ components:
         - XMLHttpRequest
         default: XMLHttpRequest
         example: XMLHttpRequest
-      description: 'CSRF defense on /api/* write operations. Play''s CSRF filter is
+      description: 'CSRF defense on every write operation — `/api/*` and legacy paths
+
+        such as `DELETE /training/target/{id}` alike. Play''s CSRF filter is
 
         configured to whitelist requests carrying this header (browsers
 

@@ -230,6 +230,10 @@ type Invoker interface {
 	// Returns 200 with an empty body. Idempotent in practice — deleting an already-gone id still returns
 	// 200.
 	//
+	// Requires `X-Requested-With: XMLHttpRequest` even though the path sits outside `/api/*`: Play's CSRF
+	// filter guards every mutation, not just `/api/*` writes. Without it: `403` with an HTML body
+	// (observed by the polar-flow-mcp client, which sends the header on every non-GET request).
+	//
 	// DELETE /training/target/{id}
 	DeleteTrainingTarget(ctx context.Context, params DeleteTrainingTargetParams) (DeleteTrainingTargetRes, error)
 	// EditTrainingSession invokes editTrainingSession operation.
@@ -2198,6 +2202,10 @@ func (c *Client) sendDeleteTrainingSession(ctx context.Context, params DeleteTra
 // Returns 200 with an empty body. Idempotent in practice — deleting an already-gone id still returns
 // 200.
 //
+// Requires `X-Requested-With: XMLHttpRequest` even though the path sits outside `/api/*`: Play's CSRF
+// filter guards every mutation, not just `/api/*` writes. Without it: `403` with an HTML body
+// (observed by the polar-flow-mcp client, which sends the header on every non-GET request).
+//
 // DELETE /training/target/{id}
 func (c *Client) DeleteTrainingTarget(ctx context.Context, params DeleteTrainingTargetParams) (DeleteTrainingTargetRes, error) {
 	res, err := c.sendDeleteTrainingTarget(ctx, params)
@@ -2267,6 +2275,20 @@ func (c *Client) sendDeleteTrainingTarget(ctx context.Context, params DeleteTrai
 	r, err := ht.NewRequest(ctx, "DELETE", u)
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-Requested-With",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(string(params.XRequestedWith)))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
 	}
 
 	{

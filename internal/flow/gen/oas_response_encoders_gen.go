@@ -470,6 +470,11 @@ func encodeDeleteTrainingTargetResponse(response DeleteTrainingTargetRes, w http
 
 		return nil
 
+	case *DeleteTrainingTargetForbidden:
+		w.WriteHeader(403)
+
+		return nil
+
 	default:
 		return errors.Errorf("unexpected response type: %T", response)
 	}
@@ -843,6 +848,11 @@ func encodeGetProgressViewSummaryResponse(response GetProgressViewSummaryRes, w 
 		if _, err := e.WriteTo(w); err != nil {
 			return errors.Wrap(err, "write")
 		}
+
+		return nil
+
+	case *GetProgressViewSummaryNotFound:
+		w.WriteHeader(404)
 
 		return nil
 
