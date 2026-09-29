@@ -1025,23 +1025,51 @@ func (s *CalendarEvent) SetTimestamp(val OptInt) {
 	s.Timestamp = val
 }
 
-// ChangeFavoriteSportBadRequest is response for ChangeFavoriteSport operation.
-type ChangeFavoriteSportBadRequest struct{}
+type ChangeFavoriteSportBadRequest struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s ChangeFavoriteSportBadRequest) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
 
 func (*ChangeFavoriteSportBadRequest) changeFavoriteSportRes() {}
 
+type ChangeFavoriteSportInternalServerError struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s ChangeFavoriteSportInternalServerError) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*ChangeFavoriteSportInternalServerError) changeFavoriteSportRes() {}
+
+// JSON text `{"success": "<localised message>"}` served as `text/plain`.
 type ChangeFavoriteSportOK struct {
-	Success string `json:"success"`
+	Data io.Reader
 }
 
-// GetSuccess returns the value of Success.
-func (s *ChangeFavoriteSportOK) GetSuccess() string {
-	return s.Success
-}
-
-// SetSuccess sets the value of Success.
-func (s *ChangeFavoriteSportOK) SetSuccess(val string) {
-	s.Success = val
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s ChangeFavoriteSportOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
 }
 
 func (*ChangeFavoriteSportOK) changeFavoriteSportRes() {}
@@ -1290,6 +1318,48 @@ func (s CreateFavoriteCreated) Read(p []byte) (n int, err error) {
 
 func (*CreateFavoriteCreated) createFavoriteRes() {}
 
+// CreateFavoriteInternalServerError is response for CreateFavorite operation.
+type CreateFavoriteInternalServerError struct{}
+
+func (*CreateFavoriteInternalServerError) createFavoriteRes() {}
+
+type CreateTargetFromFavoriteBadRequest struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s CreateTargetFromFavoriteBadRequest) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*CreateTargetFromFavoriteBadRequest) createTargetFromFavoriteRes() {}
+
+// CreateTargetFromFavoriteInternalServerError is response for CreateTargetFromFavorite operation.
+type CreateTargetFromFavoriteInternalServerError struct{}
+
+func (*CreateTargetFromFavoriteInternalServerError) createTargetFromFavoriteRes() {}
+
+type CreateTargetFromFavoriteOKTextPlain struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s CreateTargetFromFavoriteOKTextPlain) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*CreateTargetFromFavoriteOKTextPlain) createTargetFromFavoriteRes() {}
+
 // CreateTrainingSessionBadRequest is response for CreateTrainingSession operation.
 type CreateTrainingSessionBadRequest struct{}
 
@@ -1406,25 +1476,52 @@ func (s *CurrentUserResponse) SetProductCapabilities(val []jx.Raw) {
 
 func (*CurrentUserResponse) getCurrentUserRes() {}
 
-// DeleteFavoriteNotFound is response for DeleteFavorite operation.
-type DeleteFavoriteNotFound struct{}
+type DeleteFavoriteBadRequest struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DeleteFavoriteBadRequest) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*DeleteFavoriteBadRequest) deleteFavoriteRes() {}
+
+type DeleteFavoriteNotFound struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DeleteFavoriteNotFound) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
 
 func (*DeleteFavoriteNotFound) deleteFavoriteRes() {}
 
+// JSON text `{"success": "<localized message>"}` (depends on the user's `flowLanguage`). Don't
+// pattern-match; trust the 200.
 type DeleteFavoriteOK struct {
-	// Localized success message (depends on user's `flowLanguage`). Don't pattern-match; trust the 200
-	// status.
-	Success string `json:"success"`
+	Data io.Reader
 }
 
-// GetSuccess returns the value of Success.
-func (s *DeleteFavoriteOK) GetSuccess() string {
-	return s.Success
-}
-
-// SetSuccess sets the value of Success.
-func (s *DeleteFavoriteOK) SetSuccess(val string) {
-	s.Success = val
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DeleteFavoriteOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
 }
 
 func (*DeleteFavoriteOK) deleteFavoriteRes() {}
@@ -1438,6 +1535,16 @@ func (*DeleteSportProfileInternalServerError) deleteSportProfileRes() {}
 type DeleteSportProfileOK struct{}
 
 func (*DeleteSportProfileOK) deleteSportProfileRes() {}
+
+// DeleteTrainingSessionBadRequest is response for DeleteTrainingSession operation.
+type DeleteTrainingSessionBadRequest struct{}
+
+func (*DeleteTrainingSessionBadRequest) deleteTrainingSessionRes() {}
+
+// DeleteTrainingSessionInternalServerError is response for DeleteTrainingSession operation.
+type DeleteTrainingSessionInternalServerError struct{}
+
+func (*DeleteTrainingSessionInternalServerError) deleteTrainingSessionRes() {}
 
 // DeleteTrainingSessionNotFound is response for DeleteTrainingSession operation.
 type DeleteTrainingSessionNotFound struct{}
@@ -1453,6 +1560,26 @@ func (*DeleteTrainingSessionOK) deleteTrainingSessionRes() {}
 type DeleteTrainingTargetOK struct{}
 
 func (*DeleteTrainingTargetOK) deleteTrainingTargetRes() {}
+
+// EditTrainingSessionForbidden is response for EditTrainingSession operation.
+type EditTrainingSessionForbidden struct{}
+
+func (*EditTrainingSessionForbidden) editTrainingSessionRes() {}
+
+// EditTrainingSessionInternalServerError is response for EditTrainingSession operation.
+type EditTrainingSessionInternalServerError struct{}
+
+func (*EditTrainingSessionInternalServerError) editTrainingSessionRes() {}
+
+// EditTrainingSessionNotFound is response for EditTrainingSession operation.
+type EditTrainingSessionNotFound struct{}
+
+func (*EditTrainingSessionNotFound) editTrainingSessionRes() {}
+
+// EditTrainingSessionOK is response for EditTrainingSession operation.
+type EditTrainingSessionOK struct{}
+
+func (*EditTrainingSessionOK) editTrainingSessionRes() {}
 
 // A single exercise block within a training target.
 // Ref: #/components/schemas/ExerciseTarget
@@ -1554,14 +1681,16 @@ func (s *ExerciseTarget) SetID(val OptNilFloat64) {
 // (update). Adds `index` (and the existing `id`) fields to each exerciseTarget vs the create shape.
 // Ref: #/components/schemas/Favorite
 type Favorite struct {
-	// Favorite kind (same set as a training target; no datetime).
+	// Favorite kind (same set as a training target; no datetime), plus `ROUTE` for imported GPX/TCX routes
+	// and `FREE` — what a favorite created with an empty/missing `exerciseTargets` reads back as (probed
+	// 2026-09-28). Only VOLUME / STEADY_RACE_PACE / PHASED are valid on write.
 	Type FavoriteType `json:"type"`
-	// Favorite display name.
+	// Favorite display name, 1–45 chars (longer → 400 on write).
 	Name string `json:"name"`
-	// Free-text notes; empty string when not set.
-	Description OptString `json:"description"`
+	// Free-text notes (≤ 500 chars); empty string when not set, null for ROUTE favorites.
+	Description OptNilString `json:"description"`
 	// One block per exercise (multi-sport favorites have several).
-	ExerciseTargets []FavoriteExerciseTargetsItem `json:"exerciseTargets"`
+	ExerciseTargets []FavoriteExerciseTargetEntry `json:"exerciseTargets"`
 }
 
 // GetType returns the value of Type.
@@ -1575,12 +1704,12 @@ func (s *Favorite) GetName() string {
 }
 
 // GetDescription returns the value of Description.
-func (s *Favorite) GetDescription() OptString {
+func (s *Favorite) GetDescription() OptNilString {
 	return s.Description
 }
 
 // GetExerciseTargets returns the value of ExerciseTargets.
-func (s *Favorite) GetExerciseTargets() []FavoriteExerciseTargetsItem {
+func (s *Favorite) GetExerciseTargets() []FavoriteExerciseTargetEntry {
 	return s.ExerciseTargets
 }
 
@@ -1595,12 +1724,12 @@ func (s *Favorite) SetName(val string) {
 }
 
 // SetDescription sets the value of Description.
-func (s *Favorite) SetDescription(val OptString) {
+func (s *Favorite) SetDescription(val OptNilString) {
 	s.Description = val
 }
 
 // SetExerciseTargets sets the value of ExerciseTargets.
-func (s *Favorite) SetExerciseTargets(val []FavoriteExerciseTargetsItem) {
+func (s *Favorite) SetExerciseTargets(val []FavoriteExerciseTargetEntry) {
 	s.ExerciseTargets = val
 }
 
@@ -1612,9 +1741,10 @@ func (*Favorite) getFavoriteRes() {}
 type FavoriteCreate struct {
 	// Favorite kind — see TrainingTargetCreate.type for the per-value field rules.
 	Type FavoriteCreateType `json:"type"`
-	// Favorite display name (required).
+	// Favorite display name, 1–45 chars (probed 2026-09-28: 46 → 400 `{"target.name":[…]}`).
+	// Stricter than the training-target name.
 	Name string `json:"name"`
-	// Free-text notes; send empty string when none.
+	// Free-text notes, ≤ 500 chars; send empty string when none.
 	Description OptString `json:"description"`
 	// One block per exercise; send `id: null` on each (server assigns).
 	ExerciseTargets []ExerciseTarget `json:"exerciseTargets"`
@@ -1873,6 +2003,99 @@ func (s *FavoriteExerciseTarget) SetGpsRoute(val OptNilGpsRoute) {
 
 func (*FavoriteExerciseTarget) getFavoriteExerciseTargetRes() {}
 
+// One `exerciseTargets[]` entry of a favorite (`GET`/`POST /api/favoritetarget/{id}`). Same fields as
+// `ExerciseTarget`, but `sportId` is nullable: ROUTE favorites, `FREE` favorites and favorites whose
+// sport was cleared (saveSport without a sport) read back with `sportId: null`.
+// Ref: #/components/schemas/FavoriteExerciseTargetEntry
+type FavoriteExerciseTargetEntry struct {
+	// Server-assigned exerciseTargetId. Send it back on update — an entry with `id: null` is silently
+	// not updated.
+	ID OptNilInt64 `json:"id"`
+	// Position within the exerciseTargets array (read-only).
+	Index OptNilInt `json:"index"`
+	// Sport id from `/api/sports/sports`. ⚠ Not validated by the server — `9999` is stored verbatim.
+	// Null for ROUTE / FREE favorites.
+	SportId OptNilInt `json:"sportId"`
+	// `HH:MM:SS`, ≤ `99:59:59`. For PHASED favorites the read-back value is rolled up from the phases.
+	Duration OptNilString `json:"duration"`
+	// Metres (0 < d ≤ 9 999 000). Rolled up from phases on read-back for PHASED.
+	Distance OptNilFloat64 `json:"distance"`
+	// Target kcal (≥ 0), or null.
+	Calories OptNilFloat64 `json:"calories"`
+	// Populated for PHASED favorites; `[]` otherwise.
+	Phases []Phase `json:"phases"`
+}
+
+// GetID returns the value of ID.
+func (s *FavoriteExerciseTargetEntry) GetID() OptNilInt64 {
+	return s.ID
+}
+
+// GetIndex returns the value of Index.
+func (s *FavoriteExerciseTargetEntry) GetIndex() OptNilInt {
+	return s.Index
+}
+
+// GetSportId returns the value of SportId.
+func (s *FavoriteExerciseTargetEntry) GetSportId() OptNilInt {
+	return s.SportId
+}
+
+// GetDuration returns the value of Duration.
+func (s *FavoriteExerciseTargetEntry) GetDuration() OptNilString {
+	return s.Duration
+}
+
+// GetDistance returns the value of Distance.
+func (s *FavoriteExerciseTargetEntry) GetDistance() OptNilFloat64 {
+	return s.Distance
+}
+
+// GetCalories returns the value of Calories.
+func (s *FavoriteExerciseTargetEntry) GetCalories() OptNilFloat64 {
+	return s.Calories
+}
+
+// GetPhases returns the value of Phases.
+func (s *FavoriteExerciseTargetEntry) GetPhases() []Phase {
+	return s.Phases
+}
+
+// SetID sets the value of ID.
+func (s *FavoriteExerciseTargetEntry) SetID(val OptNilInt64) {
+	s.ID = val
+}
+
+// SetIndex sets the value of Index.
+func (s *FavoriteExerciseTargetEntry) SetIndex(val OptNilInt) {
+	s.Index = val
+}
+
+// SetSportId sets the value of SportId.
+func (s *FavoriteExerciseTargetEntry) SetSportId(val OptNilInt) {
+	s.SportId = val
+}
+
+// SetDuration sets the value of Duration.
+func (s *FavoriteExerciseTargetEntry) SetDuration(val OptNilString) {
+	s.Duration = val
+}
+
+// SetDistance sets the value of Distance.
+func (s *FavoriteExerciseTargetEntry) SetDistance(val OptNilFloat64) {
+	s.Distance = val
+}
+
+// SetCalories sets the value of Calories.
+func (s *FavoriteExerciseTargetEntry) SetCalories(val OptNilFloat64) {
+	s.Calories = val
+}
+
+// SetPhases sets the value of Phases.
+func (s *FavoriteExerciseTargetEntry) SetPhases(val []Phase) {
+	s.Phases = val
+}
+
 // Favorite kind. `ROUTE` carries GPS geometry in `gpsRoute`.
 type FavoriteExerciseTargetType string
 
@@ -1881,6 +2104,7 @@ const (
 	FavoriteExerciseTargetTypeSTEADYRACEPACE FavoriteExerciseTargetType = "STEADY_RACE_PACE"
 	FavoriteExerciseTargetTypePHASED         FavoriteExerciseTargetType = "PHASED"
 	FavoriteExerciseTargetTypeROUTE          FavoriteExerciseTargetType = "ROUTE"
+	FavoriteExerciseTargetTypeFREE           FavoriteExerciseTargetType = "FREE"
 )
 
 // AllValues returns all FavoriteExerciseTargetType values.
@@ -1890,6 +2114,7 @@ func (FavoriteExerciseTargetType) AllValues() []FavoriteExerciseTargetType {
 		FavoriteExerciseTargetTypeSTEADYRACEPACE,
 		FavoriteExerciseTargetTypePHASED,
 		FavoriteExerciseTargetTypeROUTE,
+		FavoriteExerciseTargetTypeFREE,
 	}
 }
 
@@ -1903,6 +2128,8 @@ func (s FavoriteExerciseTargetType) MarshalText() ([]byte, error) {
 	case FavoriteExerciseTargetTypePHASED:
 		return []byte(s), nil
 	case FavoriteExerciseTargetTypeROUTE:
+		return []byte(s), nil
+	case FavoriteExerciseTargetTypeFREE:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -1924,103 +2151,12 @@ func (s *FavoriteExerciseTargetType) UnmarshalText(data []byte) error {
 	case FavoriteExerciseTargetTypeROUTE:
 		*s = FavoriteExerciseTargetTypeROUTE
 		return nil
+	case FavoriteExerciseTargetTypeFREE:
+		*s = FavoriteExerciseTargetTypeFREE
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
-}
-
-// Merged schema.
-type FavoriteExerciseTargetsItem struct {
-	// Merged property.
-	Index OptInt `json:"index"`
-	// Polar sport identifier. 1 = Course à pied (running).
-	SportId int `json:"sportId"`
-	// Target duration in HH:MM:SS format. On create: null for PHASED targets (each phase carries its own).
-	// On read-back: for PHASED targets the server rolls up the phase durations into this field, so it is
-	// non-null even though you sent null. Send it back unchanged on update — the server recomputes it
-	// and ignores what you send.
-	Duration OptNilString `json:"duration"`
-	// Target distance in metres (the UI shows km but the wire value is metres — UI 5 km → payload
-	// 5000). Null when not distance-based on create; for PHASED targets the server rolls up the phase
-	// distances into this field on read-back (same as `duration`).
-	Distance OptNilFloat64 `json:"distance"`
-	// Target calorie burn (kcal). Null when not calorie-based.
-	Calories OptNilFloat64 `json:"calories"`
-	// Structured phases (e.g. warm-up / main / cool-down). Empty `[]` for VOLUME / STEADY_RACE_PACE
-	// targets; populated for PHASED targets.
-	Phases []Phase `json:"phases"`
-	// Populated by the server on create; send null when creating.
-	ID OptNilFloat64 `json:"id"`
-}
-
-// GetIndex returns the value of Index.
-func (s *FavoriteExerciseTargetsItem) GetIndex() OptInt {
-	return s.Index
-}
-
-// GetSportId returns the value of SportId.
-func (s *FavoriteExerciseTargetsItem) GetSportId() int {
-	return s.SportId
-}
-
-// GetDuration returns the value of Duration.
-func (s *FavoriteExerciseTargetsItem) GetDuration() OptNilString {
-	return s.Duration
-}
-
-// GetDistance returns the value of Distance.
-func (s *FavoriteExerciseTargetsItem) GetDistance() OptNilFloat64 {
-	return s.Distance
-}
-
-// GetCalories returns the value of Calories.
-func (s *FavoriteExerciseTargetsItem) GetCalories() OptNilFloat64 {
-	return s.Calories
-}
-
-// GetPhases returns the value of Phases.
-func (s *FavoriteExerciseTargetsItem) GetPhases() []Phase {
-	return s.Phases
-}
-
-// GetID returns the value of ID.
-func (s *FavoriteExerciseTargetsItem) GetID() OptNilFloat64 {
-	return s.ID
-}
-
-// SetIndex sets the value of Index.
-func (s *FavoriteExerciseTargetsItem) SetIndex(val OptInt) {
-	s.Index = val
-}
-
-// SetSportId sets the value of SportId.
-func (s *FavoriteExerciseTargetsItem) SetSportId(val int) {
-	s.SportId = val
-}
-
-// SetDuration sets the value of Duration.
-func (s *FavoriteExerciseTargetsItem) SetDuration(val OptNilString) {
-	s.Duration = val
-}
-
-// SetDistance sets the value of Distance.
-func (s *FavoriteExerciseTargetsItem) SetDistance(val OptNilFloat64) {
-	s.Distance = val
-}
-
-// SetCalories sets the value of Calories.
-func (s *FavoriteExerciseTargetsItem) SetCalories(val OptNilFloat64) {
-	s.Calories = val
-}
-
-// SetPhases sets the value of Phases.
-func (s *FavoriteExerciseTargetsItem) SetPhases(val []Phase) {
-	s.Phases = val
-}
-
-// SetID sets the value of ID.
-func (s *FavoriteExerciseTargetsItem) SetID(val OptNilFloat64) {
-	s.ID = val
 }
 
 // One element of `GET /api/favorites.targets[]`. Uses a different unit convention from
@@ -2038,7 +2174,8 @@ type FavoriteListing struct {
 	// Numeric sport id. Null for ROUTE favorites.
 	SportId OptNilInt `json:"sportId"`
 	// Favorite kind. `ROUTE` is only present for entries created via
-	// `POST /api/favorites/trainingTargets/importRoute`.
+	// `POST /api/favorites/trainingTargets/importRoute`. `FREE` appears for a favorite created without
+	// exercise targets.
 	Type OptFavoriteListingType `json:"type"`
 	// User-given favorite name.
 	FavoriteName OptString `json:"favoriteName"`
@@ -2227,7 +2364,8 @@ func (s *FavoriteListing) SetSupportedDeviceIds(val []int) {
 }
 
 // Favorite kind. `ROUTE` is only present for entries created via
-// `POST /api/favorites/trainingTargets/importRoute`.
+// `POST /api/favorites/trainingTargets/importRoute`. `FREE` appears for a favorite created without
+// exercise targets.
 type FavoriteListingType string
 
 const (
@@ -2235,6 +2373,7 @@ const (
 	FavoriteListingTypeSTEADYRACEPACE FavoriteListingType = "STEADY_RACE_PACE"
 	FavoriteListingTypePHASED         FavoriteListingType = "PHASED"
 	FavoriteListingTypeROUTE          FavoriteListingType = "ROUTE"
+	FavoriteListingTypeFREE           FavoriteListingType = "FREE"
 )
 
 // AllValues returns all FavoriteListingType values.
@@ -2244,6 +2383,7 @@ func (FavoriteListingType) AllValues() []FavoriteListingType {
 		FavoriteListingTypeSTEADYRACEPACE,
 		FavoriteListingTypePHASED,
 		FavoriteListingTypeROUTE,
+		FavoriteListingTypeFREE,
 	}
 }
 
@@ -2257,6 +2397,8 @@ func (s FavoriteListingType) MarshalText() ([]byte, error) {
 	case FavoriteListingTypePHASED:
 		return []byte(s), nil
 	case FavoriteListingTypeROUTE:
+		return []byte(s), nil
+	case FavoriteListingTypeFREE:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -2277,6 +2419,9 @@ func (s *FavoriteListingType) UnmarshalText(data []byte) error {
 		return nil
 	case FavoriteListingTypeROUTE:
 		*s = FavoriteListingTypeROUTE
+		return nil
+	case FavoriteListingTypeFREE:
+		*s = FavoriteListingTypeFREE
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -2556,13 +2701,17 @@ func (s *FavoriteSimpleSportDefaultSpeedViewSetting) UnmarshalText(data []byte) 
 	}
 }
 
-// Favorite kind (same set as a training target; no datetime).
+// Favorite kind (same set as a training target; no datetime), plus `ROUTE` for imported GPX/TCX routes
+// and `FREE` — what a favorite created with an empty/missing `exerciseTargets` reads back as (probed
+// 2026-09-28). Only VOLUME / STEADY_RACE_PACE / PHASED are valid on write.
 type FavoriteType string
 
 const (
 	FavoriteTypeVOLUME         FavoriteType = "VOLUME"
 	FavoriteTypeSTEADYRACEPACE FavoriteType = "STEADY_RACE_PACE"
 	FavoriteTypePHASED         FavoriteType = "PHASED"
+	FavoriteTypeROUTE          FavoriteType = "ROUTE"
+	FavoriteTypeFREE           FavoriteType = "FREE"
 )
 
 // AllValues returns all FavoriteType values.
@@ -2571,6 +2720,8 @@ func (FavoriteType) AllValues() []FavoriteType {
 		FavoriteTypeVOLUME,
 		FavoriteTypeSTEADYRACEPACE,
 		FavoriteTypePHASED,
+		FavoriteTypeROUTE,
+		FavoriteTypeFREE,
 	}
 }
 
@@ -2582,6 +2733,10 @@ func (s FavoriteType) MarshalText() ([]byte, error) {
 	case FavoriteTypeSTEADYRACEPACE:
 		return []byte(s), nil
 	case FavoriteTypePHASED:
+		return []byte(s), nil
+	case FavoriteTypeROUTE:
+		return []byte(s), nil
+	case FavoriteTypeFREE:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -2599,6 +2754,12 @@ func (s *FavoriteType) UnmarshalText(data []byte) error {
 		return nil
 	case FavoriteTypePHASED:
 		*s = FavoriteTypePHASED
+		return nil
+	case FavoriteTypeROUTE:
+		*s = FavoriteTypeROUTE
+		return nil
+	case FavoriteTypeFREE:
+		*s = FavoriteTypeFREE
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -2782,13 +2943,35 @@ type GetFavoriteExerciseTargetForbidden struct{}
 
 func (*GetFavoriteExerciseTargetForbidden) getFavoriteExerciseTargetRes() {}
 
-// GetFavoriteExerciseTargetNotFound is response for GetFavoriteExerciseTarget operation.
-type GetFavoriteExerciseTargetNotFound struct{}
+type GetFavoriteForbidden struct {
+	Data io.Reader
+}
 
-func (*GetFavoriteExerciseTargetNotFound) getFavoriteExerciseTargetRes() {}
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetFavoriteForbidden) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
 
-// GetFavoriteNotFound is response for GetFavorite operation.
-type GetFavoriteNotFound struct{}
+func (*GetFavoriteForbidden) getFavoriteRes() {}
+
+type GetFavoriteNotFound struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetFavoriteNotFound) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
 
 func (*GetFavoriteNotFound) getFavoriteRes() {}
 
@@ -2975,6 +3158,11 @@ type GetTrainingSessionDetailsNotFound struct{}
 
 func (*GetTrainingSessionDetailsNotFound) getTrainingSessionDetailsRes() {}
 
+// GetTrainingSessionSummaryForbidden is response for GetTrainingSessionSummary operation.
+type GetTrainingSessionSummaryForbidden struct{}
+
+func (*GetTrainingSessionSummaryForbidden) getTrainingSessionSummaryRes() {}
+
 // GetTrainingSessionSummaryNotFound is response for GetTrainingSessionSummary operation.
 type GetTrainingSessionSummaryNotFound struct{}
 
@@ -2989,6 +3177,9 @@ func (*GetTrainingTargetNotFound) getTrainingTargetRes() {}
 type GetTrainingTargetOK struct {
 	// Target category, drives which `exerciseTargets[i]` fields are populated.
 	//
+	//  - "ROUTE" — read-back only (observed 2026-09-28): what `GET /api/trainingtarget/{id}` returns for
+	//    a target created by `POST /training/target/createTargetFromFavourite` from a ROUTE favorite —
+	//    no duration/distance/phases, `description: null`. Not tried on create. # TODO: verify on create
 	//  - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is
 	//    non-null; `phases` is `[]`.
 	//  - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are populated; pace is implicit
@@ -2998,9 +3189,9 @@ type GetTrainingTargetOK struct {
 	//    (2026-05-25).
 	Type GetTrainingTargetOKType `json:"type"`
 	// Display name shown in the diary. A server-side content filter (libinjection-style SQL-injection
-	// heuristic, whole-string and prefix-sensitive) rejects some innocuous names with a 400 ValidationError
-	// on field `trainingSessionTarget.name`, on both create and update. Don't pre-filter client-side; on that
-	// rejection, prefix or reword the name and retry (probed 2026-07-22).
+	// heuristic, whole-string and prefix-sensitive) rejects some innocuous names with a `400`
+	// `ValidationError` on field `trainingSessionTarget.name`, on both create and update. Don't pre-filter
+	// client-side; on that rejection, prefix or reword the name and retry (probed 2026-07-22).
 	Name string `json:"name"`
 	// Free-text notes. The create form sends an empty string when not provided, but the server stores and
 	// returns `null` on read-back — so this must be nullable to decode a target created without a
@@ -3093,6 +3284,9 @@ func (*GetTrainingTargetOK) getTrainingTargetRes() {}
 
 // Target category, drives which `exerciseTargets[i]` fields are populated.
 //
+//   - "ROUTE" — read-back only (observed 2026-09-28): what `GET /api/trainingtarget/{id}` returns for
+//     a target created by `POST /training/target/createTargetFromFavourite` from a ROUTE favorite —
+//     no duration/distance/phases, `description: null`. Not tried on create. # TODO: verify on create
 //   - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is
 //     non-null; `phases` is `[]`.
 //   - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are populated; pace is implicit
@@ -3106,6 +3300,7 @@ const (
 	GetTrainingTargetOKTypeVOLUME         GetTrainingTargetOKType = "VOLUME"
 	GetTrainingTargetOKTypeSTEADYRACEPACE GetTrainingTargetOKType = "STEADY_RACE_PACE"
 	GetTrainingTargetOKTypePHASED         GetTrainingTargetOKType = "PHASED"
+	GetTrainingTargetOKTypeROUTE          GetTrainingTargetOKType = "ROUTE"
 )
 
 // AllValues returns all GetTrainingTargetOKType values.
@@ -3114,6 +3309,7 @@ func (GetTrainingTargetOKType) AllValues() []GetTrainingTargetOKType {
 		GetTrainingTargetOKTypeVOLUME,
 		GetTrainingTargetOKTypeSTEADYRACEPACE,
 		GetTrainingTargetOKTypePHASED,
+		GetTrainingTargetOKTypeROUTE,
 	}
 }
 
@@ -3125,6 +3321,8 @@ func (s GetTrainingTargetOKType) MarshalText() ([]byte, error) {
 	case GetTrainingTargetOKTypeSTEADYRACEPACE:
 		return []byte(s), nil
 	case GetTrainingTargetOKTypePHASED:
+		return []byte(s), nil
+	case GetTrainingTargetOKTypeROUTE:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -3142,6 +3340,9 @@ func (s *GetTrainingTargetOKType) UnmarshalText(data []byte) error {
 		return nil
 	case GetTrainingTargetOKTypePHASED:
 		*s = GetTrainingTargetOKTypePHASED
+		return nil
+	case GetTrainingTargetOKTypeROUTE:
+		*s = GetTrainingTargetOKTypeROUTE
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -3266,6 +3467,27 @@ func (s *GpsRouteUser) SetID(val int64) {
 	s.ID = val
 }
 
+type ImportRouteBadRequest struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s ImportRouteBadRequest) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*ImportRouteBadRequest) importRouteRes() {}
+
+// ImportRouteInternalServerError is response for ImportRoute operation.
+type ImportRouteInternalServerError struct{}
+
+func (*ImportRouteInternalServerError) importRouteRes() {}
+
 // ImportRouteOK is response for ImportRoute operation.
 type ImportRouteOK struct{}
 
@@ -3290,6 +3512,23 @@ func (*ListDeviceFavoritesOK) listDeviceFavoritesRes() {}
 type ListFavoritesSimpleOKApplicationJSON []FavoriteSimple
 
 func (*ListFavoritesSimpleOKApplicationJSON) listFavoritesSimpleRes() {}
+
+// JSON array text (same shape as the application/json variant).
+type ListFavoritesSimpleOKTextPlain struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s ListFavoritesSimpleOKTextPlain) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*ListFavoritesSimpleOKTextPlain) listFavoritesSimpleRes() {}
 
 type ListSportProfilesOKApplicationJSON []SportProfile
 
@@ -5323,6 +5562,74 @@ func (o OptNilString) Get() (v string, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilString) Or(d string) string {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilTargetFromFavoriteSport returns new OptNilTargetFromFavoriteSport with value set to v.
+func NewOptNilTargetFromFavoriteSport(v TargetFromFavoriteSport) OptNilTargetFromFavoriteSport {
+	return OptNilTargetFromFavoriteSport{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilTargetFromFavoriteSport is optional nullable TargetFromFavoriteSport.
+type OptNilTargetFromFavoriteSport struct {
+	Value TargetFromFavoriteSport
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilTargetFromFavoriteSport was set.
+func (o OptNilTargetFromFavoriteSport) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilTargetFromFavoriteSport) Reset() {
+	var v TargetFromFavoriteSport
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilTargetFromFavoriteSport) SetTo(v TargetFromFavoriteSport) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilTargetFromFavoriteSport) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilTargetFromFavoriteSport) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v TargetFromFavoriteSport
+	o.Value = v
+}
+
+// IsEmpty returns true if the field was omitted from the payload (not Set and not Null).
+func (o OptNilTargetFromFavoriteSport) IsEmpty() bool {
+	return !o.Set && !o.Null
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilTargetFromFavoriteSport) Get() (v TargetFromFavoriteSport, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilTargetFromFavoriteSport) Or(d TargetFromFavoriteSport) TargetFromFavoriteSport {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -7614,30 +7921,51 @@ func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) SetPercentForCh
 	s.PercentForChart = val
 }
 
-// RenameFavoriteBadRequest is response for RenameFavorite operation.
-type RenameFavoriteBadRequest struct{}
+type RenameFavoriteBadRequest struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s RenameFavoriteBadRequest) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
 
 func (*RenameFavoriteBadRequest) renameFavoriteRes() {}
 
-// RenameFavoriteInternalServerError is response for RenameFavorite operation.
-type RenameFavoriteInternalServerError struct{}
+type RenameFavoriteInternalServerError struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s RenameFavoriteInternalServerError) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
 
 func (*RenameFavoriteInternalServerError) renameFavoriteRes() {}
 
+// JSON text `{"success": "<localised message>"}` served as `text/plain` (probed 2026-09-28).
 type RenameFavoriteOK struct {
-	// Localised confirmation message (e.g. `"Modifications enregistrées"` in French, `"Changes saved"` in
-	// English).
-	Success string `json:"success"`
+	Data io.Reader
 }
 
-// GetSuccess returns the value of Success.
-func (s *RenameFavoriteOK) GetSuccess() string {
-	return s.Success
-}
-
-// SetSuccess sets the value of Success.
-func (s *RenameFavoriteOK) SetSuccess(val string) {
-	s.Success = val
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s RenameFavoriteOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
 }
 
 func (*RenameFavoriteOK) renameFavoriteRes() {}
@@ -7645,7 +7973,7 @@ func (*RenameFavoriteOK) renameFavoriteRes() {}
 type RenameFavoriteReq struct {
 	// Numeric favorite id. Accepts string form too.
 	FavoriteId RenameFavoriteReqFavoriteId `json:"favoriteId"`
-	// New name. Empty string is rejected (400).
+	// New name, 1–45 chars. Empty or longer is rejected (400).
 	FavoriteName string `json:"favoriteName"`
 }
 
@@ -7743,12 +8071,18 @@ func NewStringRenameFavoriteReqFavoriteId(v string) RenameFavoriteReqFavoriteId 
 // GPX/TCX file. Each trackpoint carries its cumulative distance from the start, in metres.
 // Ref: #/components/schemas/RouteImport
 type RouteImport struct {
+	// Ordered trackpoints. Empty → 400. A single point is accepted as long as `distance` > 0 (degenerate
+	// route). Points with an out-of-range latitude/longitude are silently dropped server-side. 5 000
+	// points were accepted and read back intact.
 	Route []RoutePoint `json:"route"`
 	// SportId from /api/sports/sports, or null for sport-agnostic.
 	Sport OptNilInt `json:"sport"`
-	// Route name (typically from `<gpx><metadata><name>`).
+	// Route name. The web UI takes the first `<trk><name>` (GPX), `<rte><name>`, or `<Course><Name>`
+	// (TCX), else a localized placeholder ("Itinéraire 1"). Must contain a non-whitespace character
+	// (400). ⚠ Longer than 45 chars is silently truncated to 45, not rejected.
 	Name string `json:"name"`
-	// Total route length in metres. Equals the last trackpoint's cumulative `distance`.
+	// Total route length in metres — the last trackpoint's cumulative `distance`. `0` → 400. ⚠ Not
+	// cross-checked against the points (any positive value is stored verbatim).
 	Distance float64 `json:"distance"`
 }
 
@@ -7795,14 +8129,20 @@ func (s *RouteImport) SetDistance(val float64) {
 // One trackpoint of a route.
 // Ref: #/components/schemas/RoutePoint
 type RoutePoint struct {
-	// WGS84 latitude, degrees.
+	// WGS84 latitude, degrees. The key must be `latitude` (`lat` → 500). Out-of-range points are
+	// silently dropped by the server.
 	Latitude float64 `json:"latitude"`
-	// WGS84 longitude, degrees.
+	// WGS84 longitude, degrees (`lon` → 500). Out-of-range points are silently dropped.
 	Longitude float64 `json:"longitude"`
-	// Elevation in metres above sea level. Use 0 if absent in source.
-	Altitude float64 `json:"altitude"`
-	// Cumulative distance from route start, in metres (haversine on lat/lon). The first point is `0`.
-	Distance float64 `json:"distance"`
+	// Elevation in metres. When the source has none, the web UI sends `0` for GPX and `null` for TCX; both
+	// are accepted (null reads back as null). May be omitted.
+	Altitude OptNilFloat64 `json:"altitude"`
+	// Cumulative distance from route start, in metres. GPX: haversine on lat/lon with Earth radius 6 371
+	// 000 m (UI-verified). TCX: the file's `<DistanceMeters>` verbatim. The first point is `0`. Not
+	// persisted per point (only the total is), and may be omitted.
+	Distance OptFloat64 `json:"distance"`
+	// Only sent by the UI for TCX Activity files (`2026-01-01T10:00:00.000Z`); ignored by the server.
+	Time OptString `json:"time"`
 }
 
 // GetLatitude returns the value of Latitude.
@@ -7816,13 +8156,18 @@ func (s *RoutePoint) GetLongitude() float64 {
 }
 
 // GetAltitude returns the value of Altitude.
-func (s *RoutePoint) GetAltitude() float64 {
+func (s *RoutePoint) GetAltitude() OptNilFloat64 {
 	return s.Altitude
 }
 
 // GetDistance returns the value of Distance.
-func (s *RoutePoint) GetDistance() float64 {
+func (s *RoutePoint) GetDistance() OptFloat64 {
 	return s.Distance
+}
+
+// GetTime returns the value of Time.
+func (s *RoutePoint) GetTime() OptString {
+	return s.Time
 }
 
 // SetLatitude sets the value of Latitude.
@@ -7836,13 +8181,18 @@ func (s *RoutePoint) SetLongitude(val float64) {
 }
 
 // SetAltitude sets the value of Altitude.
-func (s *RoutePoint) SetAltitude(val float64) {
+func (s *RoutePoint) SetAltitude(val OptNilFloat64) {
 	s.Altitude = val
 }
 
 // SetDistance sets the value of Distance.
-func (s *RoutePoint) SetDistance(val float64) {
+func (s *RoutePoint) SetDistance(val OptFloat64) {
 	s.Distance = val
+}
+
+// SetTime sets the value of Time.
+func (s *RoutePoint) SetTime(val OptString) {
+	s.Time = val
 }
 
 // Per-exercise time-series samples, one entry per recorded metric. Each value is `null` until a device
@@ -8740,7 +9090,9 @@ type SessionSummary struct {
 	// ID of the previous session chronologically, or `-1` when none.
 	PreviousTrainingId OptInt64 `json:"previousTrainingId"`
 	UserId             OptInt64 `json:"userId"`
-	// User-selected feeling as a numeric value (a float, e.g. 0.0); null when unset.
+	// User-selected feeling on Polar's inverted 0–1 scale: 0.19 = best ("Au top"), 0.39, 0.59, 0.79,
+	// 0.99 = worst ("Mal"). `0.0` = cleared / invalid input; null when never set. See
+	// `TrainingSessionEdit.feeling`.
 	Feeling OptNilFloat64 `json:"feeling"`
 	Note    OptNilString  `json:"note"`
 	// Session start latitude; null for manual sessions.
@@ -9966,6 +10318,210 @@ func (s *StandardDuration) SetMillis(val int64) {
 	s.Millis = val
 }
 
+// Response of `POST /training/target/createTargetFromFavourite` — the newly scheduled training
+// target in the `favoriteTargetsJson` element shape. ⚠ Served as `text/plain` even though the body
+// is JSON. Yet another encoding set: `date` is `DD-MM-YYYY`, `time` `HH:MM`, `distance` a string of
+// metres, `duration` a string of milliseconds.
+// Ref: #/components/schemas/TargetFromFavorite
+type TargetFromFavorite struct {
+	// The new training-target id (use with `/api/trainingtarget/{id}`).
+	ID int64 `json:"id"`
+	// Copied from the favorite.
+	Name OptString `json:"name"`
+	// Embedded sport object (same shape as `FavoriteSimple.sport`).
+	Sport       OptNilTargetFromFavoriteSport `json:"sport"`
+	IconUrl     OptNilString                  `json:"iconUrl"`
+	Description OptNilString                  `json:"description"`
+	// Scheduled date, `DD-MM-YYYY`.
+	Date OptString `json:"date"`
+	// Scheduled local time, `HH:MM` (18:00 when `to` was midnight).
+	Time OptString `json:"time"`
+	// Total distance in metres as a string (`"2000.0"`); `"0"` when the favorite has no distance goal
+	// (verified 2026-09-28).
+	Distance OptNilString `json:"distance"`
+	// Total duration in milliseconds as a string (`"600000"`, `"2700000"` for 45 min); `"0"` when the
+	// favorite has no duration.
+	Duration OptNilString `json:"duration"`
+	// Target kcal as a string (`"450"`), or null when unset (verified 2026-09-28).
+	KiloCalories OptNilString `json:"kiloCalories"`
+	// Editor URL of the new target (`/target/{id}`).
+	URL OptString `json:"url"`
+}
+
+// GetID returns the value of ID.
+func (s *TargetFromFavorite) GetID() int64 {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *TargetFromFavorite) GetName() OptString {
+	return s.Name
+}
+
+// GetSport returns the value of Sport.
+func (s *TargetFromFavorite) GetSport() OptNilTargetFromFavoriteSport {
+	return s.Sport
+}
+
+// GetIconUrl returns the value of IconUrl.
+func (s *TargetFromFavorite) GetIconUrl() OptNilString {
+	return s.IconUrl
+}
+
+// GetDescription returns the value of Description.
+func (s *TargetFromFavorite) GetDescription() OptNilString {
+	return s.Description
+}
+
+// GetDate returns the value of Date.
+func (s *TargetFromFavorite) GetDate() OptString {
+	return s.Date
+}
+
+// GetTime returns the value of Time.
+func (s *TargetFromFavorite) GetTime() OptString {
+	return s.Time
+}
+
+// GetDistance returns the value of Distance.
+func (s *TargetFromFavorite) GetDistance() OptNilString {
+	return s.Distance
+}
+
+// GetDuration returns the value of Duration.
+func (s *TargetFromFavorite) GetDuration() OptNilString {
+	return s.Duration
+}
+
+// GetKiloCalories returns the value of KiloCalories.
+func (s *TargetFromFavorite) GetKiloCalories() OptNilString {
+	return s.KiloCalories
+}
+
+// GetURL returns the value of URL.
+func (s *TargetFromFavorite) GetURL() OptString {
+	return s.URL
+}
+
+// SetID sets the value of ID.
+func (s *TargetFromFavorite) SetID(val int64) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *TargetFromFavorite) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetSport sets the value of Sport.
+func (s *TargetFromFavorite) SetSport(val OptNilTargetFromFavoriteSport) {
+	s.Sport = val
+}
+
+// SetIconUrl sets the value of IconUrl.
+func (s *TargetFromFavorite) SetIconUrl(val OptNilString) {
+	s.IconUrl = val
+}
+
+// SetDescription sets the value of Description.
+func (s *TargetFromFavorite) SetDescription(val OptNilString) {
+	s.Description = val
+}
+
+// SetDate sets the value of Date.
+func (s *TargetFromFavorite) SetDate(val OptString) {
+	s.Date = val
+}
+
+// SetTime sets the value of Time.
+func (s *TargetFromFavorite) SetTime(val OptString) {
+	s.Time = val
+}
+
+// SetDistance sets the value of Distance.
+func (s *TargetFromFavorite) SetDistance(val OptNilString) {
+	s.Distance = val
+}
+
+// SetDuration sets the value of Duration.
+func (s *TargetFromFavorite) SetDuration(val OptNilString) {
+	s.Duration = val
+}
+
+// SetKiloCalories sets the value of KiloCalories.
+func (s *TargetFromFavorite) SetKiloCalories(val OptNilString) {
+	s.KiloCalories = val
+}
+
+// SetURL sets the value of URL.
+func (s *TargetFromFavorite) SetURL(val OptString) {
+	s.URL = val
+}
+
+func (*TargetFromFavorite) createTargetFromFavoriteRes() {}
+
+// Request body for `POST /training/target/createTargetFromFavourite` — the diary's "+ Ajouter →
+// Favoris" picker. Captured 2026-09-28.
+// Ref: #/components/schemas/TargetFromFavoriteRequest
+type TargetFromFavoriteRequest struct {
+	// FavoriteId (the UI sends it as a string; a JSON number is accepted too). Missing, non-numeric or
+	// non-existent → 500 HTML page; another user's favorite → 400 `error.invalid.favorite`.
+	ID string `json:"id"`
+	// Target date+time as `YYYY-MM-DDTHH:MM:SS.sss±HH:MM` — milliseconds and a numeric offset are
+	// mandatory (`…Z`, date-only, tz-less → 400). The offset is ignored: the wall-clock part is the
+	// local schedule time. Exact midnight (`T00:00:00.000`) means "no time" and schedules at the default
+	// 18:00 (the diary always sends midnight). If another target already occupies that minute, the new one
+	// is shifted +1 minute. Past dates are accepted.
+	To string `json:"to"`
+}
+
+// GetID returns the value of ID.
+func (s *TargetFromFavoriteRequest) GetID() string {
+	return s.ID
+}
+
+// GetTo returns the value of To.
+func (s *TargetFromFavoriteRequest) GetTo() string {
+	return s.To
+}
+
+// SetID sets the value of ID.
+func (s *TargetFromFavoriteRequest) SetID(val string) {
+	s.ID = val
+}
+
+// SetTo sets the value of To.
+func (s *TargetFromFavoriteRequest) SetTo(val string) {
+	s.To = val
+}
+
+// Embedded sport object (same shape as `FavoriteSimple.sport`).
+type TargetFromFavoriteSport struct {
+	ID OptInt `json:"id"`
+	// UPPERCASE sport enum.
+	Name OptString `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *TargetFromFavoriteSport) GetID() OptInt {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *TargetFromFavoriteSport) GetName() OptString {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *TargetFromFavoriteSport) SetID(val OptInt) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *TargetFromFavoriteSport) SetName(val OptString) {
+	s.Name = val
+}
+
 // Catalog of available training-display fields a given Polar device (`productId`) can show on screen
 // for a given sport profile, grouped by category. This is the palette the watch-screen layout editor
 // draws from; the user's chosen layout is returned separately by
@@ -10223,8 +10779,9 @@ type TrainingSessionCreate struct {
 	KiloCalories int `json:"kiloCalories"`
 	// Max heart rate. Empty string when not provided (same convention as `hrAverage`).
 	HrMax string `json:"hrMax"`
-	// Subjective feeling enum. Values TODO — set via the "Mon ressenti pendant l'entraînement" dropdown
-	// in the UI. Null when not selected.
+	// Subjective feeling ("Mon ressenti pendant l'entraînement"), on an inverted 0–1 scale sent as a
+	// string: `"0.19"` best … `"0.39"`, `"0.59"`, `"0.79"`, `"0.99"` worst. Null when not selected.
+	// Verified 2026-09-28 (read back as the number `0.19`).
 	Feeling NilString `json:"feeling"`
 	// Interpolated HR samples. Always empty `[]` for manual entries. Element schema TODO.
 	InterpolatedHeartRateSamples []jx.Raw `json:"interpolatedHeartRateSamples"`
@@ -10360,6 +10917,207 @@ func (s *TrainingSessionCreate) SetInterpolatedHeartRateSamples(val []jx.Raw) {
 // SetSaveHeartRateSamples sets the value of SaveHeartRateSamples.
 func (s *TrainingSessionCreate) SetSaveHeartRateSamples(val bool) {
 	s.SaveHeartRateSamples = val
+}
+
+// Request body for `PUT /api/training/analysis/updateTrainingData/{id}` — the session page's inline
+// note/feeling box. A true partial update: only `note` and `feeling` are read, every other key is
+// silently ignored. Captured 2026-09-28.
+// Ref: #/components/schemas/TrainingSessionDataUpdate
+type TrainingSessionDataUpdate struct {
+	// New note, ≤ 10 000 chars (longer → 400). `""` clears it. Missing/null → unchanged.
+	Note OptNilString `json:"note"`
+	// Same inverted scale as `TrainingSessionEdit.feeling` (`"0.19"` best … `"0.99"` worst). Numbers
+	// outside `[0,1]` → 400. ⚠ Unlike editTraining, null here is stored as `0.0` ("no feeling") —
+	// omit the key to leave the feeling unchanged.
+	Feeling OptNilString `json:"feeling"`
+}
+
+// GetNote returns the value of Note.
+func (s *TrainingSessionDataUpdate) GetNote() OptNilString {
+	return s.Note
+}
+
+// GetFeeling returns the value of Feeling.
+func (s *TrainingSessionDataUpdate) GetFeeling() OptNilString {
+	return s.Feeling
+}
+
+// SetNote sets the value of Note.
+func (s *TrainingSessionDataUpdate) SetNote(val OptNilString) {
+	s.Note = val
+}
+
+// SetFeeling sets the value of Feeling.
+func (s *TrainingSessionDataUpdate) SetFeeling(val OptNilString) {
+	s.Feeling = val
+}
+
+// Request body for `PUT /api/training/editTraining/{id}` — the "Modifier la séance" form
+// (`/training/edit/{id}`). Captured 2026-09-28.
+//
+// Looks like a full replace but per-field null/missing semantics differ (see each property). Every
+// out-of-range value is rejected with a bare `500` and an empty body — no field name, no code — so
+// validate before sending. Safe client pattern: read `GET /api/training/analysis/{id}/summary`, merge
+// the changes, and send every field. The start date/time is not editable.
+// Ref: #/components/schemas/TrainingSessionEdit
+type TrainingSessionEdit struct {
+	// Sport id from `GET /api/sports/sports`. Unknown ids (`0`, `21`, `9999`) → 500. Missing/null →
+	// unchanged.
+	Sport OptNilInt `json:"sport"`
+	// Duration in integer seconds (same unit as `TrainingSessionCreate.duration`). `0`…`359999`
+	// (99:59:59); `0` is accepted and stored as `PT0S`. ≥ 360000 or negative → 500. A string
+	// (`"00:30:00"`) is silently ignored. Missing/null → unchanged.
+	Duration OptNilInt `json:"duration"`
+	// Distance in metres (the form shows km). Fractional values accepted. > 9 999 000 or negative → 500.
+	// Missing/null → unchanged.
+	Distance OptNilFloat64 `json:"distance"`
+	// Average HR in bpm — a number here (the create endpoint sends a string). `0` = unset. > 240 or
+	// negative → 500. A numeric string (`"140"`) is also accepted. Missing/null → unchanged.
+	HrAverage OptNilInt `json:"hrAverage"`
+	// Max HR in bpm; `0` = unset. > 240 → 500. Not checked against hrAverage.
+	HrMax OptNilInt `json:"hrMax"`
+	// Kilocalories. `0`…`65535` (uint16); outside → 500.
+	KiloCalories OptNilInt `json:"kiloCalories"`
+	// Average speed in km/h. `0`…`399`; outside → 500. Null → unchanged.
+	SpeedAverage OptNilFloat64 `json:"speedAverage"`
+	// Perceived feeling on Polar's inverted 0–1 scale, sent as a string: `"0.19"` = 5 "Au top" (best),
+	// `"0.39"` = 4 "Bien", `"0.59"` = 3 "Moyen", `"0.79"` = 2 "Pas terrible", `"0.99"` = 1 "Mal" (worst).
+	// null/missing → unchanged (a feeling cannot be cleared back to null). Any number in `[0,1]` is
+	// stored verbatim; numbers outside → 500; non-numeric strings and `""` are stored as `0.0`.
+	Feeling OptNilString `json:"feeling"`
+	// Free-text note, ≤ 10 000 chars (10 001 → 500). Missing → unchanged. ⚠ `null` is stored as
+	// the literal string `"null"` — never send null.
+	Note OptString `json:"note"`
+	// Session title, `""`…100 chars (unicode counted as characters; 101 → 500). ⚠ Missing or null
+	// resets the title to the localized sport name (e.g. `"Course à pied"`) — always send it.
+	TrainingSessionName OptString `json:"trainingSessionName"`
+	// Always null in the captured (manual, single-sport) form. A bogus value (`1`) is ignored. Semantics
+	// for device-recorded / multi-sport sessions not verified. # TODO: verify.
+	EditedExerciseId OptNilInt64 `json:"editedExerciseId"`
+	// Synthesized by the web UI — one sample per second of `duration`, every value equal to `hrAverage`.
+	// Optional: omitting it (or `[]`) yields the identical summary. Effect on a device-recorded session's
+	// real HR trace is untested. # TODO: verify.
+	HrSamples []int `json:"hrSamples"`
+}
+
+// GetSport returns the value of Sport.
+func (s *TrainingSessionEdit) GetSport() OptNilInt {
+	return s.Sport
+}
+
+// GetDuration returns the value of Duration.
+func (s *TrainingSessionEdit) GetDuration() OptNilInt {
+	return s.Duration
+}
+
+// GetDistance returns the value of Distance.
+func (s *TrainingSessionEdit) GetDistance() OptNilFloat64 {
+	return s.Distance
+}
+
+// GetHrAverage returns the value of HrAverage.
+func (s *TrainingSessionEdit) GetHrAverage() OptNilInt {
+	return s.HrAverage
+}
+
+// GetHrMax returns the value of HrMax.
+func (s *TrainingSessionEdit) GetHrMax() OptNilInt {
+	return s.HrMax
+}
+
+// GetKiloCalories returns the value of KiloCalories.
+func (s *TrainingSessionEdit) GetKiloCalories() OptNilInt {
+	return s.KiloCalories
+}
+
+// GetSpeedAverage returns the value of SpeedAverage.
+func (s *TrainingSessionEdit) GetSpeedAverage() OptNilFloat64 {
+	return s.SpeedAverage
+}
+
+// GetFeeling returns the value of Feeling.
+func (s *TrainingSessionEdit) GetFeeling() OptNilString {
+	return s.Feeling
+}
+
+// GetNote returns the value of Note.
+func (s *TrainingSessionEdit) GetNote() OptString {
+	return s.Note
+}
+
+// GetTrainingSessionName returns the value of TrainingSessionName.
+func (s *TrainingSessionEdit) GetTrainingSessionName() OptString {
+	return s.TrainingSessionName
+}
+
+// GetEditedExerciseId returns the value of EditedExerciseId.
+func (s *TrainingSessionEdit) GetEditedExerciseId() OptNilInt64 {
+	return s.EditedExerciseId
+}
+
+// GetHrSamples returns the value of HrSamples.
+func (s *TrainingSessionEdit) GetHrSamples() []int {
+	return s.HrSamples
+}
+
+// SetSport sets the value of Sport.
+func (s *TrainingSessionEdit) SetSport(val OptNilInt) {
+	s.Sport = val
+}
+
+// SetDuration sets the value of Duration.
+func (s *TrainingSessionEdit) SetDuration(val OptNilInt) {
+	s.Duration = val
+}
+
+// SetDistance sets the value of Distance.
+func (s *TrainingSessionEdit) SetDistance(val OptNilFloat64) {
+	s.Distance = val
+}
+
+// SetHrAverage sets the value of HrAverage.
+func (s *TrainingSessionEdit) SetHrAverage(val OptNilInt) {
+	s.HrAverage = val
+}
+
+// SetHrMax sets the value of HrMax.
+func (s *TrainingSessionEdit) SetHrMax(val OptNilInt) {
+	s.HrMax = val
+}
+
+// SetKiloCalories sets the value of KiloCalories.
+func (s *TrainingSessionEdit) SetKiloCalories(val OptNilInt) {
+	s.KiloCalories = val
+}
+
+// SetSpeedAverage sets the value of SpeedAverage.
+func (s *TrainingSessionEdit) SetSpeedAverage(val OptNilFloat64) {
+	s.SpeedAverage = val
+}
+
+// SetFeeling sets the value of Feeling.
+func (s *TrainingSessionEdit) SetFeeling(val OptNilString) {
+	s.Feeling = val
+}
+
+// SetNote sets the value of Note.
+func (s *TrainingSessionEdit) SetNote(val OptString) {
+	s.Note = val
+}
+
+// SetTrainingSessionName sets the value of TrainingSessionName.
+func (s *TrainingSessionEdit) SetTrainingSessionName(val OptString) {
+	s.TrainingSessionName = val
+}
+
+// SetEditedExerciseId sets the value of EditedExerciseId.
+func (s *TrainingSessionEdit) SetEditedExerciseId(val OptNilInt64) {
+	s.EditedExerciseId = val
+}
+
+// SetHrSamples sets the value of HrSamples.
+func (s *TrainingSessionEdit) SetHrSamples(val []int) {
+	s.HrSamples = val
 }
 
 // One entry in the array returned by POST /api/training/history. ⚠ `duration` is milliseconds here,
@@ -10718,6 +11476,9 @@ func (s *TrainingSettingsBlockSettingsItem) SetValue(val string) {
 type TrainingTargetCreate struct {
 	// Target category, drives which `exerciseTargets[i]` fields are populated.
 	//
+	//  - "ROUTE" — read-back only (observed 2026-09-28): what `GET /api/trainingtarget/{id}` returns for
+	//    a target created by `POST /training/target/createTargetFromFavourite` from a ROUTE favorite —
+	//    no duration/distance/phases, `description: null`. Not tried on create. # TODO: verify on create
 	//  - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is
 	//    non-null; `phases` is `[]`.
 	//  - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are populated; pace is implicit
@@ -10727,9 +11488,9 @@ type TrainingTargetCreate struct {
 	//    (2026-05-25).
 	Type TrainingTargetCreateType `json:"type"`
 	// Display name shown in the diary. A server-side content filter (libinjection-style SQL-injection
-	// heuristic, whole-string and prefix-sensitive) rejects some innocuous names with a 400 ValidationError
-	// on field `trainingSessionTarget.name`, on both create and update. Don't pre-filter client-side; on that
-	// rejection, prefix or reword the name and retry (probed 2026-07-22).
+	// heuristic, whole-string and prefix-sensitive) rejects some innocuous names with a `400`
+	// `ValidationError` on field `trainingSessionTarget.name`, on both create and update. Don't pre-filter
+	// client-side; on that rejection, prefix or reword the name and retry (probed 2026-07-22).
 	Name string `json:"name"`
 	// Free-text notes. The create form sends an empty string when not provided, but the server stores and
 	// returns `null` on read-back — so this must be nullable to decode a target created without a
@@ -10796,6 +11557,9 @@ func (s *TrainingTargetCreate) SetExerciseTargets(val []ExerciseTarget) {
 
 // Target category, drives which `exerciseTargets[i]` fields are populated.
 //
+//   - "ROUTE" — read-back only (observed 2026-09-28): what `GET /api/trainingtarget/{id}` returns for
+//     a target created by `POST /training/target/createTargetFromFavourite` from a ROUTE favorite —
+//     no duration/distance/phases, `description: null`. Not tried on create. # TODO: verify on create
 //   - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is
 //     non-null; `phases` is `[]`.
 //   - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are populated; pace is implicit
@@ -10809,6 +11573,7 @@ const (
 	TrainingTargetCreateTypeVOLUME         TrainingTargetCreateType = "VOLUME"
 	TrainingTargetCreateTypeSTEADYRACEPACE TrainingTargetCreateType = "STEADY_RACE_PACE"
 	TrainingTargetCreateTypePHASED         TrainingTargetCreateType = "PHASED"
+	TrainingTargetCreateTypeROUTE          TrainingTargetCreateType = "ROUTE"
 )
 
 // AllValues returns all TrainingTargetCreateType values.
@@ -10817,6 +11582,7 @@ func (TrainingTargetCreateType) AllValues() []TrainingTargetCreateType {
 		TrainingTargetCreateTypeVOLUME,
 		TrainingTargetCreateTypeSTEADYRACEPACE,
 		TrainingTargetCreateTypePHASED,
+		TrainingTargetCreateTypeROUTE,
 	}
 }
 
@@ -10828,6 +11594,8 @@ func (s TrainingTargetCreateType) MarshalText() ([]byte, error) {
 	case TrainingTargetCreateTypeSTEADYRACEPACE:
 		return []byte(s), nil
 	case TrainingTargetCreateTypePHASED:
+		return []byte(s), nil
+	case TrainingTargetCreateTypeROUTE:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -10845,6 +11613,9 @@ func (s *TrainingTargetCreateType) UnmarshalText(data []byte) error {
 		return nil
 	case TrainingTargetCreateTypePHASED:
 		*s = TrainingTargetCreateTypePHASED
+		return nil
+	case TrainingTargetCreateTypeROUTE:
+		*s = TrainingTargetCreateTypeROUTE
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -10881,12 +11652,14 @@ func (s *Unauthorized) SetRedirect(val OptString) {
 func (*Unauthorized) addRouteToFavoritesRes()       {}
 func (*Unauthorized) addSportProfileRes()           {}
 func (*Unauthorized) createFavoriteRes()            {}
+func (*Unauthorized) createTargetFromFavoriteRes()  {}
 func (*Unauthorized) createTrainingSessionRes()     {}
 func (*Unauthorized) createTrainingTargetRes()      {}
 func (*Unauthorized) deleteFavoriteRes()            {}
 func (*Unauthorized) deleteSportProfileRes()        {}
 func (*Unauthorized) deleteTrainingSessionRes()     {}
 func (*Unauthorized) deleteTrainingTargetRes()      {}
+func (*Unauthorized) editTrainingSessionRes()       {}
 func (*Unauthorized) getActivityTimelineFourRes()   {}
 func (*Unauthorized) getActivityTimelineRes()       {}
 func (*Unauthorized) getCalendarEventsRes()         {}
@@ -10911,10 +11684,38 @@ func (*Unauthorized) listSportProfilesRes()         {}
 func (*Unauthorized) listTrainingSessionsRes()      {}
 func (*Unauthorized) saveSportProfileRes()          {}
 func (*Unauthorized) updateFavoriteRes()            {}
+func (*Unauthorized) updateTrainingSessionDataRes() {}
 func (*Unauthorized) updateTrainingTargetRes()      {}
 
-// UpdateFavoriteNotFound is response for UpdateFavorite operation.
-type UpdateFavoriteNotFound struct{}
+type UpdateFavoriteForbidden struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s UpdateFavoriteForbidden) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*UpdateFavoriteForbidden) updateFavoriteRes() {}
+
+type UpdateFavoriteNotFound struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s UpdateFavoriteNotFound) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
 
 func (*UpdateFavoriteNotFound) updateFavoriteRes() {}
 
@@ -10922,6 +11723,21 @@ func (*UpdateFavoriteNotFound) updateFavoriteRes() {}
 type UpdateFavoriteOK struct{}
 
 func (*UpdateFavoriteOK) updateFavoriteRes() {}
+
+// UpdateTrainingSessionDataBadRequest is response for UpdateTrainingSessionData operation.
+type UpdateTrainingSessionDataBadRequest struct{}
+
+func (*UpdateTrainingSessionDataBadRequest) updateTrainingSessionDataRes() {}
+
+// UpdateTrainingSessionDataNotFound is response for UpdateTrainingSessionData operation.
+type UpdateTrainingSessionDataNotFound struct{}
+
+func (*UpdateTrainingSessionDataNotFound) updateTrainingSessionDataRes() {}
+
+// UpdateTrainingSessionDataOK is response for UpdateTrainingSessionData operation.
+type UpdateTrainingSessionDataOK struct{}
+
+func (*UpdateTrainingSessionDataOK) updateTrainingSessionDataRes() {}
 
 // UpdateTrainingTargetOK is response for UpdateTrainingTarget operation.
 type UpdateTrainingTargetOK struct{}
@@ -11032,7 +11848,9 @@ func (s *ValidationError) init() ValidationError {
 	return m
 }
 
+func (*ValidationError) createFavoriteRes()       {}
 func (*ValidationError) createTrainingTargetRes() {}
+func (*ValidationError) updateFavoriteRes()       {}
 func (*ValidationError) updateTrainingTargetRes() {}
 
 // Read-back waypoint shape. Field names differ from the upload `RoutePoint`: instead of cumulative
@@ -11044,8 +11862,8 @@ type Waypoint struct {
 	Latitude float64 `json:"latitude"`
 	// WGS84 longitude, degrees.
 	Longitude float64 `json:"longitude"`
-	// Elevation in metres above sea level.
-	Altitude OptFloat64 `json:"altitude"`
+	// Elevation in metres above sea level; null when the upload had none.
+	Altitude OptNilFloat64 `json:"altitude"`
 	// Sequence index in milliseconds (0, 1000, 2000, …). NOT actual elapsed time, since the original GPX
 	// usually has no timestamps.
 	Time int `json:"time"`
@@ -11062,7 +11880,7 @@ func (s *Waypoint) GetLongitude() float64 {
 }
 
 // GetAltitude returns the value of Altitude.
-func (s *Waypoint) GetAltitude() OptFloat64 {
+func (s *Waypoint) GetAltitude() OptNilFloat64 {
 	return s.Altitude
 }
 
@@ -11082,7 +11900,7 @@ func (s *Waypoint) SetLongitude(val float64) {
 }
 
 // SetAltitude sets the value of Altitude.
-func (s *Waypoint) SetAltitude(val OptFloat64) {
+func (s *Waypoint) SetAltitude(val OptNilFloat64) {
 	s.Altitude = val
 }
 

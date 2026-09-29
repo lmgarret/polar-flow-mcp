@@ -1251,6 +1251,16 @@ paths:
                 $ref: '#/components/schemas/SessionSummary'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'The session exists but belongs to another user (probed 2026-09-28).
+
+            Useful as an existence check before
+
+            `DELETE /api/training/deleteTrainingSession/{id}/`, which answers 200
+
+            even for ids that don''t exist.
+
+            '
         '404':
           description: Session not found
   /api/training/analysis/{id}/details:
@@ -1297,6 +1307,19 @@ paths:
 
         favorite endpoint.
 
+
+        ⚠ Server-side leniency (probed 2026-09-28): names longer than 45
+
+        chars are **silently truncated**; points with an out-of-range
+
+        latitude/longitude are **silently dropped**; an unknown `sport` id is
+
+        stored as null; the top-level `distance` is not checked against the
+
+        points; a single point with a non-zero `distance` is accepted. Validate
+
+        client-side.
+
         '
       operationId: importRoute
       tags:
@@ -1318,8 +1341,29 @@ paths:
             and matching `favoriteName`).
 
             '
+        '400':
+          description: 'text/plain list of messages in brackets, each followed by a comma,
+
+            e.g. `[Route distance cannot be 0,Route must have route points,]`.
+
+            Observed messages: `Request is missing the route`, `Route must have
+
+            route points`, `Route distance cannot be 0`, `Route must have
+
+            distance`, `Route must have a name`, `Route name must have at least
+
+            one non-whitespace character`.
+
+            '
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: '[Route distance cannot be 0,Route must have route points,]'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Malformed points (e.g. `lat`/`lon` keys instead of `latitude`/`longitude`). Body `[]`.
   /api/favorites/trainingTargets/addExerciseRoute:
     post:
       summary: Create a route favorite from a recorded session's GPS track
@@ -1436,21 +1480,45 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          description: 'Returned when caller passes a favoriteId instead of an
+          description: 'Returned for **any** id that is not one of your exercise targets —
 
-            exerciseTargetId — the lookup fails authorization rather
+            a favoriteId passed by mistake, an unknown id, or someone else''s.
 
-            than returning 404. Verify you''re passing the inner id.
+            The lookup fails authorization rather than returning 404
+
+            (re-probed 2026-09-28: unknown id `1` → 403, empty body).
 
             '
-        '404':
-          description: ExerciseTarget not found
   /api/favoritetarget:
     post:
       summary: Create a favorite (training-target template)
       description: 'Creates a reusable training-target template. Body shape is identical
 
         to POST /api/trainingtarget minus the `datetime` field.
+
+
+        **Saving an existing training target as a favorite** (target editor →
+
+        "Ajouter aux favoris") has no endpoint of its own: the UI reads
+
+        `GET /api/trainingtarget/{id}`, drops `datetime`, nulls each
+
+        `exerciseTargets[].id` and the rolled-up `duration`, and POSTs the
+
+        result here. The server assigns fresh phase ids; the source target is
+
+        not linked to the favorite. Captured 2026-09-28.
+
+
+        Validation (probed 2026-09-28): `name` 1–45 chars, `description`
+
+        ≤ 500 chars (400 `ValidationError` otherwise). ⚠ Lenient spots:
+
+        `exerciseTargets` missing or `[]` → 201 with a `FREE`-type favorite;
+
+        an unknown or missing `sportId` → 201 stored verbatim / null. Invalid
+
+        `type` enum → 500.
 
         '
       operationId: createFavorite
@@ -1476,8 +1544,28 @@ paths:
               schema:
                 type: string
               example: '81371573'
+        '400':
+          description: 'Field-keyed validation errors, e.g. `{"name":["error.required"]}`,
+
+            `{"target.name":[<localized "unexpected problem">]}` (> 45 chars),
+
+            `{"target.description":[…]}` (> 500 chars),
+
+            `{"exerciseTargets[0].distance":["trainingTarget.unknownException"],…}`
+
+            (no goal / non-positive goal), `{"exerciseTarget.duration":[…]}`
+
+            (≥ 100 h), `{"exerciseTargets[0].phases":[…]}` (PHASED without phases).
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Unknown `type` enum value. HTML error page.
   /api/favoritetarget/{id}:
     get:
       summary: Get a single favorite
@@ -1507,15 +1595,42 @@ paths:
                 $ref: '#/components/schemas/Favorite'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'The favorite belongs to another user. text/plain body
+
+            `favorites.notification_oops`.
+
+            '
+          content:
+            text/plain:
+              schema:
+                type: string
         '404':
-          description: Favorite not found
+          description: 'Favorite not found. text/plain body `favorites.notification_oops`.
+
+            '
+          content:
+            text/plain:
+              schema:
+                type: string
     post:
       summary: Update a favorite
-      description: 'Full-body update (no PUT/PATCH). Send the same shape as create plus
+      description: 'Full-body update (no PUT/PATCH — PUT → 404). Send the same shape as
 
-        the existing `exerciseTargets[i].id` value from GET. Returns 200
+        create plus the existing `exerciseTargets[i].id` value from GET.
 
-        with empty body on success.
+        Returns 200 with empty body on success.
+
+
+        ⚠ An entry sent with `id: null` returns 200 but its changes are
+
+        **silently dropped** (same quirk as training targets) — always carry
+
+        the ids from GET. Same limits as create (`name` ≤ 45, `description`
+
+        ≤ 500); a too-long name is reported under
+
+        `templateTrainingSessionTarget.name`.
 
         '
       operationId: updateFavorite
@@ -1533,10 +1648,26 @@ paths:
       responses:
         '200':
           description: Updated. Empty body.
+        '400':
+          description: Field-keyed validation errors (see createFavorite).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Another user's favorite. text/plain `favorites.notification_oops`.
+          content:
+            text/plain:
+              schema:
+                type: string
         '404':
-          description: Favorite not found
+          description: Favorite not found. text/plain `favorites.notification_oops`.
+          content:
+            text/plain:
+              schema:
+                type: string
   /api/favorites/delete/{id}:
     delete:
       summary: Delete a favorite
@@ -1546,7 +1677,11 @@ paths:
 
         which all use `/favoritetarget/{id}`. The response body is
 
-        non-empty (a localized success message).
+        non-empty (a localized success message) and — like every
+
+        `/api/favorites/*` write — is **JSON served as `text/plain`**.
+
+        Also deletes ROUTE favorites.
 
         '
       operationId: deleteFavorite
@@ -1559,26 +1694,39 @@ paths:
         '200':
           description: Deleted
           content:
-            application/json:
+            text/plain:
               schema:
-                type: object
-                required:
-                - success
-                properties:
-                  success:
-                    type: string
-                    description: 'Localized success message (depends on user''s
+                type: string
+                description: 'JSON text `{"success": "<localized message>"}` (depends on the
 
-                      `flowLanguage`). Don''t pattern-match; trust the
+                  user''s `flowLanguage`). Don''t pattern-match; trust the 200.
 
-                      200 status.
+                  '
+              example: '{"success":"Favori supprimé"}'
+        '400':
+          description: 'Another user''s favorite (text/plain JSON `{"error": "…suppression
 
-                      '
-                    example: Favori supprimé
+            du favori…"}`) or a non-numeric id (HTML page).
+
+            '
+          content:
+            text/plain:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
-          description: Favorite not found
+          description: 'Favorite not found — including one that was already deleted.
+
+            text/plain JSON `{"error": "Un problème est survenu lors de la
+
+            suppression du favori. Réessayez."}`.
+
+            '
+          content:
+            text/plain:
+              schema:
+                type: string
   /api/favorites:
     get:
       summary: List favorites (full shape)
@@ -1607,11 +1755,12 @@ paths:
         \ the rename field.\n\n### Method gotcha\n\nThe verb is **`PUT`**, not POST. Sending POST returns **404** (Play\n\
         binds the route to PUT only). This contrasts with most other\n`/api/favorites/*` write endpoints which use POST.\n\
         \n### Validation\n\n- `favoriteId` accepts both integer and string forms (`\"81388912\"`\n  works the same as `81388912`).\n\
-        - Empty `favoriteName` → 400.\n- Missing fields → 400.\n- Unknown `favoriteId` → **500** (not 404). Worse, all error\
-        \ bodies\n  carry the same boilerplate French/English message about a \"route\"\n  (`\"Un problème est survenu lors\
-        \ de l'enregistrement de l'itinéraire.\n  Réessayez.\"`) regardless of which favorite type you're updating —\n  that's\
-        \ a Polar copy/paste bug in the error catalog.\n\nMissing `X-Requested-With: XMLHttpRequest` → 403 (standard CSRF\
-        \ guard,\nsame as the rest of `/api/*` writes).\n"
+        - `favoriteName` limited to **45** characters (46 → 400); empty → 400.\n  ⚠ Whitespace-only (`\"  \"`) is accepted\
+        \ and stored.\n- Missing fields → 400. Another user's favorite → 400.\n- Unknown `favoriteId` → **500** (not 404).\
+        \ Worse, all error bodies\n  carry the same boilerplate French/English message about a \"route\"\n  (`\"Un problème\
+        \ est survenu lors de l'enregistrement de l'itinéraire.\n  Réessayez.\"`) regardless of which favorite type you're\
+        \ updating —\n  that's a Polar copy/paste bug in the error catalog.\n\nMissing `X-Requested-With: XMLHttpRequest`\
+        \ → 403 (standard CSRF guard,\nsame as the rest of `/api/*` writes).\n"
       operationId: renameFavorite
       tags:
       - favorites
@@ -1637,32 +1786,36 @@ paths:
                 favoriteName:
                   type: string
                   minLength: 1
-                  description: New name. Empty string is rejected (400).
+                  maxLength: 45
+                  description: New name, 1–45 chars. Empty or longer is rejected (400).
                   example: Long run — Sundays
       responses:
         '200':
           description: Renamed successfully.
           content:
-            application/json:
+            text/plain:
               schema:
-                type: object
-                required:
-                - success
-                properties:
-                  success:
-                    type: string
-                    description: Localised confirmation message (e.g. `"Modifications enregistrées"` in French, `"Changes
-                      saved"` in English).
-              example:
-                success: Modifications enregistrées
+                type: string
+                description: 'JSON text `{"success": "<localised message>"}` served as
+
+                  `text/plain` (probed 2026-09-28).
+
+                  '
+              example: '{"success":"Modifications enregistrées"}'
         '400':
-          description: 'Validation failure — missing fields or empty `favoriteName`. Body
+          description: 'Validation failure — missing fields, empty or > 45-char
+
+            `favoriteName`, or another user''s favorite. Body (text/plain JSON)
 
             is a misleading boilerplate error (`{error: "...itinéraire..."}`)
 
             — Polar''s server reuses a route-import error string here.
 
             '
+          content:
+            text/plain:
+              schema:
+                type: string
         '500':
           description: 'Server-side error — observed when `favoriteId` doesn''t exist.
 
@@ -1671,6 +1824,10 @@ paths:
             as 400.
 
             '
+          content:
+            text/plain:
+              schema:
+                type: string
   /api/favorites/saveSport:
     put:
       summary: Change a favorite's sport (granular update)
@@ -1706,7 +1863,9 @@ paths:
         | Unknown `favoriteSportId` (e.g. `9999`, not in `/api/sports/sports`) | **200** (sport id is accepted unchecked,
         then presumably 404s on watch sync) |
 
-        | Missing other fields | 400 |
+        | ⚠ Missing `favoriteSportId` | **200 — clears the sport** (`sportId: null` on read-back; probed 2026-09-28) |
+
+        | Unknown `favoriteId` | 500 |
 
 
         Verify your changes by re-reading the favorite via
@@ -1779,18 +1938,23 @@ paths:
 
             '
           content:
-            application/json:
+            text/plain:
               schema:
-                type: object
-                required:
-                - success
-                properties:
-                  success:
-                    type: string
-              example:
-                success: Modifications enregistrées
+                type: string
+                description: 'JSON text `{"success": "<localised message>"}` served as `text/plain`.'
+              example: '{"success":"Modifications enregistrées"}'
         '400':
-          description: Required field missing.
+          description: '`exerciseTargetId` missing. text/plain JSON boilerplate error.'
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Unknown `favoriteId`. text/plain JSON boilerplate error.
+          content:
+            text/plain:
+              schema:
+                type: string
   /api/favorites/favoriteTargetsJson:
     get:
       summary: List favorites (simple shape, used by diary picker)
@@ -1802,6 +1966,13 @@ paths:
 
         object, not just an id.
 
+
+        ⚠ Served as **`text/plain; charset=UTF-8`** despite the JSON body
+
+        (observed 2026-09-28). Both media types are declared so generated
+
+        clients accept the real response and still get the typed model.
+
         '
       operationId: listFavoritesSimple
       tags:
@@ -1810,6 +1981,10 @@ paths:
         '200':
           description: Simple favorites list
           content:
+            text/plain:
+              schema:
+                type: string
+                description: JSON array text (same shape as the application/json variant).
             application/json:
               schema:
                 type: array
@@ -2023,9 +2198,18 @@ paths:
       summary: Delete a training session
       description: '⚠ The path **must end with a trailing slash** — Polar''s app sends
 
-        `/api/training/deleteTrainingSession/{id}/`. Sending without the
+        `/api/training/deleteTrainingSession/{id}/`. Without it the route is
 
-        trailing slash may 404.
+        not matched (404 HTML page). Requires `X-Requested-With` (403 without).
+
+
+        ⚠ **A non-existent id also returns 200** (silent no-op), so a 200 does
+
+        not prove anything was deleted. To report "no such session", pre-check
+
+        with `GET /api/training/analysis/{id}/summary`: 404 = does not exist,
+
+        403 = another user''s session, 200 = deletable. Probed 2026-09-28.
 
         '
       operationId: deleteTrainingSession
@@ -2036,11 +2220,223 @@ paths:
       - $ref: '#/components/parameters/XRequestedWith'
       responses:
         '200':
-          description: Deleted successfully. Empty body.
+          description: 'Deleted — or the id did not exist (silent no-op). Empty body.
+
+            '
+        '400':
+          description: Non-numeric id. HTML error page.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
-          description: Session not found
+          description: 'The session exists but belongs to another user (or the trailing
+
+            slash is missing).
+
+            '
+        '500':
+          description: Negative id. Empty body.
+  /api/training/editTraining/{id}:
+    put:
+      summary: Edit a completed training session
+      description: 'Backs the "Modifier la séance" form (`/training/edit/{id}`, reached
+
+        from the session page via **Modifier → Modifier la séance**). Edits
+
+        sport, duration, distance, avg/max HR, calories, average speed,
+
+        feeling, note and title. The start date/time is **not** editable.
+
+        Captured 2026-09-28.
+
+
+        Method is **PUT** (POST → 404); no trailing slash. Requires
+
+        `X-Requested-With` (403 without).
+
+
+        ⚠ **Validation failures return a bare `500` with an empty body** —
+
+        no field, no code. See `TrainingSessionEdit` for every accepted range.
+
+        Null/missing handling is per-field: most fields stay unchanged, but a
+
+        missing/null `trainingSessionName` is reset to the localized sport
+
+        name and a null `note` is stored as the string `"null"`. Read the
+
+        summary, merge, and send every field.
+
+
+        Verified on manual sessions only. For a device-recorded session prefer
+
+        `PUT /api/training/analysis/updateTrainingData/{id}` for note/feeling.
+
+        # TODO: verify on a device-recorded session
+
+        '
+      operationId: editTrainingSession
+      tags:
+      - training-sessions
+      parameters:
+      - $ref: '#/components/parameters/TrainingSessionId'
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingSessionEdit'
+      responses:
+        '200':
+          description: Saved. Empty body — re-read the summary to see the result.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'The session belongs to another user (or `X-Requested-With` is
+
+            missing). Empty body.
+
+            '
+        '404':
+          description: No session with this id. Empty body.
+        '500':
+          description: 'A field is out of range or has the wrong type (unknown sport id,
+
+            duration ≥ 360000 s, name > 100 chars, HR > 240, …). Empty body —
+
+            Polar gives no hint which field.
+
+            '
+  /api/training/analysis/updateTrainingData/{id}:
+    put:
+      summary: Update a session's note and/or feeling
+      description: 'Partial update used by the session page''s inline note box
+
+        (`textarea.note-text` → **Enregistrer**). Only `note` and `feeling`
+
+        are honoured; other keys are ignored. Captured 2026-09-28.
+
+
+        Better behaved than `editTraining`: 4xx instead of 500 on bad input,
+
+        and it never touches the other fields — the safe choice for any
+
+        session, including device-recorded ones.
+
+
+        Method is **PUT** (POST → 404).
+
+        '
+      operationId: updateTrainingSessionData
+      tags:
+      - training-sessions
+      parameters:
+      - $ref: '#/components/parameters/TrainingSessionId'
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingSessionDataUpdate'
+      responses:
+        '200':
+          description: Saved. Empty body.
+        '400':
+          description: '`note` longer than 10 000 chars, `feeling` a number outside
+
+            `[0,1]`, or the session belongs to another user. Empty body.
+
+            '
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No session with this id. Empty body.
+  /training/target/createTargetFromFavourite:
+    post:
+      summary: Schedule a favorite as a training target
+      description: 'Creates a training target on a date from a favorite (template) — the
+
+        diary''s **+ Ajouter → Favoris** picker. Note the **British spelling**
+
+        (`Favourite`) and the non-`/api` prefix. Captured 2026-09-28.
+
+
+        The new target copies the favorite''s name, description, type,
+
+        sport(s) and phases. The response is the new target in the
+
+        `favoriteTargetsJson` element shape, served as **`text/plain`** —
+
+        parse the body as JSON (`TargetFromFavorite`).
+
+
+        Time handling (see `TargetFromFavoriteRequest.to`): the offset in
+
+        `to` is ignored, exact midnight schedules at the default 18:00, and a
+
+        clash with an existing target shifts the new one by +1 minute instead
+
+        of failing.
+
+
+        Requires `X-Requested-With` (403 without) and a JSON body
+
+        (form-encoded → 400 `Expecting Json data`).
+
+        '
+      operationId: createTargetFromFavorite
+      tags:
+      - favorites
+      - training-targets
+      parameters:
+      - $ref: '#/components/parameters/XRequestedWith'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TargetFromFavoriteRequest'
+      responses:
+        '200':
+          description: 'Scheduled. The body is JSON (`TargetFromFavorite`) but the
+
+            Content-Type is `text/plain; charset=UTF-8`. `application/json`
+
+            is declared too so generators produce the typed model.
+
+            '
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: '{"id":1461116717,"name":"probe-fav-src","date":"28-09-2026","time":"18:00","distance":"2000.0","duration":"600000","kiloCalories":null,"url":"/target/1461116717"}'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TargetFromFavorite'
+        '400':
+          description: 'text/plain error. `to` malformed or missing →
+
+            `Expecting Json to contain ''to'' field with valid ISO 8601 date and
+
+            time value`; another user''s favorite → `error.invalid.favorite`;
+
+            non-JSON body → `Expecting Json data`.
+
+            '
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: error.invalid.favorite
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: '`id` missing, non-numeric, or not an existing favorite. HTML error
+
+            page.
+
+            '
   /api/sleep/report:
     get:
       summary: Sleep nights report
@@ -2710,11 +3106,15 @@ components:
           - VOLUME
           - STEADY_RACE_PACE
           - PHASED
-          description: "Target category, drives which `exerciseTargets[i]` fields are populated.\n- \"VOLUME\" — single-metric\
-            \ target. Exactly one of `duration` / `distance` /\n  `calories` is non-null; `phases` is `[]`.\n- \"STEADY_RACE_PACE\"\
-            \ — time-trial. Both `duration` and `distance` are\n  populated; pace is implicit (UI lets user enter any 2 of\
-            \ 3).\n- \"PHASED\" — multi-phase workout. `phases` is populated; volume fields\n  on the exerciseTarget are null\
-            \ (each phase carries its own).\nAll three values verified from captured POST bodies (2026-05-25).\n"
+          - ROUTE
+          description: "Target category, drives which `exerciseTargets[i]` fields are populated.\n- \"ROUTE\" — **read-back\
+            \ only** (observed 2026-09-28): what\n  `GET /api/trainingtarget/{id}` returns for a target created by\n  `POST\
+            \ /training/target/createTargetFromFavourite` from a ROUTE\n  favorite — no duration/distance/phases, `description:\
+            \ null`. Not\n  tried on create. # TODO: verify on create\n\n- \"VOLUME\" — single-metric target. Exactly one\
+            \ of `duration` / `distance` /\n  `calories` is non-null; `phases` is `[]`.\n- \"STEADY_RACE_PACE\" — time-trial.\
+            \ Both `duration` and `distance` are\n  populated; pace is implicit (UI lets user enter any 2 of 3).\n- \"PHASED\"\
+            \ — multi-phase workout. `phases` is populated; volume fields\n  on the exerciseTarget are null (each phase carries\
+            \ its own).\nAll three values verified from captured POST bodies (2026-05-25).\n"
         name:
           type: string
           description: Display name shown in the diary. A server-side content filter (libinjection-style SQL-injection heuristic,
@@ -3671,9 +4071,13 @@ components:
           example: ''
         feeling:
           type: string
-          description: 'Subjective feeling enum. Values TODO — set via the "Mon ressenti
+          description: 'Subjective feeling ("Mon ressenti pendant l''entraînement"), on an
 
-            pendant l''entraînement" dropdown in the UI. Null when not selected.
+            **inverted** 0–1 scale sent as a string: `"0.19"` best … `"0.39"`,
+
+            `"0.59"`, `"0.79"`, `"0.99"` worst. Null when not selected. Verified
+
+            2026-09-28 (read back as the number `0.19`).
 
             '
           nullable: true
@@ -4063,7 +4467,13 @@ components:
           format: int64
         feeling:
           type: number
-          description: User-selected feeling as a numeric value (a float, e.g. 0.0); null when unset.
+          description: 'User-selected feeling on Polar''s **inverted** 0–1 scale: 0.19 = best
+
+            ("Au top"), 0.39, 0.59, 0.79, 0.99 = worst ("Mal"). `0.0` = cleared /
+
+            invalid input; null when never set. See `TrainingSessionEdit.feeling`.
+
+            '
           nullable: true
         note:
           type: string
@@ -4459,23 +4869,47 @@ components:
       required:
       - latitude
       - longitude
-      - altitude
-      - distance
       properties:
         latitude:
           type: number
-          description: WGS84 latitude, degrees.
+          minimum: -90
+          maximum: 90
+          description: 'WGS84 latitude, degrees. The key must be `latitude` (`lat` → 500).
+
+            Out-of-range points are silently dropped by the server.
+
+            '
         longitude:
           type: number
-          description: WGS84 longitude, degrees.
+          minimum: -180
+          maximum: 180
+          description: WGS84 longitude, degrees (`lon` → 500). Out-of-range points are silently dropped.
         altitude:
           type: number
-          description: Elevation in metres above sea level. Use 0 if absent in source.
+          description: 'Elevation in metres. When the source has none, the web UI sends `0`
+
+            for GPX and `null` for TCX; both are accepted (null reads back as
+
+            null). May be omitted.
+
+            '
+          nullable: true
         distance:
           type: number
-          description: '**Cumulative** distance from route start, in metres
+          description: '**Cumulative** distance from route start, in metres. GPX: haversine
 
-            (haversine on lat/lon). The first point is `0`.
+            on lat/lon with Earth radius 6 371 000 m (UI-verified). TCX: the
+
+            file''s `<DistanceMeters>` verbatim. The first point is `0`. Not
+
+            persisted per point (only the total is), and may be omitted.
+
+            '
+        time:
+          type: string
+          description: 'Only sent by the UI for TCX *Activity* files
+
+            (`2026-01-01T10:00:00.000Z`); ignored by the server.
 
             '
       example:
@@ -4500,6 +4934,15 @@ components:
         route:
           type: array
           minItems: 1
+          description: 'Ordered trackpoints. Empty → 400. A single point is accepted as
+
+            long as `distance` > 0 (degenerate route). Points with an
+
+            out-of-range latitude/longitude are silently dropped server-side.
+
+            5 000 points were accepted and read back intact.
+
+            '
           items:
             $ref: '#/components/schemas/RoutePoint'
         sport:
@@ -4510,14 +4953,30 @@ components:
           nullable: true
         name:
           type: string
-          description: Route name (typically from `<gpx><metadata><name>`).
-        distance:
-          type: number
-          description: 'Total route length in metres. Equals the last trackpoint''s
+          minLength: 1
+          maxLength: 45
+          description: 'Route name. The web UI takes the first `<trk><name>` (GPX),
 
-            cumulative `distance`.
+            `<rte><name>`, or `<Course><Name>` (TCX), else a localized
+
+            placeholder ("Itinéraire 1"). Must contain a non-whitespace
+
+            character (400). ⚠ Longer than 45 chars is **silently truncated**
+
+            to 45, not rejected.
 
             '
+        distance:
+          type: number
+          exclusiveMinimum: true
+          description: 'Total route length in metres — the last trackpoint''s cumulative
+
+            `distance`. `0` → 400. ⚠ Not cross-checked against the points
+
+            (any positive value is stored verbatim).
+
+            '
+          minimum: 0
       example:
         route:
         - latitude: 48.8566
@@ -4557,7 +5016,8 @@ components:
           description: WGS84 longitude, degrees.
         altitude:
           type: number
-          description: Elevation in metres above sea level.
+          description: Elevation in metres above sea level; null when the upload had none.
+          nullable: true
         time:
           type: integer
           description: 'Sequence index in milliseconds (0, 1000, 2000, …). NOT actual
@@ -4669,6 +5129,7 @@ components:
           - STEADY_RACE_PACE
           - PHASED
           - ROUTE
+          - FREE
           description: Favorite kind. `ROUTE` carries GPS geometry in `gpsRoute`.
         distance:
           type: number
@@ -4774,10 +5235,17 @@ components:
           description: Favorite kind — see TrainingTargetCreate.type for the per-value field rules.
         name:
           type: string
-          description: Favorite display name (required).
+          minLength: 1
+          maxLength: 45
+          description: 'Favorite display name, 1–45 chars (probed 2026-09-28: 46 → 400
+
+            `{"target.name":[…]}`). Stricter than the training-target name.
+
+            '
         description:
           type: string
-          description: Free-text notes; send empty string when none.
+          maxLength: 500
+          description: Free-text notes, ≤ 500 chars; send empty string when none.
         exerciseTargets:
           type: array
           description: 'One block per exercise; send `id: null` on each (server assigns).'
@@ -4794,6 +5262,69 @@ components:
           duration: null
           phases: []
           id: null
+    FavoriteExerciseTargetEntry:
+      type: object
+      description: 'One `exerciseTargets[]` entry of a favorite (`GET`/`POST
+
+        /api/favoritetarget/{id}`). Same fields as `ExerciseTarget`, but
+
+        `sportId` is **nullable**: ROUTE favorites, `FREE` favorites and
+
+        favorites whose sport was cleared (saveSport without a sport) read back
+
+        with `sportId: null`.
+
+        '
+      required:
+      - phases
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 'Server-assigned exerciseTargetId. Send it back on update — an entry
+
+            with `id: null` is silently not updated.
+
+            '
+          example: 1539651421
+          nullable: true
+        index:
+          type: integer
+          description: Position within the exerciseTargets array (read-only).
+          example: 0
+          nullable: true
+        sportId:
+          type: integer
+          description: 'Sport id from `/api/sports/sports`. ⚠ Not validated by the server —
+
+            `9999` is stored verbatim. Null for ROUTE / FREE favorites.
+
+            '
+          example: 1
+          nullable: true
+        duration:
+          type: string
+          description: '`HH:MM:SS`, ≤ `99:59:59`. For PHASED favorites the read-back value is
+
+            rolled up from the phases.
+
+            '
+          example: 00:30:00
+          nullable: true
+        distance:
+          type: number
+          description: Metres (0 < d ≤ 9 999 000). Rolled up from phases on read-back for PHASED.
+          example: 5000
+          nullable: true
+        calories:
+          type: number
+          description: Target kcal (≥ 0), or null.
+          nullable: true
+        phases:
+          type: array
+          description: Populated for PHASED favorites; `[]` otherwise.
+          items:
+            $ref: '#/components/schemas/Phase'
     Favorite:
       type: object
       description: 'Response body of GET /api/favoritetarget/{id} and request body of
@@ -4814,24 +5345,34 @@ components:
           - VOLUME
           - STEADY_RACE_PACE
           - PHASED
-          description: Favorite kind (same set as a training target; no datetime).
+          - ROUTE
+          - FREE
+          description: 'Favorite kind (same set as a training target; no datetime), plus
+
+            `ROUTE` for imported GPX/TCX routes and `FREE` — what a favorite
+
+            created with an empty/missing `exerciseTargets` reads back as
+
+            (probed 2026-09-28). Only VOLUME / STEADY_RACE_PACE / PHASED are
+
+            valid on write.
+
+            '
         name:
           type: string
-          description: Favorite display name.
+          minLength: 1
+          maxLength: 45
+          description: Favorite display name, 1–45 chars (longer → 400 on write).
         description:
           type: string
-          description: Free-text notes; empty string when not set.
+          maxLength: 500
+          description: Free-text notes (≤ 500 chars); empty string when not set, null for ROUTE favorites.
+          nullable: true
         exerciseTargets:
           type: array
           description: One block per exercise (multi-sport favorites have several).
           items:
-            allOf:
-            - $ref: '#/components/schemas/ExerciseTarget'
-            - type: object
-              properties:
-                index:
-                  type: integer
-                  description: Position within the exerciseTargets array.
+            $ref: '#/components/schemas/FavoriteExerciseTargetEntry'
       example:
         name: doc-fav-distance
         description: seed for capture
@@ -4883,9 +5424,12 @@ components:
           - STEADY_RACE_PACE
           - PHASED
           - ROUTE
+          - FREE
           description: 'Favorite kind. `ROUTE` is only present for entries created via
 
-            `POST /api/favorites/trainingTargets/importRoute`.
+            `POST /api/favorites/trainingTargets/importRoute`. `FREE` appears for
+
+            a favorite created without exercise targets.
 
             '
         favoriteName:
@@ -5709,6 +6253,340 @@ components:
             sleepDuration: 0
             inactivityAlertCount: 0
             sleepPlus: false
+    TrainingSessionEdit:
+      type: object
+      description: 'Request body for `PUT /api/training/editTraining/{id}` — the "Modifier la
+
+        séance" form (`/training/edit/{id}`). Captured 2026-09-28.
+
+
+        Looks like a full replace but per-field null/missing semantics differ
+
+        (see each property). **Every out-of-range value is rejected with a bare
+
+        `500` and an empty body** — no field name, no code — so validate before
+
+        sending. Safe client pattern: read
+
+        `GET /api/training/analysis/{id}/summary`, merge the changes, and send
+
+        every field. The start date/time is not editable.
+
+        '
+      properties:
+        sport:
+          type: integer
+          description: 'Sport id from `GET /api/sports/sports`. Unknown ids (`0`, `21`,
+
+            `9999`) → 500. Missing/null → unchanged.
+
+            '
+          example: 1
+          nullable: true
+        duration:
+          type: integer
+          minimum: 0
+          maximum: 359999
+          description: 'Duration in **integer seconds** (same unit as
+
+            `TrainingSessionCreate.duration`). `0`…`359999` (99:59:59); `0` is
+
+            accepted and stored as `PT0S`. ≥ 360000 or negative → 500. A string
+
+            (`"00:30:00"`) is silently ignored. Missing/null → unchanged.
+
+            '
+          example: 1800
+          nullable: true
+        distance:
+          type: number
+          minimum: 0
+          maximum: 9999000
+          description: 'Distance in **metres** (the form shows km). Fractional values
+
+            accepted. > 9 999 000 or negative → 500. Missing/null → unchanged.
+
+            '
+          example: 5000
+          nullable: true
+        hrAverage:
+          type: integer
+          minimum: 0
+          maximum: 240
+          description: 'Average HR in bpm — a **number** here (the create endpoint sends a
+
+            string). `0` = unset. > 240 or negative → 500. A numeric string
+
+            (`"140"`) is also accepted. Missing/null → unchanged.
+
+            '
+          example: 140
+          nullable: true
+        hrMax:
+          type: integer
+          minimum: 0
+          maximum: 240
+          description: Max HR in bpm; `0` = unset. > 240 → 500. Not checked against hrAverage.
+          example: 0
+          nullable: true
+        kiloCalories:
+          type: integer
+          minimum: 0
+          maximum: 65535
+          description: Kilocalories. `0`…`65535` (uint16); outside → 500.
+          example: 300
+          nullable: true
+        speedAverage:
+          type: number
+          minimum: 0
+          maximum: 399
+          description: Average speed in **km/h**. `0`…`399`; outside → 500. Null → unchanged.
+          example: null
+          nullable: true
+        feeling:
+          type: string
+          description: 'Perceived feeling on Polar''s **inverted** 0–1 scale, sent as a
+
+            string: `"0.19"` = 5 "Au top" (best), `"0.39"` = 4 "Bien",
+
+            `"0.59"` = 3 "Moyen", `"0.79"` = 2 "Pas terrible", `"0.99"` = 1
+
+            "Mal" (worst). **null/missing → unchanged** (a feeling cannot be
+
+            cleared back to null). Any number in `[0,1]` is stored verbatim;
+
+            numbers outside → 500; non-numeric strings and `""` are stored as
+
+            `0.0`.
+
+            '
+          example: '0.39'
+          nullable: true
+        note:
+          type: string
+          maxLength: 10000
+          description: 'Free-text note, ≤ 10 000 chars (10 001 → 500). Missing →
+
+            unchanged. ⚠ **`null` is stored as the literal string `"null"`** —
+
+            never send null.
+
+            '
+          example: edited note
+        trainingSessionName:
+          type: string
+          maxLength: 100
+          description: 'Session title, `""`…100 chars (unicode counted as characters;
+
+            101 → 500). ⚠ **Missing or null resets the title to the localized
+
+            sport name** (e.g. `"Course à pied"`) — always send it.
+
+            '
+          example: probe-edit-renamed
+        editedExerciseId:
+          type: integer
+          format: int64
+          description: 'Always null in the captured (manual, single-sport) form. A bogus value
+
+            (`1`) is ignored. Semantics for device-recorded / multi-sport sessions
+
+            not verified. # TODO: verify
+
+            '
+          example: null
+          nullable: true
+        hrSamples:
+          type: array
+          description: 'Synthesized by the web UI — one sample per second of `duration`,
+
+            every value equal to `hrAverage`. Optional: omitting it (or `[]`)
+
+            yields the identical summary. Effect on a device-recorded session''s
+
+            real HR trace is untested. # TODO: verify
+
+            '
+          items:
+            type: integer
+      example:
+        sport: 1
+        duration: 1800
+        distance: 5000
+        hrAverage: 140
+        note: edited note
+        trainingSessionName: probe-edit-renamed
+        hrMax: 0
+        kiloCalories: 300
+        feeling: '0.39'
+        editedExerciseId: null
+        speedAverage: null
+    TrainingSessionDataUpdate:
+      type: object
+      description: 'Request body for `PUT /api/training/analysis/updateTrainingData/{id}` —
+
+        the session page''s inline note/feeling box. A true partial update: only
+
+        `note` and `feeling` are read, every other key is silently ignored.
+
+        Captured 2026-09-28.
+
+        '
+      properties:
+        note:
+          type: string
+          maxLength: 10000
+          description: 'New note, ≤ 10 000 chars (longer → 400). `""` clears it.
+
+            Missing/null → unchanged.
+
+            '
+          example: inline note edit
+          nullable: true
+        feeling:
+          type: string
+          description: 'Same inverted scale as `TrainingSessionEdit.feeling` (`"0.19"` best …
+
+            `"0.99"` worst). Numbers outside `[0,1]` → 400. ⚠ Unlike
+
+            editTraining, **null here is stored as `0.0`** ("no feeling") —
+
+            omit the key to leave the feeling unchanged.
+
+            '
+          example: '0.19'
+          nullable: true
+      example:
+        note: inline note edit
+    TargetFromFavoriteRequest:
+      type: object
+      description: 'Request body for `POST /training/target/createTargetFromFavourite` —
+
+        the diary''s "+ Ajouter → Favoris" picker. Captured 2026-09-28.
+
+        '
+      required:
+      - id
+      - to
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9]+$
+          description: 'favoriteId (the UI sends it as a string; a JSON number is accepted
+
+            too). Missing, non-numeric or non-existent → 500 HTML page; another
+
+            user''s favorite → 400 `error.invalid.favorite`.
+
+            '
+          example: '83468869'
+        to:
+          type: string
+          pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}[+-][0-9]{2}:[0-9]{2}$
+          description: 'Target date+time as `YYYY-MM-DDTHH:MM:SS.sss±HH:MM` — milliseconds
+
+            **and** a numeric offset are mandatory (`…Z`, date-only, tz-less →
+
+            400). The **offset is ignored**: the wall-clock part is the local
+
+            schedule time. **Exact midnight (`T00:00:00.000`) means "no time"**
+
+            and schedules at the default **18:00** (the diary always sends
+
+            midnight). If another target already occupies that minute, the new
+
+            one is shifted +1 minute. Past dates are accepted.
+
+            '
+          example: '2026-10-20T09:30:00.000+00:00'
+      example:
+        id: '83468869'
+        to: '2026-09-28T00:00:00.000+00:00'
+    TargetFromFavorite:
+      type: object
+      description: 'Response of `POST /training/target/createTargetFromFavourite` — the
+
+        newly scheduled training target in the `favoriteTargetsJson` element
+
+        shape. ⚠ Served as **`text/plain`** even though the body is JSON.
+
+        Yet another encoding set: `date` is `DD-MM-YYYY`, `time` `HH:MM`,
+
+        `distance` a *string* of metres, `duration` a *string* of milliseconds.
+
+        '
+      required:
+      - id
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: The **new training-target id** (use with `/api/trainingtarget/{id}`).
+          example: 1461116717
+        name:
+          type: string
+          description: Copied from the favorite.
+        sport:
+          type: object
+          description: Embedded sport object (same shape as `FavoriteSimple.sport`).
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+              description: UPPERCASE sport enum.
+          nullable: true
+        iconUrl:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        date:
+          type: string
+          description: Scheduled date, `DD-MM-YYYY`.
+          example: 28-09-2026
+        time:
+          type: string
+          description: Scheduled local time, `HH:MM` (18:00 when `to` was midnight).
+          example: '18:00'
+        distance:
+          type: string
+          description: 'Total distance in metres as a string (`"2000.0"`); `"0"` when the
+
+            favorite has no distance goal (verified 2026-09-28).
+
+            '
+          nullable: true
+        duration:
+          type: string
+          description: 'Total duration in **milliseconds** as a string (`"600000"`,
+
+            `"2700000"` for 45 min); `"0"` when the favorite has no duration.
+
+            '
+          nullable: true
+        kiloCalories:
+          type: string
+          description: Target kcal as a **string** (`"450"`), or null when unset (verified 2026-09-28).
+          nullable: true
+        url:
+          type: string
+          description: Editor URL of the new target (`/target/{id}`).
+      example:
+        id: 1461116717
+        name: probe-fav-src
+        sport:
+          id: 1
+          name: RUNNING
+        iconUrl: https://platform.cdn.polar.com/ecosystem/sport/icon/808d0882e97375e68844ec6c5417ea33-2024-04-16_06_01_39
+        description: src desc
+        date: 28-09-2026
+        time: '18:00'
+        distance: '2000.0'
+        duration: '600000'
+        kiloCalories: null
+        url: /target/1461116717
     SleepNight:
       type: object
       description: 'A single recorded night of sleep on a Polar device with `Sleep Plus Stages`

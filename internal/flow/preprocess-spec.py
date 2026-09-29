@@ -22,9 +22,21 @@ def resolve_property_collisions(obj):
         obj["x-ogen-properties"] = overrides
 
 
+def convert_exclusive_bounds(obj):
+    """OpenAPI 3.1 (JSON Schema 2020-12) spells exclusive bounds as numbers
+    (`exclusiveMinimum: 0`); 3.0 wants the bound in `minimum` plus a boolean
+    flag. ogen parses the 3.0 form only."""
+    for excl, bound in (("exclusiveMinimum", "minimum"), ("exclusiveMaximum", "maximum")):
+        v = obj.get(excl)
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            obj[bound] = v
+            obj[excl] = True
+
+
 def walk(obj):
     if isinstance(obj, dict):
         resolve_property_collisions(obj)
+        convert_exclusive_bounds(obj)
         if "type" in obj and isinstance(obj["type"], list):
             types = obj["type"]
             non_null = [t for t in types if t != "null"]

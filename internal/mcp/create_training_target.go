@@ -50,35 +50,15 @@ func buildTrainingTargetCreate(req mcpgo.CallToolRequest) (*gen.TrainingTargetCr
 	if err != nil {
 		return nil, err.Error()
 	}
-	sportID := argInt(req, "sport_id", 1)
 	description := req.GetString("description", "")
 
-	args, _ := req.GetArguments()["phases"].([]any)
-	phases, err := buildPhases(args)
-	if err != nil {
-		return nil, err.Error()
+	et, phased, errMsg := buildGoalExerciseTarget(req)
+	if errMsg != "" {
+		return nil, errMsg
 	}
-
-	et := gen.ExerciseTarget{
-		SportId: sportID,
-		Phases:  phases,
-	}
-
 	targetType := gen.TrainingTargetCreateTypeVOLUME
-	if len(phases) > 0 {
+	if phased {
 		targetType = gen.TrainingTargetCreateTypePHASED
-	} else {
-		// VOLUME target: requires exactly one of duration_s or distance_m.
-		volDur, hasDur := goalDuration(req.GetArguments(), "duration_s")
-		volDist, _ := req.GetArguments()["distance_m"].(float64)
-		switch {
-		case hasDur:
-			et.Duration.SetTo(volDur)
-		case volDist > 0:
-			et.Distance.SetTo(volDist)
-		default:
-			return nil, "VOLUME targets (no phases) require duration_s or distance_m"
-		}
 	}
 
 	body := &gen.TrainingTargetCreate{
@@ -91,6 +71,37 @@ func buildTrainingTargetCreate(req mcpgo.CallToolRequest) (*gen.TrainingTargetCr
 		body.Description.SetTo(description)
 	}
 	return body, ""
+}
+
+// buildGoalExerciseTarget parses the goal arguments shared by training
+// targets and favorites — sport_id plus either a phases array (PHASED) or one
+// of duration_s / distance_m (VOLUME) — into a single wire ExerciseTarget.
+// phased reports which shape was built.
+func buildGoalExerciseTarget(req mcpgo.CallToolRequest) (et gen.ExerciseTarget, phased bool, errMsg string) {
+	args, _ := req.GetArguments()["phases"].([]any)
+	phases, err := buildPhases(args)
+	if err != nil {
+		return et, false, err.Error()
+	}
+	et = gen.ExerciseTarget{
+		SportId: argInt(req, "sport_id", 1),
+		Phases:  phases,
+	}
+	if len(phases) > 0 {
+		return et, true, ""
+	}
+	// VOLUME target: requires exactly one of duration_s or distance_m.
+	volDur, hasDur := goalDuration(req.GetArguments(), "duration_s")
+	volDist, _ := req.GetArguments()["distance_m"].(float64)
+	switch {
+	case hasDur:
+		et.Duration.SetTo(volDur)
+	case volDist > 0:
+		et.Distance.SetTo(volDist)
+	default:
+		return et, false, "VOLUME targets (no phases) require duration_s or distance_m"
+	}
+	return et, false, ""
 }
 
 // buildPhases turns the user-facing flat phase array into Polar Flow's

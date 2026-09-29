@@ -485,11 +485,12 @@ func (s *Server) handleAddSportProfileRequest(args [0]string, argsEscaped bool, 
 // Polar's server is dangerously lenient here. Probed 2026-05-26:
 //
 //	Body                                                                 | Status
-//	---------------------------------------------------------------------+-------------------------------------------------------------------------
+//	---------------------------------------------------------------------+---------------------------------------------------------------------------
 //	Missing `exerciseTargetId`                                           | 400
 //	Unknown `exerciseTargetId`                                           | 200 (silent no-op — favorite not actually updated server-side)
 //	Unknown `favoriteSportId` (e.g. `9999`, not in `/api/sports/sports`) | 200 (sport id is accepted unchecked, then presumably 404s on watch sync)
-//	Missing other fields                                                 | 400
+//	⚠ Missing `favoriteSportId`                                        | 200 — clears the sport (`sportId: null` on read-back; probed 2026-09-28)
+//	Unknown `favoriteId`                                                 | 500
 //
 // Verify your changes by re-reading the favorite via `GET /api/favoritetarget/{id}` rather than
 // trusting the 200.
@@ -699,6 +700,16 @@ func (s *Server) handleChangeFavoriteSportRequest(args [0]string, argsEscaped bo
 // Creates a reusable training-target template. Body shape is identical to POST /api/trainingtarget
 // minus the `datetime` field.
 //
+// Saving an existing training target as a favorite (target editor → "Ajouter aux favoris") has no
+// endpoint of its own: the UI reads `GET /api/trainingtarget/{id}`, drops `datetime`, nulls each
+// `exerciseTargets[].id` and the rolled-up `duration`, and POSTs the result here. The server assigns
+// fresh phase ids; the source target is not linked to the favorite. Captured 2026-09-28.
+//
+// Validation (probed 2026-09-28): `name` 1–45 chars, `description` ≤ 500 chars (400
+// `ValidationError` otherwise). ⚠ Lenient spots: `exerciseTargets` missing or `[]` → 201 with a
+// `FREE`-type favorite; an unknown or missing `sportId` → 201 stored verbatim / null. Invalid `type`
+// enum → 500.
+//
 // POST /api/favoritetarget
 func (s *Server) handleCreateFavoriteRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -889,6 +900,220 @@ func (s *Server) handleCreateFavoriteRequest(args [0]string, argsEscaped bool, w
 	}
 
 	if err := encodeCreateFavoriteResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleCreateTargetFromFavoriteRequest handles createTargetFromFavorite operation.
+//
+// Creates a training target on a date from a favorite (template) — the diary's + Ajouter → Favoris
+// picker. Note the British spelling (`Favourite`) and the non-`/api` prefix. Captured 2026-09-28.
+//
+// The new target copies the favorite's name, description, type, sport(s) and phases. The response is
+// the new target in the `favoriteTargetsJson` element shape, served as `text/plain` — parse the body
+// as JSON (`TargetFromFavorite`).
+//
+// Time handling (see `TargetFromFavoriteRequest.to`): the offset in `to` is ignored, exact midnight
+// schedules at the default 18:00, and a clash with an existing target shifts the new one by +1 minute
+// instead of failing.
+//
+// Requires `X-Requested-With` (403 without) and a JSON body (form-encoded → 400
+// `Expecting Json data`).
+//
+// POST /training/target/createTargetFromFavourite
+func (s *Server) handleCreateTargetFromFavoriteRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createTargetFromFavorite"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/training/target/createTargetFromFavourite"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), CreateTargetFromFavoriteOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(attrs...)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: CreateTargetFromFavoriteOperation,
+			ID:   "createTargetFromFavorite",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securitySessionCookie(ctx, CreateTargetFromFavoriteOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "SessionCookie",
+					Err:              err,
+				}
+				defer recordError("Security:SessionCookie", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeCreateTargetFromFavoriteParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeCreateTargetFromFavoriteRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response CreateTargetFromFavoriteRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    CreateTargetFromFavoriteOperation,
+			OperationSummary: "Schedule a favorite as a training target",
+			OperationID:      "createTargetFromFavorite",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "X-Requested-With",
+					In:   "header",
+				}: params.XRequestedWith,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *TargetFromFavoriteRequest
+			Params   = CreateTargetFromFavoriteParams
+			Response = CreateTargetFromFavoriteRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackCreateTargetFromFavoriteParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.CreateTargetFromFavorite(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.CreateTargetFromFavorite(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeCreateTargetFromFavoriteResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -1337,7 +1562,8 @@ func (s *Server) handleCreateTrainingTargetRequest(args [0]string, argsEscaped b
 //
 // Verb-in-path REST violation (Polar's choice, not ours). Note the `/favorites/delete/{id}` shape —
 // distinct from create/get/update which all use `/favoritetarget/{id}`. The response body is non-empty
-// (a localized success message).
+// (a localized success message) and — like every `/api/favorites/*` write — is JSON served as
+// `text/plain`. Also deletes ROUTE favorites.
 //
 // DELETE /api/favorites/delete/{id}
 func (s *Server) handleDeleteFavoriteRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -1730,7 +1956,12 @@ func (s *Server) handleDeleteSportProfileRequest(args [1]string, argsEscaped boo
 // handleDeleteTrainingSessionRequest handles deleteTrainingSession operation.
 //
 // ⚠ The path must end with a trailing slash — Polar's app sends
-// `/api/training/deleteTrainingSession/{id}/`. Sending without the trailing slash may 404.
+// `/api/training/deleteTrainingSession/{id}/`. Without it the route is not matched (404 HTML page).
+// Requires `X-Requested-With` (403 without).
+//
+// ⚠ A non-existent id also returns 200 (silent no-op), so a 200 does not prove anything was deleted.
+// To report "no such session", pre-check with `GET /api/training/analysis/{id}/summary`: 404 = does
+// not exist, 403 = another user's session, 200 = deletable. Probed 2026-09-28.
 //
 // DELETE /api/training/deleteTrainingSession/{id}/
 func (s *Server) handleDeleteTrainingSessionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -2105,6 +2336,226 @@ func (s *Server) handleDeleteTrainingTargetRequest(args [1]string, argsEscaped b
 	}
 
 	if err := encodeDeleteTrainingTargetResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleEditTrainingSessionRequest handles editTrainingSession operation.
+//
+// Backs the "Modifier la séance" form (`/training/edit/{id}`, reached from the session page via
+// Modifier → Modifier la séance). Edits sport, duration, distance, avg/max HR, calories, average
+// speed, feeling, note and title. The start date/time is not editable. Captured 2026-09-28.
+//
+// Method is PUT (POST → 404); no trailing slash. Requires `X-Requested-With` (403 without).
+//
+// ⚠ Validation failures return a bare `500` with an empty body — no field, no code. See
+// `TrainingSessionEdit` for every accepted range. Null/missing handling is per-field: most fields stay
+// unchanged, but a missing/null `trainingSessionName` is reset to the localized sport name and a null
+// `note` is stored as the string `"null"`. Read the summary, merge, and send every field.
+//
+// Verified on manual sessions only. For a device-recorded session prefer
+// `PUT /api/training/analysis/updateTrainingData/{id}` for note/feeling.
+//
+// # TODO: verify on a device-recorded session
+//
+// PUT /api/training/editTraining/{id}
+func (s *Server) handleEditTrainingSessionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("editTrainingSession"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.HTTPRouteKey.String("/api/training/editTraining/{id}"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), EditTrainingSessionOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(attrs...)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: EditTrainingSessionOperation,
+			ID:   "editTrainingSession",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securitySessionCookie(ctx, EditTrainingSessionOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "SessionCookie",
+					Err:              err,
+				}
+				defer recordError("Security:SessionCookie", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeEditTrainingSessionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeEditTrainingSessionRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response EditTrainingSessionRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    EditTrainingSessionOperation,
+			OperationSummary: "Edit a completed training session",
+			OperationID:      "editTrainingSession",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "X-Requested-With",
+					In:   "header",
+				}: params.XRequestedWith,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *TrainingSessionEdit
+			Params   = EditTrainingSessionParams
+			Response = EditTrainingSessionRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackEditTrainingSessionParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.EditTrainingSession(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.EditTrainingSession(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeEditTrainingSessionResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -5625,6 +6076,11 @@ func (s *Server) handleGetTrainingTargetRequest(args [1]string, argsEscaped bool
 // Note the unusual path shape (`trainingTargets` camelCased and plural, `importRoute` as a verb) —
 // distinct from every other favorite endpoint.
 //
+// ⚠ Server-side leniency (probed 2026-09-28): names longer than 45 chars are silently truncated;
+// points with an out-of-range latitude/longitude are silently dropped; an unknown `sport` id is stored
+// as null; the top-level `distance` is not checked against the points; a single point with a non-zero
+// `distance` is accepted. Validate client-side.
+//
 // POST /api/favorites/trainingTargets/importRoute
 func (s *Server) handleImportRouteRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
@@ -6173,6 +6629,9 @@ func (s *Server) handleListFavoritesRequest(args [0]string, argsEscaped bool, w 
 // Returns a simpler array used by the diary's "Add training target" picker. Note: `duration` is
 // `HH:MM:SS` here vs milliseconds in `GET /api/favorites`. The embedded `sport` is a full sport
 // object, not just an id.
+//
+// ⚠ Served as `text/plain; charset=UTF-8` despite the JSON body (observed 2026-09-28). Both media
+// types are declared so generated clients accept the real response and still get the typed model.
 //
 // GET /api/favorites/favoriteTargetsJson
 func (s *Server) handleListFavoritesSimpleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -6768,8 +7227,9 @@ func (s *Server) handleListTrainingSessionsRequest(args [0]string, argsEscaped b
 // # Validation
 //
 //   - `favoriteId` accepts both integer and string forms (`"81388912"` works the same as `81388912`).
-//   - Empty `favoriteName` → 400.
-//   - Missing fields → 400.
+//   - `favoriteName` limited to 45 characters (46 → 400); empty → 400. ⚠ Whitespace-only (`"  "`)
+//     is accepted and stored.
+//   - Missing fields → 400. Another user's favorite → 400.
 //   - Unknown `favoriteId` → 500 (not 404). Worse, all error bodies carry the same boilerplate
 //     French/English message about a "route"
 //     (`"Un problème est survenu lors de l'enregistrement de l'itinéraire. Réessayez."`) regardless
@@ -7190,8 +7650,12 @@ func (s *Server) handleSaveSportProfileRequest(args [0]string, argsEscaped bool,
 
 // handleUpdateFavoriteRequest handles updateFavorite operation.
 //
-// Full-body update (no PUT/PATCH). Send the same shape as create plus the existing
+// Full-body update (no PUT/PATCH — PUT → 404). Send the same shape as create plus the existing
 // `exerciseTargets[i].id` value from GET. Returns 200 with empty body on success.
+//
+// ⚠ An entry sent with `id: null` returns 200 but its changes are silently dropped (same quirk as
+// training targets) — always carry the ids from GET. Same limits as create (`name` ≤ 45,
+// `description` ≤ 500); a too-long name is reported under `templateTrainingSessionTarget.name`.
 //
 // POST /api/favoritetarget/{id}
 func (s *Server) handleUpdateFavoriteRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -7387,6 +7851,218 @@ func (s *Server) handleUpdateFavoriteRequest(args [1]string, argsEscaped bool, w
 	}
 
 	if err := encodeUpdateFavoriteResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleUpdateTrainingSessionDataRequest handles updateTrainingSessionData operation.
+//
+// Partial update used by the session page's inline note box (`textarea.note-text` → Enregistrer).
+// Only `note` and `feeling` are honoured; other keys are ignored. Captured 2026-09-28.
+//
+// Better behaved than `editTraining`: 4xx instead of 500 on bad input, and it never touches the other
+// fields — the safe choice for any session, including device-recorded ones.
+//
+// Method is PUT (POST → 404).
+//
+// PUT /api/training/analysis/updateTrainingData/{id}
+func (s *Server) handleUpdateTrainingSessionDataRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateTrainingSessionData"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.HTTPRouteKey.String("/api/training/analysis/updateTrainingData/{id}"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), UpdateTrainingSessionDataOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(attrs...)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: UpdateTrainingSessionDataOperation,
+			ID:   "updateTrainingSessionData",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securitySessionCookie(ctx, UpdateTrainingSessionDataOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "SessionCookie",
+					Err:              err,
+				}
+				defer recordError("Security:SessionCookie", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeUpdateTrainingSessionDataParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeUpdateTrainingSessionDataRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response UpdateTrainingSessionDataRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    UpdateTrainingSessionDataOperation,
+			OperationSummary: "Update a session's note and/or feeling",
+			OperationID:      "updateTrainingSessionData",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+				{
+					Name: "X-Requested-With",
+					In:   "header",
+				}: params.XRequestedWith,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *TrainingSessionDataUpdate
+			Params   = UpdateTrainingSessionDataParams
+			Response = UpdateTrainingSessionDataRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackUpdateTrainingSessionDataParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.UpdateTrainingSessionData(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.UpdateTrainingSessionData(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeUpdateTrainingSessionDataResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

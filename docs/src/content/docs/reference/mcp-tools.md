@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-polar-flow-mcp exposes fourteen tools backed by the
+polar-flow-mcp exposes twenty-seven tools backed by the
 [ogen](https://github.com/ogen-go/ogen)-generated client in `internal/flow/`.
 All tools act as the single Polar Flow account configured via `POLAR_EMAIL` /
 `POLAR_PASSWORD`.
@@ -16,10 +16,12 @@ themselves are bad.
 
 ## User confirmation on writes
 
-Two tools touch real diary data and ask the user to confirm before they run:
+Four tools touch real diary data and ask the user to confirm before they run:
 [`create_training_session`](#create_training_session), which writes a session
-that counts toward Polar's training-load model, and
-[`delete_training_target`](#delete_training_target), which is irreversible.
+that counts toward Polar's training-load model, and the three irreversible
+deletes — [`delete_training_target`](#delete_training_target),
+[`delete_training_session`](#delete_training_session) and
+[`delete_favorite`](#delete_favorite).
 
 The mechanism is an MCP [elicitation](https://modelcontextprotocol.io/): the
 tool answers the first call with "I need confirmation", the host puts the
@@ -29,9 +31,10 @@ On protocol `2026-07-28` and later this is a
 versions the server issues the `elicitation/create` those clients understand.
 Either way the handler is the same code.
 
-The delete prompt names the target it is about to remove (`Permanently delete
+Each delete prompt names what it is about to remove (`Permanently delete
 the training target "5x1km Threshold" scheduled for 2026-06-02T09:00 (id
-7286431)?`), so the ask costs one extra read on the first leg only.
+7286431)?`, `… the training session "Easy 5km" on 2026-09-20T08:00:00 (30 min)
+(id 8429796771)? …`), so the ask costs one extra read on the first leg only.
 
 If the user declines or cancels, the tool returns a plain text result saying so
 and nothing is written — that is a normal outcome, not a tool error to retry
@@ -315,7 +318,8 @@ averages, sport, etc.
 
 **Response:** canonical session object — `session_duration_s` (seconds, decoded
 from the wire's ISO-8601 `PTxxM`), `distance_m`, `hr_avg` / `hr_max` (bpm),
-`calories`, `start_time` (ISO 8601). See [Units & dates](/polar-flow-mcp/reference/units-and-dates/).
+`calories`, `start_time` (ISO 8601), `note`, and `feeling` (1 = bad … 5 = great,
+`null` when unset). See [Units & dates](/polar-flow-mcp/reference/units-and-dates/).
 
 ## `get_training_session_details`
 
@@ -325,6 +329,241 @@ user asks about pace splits, HR zone time, or per-lap stats.
 | Argument | Type | Required |
 |----------|------|----------|
 | `session_id` | integer | yes |
+
+## Favorites and routes
+
+A **favorite** is a reusable, date-less training-target template (type
+`VOLUME`, `STEADY_RACE_PACE` or `PHASED`); an imported GPX/TCX **route** is a
+favorite of type `ROUTE`. Every favorite has two ids: the `favorite_id` (used by
+almost every tool) and an inner `exercise_target_id` (used by
+[`get_route`](#get_route) and, for multi-sport favorites,
+[`set_favorite_sport`](#set_favorite_sport)). `list_favorites` returns both.
+
+Polar's favorite endpoints validate little — they store unknown sport ids,
+accept whitespace-only names, silently truncate route names and drop
+out-of-range route points — so these tools check every argument before any
+request goes out and verify writes by reading them back.
+
+| Limit | Value |
+|-------|-------|
+| Favorite / route name | 1–45 characters, not blank |
+| Favorite description | ≤ 500 characters |
+| Duration goal | 1 s – 99:59:59 (`359999` s) |
+| Distance goal | > 0 and ≤ 9 999 000 m |
+| `sport_id` | must exist in [`list_sports`](#list_sports) |
+
+### `list_favorites`
+
+| Argument | Type | Default |
+|----------|------|---------|
+| `kind` | `all` \| `templates` \| `routes` | `all` |
+
+**Response:** a text list plus canonical items: `favorite_id`,
+`exercise_target_id`, `name`, `description`, `type`, `sport_id`, `sport_name`,
+`sport_category`, `duration_s`, `distance_m`, `calories`, `route_source`
+(`FLOW_FILE_IMPORT` for imported files). Durations are converted from the
+wire's milliseconds.
+
+### `get_favorite`
+
+| Argument | Type | Required |
+|----------|------|----------|
+| `favorite_id` | integer | yes |
+
+**Response:** `favorite_id`, `name`, `description`, `type`, and
+`exercise_targets[]` (`exercise_target_id`, `sport_id`, `duration_s`,
+`distance_m`, `calories`, `phases`). For PHASED favorites Polar rolls the phase
+goals up into `duration_s` / `distance_m`; the phase tree is passed through
+raw. A ROUTE favorite has no geometry here — use `get_route`. `No favorite with
+favorite_id <id>.` when it does not exist.
+
+### `create_favorite`
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | string | yes | 1–45 characters. |
+| `description` | string | no | ≤ 500 characters. |
+| `sport_id` | integer | no | Default `1` (running). |
+| `duration_s` | integer | one goal | VOLUME goal in seconds. |
+| `distance_m` | number | one goal | VOLUME goal in metres. |
+| `phases` | array | one goal | PHASED goal — same shape as [`create_training_target`](#phase-shape). |
+
+Exactly one of `duration_s`, `distance_m` or `phases`.
+
+```json
+{"name": "6x800", "sport_id": 1, "phases": [
+  {"type": "warmup", "duration_s": 900},
+  {"type": "repeat", "reps": 6, "goal": {"distance_m": 800},
+   "intensity": {"hr_zone": 4}, "recovery": {"duration_s": 90}},
+  {"type": "cooldown", "duration_s": 600}]}
+```
+
+**Response:** the new favorite, read back (same shape as `get_favorite`).
+
+### `update_favorite`
+
+Full replace of a single-sport, non-route favorite: same arguments as
+`create_favorite` plus the required `favorite_id`. Anything omitted is cleared,
+so read it with `get_favorite` first. The tool carries Polar's
+exercise-target id over for you — Polar silently ignores an update without it.
+ROUTE and multi-sport favorites are refused.
+
+### `rename_favorite`
+
+| Argument | Type | Required |
+|----------|------|----------|
+| `favorite_id` | integer | yes |
+| `name` | string (1–45) | yes |
+
+Works on routes too. Checks the favorite exists first (Polar's rename answers an
+unknown id with a server error).
+
+### `set_favorite_sport`
+
+| Argument | Type | Required |
+|----------|------|----------|
+| `favorite_id` | integer | yes |
+| `sport_id` | integer | yes |
+| `exercise_target_id` | integer | only for multi-sport favorites |
+
+Polar's endpoint accepts unknown sport ids and exercise-target ids with a
+success reply (and clears the sport when none is sent), so the tool validates
+both and confirms the change by reading the favorite back.
+
+### `delete_favorite`
+
+| Argument | Type | Required |
+|----------|------|----------|
+| `favorite_id` | integer | yes |
+
+Deletes a template or a route. Targets already scheduled from it are not
+affected. Asks the user to confirm first where the host supports it — see
+[User confirmation on writes](#user-confirmation-on-writes).
+
+### `save_target_as_favorite`
+
+| Argument | Type | Required |
+|----------|------|----------|
+| `target_id` | integer | yes |
+| `name` | string (1–45) | no — defaults to the target's name |
+
+The Flow target editor's "Add to favorites" button: copies the target's name,
+description, type, sport and phases into a new favorite (the date is dropped).
+Polar has no endpoint for this — the web UI copies the target client-side and
+creates a favorite, and so does this tool. The target is not linked to the new
+favorite; calling twice creates two favorites. Pass `name` when the target's
+name exceeds the 45-character favorite limit.
+
+### `schedule_favorite`
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `favorite_id` | integer | yes | A training-target favorite (not a route). |
+| `date` | `YYYY-MM-DD` | yes | Local date; past dates are allowed. |
+| `time` | `HH:MM` | no | Default `18:00`. `00:00` is refused. |
+
+Creates a training target from the favorite (the diary's "Add → Favorites"
+picker) and returns its `target_id`, `date`, `time`, `start`, `sport_id`,
+`duration_s`, `distance_m`, `calories`. If another target already starts at
+that minute Polar shifts the new one by one minute instead of failing; the
+result says so. Polar reads midnight as "no time" and moves it to 18:00, hence
+the `00:00` refusal.
+
+### `import_route`
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `content` | string | yes | Full text of the GPX or TCX file. |
+| `format` | `auto` \| `gpx` \| `tcx` | no | Default `auto` (detected from the XML root). |
+| `name` | string (1–45) | no | Default: the name in the file, else `Imported route`. |
+| `sport_id` | integer | no | Binds the route to a sport. |
+
+The file is parsed in Go and uploaded as JSON trackpoints, in exactly the shape
+the Flow web UI sends (verified byte-for-byte against captured uploads):
+
+- **GPX** — the first `<trk>` (all of its segments; the web UI keeps only the
+  first) or else the first `<rte>`; cumulative distance by haversine with the
+  UI's Earth radius; missing `<ele>` → altitude `0`.
+- **TCX** — the first `<Course>` or `<Activity>`; only trackpoints with a
+  position; the file's own `DistanceMeters`; missing altitude → `null`.
+
+Rejected before upload: empty or non-XML content, unknown root element, fewer
+than two points, a latitude outside [-90, 90] or longitude outside
+[-180, 180], zero length, decreasing TCX distances, files over 25 MB.
+
+**Response:** `favorite_id`, `exercise_target_id`, `name`, `format`,
+`point_count`, `distance_m`. Polar's import returns an empty body, so the tool
+finds the new favorite by listing favorites before and after.
+
+### `get_route`
+
+| Argument | Type | Required |
+|----------|------|----------|
+| `exercise_target_id` | integer | one of the two |
+| `favorite_id` | integer | one of the two |
+| `max_points` | integer (2–100000) | no — default `500` |
+
+Polar's geometry endpoint is keyed by the **exercise-target id** and answers
+"forbidden" for anything else, including a favorite id passed by mistake; pass
+`favorite_id` and the tool resolves it. **Response:** `exercise_target_id`,
+`name`, `distance_m`, `sport_id`, `point_count` (full), `returned_points`,
+`start`, and `points[]` (`lat`, `lon`, `altitude_m`), evenly down-sampled to
+`max_points` with the first and last point kept. Polar's synthesized per-point
+`time` (a sequence index) is dropped.
+
+## Editing and deleting completed sessions
+
+### `edit_training_session`
+
+What the diary's **Edit session** form allows. Pass only what changes;
+everything else keeps its current value. The date/time cannot be edited.
+
+| Argument | Type | Limits |
+|----------|------|--------|
+| `session_id` | integer | required |
+| `name` | string | 1–100 characters |
+| `note` | string | ≤ 10 000 characters; `""` clears it |
+| `feeling` | integer | 1 (bad) – 5 (great) |
+| `sport_id` | integer | must exist in `list_sports` |
+| `duration_s` | integer | 1 – 359999 seconds |
+| `distance_m` | number | 0 – 9 999 000 metres |
+| `hr_avg` | integer | 0 – 240 bpm (`0` clears) |
+| `hr_max` | integer | 0 – 240 bpm, ≥ `hr_avg` |
+| `kcal` | integer | 0 – 65535 |
+| `speed_kmh` | number | 0 – 399 km/h |
+
+```json
+{"session_id": 8429796771, "distance_m": 10200, "note": "Windy, legs heavy", "feeling": 3}
+```
+
+- `note` and `feeling` alone go through Polar's partial note/feeling endpoint,
+  which is safe on any session.
+- Any other field goes through the full edit form, which the tool only uses on
+  single-exercise **manually entered** sessions (recorded sessions are refused:
+  the web form re-synthesizes the heart-rate trace, which is unverified on
+  device data). The tool reads the live values and sends every field, because
+  the endpoint resets a missing name to the sport name and stores a `null` note
+  as the text `"null"`.
+- Polar answers any out-of-range value with an unexplained server error, which
+  is why the limits above are enforced before sending.
+- A feeling cannot be removed once set.
+
+**Response:** the session summary as read back (same shape as
+[`get_training_session_summary`](#get_training_session_summary), including
+`feeling` as 1–5).
+
+### `delete_training_session`
+
+| Argument | Type | Required |
+|----------|------|----------|
+| `session_id` | integer | yes |
+
+Deletes a completed session (`DELETE /api/training/deleteTrainingSession/{id}/`
+— the trailing slash is required). Polar reports success even for an id that
+does not exist, so the tool first checks the session exists (`No session with
+id <id>.` otherwise, or an error for another account's session) and afterwards
+verifies it is gone. Asks the user to confirm first where the host supports it
+— see [User confirmation on writes](#user-confirmation-on-writes).
 
 ## Behaviour notes
 

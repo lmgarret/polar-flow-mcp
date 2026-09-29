@@ -100,6 +100,9 @@ type SessionSummary struct {
 	Calories         *int     `json:"calories,omitempty"`
 	TrainingLoad     *float64 `json:"training_load,omitempty"`
 	Note             string   `json:"note,omitempty"`
+	// Feeling is the user's 1 (worst) – 5 (best) rating, mapped from Flow's
+	// inverted 0–1 wire scale; null when never set or cleared.
+	Feeling *int `json:"feeling"`
 }
 
 // FromWireSessionSummary maps gen.SessionSummary to the canonical SessionSummary.
@@ -146,8 +149,23 @@ func FromWireSessionSummary(s *gen.SessionSummary) SessionSummary {
 	if v, ok := s.Note.Get(); ok {
 		out.Note = CleanNote(v)
 	}
-	out.SportCategory = SportCategory(out.Name, derefInt(out.SportID))
+	fillSessionFeelingAndSport(&out, s)
 	return out
+}
+
+// fillSessionFeelingAndSport sets the 1–5 feeling rating and, when the
+// top-level sportId is null (the usual case), the first exercise's sport — then
+// derives the sport category.
+func fillSessionFeelingAndSport(out *SessionSummary, s *gen.SessionSummary) {
+	if v, ok := s.Feeling.Get(); ok {
+		out.Feeling = FeelingFromWire(v)
+	}
+	if out.SportID == nil {
+		if id, ok := SessionSportID(s); ok {
+			out.SportID = &id
+		}
+	}
+	out.SportCategory = SportCategory(out.Name, derefInt(out.SportID))
 }
 
 // derefInt returns the pointed-to int, or 0 when the pointer is nil.

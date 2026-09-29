@@ -231,3 +231,71 @@ func NilIfSentinelID(id int64) *int64 {
 	}
 	return &id
 }
+
+// WireFavouriteTo renders the wall-clock time t as the only `to` form
+// POST /training/target/createTargetFromFavourite accepts:
+// "YYYY-MM-DDTHH:MM:SS.sss+00:00" (milliseconds and a numeric offset are both
+// mandatory). Flow ignores the offset and schedules at the wall-clock part, so
+// the offset is fixed rather than derived from t's location.
+func WireFavouriteTo(t time.Time) string {
+	return t.Format("2006-01-02T15:04:05.000") + "+00:00"
+}
+
+// ParseDashDMY parses Flow's "DD-MM-YYYY" date (the createTargetFromFavourite
+// response's `date`) into a canonical ISO 8601 YYYY-MM-DD string. ok=false
+// when s is not in that form.
+func ParseDashDMY(s string) (string, bool) {
+	t, err := time.Parse("02-01-2006", strings.TrimSpace(s))
+	if err != nil {
+		return "", false
+	}
+	return t.Format(ISODate), true
+}
+
+// ClockToSeconds parses an "HH:MM:SS" duration (training-target and favorite
+// exerciseTargets / phases) into whole seconds. ok=false for anything else.
+func ClockToSeconds(s string) (int, bool) {
+	parts := strings.Split(strings.TrimSpace(s), ":")
+	if len(parts) != 3 {
+		return 0, false
+	}
+	var total int
+	for i, mult := range []int{3600, 60, 1} {
+		n, err := strconv.Atoi(parts[i])
+		if err != nil || n < 0 || (i > 0 && n > 59) {
+			return 0, false
+		}
+		total += n * mult
+	}
+	return total, true
+}
+
+// Session "feeling" is stored on an inverted 0–1 scale: the web UI's five
+// choices send "0.19" (best, "Au top") … "0.99" (worst, "Mal"). The canonical
+// contract exposes it as an integer rating 1 (worst) – 5 (best).
+var feelingWire = map[int]string{5: "0.19", 4: "0.39", 3: "0.59", 2: "0.79", 1: "0.99"}
+
+// FeelingToWire maps a 1–5 rating (5 = best) to Flow's wire string.
+// ok=false for any other rating.
+func FeelingToWire(rating int) (string, bool) {
+	v, ok := feelingWire[rating]
+	return v, ok
+}
+
+// FeelingFromWire maps Flow's stored feeling back to a 1–5 rating. Values are
+// matched to the nearest of the five UI anchors; 0 (Flow's "cleared / invalid
+// input" value) and anything outside (0, 1] read as nil — no rating.
+func FeelingFromWire(v float64) *int {
+	if v <= 0 || v > 1 {
+		return nil
+	}
+	// 0.19 → 5, 0.39 → 4, … 0.99 → 1: invert and bucket by 0.2.
+	rating := 5 - int((v-0.09)/0.2)
+	if rating < 1 {
+		rating = 1
+	}
+	if rating > 5 {
+		rating = 5
+	}
+	return &rating
+}

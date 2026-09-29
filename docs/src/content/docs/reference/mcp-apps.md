@@ -6,7 +6,7 @@ sidebar:
 ---
 
 Hosts that support [MCP Apps](https://modelcontextprotocol.io/) render most
-tool results as an inline widget instead of raw JSON. The five UIs are embedded
+tool results as an inline widget instead of raw JSON. The six UIs are embedded
 in the binary and served as `ui://polar-flow/*.html` resources; each tool
 advertises its UI in `_meta.ui.resourceUri`. Hosts without MCP-app support get
 the same data as the usual text/JSON result.
@@ -16,7 +16,7 @@ The screenshots below use sample data.
 ## Sessions — `sessions.html`
 
 Tools: `list_training_sessions`, `get_training_session_summary`,
-`get_training_session_details`.
+`get_training_session_details`, `edit_training_session`.
 
 The list renders one card per session, newest first:
 
@@ -24,7 +24,9 @@ The list renders one card per session, newest first:
 
 Clicking a card calls `get_training_session_summary` from inside the widget
 and drills into the summary — duration, distance, pace or speed (per sport), heart rate, calories,
-training load and time in each heart-rate zone:
+training load and time in each heart-rate zone, plus the session's feeling
+(1–5 dots) and note when set. `edit_training_session` returns the edited
+session in this same summary view:
 
 ![One session's summary with its heart-rate zone bar](../../../assets/mcp-apps/session-summary.webp)
 
@@ -39,6 +41,21 @@ A single target shows its phases — warm-up, repeat blocks with work and rest,
 cool-down — with each goal and heart-rate zone:
 
 ![One interval target broken into phases](../../../assets/mcp-apps/target-detail.webp)
+
+## Favorites — `favorites.html`
+
+Tools: `list_favorites`, `get_favorite`, `create_favorite`, `update_favorite`,
+`rename_favorite`, `set_favorite_sport`, `save_target_as_favorite`,
+`schedule_favorite`.
+
+The list shows one card per favorite with its sport, type (volume, phased,
+route) and goal (distance, duration, calories). A single favorite shows its
+description and, for phased favorites, the same phase cards as a training
+target. `schedule_favorite` shows a confirmation with the new target id, date
+and time.
+
+Imported routes appear in the list, but `import_route` and `get_route` have no
+widget yet: they return text/JSON only.
 
 ## Calendar — `calendar.html`
 

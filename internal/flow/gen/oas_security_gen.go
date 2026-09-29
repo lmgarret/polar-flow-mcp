@@ -42,12 +42,14 @@ var operationRolesSessionCookie = map[string][]string{
 	AddSportProfileOperation:           []string{},
 	ChangeFavoriteSportOperation:       []string{},
 	CreateFavoriteOperation:            []string{},
+	CreateTargetFromFavoriteOperation:  []string{},
 	CreateTrainingSessionOperation:     []string{},
 	CreateTrainingTargetOperation:      []string{},
 	DeleteFavoriteOperation:            []string{},
 	DeleteSportProfileOperation:        []string{},
 	DeleteTrainingSessionOperation:     []string{},
 	DeleteTrainingTargetOperation:      []string{},
+	EditTrainingSessionOperation:       []string{},
 	GetActivityTimelineOperation:       []string{},
 	GetActivityTimelineFourOperation:   []string{},
 	GetCalendarEventsOperation:         []string{},
@@ -74,6 +76,7 @@ var operationRolesSessionCookie = map[string][]string{
 	RenameFavoriteOperation:            []string{},
 	SaveSportProfileOperation:          []string{},
 	UpdateFavoriteOperation:            []string{},
+	UpdateTrainingSessionDataOperation: []string{},
 	UpdateTrainingTargetOperation:      []string{},
 }
 
