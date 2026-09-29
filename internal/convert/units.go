@@ -8,6 +8,8 @@
 //	Duration   integer seconds        (field suffix *_s)
 //	Distance   metres                 (field suffix *_m)
 //	Speed      km/h                   (field suffix *_kmh)
+//	Pace       seconds per km         (field suffix *_s_per_km)
+//	Power      watts                  (field suffix *_w)
 //	Heart rate integer bpm, null when absent
 //	Date       ISO 8601 YYYY-MM-DD
 //	Datetime   ISO 8601 (tz-less for targets, offset for sessions)
@@ -19,6 +21,7 @@ package convert
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -299,6 +302,40 @@ func FeelingFromWire(v float64) *int {
 		rating = 5
 	}
 	return &rating
+}
+
+// KmhToPaceSeconds converts a speed in km/h to a pace in whole seconds per
+// kilometre (12 km/h → 300). ok=false for a non-positive speed, which has no
+// finite pace.
+func KmhToPaceSeconds(kmh float64) (int, bool) {
+	if kmh <= 0 {
+		return 0, false
+	}
+	return int(math.Round(3600 / kmh)), true
+}
+
+// PolarEnumTail lowercases the part of a Polar enum constant after marker:
+// PolarEnumTail("SPEED_ZONE_CALCULATION_METHOD_MAS_BASED", "_METHOD_") →
+// "mas_based", PolarEnumTail("FTP_SOURCE_ESTIMATED", "_SOURCE_") →
+// "estimated". Returns "" for an empty or *_UNKNOWN value, and the whole value
+// lowercased when marker is absent (so an unexpected constant still shows).
+func PolarEnumTail(v, marker string) string {
+	if i := strings.LastIndex(v, marker); i >= 0 {
+		v = v[i+len(marker):]
+	}
+	v = strings.ToLower(v)
+	if v == "unknown" {
+		return ""
+	}
+	return v
+}
+
+// PaceClock formats a pace in seconds per km as "M:SS" (299 → "4:59").
+func PaceClock(secs int) string {
+	if secs < 0 {
+		secs = 0
+	}
+	return fmt.Sprintf("%d:%02d", secs/60, secs%60)
 }
 
 // PolarTextLen is a string's length as Flow's length limits count it: UTF-16

@@ -69,6 +69,45 @@ constant, e.g. `{"1": "RUNNING", "2": "CYCLING", "23": "SWIMMING", ...}`. The
 catalogue is a moving snapshot (Polar adds sports over time), so re-fetch rather
 than hard-coding ids.
 
+## `get_training_zones`
+
+Returns the athlete's **training zones** — what `hr_zone`, `speed_zone` and
+`power_zone` 1–5 mean in bpm, km/h (with min/km pace) and watts. Zones are per
+sport. Call it before planning a zoned workout to pick zone numbers from a
+target pace, wattage or heart rate.
+
+| Argument | Type | Required | Notes |
+|---|---|---|---|
+| `sport_id` | integer | no | Polar sport ID. With it: that sport's zones — from the stored sport profile if the account has one (`source: "profile"`), otherwise Polar's defaults, computed without saving anything (`source: "default"`). Without it: every stored sport profile (possibly none). |
+
+**Response:** a text summary plus a `training_zones` payload:
+
+```json
+{"type": "training_zones", "sports": [{
+  "sport_id": 1, "sport_name": "RUNNING", "sport_category": "run", "source": "profile",
+  "heart_rate": {"setting": "default", "zones": [{"zone": 1, "min_bpm": 95, "max_bpm": 114}, …]},
+  "speed": {"setting": "default", "method": "mas_based", "speed_view": "pace", "zones": [
+    {"zone": 1, "min_kmh": 9.45, "max_kmh": 12.03, "slowest_pace_s_per_km": 381, "fastest_pace_s_per_km": 299}, …,
+    {"zone": 5, "min_kmh": 19.76, "max_kmh": null, "slowest_pace_s_per_km": 182, "fastest_pace_s_per_km": null}]},
+  "power": {"setting": "default", "method": "map_based", "zones": [… {"zone": 5, "min_w": 464, "max_w": null}]},
+  "thresholds": {"mas_kmh": 17.18, "mas_source": "estimated", "map_w": 403, "map_source": "estimated"}
+}]}
+```
+
+- Each zone is the half-open range `[min, max)`; zones are contiguous. The top
+  speed and power zones are open-ended (`max_kmh` / `max_w` null — Flow's
+  399 km/h and 2000 W ceilings are sentinels).
+- `setting` is `default` (computed) or `free` (limits typed in by the user).
+  `method` says how default speed/power zones were computed: `mas_based` /
+  `map_based` (55/70/85/100/115 % of maximum aerobic speed / power, running),
+  `ftp_based` (55/75/90/105/120 % of FTP, cycling),
+  `sport_specific_predefined` (a fixed table — cycling 10/20/30/40/50 km/h).
+  Default heart-rate zones are 50/60/70/80/90/100 % of max HR.
+- A zone type the sport lacks is omitted (swimming and strength have
+  heart-rate zones only).
+- `thresholds` carries MAS (km/h), MAP and FTP (W) where they apply; `estimated`
+  means Polar derived them from physical info rather than a test.
+
 ## `create_training_target`
 
 Schedule a training target (a planned workout) in Polar Flow. There are two
@@ -126,8 +165,8 @@ Each entry in `phases` is an object with `type` ∈ {`warmup`, `repeat`,
   several are given: `hr_zone` > `power_zone` > `speed_zone` > `label`.
   `power_zone` and `speed_zone` are Polar zone **indices**, not raw watts or
   km/h/min-per-km — Polar Flow computes each zone's physical range from the
-  athlete's Sport Profile thresholds (max HR, FTP, threshold pace), which this
-  server does not read or expose. `power_zone` needs a power-capable sport
+  athlete's sport profile; [`get_training_zones`](#get_training_zones) returns
+  those ranges. `power_zone` needs a power-capable sport
   (e.g. cycling, `sport_id` `2`).
 - Each phase (and a `recovery`) accepts an optional `name`, persisted verbatim
   by Polar; it defaults to a type-derived label (`Warm-up`, `Work`, `Recovery`,

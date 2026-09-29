@@ -24,11 +24,11 @@ The tools never accept km, miles, or `HH:MM:SS`. Convert before calling.
 units.** Polar Flow does not accept a literal bpm, watt, or km/h (or min/km)
 threshold on a phase — only a zone number. Each zone's actual physical range
 (e.g. what "power zone 4" means in watts) is computed server-side from the
-athlete's Sport Profile thresholds (max HR, FTP, threshold pace), which this
-server does not read or expose. If a user asks for "220 watts" or "4:30/km",
-ask them which zone number that corresponds to (or check the Polar Flow app)
-rather than guessing a conversion — there is no tool-side way to send a raw
-value through. `power_zone` additionally requires a power-capable sport (e.g.
+athlete's sport profile. If a user asks for "220 watts" or "4:30/km", call
+`get_training_zones` with the workout's `sport_id` and use the zone whose
+`[min, max)` range contains the value (for pace, compare against
+`slowest_pace_s_per_km` / `fastest_pace_s_per_km`) — there is no tool-side way
+to send a raw value through. `power_zone` additionally requires a power-capable sport (e.g.
 cycling, `sport_id` `2`) to mean anything on the device/app side, though the
 API itself does not reject it on other sports.
 
@@ -145,3 +145,9 @@ phases.
 
 `delete_training_target(target_id)` is permanent. Confirm with the user, then
 call it. A non-existent or foreign id is reported as a no-op, not an error.
+
+## Reusing a workout
+
+To keep a target as a reusable template, use `save_target_as_favorite`. To put
+an existing template in the diary, use `schedule_favorite`, which creates a
+new target. See `reference/favorites-and-routes.md`.

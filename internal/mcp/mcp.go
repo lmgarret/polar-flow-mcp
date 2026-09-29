@@ -184,6 +184,36 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		),
 	), withLogging("list_sports", ListSportsHandler(fc)))
 
+	tz := mcpgo.NewTool("get_training_zones",
+		mcpgo.WithDescription(
+			"Return the athlete's heart-rate, speed/pace and power training zones — what "+
+				"hr_zone / speed_zone / power_zone 1–5 mean in bpm, km/h (with min/km pace) and "+
+				"watts. Use it before planning a zoned workout (create_training_target, "+
+				"create_favorite) to pick zone numbers from a target pace / wattage / heart rate, "+
+				"or to explain a zone to the user.\n\n"+
+				"Zones are per sport: pass sport_id for the sport you are planning. If the account "+
+				"has a stored sport profile for it, its zones are returned (source \"profile\"; "+
+				"setting \"free\" = limits typed in by the user). Otherwise Polar's defaults for "+
+				"that sport are computed without saving anything (source \"default\"). Without "+
+				"sport_id, every stored sport profile is returned (possibly none).\n\n"+
+				"Each zone is the half-open range [min, max); zones are contiguous. The top speed "+
+				"and power zones are open-ended (max_kmh / max_w null). A zone type the sport does "+
+				"not support is omitted (swimming and strength have heart-rate zones only). "+
+				"Defaults: heart rate = 50/60/70/80/90/100 % of max HR; running speed and power = "+
+				"55/70/85/100/115 % of MAS / MAP; cycling power = 55/75/90/105/120 % of FTP; "+
+				"cycling speed = fixed 10/20/30/40/50 km/h. thresholds lists MAS (km/h), MAP and "+
+				"FTP (W) where they apply, with \"estimated\" when Polar derived them from the "+
+				"user's physical info rather than a test.\n\n"+
+				"Example: sport_id 1 → heart_rate.zones[3] = {zone: 4, min_bpm: 152, max_bpm: 171}, "+
+				"so a run at 160 bpm is hr_zone 4.",
+		),
+		mcpgo.WithInteger("sport_id", mcpgo.Min(1),
+			mcpgo.Description("Polar sport id (1 = running, 2 = cycling, 23 = swimming; "+
+				"list_sports has them all). Omit to list every stored sport profile.")),
+	)
+	bindUI(&tz, "ui://polar-flow/zones.html")
+	s.AddTool(tz, withLogging("get_training_zones", GetTrainingZonesHandler(fc)))
+
 	ct := mcpgo.NewTool("create_training_target",
 		mcpgo.WithDescription(
 			"Create a scheduled Polar Flow training target (a planned workout in the diary). "+
@@ -198,8 +228,8 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"rate (intensity.hr_zone, or an effort label: easy→1–2, aerobic→2, tempo→3, "+
 				"threshold→4, vo2max→5), power (intensity.power_zone; needs a power-capable "+
 				"sport such as cycling), or speed/pace (intensity.speed_zone). All three are "+
-				"zone INDICES, not raw bpm/watts/km-h values — Polar computes each zone's "+
-				"physical range server-side from the athlete's Sport Profile thresholds.\n\n"+
+				"zone INDICES, not raw bpm/watts/km-h values — call get_training_zones with the "+
+				"sport_id to see what each zone means for this athlete.\n\n"+
 				"Example A — 35-minute easy run (VOLUME):\n"+
 				"  name: \"Easy 35 min\", date: \"2026-06-14\", duration_s: 2100, sport_id: 1\n\n"+
 				"Example B — 10 min warmup, 5×1 km @ threshold with 2 min jog recovery, 10 min cooldown:\n"+
@@ -539,10 +569,9 @@ func phaseItemSchema() map[string]any {
 					"All three zone numbers (hr_zone, power_zone, speed_zone) are Polar zone INDICES " +
 					"1–5, NOT raw bpm/watts/km-h thresholds — Polar Flow does not accept literal " +
 					"physical-unit bounds on a phase. Each zone's actual bpm / watt / km-h range is " +
-					"computed server-side from the athlete's Sport Profile thresholds (max HR, FTP, " +
-					"threshold pace), which this server does not read or expose; ask the user which " +
-					"zone number they mean (or use an hr_zone label) rather than converting a pace or " +
-					"wattage yourself.",
+					"computed server-side from the athlete's sport profile (max HR, MAS, MAP / FTP). " +
+					"To turn a pace, wattage or bpm into a zone number, call get_training_zones with " +
+					"the same sport_id and pick the zone whose range contains it.",
 				"properties": map[string]any{
 					"label":      map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}, "description": "Effort label, mapped to an HR zone."},
 					"hr_zone":    map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar heart-rate zone 1–5, used as both lower and upper bound."},

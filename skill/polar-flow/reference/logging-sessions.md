@@ -61,3 +61,34 @@ create_training_session(
 
 After logging, the session appears in `list_training_sessions` and contributes
 to `get_progress_summary` / `get_calendar_week_summary`.
+
+## Correcting a session — `edit_training_session`
+
+Use this when the user says a logged session is wrong ("it was 10.2 km", "add
+a note that my legs were heavy", "that felt like a 4/5"). The same
+user-initiated rule applies. Pass only what changes:
+
+```
+edit_training_session(session_id=8429796771, distance_m=10200,
+                      note="Windy, legs heavy", feeling=4)
+```
+
+- **Any session:** `note` and `feeling` (1 = bad … 5 = great). A feeling
+  can't be removed once set.
+- **Manual single-exercise sessions only:** `name`, `sport_id`, `duration_s`,
+  `distance_m`, `hr_avg`, `hr_max`, `kcal`, `speed_kmh`. Watch-recorded
+  sessions are refused, since their numbers come from the device.
+- The date and time can't be changed. To move a session to another day,
+  delete it and log it again, and only if the user agrees.
+
+## Removing a session — `delete_training_session`
+
+This is permanent. The session leaves the diary, weekly totals, progress and
+training load. Only call it when the user asks, e.g. to remove a duplicate or
+a mistaken log.
+
+- Confirm first.
+- On hosts that support elicitation the tool asks the user itself. If the
+  result says the user did not confirm, the session is still there.
+- The tool reports "no session" for an unknown id. Polar's own endpoint would
+  have claimed success.

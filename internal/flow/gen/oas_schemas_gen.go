@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
-	"github.com/google/uuid"
 )
 
 // A single `{time, value}` mini-chart data point.
@@ -1542,10 +1541,21 @@ func (s DeleteFavoriteOK) Read(p []byte) (n int, err error) {
 
 func (*DeleteFavoriteOK) deleteFavoriteRes() {}
 
-// DeleteSportProfileInternalServerError is response for DeleteSportProfile operation.
-type DeleteSportProfileInternalServerError struct{}
+type DeleteSportProfileBadRequest struct {
+	Data io.Reader
+}
 
-func (*DeleteSportProfileInternalServerError) deleteSportProfileRes() {}
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DeleteSportProfileBadRequest) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*DeleteSportProfileBadRequest) deleteSportProfileRes() {}
 
 // DeleteSportProfileOK is response for DeleteSportProfile operation.
 type DeleteSportProfileOK struct{}
@@ -3137,6 +3147,22 @@ func (s GetSportProfileBadRequest) Read(p []byte) (n int, err error) {
 
 func (*GetSportProfileBadRequest) getSportProfileRes() {}
 
+type GetSportProfileNotFound struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetSportProfileNotFound) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*GetSportProfileNotFound) getSportProfileRes() {}
+
 // GetSportsInternalServerError is response for GetSports operation.
 type GetSportsInternalServerError struct{}
 
@@ -4543,6 +4569,52 @@ func (o OptClubModel) Get() (v ClubModel, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptClubModel) Or(d ClubModel) ClubModel {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptDateTime returns new OptDateTime with value set to v.
+func NewOptDateTime(v time.Time) OptDateTime {
+	return OptDateTime{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptDateTime is optional time.Time.
+type OptDateTime struct {
+	Value time.Time
+	Set   bool
+}
+
+// IsSet returns true if OptDateTime was set.
+func (o OptDateTime) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptDateTime) Reset() {
+	var v time.Time
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptDateTime) SetTo(v time.Time) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptDateTime) Get() (v time.Time, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptDateTime) Or(d time.Time) time.Time {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -6611,6 +6683,282 @@ func (o OptSportProfileAddResponseSport) Or(d SportProfileAddResponseSport) Spor
 	return d
 }
 
+// NewOptSportProfileBodySettings returns new OptSportProfileBodySettings with value set to v.
+func NewOptSportProfileBodySettings(v SportProfileBodySettings) OptSportProfileBodySettings {
+	return OptSportProfileBodySettings{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSportProfileBodySettings is optional SportProfileBodySettings.
+type OptSportProfileBodySettings struct {
+	Value SportProfileBodySettings
+	Set   bool
+}
+
+// IsSet returns true if OptSportProfileBodySettings was set.
+func (o OptSportProfileBodySettings) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSportProfileBodySettings) Reset() {
+	var v SportProfileBodySettings
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSportProfileBodySettings) SetTo(v SportProfileBodySettings) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSportProfileBodySettings) Get() (v SportProfileBodySettings, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSportProfileBodySettings) Or(d SportProfileBodySettings) SportProfileBodySettings {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSportProfileBodySettingsTrainingReminder returns new OptSportProfileBodySettingsTrainingReminder with value set to v.
+func NewOptSportProfileBodySettingsTrainingReminder(v SportProfileBodySettingsTrainingReminder) OptSportProfileBodySettingsTrainingReminder {
+	return OptSportProfileBodySettingsTrainingReminder{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSportProfileBodySettingsTrainingReminder is optional SportProfileBodySettingsTrainingReminder.
+type OptSportProfileBodySettingsTrainingReminder struct {
+	Value SportProfileBodySettingsTrainingReminder
+	Set   bool
+}
+
+// IsSet returns true if OptSportProfileBodySettingsTrainingReminder was set.
+func (o OptSportProfileBodySettingsTrainingReminder) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSportProfileBodySettingsTrainingReminder) Reset() {
+	var v SportProfileBodySettingsTrainingReminder
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSportProfileBodySettingsTrainingReminder) SetTo(v SportProfileBodySettingsTrainingReminder) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSportProfileBodySettingsTrainingReminder) Get() (v SportProfileBodySettingsTrainingReminder, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSportProfileBodySettingsTrainingReminder) Or(d SportProfileBodySettingsTrainingReminder) SportProfileBodySettingsTrainingReminder {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSportProfileBodySettingsVolume returns new OptSportProfileBodySettingsVolume with value set to v.
+func NewOptSportProfileBodySettingsVolume(v SportProfileBodySettingsVolume) OptSportProfileBodySettingsVolume {
+	return OptSportProfileBodySettingsVolume{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSportProfileBodySettingsVolume is optional SportProfileBodySettingsVolume.
+type OptSportProfileBodySettingsVolume struct {
+	Value SportProfileBodySettingsVolume
+	Set   bool
+}
+
+// IsSet returns true if OptSportProfileBodySettingsVolume was set.
+func (o OptSportProfileBodySettingsVolume) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSportProfileBodySettingsVolume) Reset() {
+	var v SportProfileBodySettingsVolume
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSportProfileBodySettingsVolume) SetTo(v SportProfileBodySettingsVolume) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSportProfileBodySettingsVolume) Get() (v SportProfileBodySettingsVolume, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSportProfileBodySettingsVolume) Or(d SportProfileBodySettingsVolume) SportProfileBodySettingsVolume {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSportProfileLegacyProfiles returns new OptSportProfileLegacyProfiles with value set to v.
+func NewOptSportProfileLegacyProfiles(v SportProfileLegacyProfiles) OptSportProfileLegacyProfiles {
+	return OptSportProfileLegacyProfiles{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSportProfileLegacyProfiles is optional SportProfileLegacyProfiles.
+type OptSportProfileLegacyProfiles struct {
+	Value SportProfileLegacyProfiles
+	Set   bool
+}
+
+// IsSet returns true if OptSportProfileLegacyProfiles was set.
+func (o OptSportProfileLegacyProfiles) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSportProfileLegacyProfiles) Reset() {
+	var v SportProfileLegacyProfiles
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSportProfileLegacyProfiles) SetTo(v SportProfileLegacyProfiles) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSportProfileLegacyProfiles) Get() (v SportProfileLegacyProfiles, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSportProfileLegacyProfiles) Or(d SportProfileLegacyProfiles) SportProfileLegacyProfiles {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSportProfileThreshold returns new OptSportProfileThreshold with value set to v.
+func NewOptSportProfileThreshold(v SportProfileThreshold) OptSportProfileThreshold {
+	return OptSportProfileThreshold{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSportProfileThreshold is optional SportProfileThreshold.
+type OptSportProfileThreshold struct {
+	Value SportProfileThreshold
+	Set   bool
+}
+
+// IsSet returns true if OptSportProfileThreshold was set.
+func (o OptSportProfileThreshold) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSportProfileThreshold) Reset() {
+	var v SportProfileThreshold
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSportProfileThreshold) SetTo(v SportProfileThreshold) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSportProfileThreshold) Get() (v SportProfileThreshold, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSportProfileThreshold) Or(d SportProfileThreshold) SportProfileThreshold {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSportProfileZoneLimits returns new OptSportProfileZoneLimits with value set to v.
+func NewOptSportProfileZoneLimits(v SportProfileZoneLimits) OptSportProfileZoneLimits {
+	return OptSportProfileZoneLimits{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSportProfileZoneLimits is optional SportProfileZoneLimits.
+type OptSportProfileZoneLimits struct {
+	Value SportProfileZoneLimits
+	Set   bool
+}
+
+// IsSet returns true if OptSportProfileZoneLimits was set.
+func (o OptSportProfileZoneLimits) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSportProfileZoneLimits) Reset() {
+	var v SportProfileZoneLimits
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSportProfileZoneLimits) SetTo(v SportProfileZoneLimits) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSportProfileZoneLimits) Get() (v SportProfileZoneLimits, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSportProfileZoneLimits) Or(d SportProfileZoneLimits) SportProfileZoneLimits {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptStandardDuration returns new OptStandardDuration with value set to v.
 func NewOptStandardDuration(v StandardDuration) OptStandardDuration {
 	return OptStandardDuration{
@@ -6789,52 +7137,6 @@ func (o OptURI) Get() (v url.URL, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptURI) Or(d url.URL) url.URL {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptUUID returns new OptUUID with value set to v.
-func NewOptUUID(v uuid.UUID) OptUUID {
-	return OptUUID{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptUUID is optional uuid.UUID.
-type OptUUID struct {
-	Value uuid.UUID
-	Set   bool
-}
-
-// IsSet returns true if OptUUID was set.
-func (o OptUUID) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptUUID) Reset() {
-	var v uuid.UUID
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptUUID) SetTo(v uuid.UUID) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptUUID) Get() (v uuid.UUID, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptUUID) Or(d uuid.UUID) uuid.UUID {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -8003,6 +8305,22 @@ func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) SetNameForChart
 func (s *ProgressViewSummaryTrainingBenefitDistributionListItem) SetPercentForChart(val OptFloat32) {
 	s.PercentForChart = val
 }
+
+type RecalculateSportProfileBadRequest struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s RecalculateSportProfileBadRequest) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*RecalculateSportProfileBadRequest) recalculateSportProfileRes() {}
 
 type RenameFavoriteBadRequest struct {
 	Data io.Reader
@@ -10016,56 +10334,68 @@ func (s *SportDistributionEntry) SetValueForChart(val OptFloat32) {
 }
 
 // A user's sport profile ("Profil sportif") — the per-sport configuration a Polar device uses when
-// you start a training session in that sport (training views / watch-screen layout, auto-lap, zones,
-// GPS/sensor settings, etc.).
+// you start a session in that sport, including the heart-rate / speed / power training zones
+// (`profile.settings.zoneLimits`). Captured 2026-09-29.
 //
-//	Element shape is only partially observed. This `/api/sports/profiles` resource returned `[]` on
-//	every account tried (incl. a device-paired one), so a populated element could not be captured here.
-//	Note that profiles are actually created/edited via the legacy `/settings/sports/*` controller
-//	(`POST /settings/sports/add`, `POST /settings/sports/save`) which keys them by a numeric id —
-//	this UUID-based resource appears to be separate. The fields below are the ones that could be
-//	justified from the `/settings/sports` page and the watch-display editor micro-frontend; everything
-//	marked `# TODO: verify` awaits a capture from an account with a paired device.
-//	`additionalProperties` is therefore left open.
-//
+// Every account has at least one profile once any is created (the server refuses to delete the last
+// one). Creating a profile through either `POST /api/sports/profiles/create/{sportId}` or the legacy
+// `POST /settings/sports/add` lands here; `legacyId` on the create response is the numeric id the
+// legacy `/settings/sports/*` controller uses.
 // Ref: #/components/schemas/SportProfile
 type SportProfile struct {
-	// Server-assigned profile identifier. This is a UUID string, not the numeric `sportId`. Used as `{id}`
-	// in `GET /api/sports/profiles/{id}` and `DELETE /api/sports/profiles/{id}`.
-	ID OptUUID `json:"id"`
-	// Numeric sport this profile is for — the same id space as `GET /api/sports/sports` (e.g. 1 =
-	// RUNNING, 2 = CYCLING, 23 = SWIMMING, 15 = STRENGTH_TRAINING, 68 = TRIATHLON). The `/settings/sports`
-	// page seeds these five as default template cards (each with an empty `profileId` until a device
-	// persists one).
-	SportId OptInt `json:"sportId"`
-	// Display name of the profile, localized to the account language on the default templates (e.g.
-	// "Course à pied", "Cyclisme"). On device-created profiles this is the user-editable profile name. #
-	// TODO: verify whether the API returns the raw constant or the localized label.
-	Name OptString `json:"name"`
-	// Creation timestamp shown on the profile card. Exact wire format unconfirmed (the UI renders it as
-	// `D-M-YYYY HH:mm`). # TODO: verify (ISO 8601 vs epoch ms).
-	Created         OptString `json:"created"`
+	// Profile id. Polar's structured UUID, not a random v4: the first group is a domain (`0f000000`) and
+	// the last group is the sport id in hex (`0f000000-0080-0000-0000-000000000001` = RUNNING,
+	// `…-000000000002` = CYCLING). The server rejects uuids whose domain is unknown or whose sport
+	// segment is 0.
+	UUID string `json:"uuid"`
+	// Owner's numeric user id, as a string. ⚠ `GET /api/sports/profiles/{id}` returns `"0"` here while
+	// the list and create responses return the real id.
+	UserId  OptString   `json:"userId"`
+	Created OptDateTime `json:"created"`
+	// Last-modified time. Writes must send a newer `modified` (else 409 OUTDATED).
+	Modified OptDateTime      `json:"modified"`
+	Profile  SportProfileBody `json:"profile"`
+	// Legacy per-device profile blobs. `{}` without a paired device.
+	LegacyProfiles OptSportProfileLegacyProfiles `json:"legacyProfiles"`
+	// Numeric id of the same profile in the legacy `/settings/sports/*` controller. Only observed on the
+	// create response.
+	LegacyId        OptString `json:"legacyId"`
 	AdditionalProps SportProfileAdditional
 }
 
-// GetID returns the value of ID.
-func (s *SportProfile) GetID() OptUUID {
-	return s.ID
+// GetUUID returns the value of UUID.
+func (s *SportProfile) GetUUID() string {
+	return s.UUID
 }
 
-// GetSportId returns the value of SportId.
-func (s *SportProfile) GetSportId() OptInt {
-	return s.SportId
-}
-
-// GetName returns the value of Name.
-func (s *SportProfile) GetName() OptString {
-	return s.Name
+// GetUserId returns the value of UserId.
+func (s *SportProfile) GetUserId() OptString {
+	return s.UserId
 }
 
 // GetCreated returns the value of Created.
-func (s *SportProfile) GetCreated() OptString {
+func (s *SportProfile) GetCreated() OptDateTime {
 	return s.Created
+}
+
+// GetModified returns the value of Modified.
+func (s *SportProfile) GetModified() OptDateTime {
+	return s.Modified
+}
+
+// GetProfile returns the value of Profile.
+func (s *SportProfile) GetProfile() SportProfileBody {
+	return s.Profile
+}
+
+// GetLegacyProfiles returns the value of LegacyProfiles.
+func (s *SportProfile) GetLegacyProfiles() OptSportProfileLegacyProfiles {
+	return s.LegacyProfiles
+}
+
+// GetLegacyId returns the value of LegacyId.
+func (s *SportProfile) GetLegacyId() OptString {
+	return s.LegacyId
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -10073,24 +10403,39 @@ func (s *SportProfile) GetAdditionalProps() SportProfileAdditional {
 	return s.AdditionalProps
 }
 
-// SetID sets the value of ID.
-func (s *SportProfile) SetID(val OptUUID) {
-	s.ID = val
+// SetUUID sets the value of UUID.
+func (s *SportProfile) SetUUID(val string) {
+	s.UUID = val
 }
 
-// SetSportId sets the value of SportId.
-func (s *SportProfile) SetSportId(val OptInt) {
-	s.SportId = val
-}
-
-// SetName sets the value of Name.
-func (s *SportProfile) SetName(val OptString) {
-	s.Name = val
+// SetUserId sets the value of UserId.
+func (s *SportProfile) SetUserId(val OptString) {
+	s.UserId = val
 }
 
 // SetCreated sets the value of Created.
-func (s *SportProfile) SetCreated(val OptString) {
+func (s *SportProfile) SetCreated(val OptDateTime) {
 	s.Created = val
+}
+
+// SetModified sets the value of Modified.
+func (s *SportProfile) SetModified(val OptDateTime) {
+	s.Modified = val
+}
+
+// SetProfile sets the value of Profile.
+func (s *SportProfile) SetProfile(val SportProfileBody) {
+	s.Profile = val
+}
+
+// SetLegacyProfiles sets the value of LegacyProfiles.
+func (s *SportProfile) SetLegacyProfiles(val OptSportProfileLegacyProfiles) {
+	s.LegacyProfiles = val
+}
+
+// SetLegacyId sets the value of LegacyId.
+func (s *SportProfile) SetLegacyId(val OptString) {
+	s.LegacyId = val
 }
 
 // SetAdditionalProps sets the value of AdditionalProps.
@@ -10098,7 +10443,9 @@ func (s *SportProfile) SetAdditionalProps(val SportProfileAdditional) {
 	s.AdditionalProps = val
 }
 
-func (*SportProfile) getSportProfileRes() {}
+func (*SportProfile) createSportProfileRes()      {}
+func (*SportProfile) getSportProfileRes()         {}
+func (*SportProfile) recalculateSportProfileRes() {}
 
 // Response of `POST /settings/sports/add` — the newly created sport profile's summary. Sent as
 // `text/plain` but the body is JSON. Captured 2026-06-01.
@@ -10208,6 +10555,440 @@ func (s *SportProfileAdditional) init() SportProfileAdditional {
 	return m
 }
 
+// The `profile` payload of a sport profile: the sport, its device settings (including the training
+// zones under `settings.zoneLimits`) and the thresholds the default zones derive from.
+//
+// On `GET /api/sports/profiles` (list) this is a slim object with only `sportId`, `productSettings`,
+// `subProfileUuids` — read the profile by uuid (or call `recalculate`) to get `settings` and the
+// thresholds.
+// Ref: #/components/schemas/SportProfileBody
+type SportProfileBody struct {
+	// Sport id (same id space as `GET /api/sports/sports`).
+	SportId int `json:"sportId"`
+	// Device settings for this sport. Only `zoneLimits` is modeled in detail; the rest are passed through.
+	Settings OptSportProfileBodySettings `json:"settings"`
+	// Per-sport energy/load factor (RUNNING 1.4, CYCLING 0.9 observed). Absent from `recalculate` output.
+	SportFactor OptFloat64 `json:"sportFactor"`
+	// Per-device settings. `[]` without a paired device.
+	ProductSettings          []jx.Raw                 `json:"productSettings"`
+	SubProfileUuids          []string                 `json:"subProfileUuids"`
+	MaximumAerobicSpeed      OptSportProfileThreshold `json:"maximumAerobicSpeed"`
+	MaximumAerobicPower      OptSportProfileThreshold `json:"maximumAerobicPower"`
+	FunctionalThresholdPower OptSportProfileThreshold `json:"functionalThresholdPower"`
+	AdditionalProps          SportProfileBodyAdditional
+}
+
+// GetSportId returns the value of SportId.
+func (s *SportProfileBody) GetSportId() int {
+	return s.SportId
+}
+
+// GetSettings returns the value of Settings.
+func (s *SportProfileBody) GetSettings() OptSportProfileBodySettings {
+	return s.Settings
+}
+
+// GetSportFactor returns the value of SportFactor.
+func (s *SportProfileBody) GetSportFactor() OptFloat64 {
+	return s.SportFactor
+}
+
+// GetProductSettings returns the value of ProductSettings.
+func (s *SportProfileBody) GetProductSettings() []jx.Raw {
+	return s.ProductSettings
+}
+
+// GetSubProfileUuids returns the value of SubProfileUuids.
+func (s *SportProfileBody) GetSubProfileUuids() []string {
+	return s.SubProfileUuids
+}
+
+// GetMaximumAerobicSpeed returns the value of MaximumAerobicSpeed.
+func (s *SportProfileBody) GetMaximumAerobicSpeed() OptSportProfileThreshold {
+	return s.MaximumAerobicSpeed
+}
+
+// GetMaximumAerobicPower returns the value of MaximumAerobicPower.
+func (s *SportProfileBody) GetMaximumAerobicPower() OptSportProfileThreshold {
+	return s.MaximumAerobicPower
+}
+
+// GetFunctionalThresholdPower returns the value of FunctionalThresholdPower.
+func (s *SportProfileBody) GetFunctionalThresholdPower() OptSportProfileThreshold {
+	return s.FunctionalThresholdPower
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *SportProfileBody) GetAdditionalProps() SportProfileBodyAdditional {
+	return s.AdditionalProps
+}
+
+// SetSportId sets the value of SportId.
+func (s *SportProfileBody) SetSportId(val int) {
+	s.SportId = val
+}
+
+// SetSettings sets the value of Settings.
+func (s *SportProfileBody) SetSettings(val OptSportProfileBodySettings) {
+	s.Settings = val
+}
+
+// SetSportFactor sets the value of SportFactor.
+func (s *SportProfileBody) SetSportFactor(val OptFloat64) {
+	s.SportFactor = val
+}
+
+// SetProductSettings sets the value of ProductSettings.
+func (s *SportProfileBody) SetProductSettings(val []jx.Raw) {
+	s.ProductSettings = val
+}
+
+// SetSubProfileUuids sets the value of SubProfileUuids.
+func (s *SportProfileBody) SetSubProfileUuids(val []string) {
+	s.SubProfileUuids = val
+}
+
+// SetMaximumAerobicSpeed sets the value of MaximumAerobicSpeed.
+func (s *SportProfileBody) SetMaximumAerobicSpeed(val OptSportProfileThreshold) {
+	s.MaximumAerobicSpeed = val
+}
+
+// SetMaximumAerobicPower sets the value of MaximumAerobicPower.
+func (s *SportProfileBody) SetMaximumAerobicPower(val OptSportProfileThreshold) {
+	s.MaximumAerobicPower = val
+}
+
+// SetFunctionalThresholdPower sets the value of FunctionalThresholdPower.
+func (s *SportProfileBody) SetFunctionalThresholdPower(val OptSportProfileThreshold) {
+	s.FunctionalThresholdPower = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *SportProfileBody) SetAdditionalProps(val SportProfileBodyAdditional) {
+	s.AdditionalProps = val
+}
+
+type SportProfileBodyAdditional map[string]jx.Raw
+
+func (s *SportProfileBodyAdditional) init() SportProfileBodyAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Device settings for this sport. Only `zoneLimits` is modeled in detail; the rest are passed through.
+type SportProfileBodySettings struct {
+	ZoneLimits OptSportProfileZoneLimits `json:"zoneLimits"`
+	// How the watch shows speed: `SPEED_VIEW_PACE` (running-type sports default) or `SPEED_VIEW_SPEED`.
+	// Display only — `speedZones` are always km/h.
+	SpeedView              OptString                                   `json:"speedView"`
+	PowerView              OptString                                   `json:"powerView"`
+	HrZoneLockAvailable    OptBool                                     `json:"hrZoneLockAvailable"`
+	SpeedZoneLockAvailable OptBool                                     `json:"speedZoneLockAvailable"`
+	PowerZoneLockAvailable OptBool                                     `json:"powerZoneLockAvailable"`
+	SensorBroadcastingHr   OptBool                                     `json:"sensorBroadcastingHr"`
+	Volume                 OptSportProfileBodySettingsVolume           `json:"volume"`
+	TrainingReminder       OptSportProfileBodySettingsTrainingReminder `json:"trainingReminder"`
+	StrideSpeedSource      OptString                                   `json:"strideSpeedSource"`
+	SwimmingUnits          OptString                                   `json:"swimmingUnits"`
+	RemoteButtonActions    []jx.Raw                                    `json:"remoteButtonActions"`
+	AdditionalProps        SportProfileBodySettingsAdditional
+}
+
+// GetZoneLimits returns the value of ZoneLimits.
+func (s *SportProfileBodySettings) GetZoneLimits() OptSportProfileZoneLimits {
+	return s.ZoneLimits
+}
+
+// GetSpeedView returns the value of SpeedView.
+func (s *SportProfileBodySettings) GetSpeedView() OptString {
+	return s.SpeedView
+}
+
+// GetPowerView returns the value of PowerView.
+func (s *SportProfileBodySettings) GetPowerView() OptString {
+	return s.PowerView
+}
+
+// GetHrZoneLockAvailable returns the value of HrZoneLockAvailable.
+func (s *SportProfileBodySettings) GetHrZoneLockAvailable() OptBool {
+	return s.HrZoneLockAvailable
+}
+
+// GetSpeedZoneLockAvailable returns the value of SpeedZoneLockAvailable.
+func (s *SportProfileBodySettings) GetSpeedZoneLockAvailable() OptBool {
+	return s.SpeedZoneLockAvailable
+}
+
+// GetPowerZoneLockAvailable returns the value of PowerZoneLockAvailable.
+func (s *SportProfileBodySettings) GetPowerZoneLockAvailable() OptBool {
+	return s.PowerZoneLockAvailable
+}
+
+// GetSensorBroadcastingHr returns the value of SensorBroadcastingHr.
+func (s *SportProfileBodySettings) GetSensorBroadcastingHr() OptBool {
+	return s.SensorBroadcastingHr
+}
+
+// GetVolume returns the value of Volume.
+func (s *SportProfileBodySettings) GetVolume() OptSportProfileBodySettingsVolume {
+	return s.Volume
+}
+
+// GetTrainingReminder returns the value of TrainingReminder.
+func (s *SportProfileBodySettings) GetTrainingReminder() OptSportProfileBodySettingsTrainingReminder {
+	return s.TrainingReminder
+}
+
+// GetStrideSpeedSource returns the value of StrideSpeedSource.
+func (s *SportProfileBodySettings) GetStrideSpeedSource() OptString {
+	return s.StrideSpeedSource
+}
+
+// GetSwimmingUnits returns the value of SwimmingUnits.
+func (s *SportProfileBodySettings) GetSwimmingUnits() OptString {
+	return s.SwimmingUnits
+}
+
+// GetRemoteButtonActions returns the value of RemoteButtonActions.
+func (s *SportProfileBodySettings) GetRemoteButtonActions() []jx.Raw {
+	return s.RemoteButtonActions
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *SportProfileBodySettings) GetAdditionalProps() SportProfileBodySettingsAdditional {
+	return s.AdditionalProps
+}
+
+// SetZoneLimits sets the value of ZoneLimits.
+func (s *SportProfileBodySettings) SetZoneLimits(val OptSportProfileZoneLimits) {
+	s.ZoneLimits = val
+}
+
+// SetSpeedView sets the value of SpeedView.
+func (s *SportProfileBodySettings) SetSpeedView(val OptString) {
+	s.SpeedView = val
+}
+
+// SetPowerView sets the value of PowerView.
+func (s *SportProfileBodySettings) SetPowerView(val OptString) {
+	s.PowerView = val
+}
+
+// SetHrZoneLockAvailable sets the value of HrZoneLockAvailable.
+func (s *SportProfileBodySettings) SetHrZoneLockAvailable(val OptBool) {
+	s.HrZoneLockAvailable = val
+}
+
+// SetSpeedZoneLockAvailable sets the value of SpeedZoneLockAvailable.
+func (s *SportProfileBodySettings) SetSpeedZoneLockAvailable(val OptBool) {
+	s.SpeedZoneLockAvailable = val
+}
+
+// SetPowerZoneLockAvailable sets the value of PowerZoneLockAvailable.
+func (s *SportProfileBodySettings) SetPowerZoneLockAvailable(val OptBool) {
+	s.PowerZoneLockAvailable = val
+}
+
+// SetSensorBroadcastingHr sets the value of SensorBroadcastingHr.
+func (s *SportProfileBodySettings) SetSensorBroadcastingHr(val OptBool) {
+	s.SensorBroadcastingHr = val
+}
+
+// SetVolume sets the value of Volume.
+func (s *SportProfileBodySettings) SetVolume(val OptSportProfileBodySettingsVolume) {
+	s.Volume = val
+}
+
+// SetTrainingReminder sets the value of TrainingReminder.
+func (s *SportProfileBodySettings) SetTrainingReminder(val OptSportProfileBodySettingsTrainingReminder) {
+	s.TrainingReminder = val
+}
+
+// SetStrideSpeedSource sets the value of StrideSpeedSource.
+func (s *SportProfileBodySettings) SetStrideSpeedSource(val OptString) {
+	s.StrideSpeedSource = val
+}
+
+// SetSwimmingUnits sets the value of SwimmingUnits.
+func (s *SportProfileBodySettings) SetSwimmingUnits(val OptString) {
+	s.SwimmingUnits = val
+}
+
+// SetRemoteButtonActions sets the value of RemoteButtonActions.
+func (s *SportProfileBodySettings) SetRemoteButtonActions(val []jx.Raw) {
+	s.RemoteButtonActions = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *SportProfileBodySettings) SetAdditionalProps(val SportProfileBodySettingsAdditional) {
+	s.AdditionalProps = val
+}
+
+type SportProfileBodySettingsAdditional map[string]jx.Raw
+
+func (s *SportProfileBodySettingsAdditional) init() SportProfileBodySettingsAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type SportProfileBodySettingsTrainingReminder struct {
+	Type OptString `json:"type"`
+	Text OptString `json:"text"`
+}
+
+// GetType returns the value of Type.
+func (s *SportProfileBodySettingsTrainingReminder) GetType() OptString {
+	return s.Type
+}
+
+// GetText returns the value of Text.
+func (s *SportProfileBodySettingsTrainingReminder) GetText() OptString {
+	return s.Text
+}
+
+// SetType sets the value of Type.
+func (s *SportProfileBodySettingsTrainingReminder) SetType(val OptString) {
+	s.Type = val
+}
+
+// SetText sets the value of Text.
+func (s *SportProfileBodySettingsTrainingReminder) SetText(val OptString) {
+	s.Text = val
+}
+
+type SportProfileBodySettingsVolume struct {
+	Volume OptInt `json:"volume"`
+}
+
+// GetVolume returns the value of Volume.
+func (s *SportProfileBodySettingsVolume) GetVolume() OptInt {
+	return s.Volume
+}
+
+// SetVolume sets the value of Volume.
+func (s *SportProfileBodySettingsVolume) SetVolume(val OptInt) {
+	s.Volume = val
+}
+
+// Legacy per-device profile blobs. `{}` without a paired device.
+type SportProfileLegacyProfiles map[string]jx.Raw
+
+func (s *SportProfileLegacyProfiles) init() SportProfileLegacyProfiles {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// The ordered list(s) of sport profiles shown on the device. The account's first profile creates it;
+// each list holds profile uuids in display order.
+// Ref: #/components/schemas/SportProfileListCatalog
+type SportProfileListCatalog struct {
+	UUID                        OptString                          `json:"uuid"`
+	UserId                      OptString                          `json:"userId"`
+	Created                     OptDateTime                        `json:"created"`
+	Modified                    OptDateTime                        `json:"modified"`
+	ActiveSportProfileListIndex OptInt                             `json:"activeSportProfileListIndex"`
+	Lists                       []SportProfileListCatalogListsItem `json:"lists"`
+}
+
+// GetUUID returns the value of UUID.
+func (s *SportProfileListCatalog) GetUUID() OptString {
+	return s.UUID
+}
+
+// GetUserId returns the value of UserId.
+func (s *SportProfileListCatalog) GetUserId() OptString {
+	return s.UserId
+}
+
+// GetCreated returns the value of Created.
+func (s *SportProfileListCatalog) GetCreated() OptDateTime {
+	return s.Created
+}
+
+// GetModified returns the value of Modified.
+func (s *SportProfileListCatalog) GetModified() OptDateTime {
+	return s.Modified
+}
+
+// GetActiveSportProfileListIndex returns the value of ActiveSportProfileListIndex.
+func (s *SportProfileListCatalog) GetActiveSportProfileListIndex() OptInt {
+	return s.ActiveSportProfileListIndex
+}
+
+// GetLists returns the value of Lists.
+func (s *SportProfileListCatalog) GetLists() []SportProfileListCatalogListsItem {
+	return s.Lists
+}
+
+// SetUUID sets the value of UUID.
+func (s *SportProfileListCatalog) SetUUID(val OptString) {
+	s.UUID = val
+}
+
+// SetUserId sets the value of UserId.
+func (s *SportProfileListCatalog) SetUserId(val OptString) {
+	s.UserId = val
+}
+
+// SetCreated sets the value of Created.
+func (s *SportProfileListCatalog) SetCreated(val OptDateTime) {
+	s.Created = val
+}
+
+// SetModified sets the value of Modified.
+func (s *SportProfileListCatalog) SetModified(val OptDateTime) {
+	s.Modified = val
+}
+
+// SetActiveSportProfileListIndex sets the value of ActiveSportProfileListIndex.
+func (s *SportProfileListCatalog) SetActiveSportProfileListIndex(val OptInt) {
+	s.ActiveSportProfileListIndex = val
+}
+
+// SetLists sets the value of Lists.
+func (s *SportProfileListCatalog) SetLists(val []SportProfileListCatalogListsItem) {
+	s.Lists = val
+}
+
+func (*SportProfileListCatalog) getSportProfileListCatalogRes() {}
+
+type SportProfileListCatalogListsItem struct {
+	Index             OptInt   `json:"index"`
+	SportProfileUuids []string `json:"sportProfileUuids"`
+}
+
+// GetIndex returns the value of Index.
+func (s *SportProfileListCatalogListsItem) GetIndex() OptInt {
+	return s.Index
+}
+
+// GetSportProfileUuids returns the value of SportProfileUuids.
+func (s *SportProfileListCatalogListsItem) GetSportProfileUuids() []string {
+	return s.SportProfileUuids
+}
+
+// SetIndex sets the value of Index.
+func (s *SportProfileListCatalogListsItem) SetIndex(val OptInt) {
+	s.Index = val
+}
+
+// SetSportProfileUuids sets the value of SportProfileUuids.
+func (s *SportProfileListCatalogListsItem) SetSportProfileUuids(val []string) {
+	s.SportProfileUuids = val
+}
+
 // Body for `POST /settings/sports/save` — updates one or more sport profiles' settings and
 // watch-screen layout in a single call. Captured 2026-06-01 from a device-paired account.
 // Ref: #/components/schemas/SportProfileSaveRequest
@@ -10311,6 +11092,239 @@ func NewTrainingDisplaysBlockSportProfileSaveRequestSportsItemItem(v TrainingDis
 	var s SportProfileSaveRequestSportsItemItem
 	s.SetTrainingDisplaysBlock(v)
 	return s
+}
+
+// A per-sport threshold the default zones are derived from. Exactly one of `speed` (km/h, for
+// `maximumAerobicSpeed`) or `power` (W, for `maximumAerobicPower` / `functionalThresholdPower`) is
+// set.
+// Ref: #/components/schemas/SportProfileThreshold
+type SportProfileThreshold struct {
+	// Maximum aerobic speed (MAS) in km/h.
+	Speed OptFloat64 `json:"speed"`
+	// Power threshold (MAP or FTP) in watts.
+	Power OptInt `json:"power"`
+	// Where the value comes from. Observed: `MAS_SOURCE_ESTIMATED`, `MAP_SOURCE_ESTIMATED`,
+	// `FTP_SOURCE_ESTIMATED` (estimated from physical info / the account's `functionalThresholdPower`).
+	// Measured/user-set variants likely exist. # TODO: verify.
+	Source OptString `json:"source"`
+}
+
+// GetSpeed returns the value of Speed.
+func (s *SportProfileThreshold) GetSpeed() OptFloat64 {
+	return s.Speed
+}
+
+// GetPower returns the value of Power.
+func (s *SportProfileThreshold) GetPower() OptInt {
+	return s.Power
+}
+
+// GetSource returns the value of Source.
+func (s *SportProfileThreshold) GetSource() OptString {
+	return s.Source
+}
+
+// SetSpeed sets the value of Speed.
+func (s *SportProfileThreshold) SetSpeed(val OptFloat64) {
+	s.Speed = val
+}
+
+// SetPower sets the value of Power.
+func (s *SportProfileThreshold) SetPower(val OptInt) {
+	s.Power = val
+}
+
+// SetSource sets the value of Source.
+func (s *SportProfileThreshold) SetSource(val OptString) {
+	s.Source = val
+}
+
+// Body of `POST /api/sports/profiles/{id}/recalculate` and
+// `POST /api/sports/profiles/{id}/update-zones` — the web UI wraps the profile's `profile` object in
+// the envelope below.
+// Ref: #/components/schemas/SportProfileWriteRequest
+type SportProfileWriteRequest struct {
+	// Must equal the `{id}` in the URL (else 400 `Profile UUID in the request
+	// body does not match the UUID in the URL`). Same structure rules as `SportProfile.uuid`.
+	UUID string `json:"uuid"`
+	// The signed-in user's id (`GET /api/account/users/current/user` → `user.id`). Required (missing →
+	// 400 `must be >= 1`) and must match the session user (else 400
+	// `Profile userId (…) does not match request userId (…)`). Sent as a number by the UI; a numeric
+	// string is accepted too.
+	UserId int `json:"userId"`
+	// Client timestamp (the UI sends `new Date().toISOString()`). Required by `update-zones`, where it
+	// must be newer than the stored profile's `modified` (else 409 OUTDATED). Ignored by `recalculate`.
+	Modified OptDateTime      `json:"modified"`
+	Profile  SportProfileBody `json:"profile"`
+}
+
+// GetUUID returns the value of UUID.
+func (s *SportProfileWriteRequest) GetUUID() string {
+	return s.UUID
+}
+
+// GetUserId returns the value of UserId.
+func (s *SportProfileWriteRequest) GetUserId() int {
+	return s.UserId
+}
+
+// GetModified returns the value of Modified.
+func (s *SportProfileWriteRequest) GetModified() OptDateTime {
+	return s.Modified
+}
+
+// GetProfile returns the value of Profile.
+func (s *SportProfileWriteRequest) GetProfile() SportProfileBody {
+	return s.Profile
+}
+
+// SetUUID sets the value of UUID.
+func (s *SportProfileWriteRequest) SetUUID(val string) {
+	s.UUID = val
+}
+
+// SetUserId sets the value of UserId.
+func (s *SportProfileWriteRequest) SetUserId(val int) {
+	s.UserId = val
+}
+
+// SetModified sets the value of Modified.
+func (s *SportProfileWriteRequest) SetModified(val OptDateTime) {
+	s.Modified = val
+}
+
+// SetProfile sets the value of Profile.
+func (s *SportProfileWriteRequest) SetProfile(val SportProfileBody) {
+	s.Profile = val
+}
+
+// The heart-rate, speed/pace and power training zones of one sport profile — the zones a Polar
+// device uses for that sport, and therefore what
+// `intensityType: HEART_RATE_ZONES | SPEED_ZONES | POWER_ZONES` + `lowerZone`/`upperZone` (1–5) on a
+// training-target phase resolve to.
+//
+// Each list holds exactly 5 zones, index 0 = zone 1 (lowest). A list is `[]` when the sport does not
+// support that zone type (e.g. SWIMMING and STRENGTH_TRAINING only have heart-rate zones; CYCLING has
+// all three).
+//
+// Default zones (`*_SETTING_SOURCE_DEFAULT`) are derived server-side (observed 2026-09-29, test
+// account with no measured HRmax/MAS):
+//
+//	Type                       | Basis                                                                                    | Zone boundaries
+//	---------------------------+------------------------------------------------------------------------------------------+---------------------------------------------------
+//	Heart rate                 | HRmax (age-estimated when `physicalInfo.maximumHeartRate` is null — 190 bpm at age 30) | 50 / 60 / 70 / 80 / 90 / 100 % HRmax
+//	Speed, running-type sports | MAS (`maximumAerobicSpeed`) — `SPEED_ZONE_CALCULATION_METHOD_MAS_BASED`                | 55 / 70 / 85 / 100 / 115 % MAS, top open (399)
+//	Speed, other sports        | fixed per-sport table — `SPEED_ZONE_CALCULATION_METHOD_SPORT_SPECIFIC_PREDEFINED`      | CYCLING 10/20/30/40/50 km/h, HIKING 1/2/4/6/8 km/h
+//	Power, running             | MAP (`maximumAerobicPower`) — `POWER_ZONE_CALCULATION_METHOD_MAP_BASED`                | 55 / 70 / 85 / 100 / 115 % MAP, top open (2000)
+//	Power, cycling             | FTP (`functionalThresholdPower`) — `POWER_ZONE_CALCULATION_METHOD_FTP_BASED`           | 55 / 75 / 90 / 105 / 120 % FTP, top open (2000)
+//
+// `*_SETTING_SOURCE_FREE` means the user typed the limits in by hand.
+// Ref: #/components/schemas/SportProfileZoneLimits
+type SportProfileZoneLimits struct {
+	// Heart-rate zones in bpm (5 entries, or `[]`).
+	HeartRateZones []ZoneLimit `json:"heartRateZones"`
+	// Speed zones in km/h (5 entries, or `[]` when the sport has no speed zones).
+	SpeedZones []ZoneLimit `json:"speedZones"`
+	// Power zones in watts (5 entries, or `[]` when the sport has no power zones).
+	PowerZones []ZoneLimit `json:"powerZones"`
+	// Observed: `HEART_RATE_ZONE_SETTING_SOURCE_DEFAULT` (derived from HRmax),
+	// `HEART_RATE_ZONE_SETTING_SOURCE_FREE` (user-entered limits). Left as an open string: other values
+	// (e.g. threshold-based) may exist. # TODO: verify.
+	HeartRateSettingSource OptString `json:"heartRateSettingSource"`
+	// Observed: `SPEED_ZONE_SETTING_SOURCE_DEFAULT` (computed, see `speedZoneCalculationMethod`),
+	// `SPEED_ZONE_SETTING_SOURCE_FREE` (user-entered). Open string.
+	SpeedSettingSource OptString `json:"speedSettingSource"`
+	// Observed: `POWER_ZONE_SETTING_SOURCE_DEFAULT` (computed, see `powerZoneCalculationMethod`),
+	// `POWER_ZONE_SETTING_SOURCE_FREE` (user-entered). Open string.
+	PowerSettingSource OptString `json:"powerSettingSource"`
+	// How default speed zones were computed. Observed: `SPEED_ZONE_CALCULATION_METHOD_MAS_BASED`,
+	// `SPEED_ZONE_CALCULATION_METHOD_SPORT_SPECIFIC_PREDEFINED`, `SPEED_ZONE_CALCULATION_METHOD_UNKNOWN`
+	// (sport has no speed zones). Open string.
+	SpeedZoneCalculationMethod OptString `json:"speedZoneCalculationMethod"`
+	// How default power zones were computed. Observed: `POWER_ZONE_CALCULATION_METHOD_MAP_BASED`,
+	// `POWER_ZONE_CALCULATION_METHOD_FTP_BASED`, `POWER_ZONE_CALCULATION_METHOD_UNKNOWN` (sport has no
+	// power zones). Open string.
+	PowerZoneCalculationMethod OptString `json:"powerZoneCalculationMethod"`
+}
+
+// GetHeartRateZones returns the value of HeartRateZones.
+func (s *SportProfileZoneLimits) GetHeartRateZones() []ZoneLimit {
+	return s.HeartRateZones
+}
+
+// GetSpeedZones returns the value of SpeedZones.
+func (s *SportProfileZoneLimits) GetSpeedZones() []ZoneLimit {
+	return s.SpeedZones
+}
+
+// GetPowerZones returns the value of PowerZones.
+func (s *SportProfileZoneLimits) GetPowerZones() []ZoneLimit {
+	return s.PowerZones
+}
+
+// GetHeartRateSettingSource returns the value of HeartRateSettingSource.
+func (s *SportProfileZoneLimits) GetHeartRateSettingSource() OptString {
+	return s.HeartRateSettingSource
+}
+
+// GetSpeedSettingSource returns the value of SpeedSettingSource.
+func (s *SportProfileZoneLimits) GetSpeedSettingSource() OptString {
+	return s.SpeedSettingSource
+}
+
+// GetPowerSettingSource returns the value of PowerSettingSource.
+func (s *SportProfileZoneLimits) GetPowerSettingSource() OptString {
+	return s.PowerSettingSource
+}
+
+// GetSpeedZoneCalculationMethod returns the value of SpeedZoneCalculationMethod.
+func (s *SportProfileZoneLimits) GetSpeedZoneCalculationMethod() OptString {
+	return s.SpeedZoneCalculationMethod
+}
+
+// GetPowerZoneCalculationMethod returns the value of PowerZoneCalculationMethod.
+func (s *SportProfileZoneLimits) GetPowerZoneCalculationMethod() OptString {
+	return s.PowerZoneCalculationMethod
+}
+
+// SetHeartRateZones sets the value of HeartRateZones.
+func (s *SportProfileZoneLimits) SetHeartRateZones(val []ZoneLimit) {
+	s.HeartRateZones = val
+}
+
+// SetSpeedZones sets the value of SpeedZones.
+func (s *SportProfileZoneLimits) SetSpeedZones(val []ZoneLimit) {
+	s.SpeedZones = val
+}
+
+// SetPowerZones sets the value of PowerZones.
+func (s *SportProfileZoneLimits) SetPowerZones(val []ZoneLimit) {
+	s.PowerZones = val
+}
+
+// SetHeartRateSettingSource sets the value of HeartRateSettingSource.
+func (s *SportProfileZoneLimits) SetHeartRateSettingSource(val OptString) {
+	s.HeartRateSettingSource = val
+}
+
+// SetSpeedSettingSource sets the value of SpeedSettingSource.
+func (s *SportProfileZoneLimits) SetSpeedSettingSource(val OptString) {
+	s.SpeedSettingSource = val
+}
+
+// SetPowerSettingSource sets the value of PowerSettingSource.
+func (s *SportProfileZoneLimits) SetPowerSettingSource(val OptString) {
+	s.PowerSettingSource = val
+}
+
+// SetSpeedZoneCalculationMethod sets the value of SpeedZoneCalculationMethod.
+func (s *SportProfileZoneLimits) SetSpeedZoneCalculationMethod(val OptString) {
+	s.SpeedZoneCalculationMethod = val
+}
+
+// SetPowerZoneCalculationMethod sets the value of PowerZoneCalculationMethod.
+func (s *SportProfileZoneLimits) SetPowerZoneCalculationMethod(val OptString) {
+	s.PowerZoneCalculationMethod = val
 }
 
 // Map of numeric sport ID (as string key) to Polar sport name constant. Full inventory captured
@@ -11736,43 +12750,47 @@ func (s *Unauthorized) SetRedirect(val OptString) {
 	s.Redirect = val
 }
 
-func (*Unauthorized) addRouteToFavoritesRes()       {}
-func (*Unauthorized) addSportProfileRes()           {}
-func (*Unauthorized) createFavoriteRes()            {}
-func (*Unauthorized) createTargetFromFavoriteRes()  {}
-func (*Unauthorized) createTrainingSessionRes()     {}
-func (*Unauthorized) createTrainingTargetRes()      {}
-func (*Unauthorized) deleteFavoriteRes()            {}
-func (*Unauthorized) deleteSportProfileRes()        {}
-func (*Unauthorized) deleteTrainingSessionRes()     {}
-func (*Unauthorized) deleteTrainingTargetRes()      {}
-func (*Unauthorized) editTrainingSessionRes()       {}
-func (*Unauthorized) getActivityTimelineFourRes()   {}
-func (*Unauthorized) getActivityTimelineRes()       {}
-func (*Unauthorized) getCalendarEventsRes()         {}
-func (*Unauthorized) getCalendarWeekSummaryRes()    {}
-func (*Unauthorized) getCurrentUserRes()            {}
-func (*Unauthorized) getFavoriteExerciseTargetRes() {}
-func (*Unauthorized) getFavoriteRes()               {}
-func (*Unauthorized) getFeaturesAvailableRes()      {}
-func (*Unauthorized) getProgressViewSummaryRes()    {}
-func (*Unauthorized) getSportProfileRes()           {}
-func (*Unauthorized) getSummaryDataRes()            {}
-func (*Unauthorized) getTrainingDisplayItemsRes()   {}
-func (*Unauthorized) getTrainingDisplayListsRes()   {}
-func (*Unauthorized) getTrainingSessionDetailsRes() {}
-func (*Unauthorized) getTrainingSessionSummaryRes() {}
-func (*Unauthorized) getTrainingTargetRes()         {}
-func (*Unauthorized) importRouteRes()               {}
-func (*Unauthorized) listDeviceFavoritesRes()       {}
-func (*Unauthorized) listFavoritesRes()             {}
-func (*Unauthorized) listFavoritesSimpleRes()       {}
-func (*Unauthorized) listSportProfilesRes()         {}
-func (*Unauthorized) listTrainingSessionsRes()      {}
-func (*Unauthorized) saveSportProfileRes()          {}
-func (*Unauthorized) updateFavoriteRes()            {}
-func (*Unauthorized) updateTrainingSessionDataRes() {}
-func (*Unauthorized) updateTrainingTargetRes()      {}
+func (*Unauthorized) addRouteToFavoritesRes()        {}
+func (*Unauthorized) addSportProfileRes()            {}
+func (*Unauthorized) createFavoriteRes()             {}
+func (*Unauthorized) createSportProfileRes()         {}
+func (*Unauthorized) createTargetFromFavoriteRes()   {}
+func (*Unauthorized) createTrainingSessionRes()      {}
+func (*Unauthorized) createTrainingTargetRes()       {}
+func (*Unauthorized) deleteFavoriteRes()             {}
+func (*Unauthorized) deleteSportProfileRes()         {}
+func (*Unauthorized) deleteTrainingSessionRes()      {}
+func (*Unauthorized) deleteTrainingTargetRes()       {}
+func (*Unauthorized) editTrainingSessionRes()        {}
+func (*Unauthorized) getActivityTimelineFourRes()    {}
+func (*Unauthorized) getActivityTimelineRes()        {}
+func (*Unauthorized) getCalendarEventsRes()          {}
+func (*Unauthorized) getCalendarWeekSummaryRes()     {}
+func (*Unauthorized) getCurrentUserRes()             {}
+func (*Unauthorized) getFavoriteExerciseTargetRes()  {}
+func (*Unauthorized) getFavoriteRes()                {}
+func (*Unauthorized) getFeaturesAvailableRes()       {}
+func (*Unauthorized) getProgressViewSummaryRes()     {}
+func (*Unauthorized) getSportProfileListCatalogRes() {}
+func (*Unauthorized) getSportProfileRes()            {}
+func (*Unauthorized) getSummaryDataRes()             {}
+func (*Unauthorized) getTrainingDisplayItemsRes()    {}
+func (*Unauthorized) getTrainingDisplayListsRes()    {}
+func (*Unauthorized) getTrainingSessionDetailsRes()  {}
+func (*Unauthorized) getTrainingSessionSummaryRes()  {}
+func (*Unauthorized) getTrainingTargetRes()          {}
+func (*Unauthorized) importRouteRes()                {}
+func (*Unauthorized) listDeviceFavoritesRes()        {}
+func (*Unauthorized) listFavoritesRes()              {}
+func (*Unauthorized) listFavoritesSimpleRes()        {}
+func (*Unauthorized) listSportProfilesRes()          {}
+func (*Unauthorized) listTrainingSessionsRes()       {}
+func (*Unauthorized) recalculateSportProfileRes()    {}
+func (*Unauthorized) saveSportProfileRes()           {}
+func (*Unauthorized) updateFavoriteRes()             {}
+func (*Unauthorized) updateSportProfileZonesRes()    {}
+func (*Unauthorized) updateTrainingSessionDataRes()  {}
+func (*Unauthorized) updateTrainingTargetRes()       {}
 
 type UpdateFavoriteForbidden struct {
 	Data io.Reader
@@ -11810,6 +12828,43 @@ func (*UpdateFavoriteNotFound) updateFavoriteRes() {}
 type UpdateFavoriteOK struct{}
 
 func (*UpdateFavoriteOK) updateFavoriteRes() {}
+
+type UpdateSportProfileZonesBadRequest struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s UpdateSportProfileZonesBadRequest) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*UpdateSportProfileZonesBadRequest) updateSportProfileZonesRes() {}
+
+type UpdateSportProfileZonesConflict struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s UpdateSportProfileZonesConflict) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*UpdateSportProfileZonesConflict) updateSportProfileZonesRes() {}
+
+// UpdateSportProfileZonesOK is response for UpdateSportProfileZones operation.
+type UpdateSportProfileZonesOK struct{}
+
+func (*UpdateSportProfileZonesOK) updateSportProfileZonesRes() {}
 
 // UpdateTrainingSessionDataBadRequest is response for UpdateTrainingSessionData operation.
 type UpdateTrainingSessionDataBadRequest struct{}
@@ -12044,4 +13099,47 @@ func (s *XRequestedWith) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// One training zone as a half-open range `[lowerLimit, higherLimit)`. Zones are contiguous: each
+// zone's `lowerLimit` equals the previous zone's `higherLimit` (the server rejects a gap or overlap
+// with 400). Units depend on the list the zone sits in:
+//
+//   - `heartRateZones` — bpm, integers. Valid range [15, 240]. The top zone's `higherLimit` is the
+//     maximum heart rate the zones were derived from.
+//   - `speedZones` — km/h, floats (even on pace-view sports; `speedView` only changes how the watch
+//     displays it). Valid range [1.0, 399.0]. The top zone's `higherLimit` is the sentinel `399.0` ("no
+//     ceiling").
+//   - `powerZones` — watts, integers. Valid range [0, 2000]. The top zone's `higherLimit` is the
+//     sentinel `2000` ("no ceiling").
+//
+// Every zone must span at least 2 units (`higherLimit - lowerLimit >= 2`). Note the legacy
+// `/settings/sports/edit` HTML renders the same zones with an inclusive upper bound (`95 - 113` for
+// `[95, 114)`).
+// Ref: #/components/schemas/ZoneLimit
+type ZoneLimit struct {
+	// Inclusive lower bound (bpm, km/h or W — see the containing list).
+	LowerLimit float64 `json:"lowerLimit"`
+	// Exclusive upper bound (bpm, km/h or W — see the containing list).
+	HigherLimit float64 `json:"higherLimit"`
+}
+
+// GetLowerLimit returns the value of LowerLimit.
+func (s *ZoneLimit) GetLowerLimit() float64 {
+	return s.LowerLimit
+}
+
+// GetHigherLimit returns the value of HigherLimit.
+func (s *ZoneLimit) GetHigherLimit() float64 {
+	return s.HigherLimit
+}
+
+// SetLowerLimit sets the value of LowerLimit.
+func (s *ZoneLimit) SetLowerLimit(val float64) {
+	s.LowerLimit = val
+}
+
+// SetHigherLimit sets the value of HigherLimit.
+func (s *ZoneLimit) SetHigherLimit(val float64) {
+	s.HigherLimit = val
 }

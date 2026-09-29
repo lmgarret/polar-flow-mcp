@@ -6,6 +6,7 @@ import (
 	"math/bits"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
@@ -7630,6 +7631,41 @@ func (s *OptClubModel) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes time.Time as json.
+func (o OptDateTime) Encode(e *jx.Encoder, format func(*jx.Encoder, time.Time)) {
+	if !o.Set {
+		return
+	}
+	format(e, o.Value)
+}
+
+// Decode decodes time.Time from json.
+func (o *OptDateTime) Decode(d *jx.Decoder, format func(*jx.Decoder) (time.Time, error)) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptDateTime to nil")
+	}
+	o.Set = true
+	v, err := format(d)
+	if err != nil {
+		return err
+	}
+	o.Value = v
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptDateTime) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e, json.EncodeDateTime)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptDateTime) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d, json.DecodeDateTime)
+}
+
 // Encode encodes FavoriteExerciseTargetType as json.
 func (o OptFavoriteExerciseTargetType) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -9138,6 +9174,205 @@ func (s *OptSportProfileAddResponseSport) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes SportProfileBodySettings as json.
+func (o OptSportProfileBodySettings) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SportProfileBodySettings from json.
+func (o *OptSportProfileBodySettings) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptSportProfileBodySettings to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptSportProfileBodySettings) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptSportProfileBodySettings) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SportProfileBodySettingsTrainingReminder as json.
+func (o OptSportProfileBodySettingsTrainingReminder) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SportProfileBodySettingsTrainingReminder from json.
+func (o *OptSportProfileBodySettingsTrainingReminder) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptSportProfileBodySettingsTrainingReminder to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptSportProfileBodySettingsTrainingReminder) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptSportProfileBodySettingsTrainingReminder) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SportProfileBodySettingsVolume as json.
+func (o OptSportProfileBodySettingsVolume) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SportProfileBodySettingsVolume from json.
+func (o *OptSportProfileBodySettingsVolume) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptSportProfileBodySettingsVolume to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptSportProfileBodySettingsVolume) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptSportProfileBodySettingsVolume) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SportProfileLegacyProfiles as json.
+func (o OptSportProfileLegacyProfiles) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SportProfileLegacyProfiles from json.
+func (o *OptSportProfileLegacyProfiles) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptSportProfileLegacyProfiles to nil")
+	}
+	o.Set = true
+	o.Value = make(SportProfileLegacyProfiles)
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptSportProfileLegacyProfiles) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptSportProfileLegacyProfiles) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SportProfileThreshold as json.
+func (o OptSportProfileThreshold) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SportProfileThreshold from json.
+func (o *OptSportProfileThreshold) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptSportProfileThreshold to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptSportProfileThreshold) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptSportProfileThreshold) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SportProfileZoneLimits as json.
+func (o OptSportProfileZoneLimits) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SportProfileZoneLimits from json.
+func (o *OptSportProfileZoneLimits) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptSportProfileZoneLimits to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptSportProfileZoneLimits) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptSportProfileZoneLimits) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes StandardDuration as json.
 func (o OptStandardDuration) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -9270,41 +9505,6 @@ func (s OptURI) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptURI) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes uuid.UUID as json.
-func (o OptUUID) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	json.EncodeUUID(e, o.Value)
-}
-
-// Decode decodes uuid.UUID from json.
-func (o *OptUUID) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptUUID to nil")
-	}
-	o.Set = true
-	v, err := json.DecodeUUID(d)
-	if err != nil {
-		return err
-	}
-	o.Value = v
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptUUID) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptUUID) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -15529,27 +15729,41 @@ func (s *SportProfile) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *SportProfile) encodeFields(e *jx.Encoder) {
 	{
-		if s.ID.Set {
-			e.FieldStart("id")
-			s.ID.Encode(e)
-		}
+		e.FieldStart("uuid")
+		e.Str(s.UUID)
 	}
 	{
-		if s.SportId.Set {
-			e.FieldStart("sportId")
-			s.SportId.Encode(e)
-		}
-	}
-	{
-		if s.Name.Set {
-			e.FieldStart("name")
-			s.Name.Encode(e)
+		if s.UserId.Set {
+			e.FieldStart("userId")
+			s.UserId.Encode(e)
 		}
 	}
 	{
 		if s.Created.Set {
 			e.FieldStart("created")
-			s.Created.Encode(e)
+			s.Created.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		if s.Modified.Set {
+			e.FieldStart("modified")
+			s.Modified.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		e.FieldStart("profile")
+		s.Profile.Encode(e)
+	}
+	{
+		if s.LegacyProfiles.Set {
+			e.FieldStart("legacyProfiles")
+			s.LegacyProfiles.Encode(e)
+		}
+	}
+	{
+		if s.LegacyId.Set {
+			e.FieldStart("legacyId")
+			s.LegacyId.Encode(e)
 		}
 	}
 	for k, elem := range s.AdditionalProps {
@@ -15561,11 +15775,14 @@ func (s *SportProfile) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSportProfile = [4]string{
-	0: "id",
-	1: "sportId",
-	2: "name",
-	3: "created",
+var jsonFieldsNameOfSportProfile = [7]string{
+	0: "uuid",
+	1: "userId",
+	2: "created",
+	3: "modified",
+	4: "profile",
+	5: "legacyProfiles",
+	6: "legacyId",
 }
 
 // Decode decodes SportProfile from json.
@@ -15573,49 +15790,82 @@ func (s *SportProfile) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode SportProfile to nil")
 	}
+	var requiredBitSet [1]uint8
 	s.AdditionalProps = map[string]jx.Raw{}
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "id":
+		case "uuid":
+			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.ID.Reset()
-				if err := s.ID.Decode(d); err != nil {
+				v, err := d.Str()
+				s.UUID = string(v)
+				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"id\"")
+				return errors.Wrap(err, "decode field \"uuid\"")
 			}
-		case "sportId":
+		case "userId":
 			if err := func() error {
-				s.SportId.Reset()
-				if err := s.SportId.Decode(d); err != nil {
+				s.UserId.Reset()
+				if err := s.UserId.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"sportId\"")
-			}
-		case "name":
-			if err := func() error {
-				s.Name.Reset()
-				if err := s.Name.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"name\"")
+				return errors.Wrap(err, "decode field \"userId\"")
 			}
 		case "created":
 			if err := func() error {
 				s.Created.Reset()
-				if err := s.Created.Decode(d); err != nil {
+				if err := s.Created.Decode(d, json.DecodeDateTime); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"created\"")
+			}
+		case "modified":
+			if err := func() error {
+				s.Modified.Reset()
+				if err := s.Modified.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"modified\"")
+			}
+		case "profile":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				if err := s.Profile.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"profile\"")
+			}
+		case "legacyProfiles":
+			if err := func() error {
+				s.LegacyProfiles.Reset()
+				if err := s.LegacyProfiles.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"legacyProfiles\"")
+			}
+		case "legacyId":
+			if err := func() error {
+				s.LegacyId.Reset()
+				if err := s.LegacyId.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"legacyId\"")
 			}
 		default:
 			var elem jx.Raw
@@ -15634,6 +15884,38 @@ func (s *SportProfile) Decode(d *jx.Decoder) error {
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "decode SportProfile")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00010001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSportProfile) {
+					name = jsonFieldsNameOfSportProfile[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
 	}
 
 	return nil
@@ -15917,6 +16199,1121 @@ func (s SportProfileAdditional) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SportProfileAdditional) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SportProfileBody) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SportProfileBody) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("sportId")
+		e.Int(s.SportId)
+	}
+	{
+		if s.Settings.Set {
+			e.FieldStart("settings")
+			s.Settings.Encode(e)
+		}
+	}
+	{
+		if s.SportFactor.Set {
+			e.FieldStart("sportFactor")
+			s.SportFactor.Encode(e)
+		}
+	}
+	{
+		if s.ProductSettings != nil {
+			e.FieldStart("productSettings")
+			e.ArrStart()
+			for _, elem := range s.ProductSettings {
+				if len(elem) != 0 {
+					e.Raw(elem)
+				}
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.SubProfileUuids != nil {
+			e.FieldStart("subProfileUuids")
+			e.ArrStart()
+			for _, elem := range s.SubProfileUuids {
+				e.Str(elem)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.MaximumAerobicSpeed.Set {
+			e.FieldStart("maximumAerobicSpeed")
+			s.MaximumAerobicSpeed.Encode(e)
+		}
+	}
+	{
+		if s.MaximumAerobicPower.Set {
+			e.FieldStart("maximumAerobicPower")
+			s.MaximumAerobicPower.Encode(e)
+		}
+	}
+	{
+		if s.FunctionalThresholdPower.Set {
+			e.FieldStart("functionalThresholdPower")
+			s.FunctionalThresholdPower.Encode(e)
+		}
+	}
+	for k, elem := range s.AdditionalProps {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+var jsonFieldsNameOfSportProfileBody = [8]string{
+	0: "sportId",
+	1: "settings",
+	2: "sportFactor",
+	3: "productSettings",
+	4: "subProfileUuids",
+	5: "maximumAerobicSpeed",
+	6: "maximumAerobicPower",
+	7: "functionalThresholdPower",
+}
+
+// Decode decodes SportProfileBody from json.
+func (s *SportProfileBody) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileBody to nil")
+	}
+	var requiredBitSet [1]uint8
+	s.AdditionalProps = map[string]jx.Raw{}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "sportId":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Int()
+				s.SportId = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sportId\"")
+			}
+		case "settings":
+			if err := func() error {
+				s.Settings.Reset()
+				if err := s.Settings.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"settings\"")
+			}
+		case "sportFactor":
+			if err := func() error {
+				s.SportFactor.Reset()
+				if err := s.SportFactor.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sportFactor\"")
+			}
+		case "productSettings":
+			if err := func() error {
+				s.ProductSettings = make([]jx.Raw, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem jx.Raw
+					v, err := d.RawAppend(nil)
+					elem = jx.Raw(v)
+					if err != nil {
+						return err
+					}
+					s.ProductSettings = append(s.ProductSettings, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"productSettings\"")
+			}
+		case "subProfileUuids":
+			if err := func() error {
+				s.SubProfileUuids = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.SubProfileUuids = append(s.SubProfileUuids, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"subProfileUuids\"")
+			}
+		case "maximumAerobicSpeed":
+			if err := func() error {
+				s.MaximumAerobicSpeed.Reset()
+				if err := s.MaximumAerobicSpeed.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"maximumAerobicSpeed\"")
+			}
+		case "maximumAerobicPower":
+			if err := func() error {
+				s.MaximumAerobicPower.Reset()
+				if err := s.MaximumAerobicPower.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"maximumAerobicPower\"")
+			}
+		case "functionalThresholdPower":
+			if err := func() error {
+				s.FunctionalThresholdPower.Reset()
+				if err := s.FunctionalThresholdPower.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"functionalThresholdPower\"")
+			}
+		default:
+			var elem jx.Raw
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				elem = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrapf(err, "decode field %q", k)
+			}
+			s.AdditionalProps[string(k)] = elem
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileBody")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSportProfileBody) {
+					name = jsonFieldsNameOfSportProfileBody[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SportProfileBody) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileBody) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s SportProfileBodyAdditional) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s SportProfileBodyAdditional) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+// Decode decodes SportProfileBodyAdditional from json.
+func (s *SportProfileBodyAdditional) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileBodyAdditional to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem jx.Raw
+		if err := func() error {
+			v, err := d.RawAppend(nil)
+			elem = jx.Raw(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileBodyAdditional")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SportProfileBodyAdditional) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileBodyAdditional) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SportProfileBodySettings) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SportProfileBodySettings) encodeFields(e *jx.Encoder) {
+	{
+		if s.ZoneLimits.Set {
+			e.FieldStart("zoneLimits")
+			s.ZoneLimits.Encode(e)
+		}
+	}
+	{
+		if s.SpeedView.Set {
+			e.FieldStart("speedView")
+			s.SpeedView.Encode(e)
+		}
+	}
+	{
+		if s.PowerView.Set {
+			e.FieldStart("powerView")
+			s.PowerView.Encode(e)
+		}
+	}
+	{
+		if s.HrZoneLockAvailable.Set {
+			e.FieldStart("hrZoneLockAvailable")
+			s.HrZoneLockAvailable.Encode(e)
+		}
+	}
+	{
+		if s.SpeedZoneLockAvailable.Set {
+			e.FieldStart("speedZoneLockAvailable")
+			s.SpeedZoneLockAvailable.Encode(e)
+		}
+	}
+	{
+		if s.PowerZoneLockAvailable.Set {
+			e.FieldStart("powerZoneLockAvailable")
+			s.PowerZoneLockAvailable.Encode(e)
+		}
+	}
+	{
+		if s.SensorBroadcastingHr.Set {
+			e.FieldStart("sensorBroadcastingHr")
+			s.SensorBroadcastingHr.Encode(e)
+		}
+	}
+	{
+		if s.Volume.Set {
+			e.FieldStart("volume")
+			s.Volume.Encode(e)
+		}
+	}
+	{
+		if s.TrainingReminder.Set {
+			e.FieldStart("trainingReminder")
+			s.TrainingReminder.Encode(e)
+		}
+	}
+	{
+		if s.StrideSpeedSource.Set {
+			e.FieldStart("strideSpeedSource")
+			s.StrideSpeedSource.Encode(e)
+		}
+	}
+	{
+		if s.SwimmingUnits.Set {
+			e.FieldStart("swimmingUnits")
+			s.SwimmingUnits.Encode(e)
+		}
+	}
+	{
+		if s.RemoteButtonActions != nil {
+			e.FieldStart("remoteButtonActions")
+			e.ArrStart()
+			for _, elem := range s.RemoteButtonActions {
+				if len(elem) != 0 {
+					e.Raw(elem)
+				}
+			}
+			e.ArrEnd()
+		}
+	}
+	for k, elem := range s.AdditionalProps {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+var jsonFieldsNameOfSportProfileBodySettings = [12]string{
+	0:  "zoneLimits",
+	1:  "speedView",
+	2:  "powerView",
+	3:  "hrZoneLockAvailable",
+	4:  "speedZoneLockAvailable",
+	5:  "powerZoneLockAvailable",
+	6:  "sensorBroadcastingHr",
+	7:  "volume",
+	8:  "trainingReminder",
+	9:  "strideSpeedSource",
+	10: "swimmingUnits",
+	11: "remoteButtonActions",
+}
+
+// Decode decodes SportProfileBodySettings from json.
+func (s *SportProfileBodySettings) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileBodySettings to nil")
+	}
+	s.AdditionalProps = map[string]jx.Raw{}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "zoneLimits":
+			if err := func() error {
+				s.ZoneLimits.Reset()
+				if err := s.ZoneLimits.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"zoneLimits\"")
+			}
+		case "speedView":
+			if err := func() error {
+				s.SpeedView.Reset()
+				if err := s.SpeedView.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"speedView\"")
+			}
+		case "powerView":
+			if err := func() error {
+				s.PowerView.Reset()
+				if err := s.PowerView.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"powerView\"")
+			}
+		case "hrZoneLockAvailable":
+			if err := func() error {
+				s.HrZoneLockAvailable.Reset()
+				if err := s.HrZoneLockAvailable.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"hrZoneLockAvailable\"")
+			}
+		case "speedZoneLockAvailable":
+			if err := func() error {
+				s.SpeedZoneLockAvailable.Reset()
+				if err := s.SpeedZoneLockAvailable.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"speedZoneLockAvailable\"")
+			}
+		case "powerZoneLockAvailable":
+			if err := func() error {
+				s.PowerZoneLockAvailable.Reset()
+				if err := s.PowerZoneLockAvailable.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"powerZoneLockAvailable\"")
+			}
+		case "sensorBroadcastingHr":
+			if err := func() error {
+				s.SensorBroadcastingHr.Reset()
+				if err := s.SensorBroadcastingHr.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sensorBroadcastingHr\"")
+			}
+		case "volume":
+			if err := func() error {
+				s.Volume.Reset()
+				if err := s.Volume.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"volume\"")
+			}
+		case "trainingReminder":
+			if err := func() error {
+				s.TrainingReminder.Reset()
+				if err := s.TrainingReminder.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"trainingReminder\"")
+			}
+		case "strideSpeedSource":
+			if err := func() error {
+				s.StrideSpeedSource.Reset()
+				if err := s.StrideSpeedSource.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"strideSpeedSource\"")
+			}
+		case "swimmingUnits":
+			if err := func() error {
+				s.SwimmingUnits.Reset()
+				if err := s.SwimmingUnits.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"swimmingUnits\"")
+			}
+		case "remoteButtonActions":
+			if err := func() error {
+				s.RemoteButtonActions = make([]jx.Raw, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem jx.Raw
+					v, err := d.RawAppend(nil)
+					elem = jx.Raw(v)
+					if err != nil {
+						return err
+					}
+					s.RemoteButtonActions = append(s.RemoteButtonActions, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"remoteButtonActions\"")
+			}
+		default:
+			var elem jx.Raw
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				elem = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrapf(err, "decode field %q", k)
+			}
+			s.AdditionalProps[string(k)] = elem
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileBodySettings")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SportProfileBodySettings) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileBodySettings) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s SportProfileBodySettingsAdditional) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s SportProfileBodySettingsAdditional) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+// Decode decodes SportProfileBodySettingsAdditional from json.
+func (s *SportProfileBodySettingsAdditional) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileBodySettingsAdditional to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem jx.Raw
+		if err := func() error {
+			v, err := d.RawAppend(nil)
+			elem = jx.Raw(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileBodySettingsAdditional")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SportProfileBodySettingsAdditional) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileBodySettingsAdditional) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SportProfileBodySettingsTrainingReminder) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SportProfileBodySettingsTrainingReminder) encodeFields(e *jx.Encoder) {
+	{
+		if s.Type.Set {
+			e.FieldStart("type")
+			s.Type.Encode(e)
+		}
+	}
+	{
+		if s.Text.Set {
+			e.FieldStart("text")
+			s.Text.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfSportProfileBodySettingsTrainingReminder = [2]string{
+	0: "type",
+	1: "text",
+}
+
+// Decode decodes SportProfileBodySettingsTrainingReminder from json.
+func (s *SportProfileBodySettingsTrainingReminder) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileBodySettingsTrainingReminder to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "type":
+			if err := func() error {
+				s.Type.Reset()
+				if err := s.Type.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"type\"")
+			}
+		case "text":
+			if err := func() error {
+				s.Text.Reset()
+				if err := s.Text.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"text\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileBodySettingsTrainingReminder")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SportProfileBodySettingsTrainingReminder) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileBodySettingsTrainingReminder) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SportProfileBodySettingsVolume) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SportProfileBodySettingsVolume) encodeFields(e *jx.Encoder) {
+	{
+		if s.Volume.Set {
+			e.FieldStart("volume")
+			s.Volume.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfSportProfileBodySettingsVolume = [1]string{
+	0: "volume",
+}
+
+// Decode decodes SportProfileBodySettingsVolume from json.
+func (s *SportProfileBodySettingsVolume) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileBodySettingsVolume to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "volume":
+			if err := func() error {
+				s.Volume.Reset()
+				if err := s.Volume.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"volume\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileBodySettingsVolume")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SportProfileBodySettingsVolume) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileBodySettingsVolume) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s SportProfileLegacyProfiles) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s SportProfileLegacyProfiles) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+// Decode decodes SportProfileLegacyProfiles from json.
+func (s *SportProfileLegacyProfiles) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileLegacyProfiles to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem jx.Raw
+		if err := func() error {
+			v, err := d.RawAppend(nil)
+			elem = jx.Raw(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileLegacyProfiles")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SportProfileLegacyProfiles) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileLegacyProfiles) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SportProfileListCatalog) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SportProfileListCatalog) encodeFields(e *jx.Encoder) {
+	{
+		if s.UUID.Set {
+			e.FieldStart("uuid")
+			s.UUID.Encode(e)
+		}
+	}
+	{
+		if s.UserId.Set {
+			e.FieldStart("userId")
+			s.UserId.Encode(e)
+		}
+	}
+	{
+		if s.Created.Set {
+			e.FieldStart("created")
+			s.Created.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		if s.Modified.Set {
+			e.FieldStart("modified")
+			s.Modified.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		if s.ActiveSportProfileListIndex.Set {
+			e.FieldStart("activeSportProfileListIndex")
+			s.ActiveSportProfileListIndex.Encode(e)
+		}
+	}
+	{
+		if s.Lists != nil {
+			e.FieldStart("lists")
+			e.ArrStart()
+			for _, elem := range s.Lists {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+}
+
+var jsonFieldsNameOfSportProfileListCatalog = [6]string{
+	0: "uuid",
+	1: "userId",
+	2: "created",
+	3: "modified",
+	4: "activeSportProfileListIndex",
+	5: "lists",
+}
+
+// Decode decodes SportProfileListCatalog from json.
+func (s *SportProfileListCatalog) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileListCatalog to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "uuid":
+			if err := func() error {
+				s.UUID.Reset()
+				if err := s.UUID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"uuid\"")
+			}
+		case "userId":
+			if err := func() error {
+				s.UserId.Reset()
+				if err := s.UserId.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"userId\"")
+			}
+		case "created":
+			if err := func() error {
+				s.Created.Reset()
+				if err := s.Created.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"created\"")
+			}
+		case "modified":
+			if err := func() error {
+				s.Modified.Reset()
+				if err := s.Modified.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"modified\"")
+			}
+		case "activeSportProfileListIndex":
+			if err := func() error {
+				s.ActiveSportProfileListIndex.Reset()
+				if err := s.ActiveSportProfileListIndex.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"activeSportProfileListIndex\"")
+			}
+		case "lists":
+			if err := func() error {
+				s.Lists = make([]SportProfileListCatalogListsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem SportProfileListCatalogListsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Lists = append(s.Lists, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"lists\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileListCatalog")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SportProfileListCatalog) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileListCatalog) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SportProfileListCatalogListsItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SportProfileListCatalogListsItem) encodeFields(e *jx.Encoder) {
+	{
+		if s.Index.Set {
+			e.FieldStart("index")
+			s.Index.Encode(e)
+		}
+	}
+	{
+		if s.SportProfileUuids != nil {
+			e.FieldStart("sportProfileUuids")
+			e.ArrStart()
+			for _, elem := range s.SportProfileUuids {
+				e.Str(elem)
+			}
+			e.ArrEnd()
+		}
+	}
+}
+
+var jsonFieldsNameOfSportProfileListCatalogListsItem = [2]string{
+	0: "index",
+	1: "sportProfileUuids",
+}
+
+// Decode decodes SportProfileListCatalogListsItem from json.
+func (s *SportProfileListCatalogListsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileListCatalogListsItem to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "index":
+			if err := func() error {
+				s.Index.Reset()
+				if err := s.Index.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"index\"")
+			}
+		case "sportProfileUuids":
+			if err := func() error {
+				s.SportProfileUuids = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.SportProfileUuids = append(s.SportProfileUuids, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sportProfileUuids\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileListCatalogListsItem")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SportProfileListCatalogListsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileListCatalogListsItem) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -16216,6 +17613,463 @@ func (s SportProfileSaveRequestSportsItemItem) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SportProfileSaveRequestSportsItemItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SportProfileThreshold) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SportProfileThreshold) encodeFields(e *jx.Encoder) {
+	{
+		if s.Speed.Set {
+			e.FieldStart("speed")
+			s.Speed.Encode(e)
+		}
+	}
+	{
+		if s.Power.Set {
+			e.FieldStart("power")
+			s.Power.Encode(e)
+		}
+	}
+	{
+		if s.Source.Set {
+			e.FieldStart("source")
+			s.Source.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfSportProfileThreshold = [3]string{
+	0: "speed",
+	1: "power",
+	2: "source",
+}
+
+// Decode decodes SportProfileThreshold from json.
+func (s *SportProfileThreshold) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileThreshold to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "speed":
+			if err := func() error {
+				s.Speed.Reset()
+				if err := s.Speed.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"speed\"")
+			}
+		case "power":
+			if err := func() error {
+				s.Power.Reset()
+				if err := s.Power.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"power\"")
+			}
+		case "source":
+			if err := func() error {
+				s.Source.Reset()
+				if err := s.Source.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"source\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileThreshold")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SportProfileThreshold) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileThreshold) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SportProfileWriteRequest) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SportProfileWriteRequest) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("uuid")
+		e.Str(s.UUID)
+	}
+	{
+		e.FieldStart("userId")
+		e.Int(s.UserId)
+	}
+	{
+		if s.Modified.Set {
+			e.FieldStart("modified")
+			s.Modified.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		e.FieldStart("profile")
+		s.Profile.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfSportProfileWriteRequest = [4]string{
+	0: "uuid",
+	1: "userId",
+	2: "modified",
+	3: "profile",
+}
+
+// Decode decodes SportProfileWriteRequest from json.
+func (s *SportProfileWriteRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileWriteRequest to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "uuid":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.UUID = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"uuid\"")
+			}
+		case "userId":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.UserId = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"userId\"")
+			}
+		case "modified":
+			if err := func() error {
+				s.Modified.Reset()
+				if err := s.Modified.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"modified\"")
+			}
+		case "profile":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.Profile.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"profile\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileWriteRequest")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSportProfileWriteRequest) {
+					name = jsonFieldsNameOfSportProfileWriteRequest[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SportProfileWriteRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileWriteRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SportProfileZoneLimits) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SportProfileZoneLimits) encodeFields(e *jx.Encoder) {
+	{
+		if s.HeartRateZones != nil {
+			e.FieldStart("heartRateZones")
+			e.ArrStart()
+			for _, elem := range s.HeartRateZones {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.SpeedZones != nil {
+			e.FieldStart("speedZones")
+			e.ArrStart()
+			for _, elem := range s.SpeedZones {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.PowerZones != nil {
+			e.FieldStart("powerZones")
+			e.ArrStart()
+			for _, elem := range s.PowerZones {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.HeartRateSettingSource.Set {
+			e.FieldStart("heartRateSettingSource")
+			s.HeartRateSettingSource.Encode(e)
+		}
+	}
+	{
+		if s.SpeedSettingSource.Set {
+			e.FieldStart("speedSettingSource")
+			s.SpeedSettingSource.Encode(e)
+		}
+	}
+	{
+		if s.PowerSettingSource.Set {
+			e.FieldStart("powerSettingSource")
+			s.PowerSettingSource.Encode(e)
+		}
+	}
+	{
+		if s.SpeedZoneCalculationMethod.Set {
+			e.FieldStart("speedZoneCalculationMethod")
+			s.SpeedZoneCalculationMethod.Encode(e)
+		}
+	}
+	{
+		if s.PowerZoneCalculationMethod.Set {
+			e.FieldStart("powerZoneCalculationMethod")
+			s.PowerZoneCalculationMethod.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfSportProfileZoneLimits = [8]string{
+	0: "heartRateZones",
+	1: "speedZones",
+	2: "powerZones",
+	3: "heartRateSettingSource",
+	4: "speedSettingSource",
+	5: "powerSettingSource",
+	6: "speedZoneCalculationMethod",
+	7: "powerZoneCalculationMethod",
+}
+
+// Decode decodes SportProfileZoneLimits from json.
+func (s *SportProfileZoneLimits) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SportProfileZoneLimits to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "heartRateZones":
+			if err := func() error {
+				s.HeartRateZones = make([]ZoneLimit, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem ZoneLimit
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.HeartRateZones = append(s.HeartRateZones, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"heartRateZones\"")
+			}
+		case "speedZones":
+			if err := func() error {
+				s.SpeedZones = make([]ZoneLimit, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem ZoneLimit
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.SpeedZones = append(s.SpeedZones, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"speedZones\"")
+			}
+		case "powerZones":
+			if err := func() error {
+				s.PowerZones = make([]ZoneLimit, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem ZoneLimit
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.PowerZones = append(s.PowerZones, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"powerZones\"")
+			}
+		case "heartRateSettingSource":
+			if err := func() error {
+				s.HeartRateSettingSource.Reset()
+				if err := s.HeartRateSettingSource.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"heartRateSettingSource\"")
+			}
+		case "speedSettingSource":
+			if err := func() error {
+				s.SpeedSettingSource.Reset()
+				if err := s.SpeedSettingSource.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"speedSettingSource\"")
+			}
+		case "powerSettingSource":
+			if err := func() error {
+				s.PowerSettingSource.Reset()
+				if err := s.PowerSettingSource.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"powerSettingSource\"")
+			}
+		case "speedZoneCalculationMethod":
+			if err := func() error {
+				s.SpeedZoneCalculationMethod.Reset()
+				if err := s.SpeedZoneCalculationMethod.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"speedZoneCalculationMethod\"")
+			}
+		case "powerZoneCalculationMethod":
+			if err := func() error {
+				s.PowerZoneCalculationMethod.Reset()
+				if err := s.PowerZoneCalculationMethod.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"powerZoneCalculationMethod\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SportProfileZoneLimits")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SportProfileZoneLimits) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SportProfileZoneLimits) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -19582,6 +21436,119 @@ func (s *Waypoint) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *Waypoint) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ZoneLimit) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ZoneLimit) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("lowerLimit")
+		e.Float64(s.LowerLimit)
+	}
+	{
+		e.FieldStart("higherLimit")
+		e.Float64(s.HigherLimit)
+	}
+}
+
+var jsonFieldsNameOfZoneLimit = [2]string{
+	0: "lowerLimit",
+	1: "higherLimit",
+}
+
+// Decode decodes ZoneLimit from json.
+func (s *ZoneLimit) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ZoneLimit to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "lowerLimit":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Float64()
+				s.LowerLimit = float64(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"lowerLimit\"")
+			}
+		case "higherLimit":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Float64()
+				s.HigherLimit = float64(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"higherLimit\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ZoneLimit")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfZoneLimit) {
+					name = jsonFieldsNameOfZoneLimit[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ZoneLimit) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ZoneLimit) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

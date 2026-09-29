@@ -18,6 +18,8 @@ one canonical contract.
 | Duration | integer **seconds** | `*_s` |
 | Distance | **metres** (number) | `*_m` |
 | Speed | **km/h** (number) | `*_kmh` |
+| Pace | integer **seconds per km** | `*_s_per_km` |
+| Power | integer **watts** | `*_w` |
 | Heart rate | integer **bpm**; omitted when absent | `hr_*` |
 | Date (only) | ISO 8601 `YYYY-MM-DD` | `*_date` |
 | Datetime | ISO 8601 (`start_time`, RFC3339 or tz-less) | `*_time` / `*_at` |

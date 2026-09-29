@@ -18,6 +18,7 @@ from the OpenAPI spec in [`../../../polar-openapi-maker/`](https://github.com/lm
 | `client.go`, `login.go`, `cookies.go`, `jwt.go`, `errors.go`, `ops.go`, `transport_tls.go` | Hand-written wrapper around `gen.Client` |
 | `ops_favorites.go` | Favorites, routes and scheduling (`/api/favoritetarget`, `/api/favorites/*`, `/training/target/createTargetFromFavourite`) |
 | `ops_sessions.go` | Session existence check, delete, full edit (`editTraining`) and partial note/feeling update |
+| `ops_zones.go` | Sport profiles and training zones: list / read a stored profile, and `DefaultSportZones` via the non-persisting `POST /api/sports/profiles/{uuid}/recalculate` |
 | `sports.go` | Cached sport catalogue behind `SportName` (sport-id validation for write tools) |
 | `testing.go` | `NewForTesting(baseURL)` — a Client against an `httptest` server, no login (tests only) |
 
@@ -70,6 +71,11 @@ other semantic changes.
   that is not one of the account's exercise targets; it maps to
   `ErrFavoriteNotFound`. Reads of another account's session / favorite map to
   `ErrNotOwned`.
+- **Zones without a profile.** Most accounts store no sport profile for most
+  sports. `recalculate` computes a sport's default zones for any well-formed
+  profile uuid (`0f000000-0080-0000-0000-<sportId hex>`, see
+  `SportProfileUUID`) without saving, so `DefaultSportZones` needs no write.
+  It requires the caller's own `userId` in the body.
 
 ## Architecture
 
