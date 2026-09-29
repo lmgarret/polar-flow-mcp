@@ -144,6 +144,24 @@ func TestUpdateFavorite(t *testing.T) {
 			}
 		})
 	}
+	// A rename-style call (no goal) on a route: the route is why it cannot be
+	// done, not the missing goal.
+	for _, tc := range []struct {
+		name, fav, wantErr string
+	}{
+		{"route without goal", favRouteJSON, "update_favorite cannot edit routes"},
+		{"multi-sport without goal", favMultiJSON, "2 exercise targets"},
+		{"volume without goal", favVolumeJSON, "a favorite needs a goal"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ff := newFakeFlow(t)
+			ff.on("GET", "/api/favoritetarget/7", 200, "application/json", tc.fav)
+			res := callTool(t, UpdateFavoriteHandler(ff.client()), map[string]any{"favorite_id": 7.0, "name": "x"})
+			if !res.IsError || !strings.Contains(resultText(res), tc.wantErr) || len(ff.writes()) != 0 {
+				t.Fatalf("got %q, writes %v", resultText(res), ff.writes())
+			}
+		})
+	}
 	t.Run("unknown id", func(t *testing.T) {
 		ff := newFakeFlow(t)
 		ff.on("GET", "/api/favoritetarget/1", 404, textPlain, "favorites.notification_oops")

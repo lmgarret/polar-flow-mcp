@@ -82,6 +82,9 @@ func favoriteGoalArgs(req mcpgo.CallToolRequest) (name, desc string, sportID int
 	return name, desc, sportID, nil
 }
 
+// errNoGoal is favoriteGoalShape's answer when no goal argument was given.
+var errNoGoal = errors.New("a favorite needs a goal: duration_s, distance_m, or a phases array")
+
 // favoriteGoalShape checks the goal arguments: exactly one of duration_s,
 // distance_m or a non-empty phases array, each in Polar's accepted range.
 func favoriteGoalShape(req mcpgo.CallToolRequest) error {
@@ -110,7 +113,7 @@ func favoriteGoalShape(req mcpgo.CallToolRequest) error {
 	case hasDur && hasDist:
 		return errors.New("give only one of duration_s or distance_m for a VOLUME favorite")
 	case !hasPhases && !hasDur && !hasDist:
-		return errors.New("a favorite needs a goal: duration_s, distance_m, or a phases array")
+		return errNoGoal
 	}
 	return nil
 }
@@ -242,19 +245,24 @@ func UpdateFavoriteHandler(fc *flow.Client) toolHandler {
 		}
 		create, err := buildFavoriteCreate(ctx, fc, req)
 		if err != nil {
+			// A goal-less call is how a rename of a route or multi-sport favorite
+			// arrives here; no goal would make those editable, so say why
+			// instead of asking for one.
+			if errors.Is(err, errNoGoal) {
+				if existing, gerr := fc.GetFavorite(ctx, id); gerr == nil {
+					if msg := notReplaceable(existing, id); msg != "" {
+						return mcpgo.NewToolResultError(msg), nil
+					}
+				}
+			}
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		existing, err := fc.GetFavorite(ctx, id)
 		if err != nil {
 			return favoriteErrorResult(err, "favorite_id", id), nil
 		}
-		switch {
-		case existing.Type == gen.FavoriteTypeROUTE:
-			return mcpgo.NewToolResultError("favorite " + fmt.Sprint(id) + " is a ROUTE; its geometry cannot be " +
-				"edited — use rename_favorite or set_favorite_sport, or import a new route"), nil
-		case len(existing.ExerciseTargets) != 1:
-			return mcpgo.NewToolResultError(fmt.Sprintf("favorite %d has %d exercise targets (multi-sport); "+
-				"update_favorite only replaces single-sport favorites", id, len(existing.ExerciseTargets))), nil
+		if msg := notReplaceable(existing, id); msg != "" {
+			return mcpgo.NewToolResultError(msg), nil
 		}
 		etID, ok := existing.ExerciseTargets[0].ID.Get()
 		if !ok {
@@ -275,6 +283,20 @@ func UpdateFavoriteHandler(fc *flow.Client) toolHandler {
 		}
 		return favoriteResult(ctx, fc, id, fmt.Sprintf("Updated favorite %d.", id)), nil
 	}
+}
+
+// notReplaceable explains why update_favorite cannot full-replace a favorite,
+// or returns "" when it can.
+func notReplaceable(f *gen.Favorite, id int64) string {
+	switch {
+	case f.Type == gen.FavoriteTypeROUTE:
+		return fmt.Sprintf("favorite %d is a ROUTE; update_favorite cannot edit routes — use rename_favorite "+
+			"or set_favorite_sport, or import a new route", id)
+	case len(f.ExerciseTargets) != 1:
+		return fmt.Sprintf("favorite %d has %d exercise targets (multi-sport); update_favorite only replaces "+
+			"single-sport favorites", id, len(f.ExerciseTargets))
+	}
+	return ""
 }
 
 // DeleteFavoriteHandler deletes a favorite or route, after confirmation.
