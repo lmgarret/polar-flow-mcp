@@ -9,7 +9,7 @@ import (
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/lmgarret/polar-flow-mcp/internal/flow"
+	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
 
 // User confirmation for the two tools that touch real diary data:
@@ -54,7 +54,7 @@ var confirmSchema = map[string]any{
 // question, or the cancellation notice.
 //
 // message is a closure because it is only needed on the leg that actually
-// asks; building it may cost an API round-trip (see describeTarget).
+// asks.
 func requireConfirm(
 	ctx context.Context,
 	req mcpgo.CallToolRequest,
@@ -110,11 +110,9 @@ func canElicit(ctx context.Context) bool {
 // describeTarget renders a target as something a user can actually agree to
 // delete. "Delete target 7286431?" is not an answerable question; "Delete
 // \"5x1km Threshold\" (2026-06-02T09:00)?" is. Falls back to the bare id when
-// the read fails — the prompt is still worth showing without the name, and the
-// delete itself reports a missing target on its own.
-func describeTarget(ctx context.Context, fc *flow.Client, id int64) string {
-	t, err := fc.GetTrainingTarget(ctx, id)
-	if err != nil || strings.TrimSpace(t.Name) == "" {
+// the target has no name.
+func describeTarget(t *gen.GetTrainingTargetOK, id int64) string {
+	if strings.TrimSpace(t.Name) == "" {
 		return fmt.Sprintf("the training target with id %d", id)
 	}
 	if t.Datetime != "" {

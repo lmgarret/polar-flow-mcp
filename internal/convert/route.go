@@ -8,7 +8,6 @@ import (
 	"math"
 	"strings"
 	"time"
-	"unicode/utf8"
 )
 
 // Route import: Flow's web UI parses GPX/TCX files in the browser and uploads
@@ -349,7 +348,7 @@ func ValidateRouteName(name string) error {
 	if strings.TrimSpace(name) == "" {
 		return errors.New("route name must contain a non-whitespace character")
 	}
-	if n := utf8.RuneCountInString(name); n > MaxRouteNameRunes {
+	if n := PolarTextLen(name); n > MaxRouteNameRunes {
 		return fmt.Errorf("route name is %d characters; Polar's limit is %d", n, MaxRouteNameRunes)
 	}
 	return nil

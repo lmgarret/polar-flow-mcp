@@ -208,3 +208,12 @@ func TestNilIfSentinelID(t *testing.T) {
 		t.Errorf("NilIfSentinelID(42) = %v, want 42", got)
 	}
 }
+
+func TestPolarTextLen(t *testing.T) {
+	cases := map[string]int{"": 0, "abc": 3, "ééé": 3, "mcp–x": 5, "a🏃": 3, "🏃🏃": 4}
+	for in, want := range cases {
+		if got := PolarTextLen(in); got != want {
+			t.Errorf("PolarTextLen(%q) = %d, want %d", in, got, want)
+		}
+	}
+}

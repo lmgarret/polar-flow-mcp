@@ -1370,6 +1370,22 @@ type CreateTrainingSessionOK struct{}
 
 func (*CreateTrainingSessionOK) createTrainingSessionRes() {}
 
+type CreateTrainingTargetBadRequestTextPlain struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s CreateTrainingTargetBadRequestTextPlain) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*CreateTrainingTargetBadRequestTextPlain) createTrainingTargetRes() {}
+
 type CreateTrainingTargetCreated struct {
 	Data io.Reader
 }
@@ -1555,6 +1571,22 @@ func (*DeleteTrainingSessionNotFound) deleteTrainingSessionRes() {}
 type DeleteTrainingSessionOK struct{}
 
 func (*DeleteTrainingSessionOK) deleteTrainingSessionRes() {}
+
+type DeleteTrainingTargetBadRequest struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DeleteTrainingTargetBadRequest) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*DeleteTrainingTargetBadRequest) deleteTrainingTargetRes() {}
 
 // DeleteTrainingTargetForbidden is response for DeleteTrainingTarget operation.
 type DeleteTrainingTargetForbidden struct{}
@@ -1746,8 +1778,9 @@ func (*Favorite) getFavoriteRes() {}
 type FavoriteCreate struct {
 	// Favorite kind — see TrainingTargetCreate.type for the per-value field rules.
 	Type FavoriteCreateType `json:"type"`
-	// Favorite display name, 1–45 chars (probed 2026-09-28: 46 → 400 `{"target.name":[…]}`).
-	// Stricter than the training-target name.
+	// Favorite display name, 1–45 chars counted as UTF-16 code units (Java `String.length()`: 44 letters
+	// + one emoji = 46 → 400; probed 2026-09-28/29: 46 → 400 `{"target.name":[…]}`). Same limit as
+	// the training-target name.
 	Name string `json:"name"`
 	// Free-text notes, ≤ 500 chars; send empty string when none.
 	Description OptString `json:"description"`
@@ -2204,8 +2237,13 @@ type FavoriteListing struct {
 	ExternalRouteIdentifier OptNilString `json:"externalRouteIdentifier"`
 	// Devices that can use this favorite. Empty until a device is paired; element shape TBD.
 	SupportedDevices []jx.Raw `json:"supportedDevices"`
-	// Ids of the supported devices.
-	SupportedDeviceIds []int `json:"supportedDeviceIds"`
+	// Ids of the paired devices this favorite can be synced to. `[]` on a device-less account. Type
+	// deliberately left open (TODO: verify on a device-paired account): a client that decoded it as an
+	// integer array failed on a real device-paired account (2026-09-29, "got a string"), and the web app
+	// only ever does `supportedDeviceIds.indexOf(device.deviceId)` where `deviceId` is a string
+	// (interpolated raw into `/api/devices/:deviceId/...`) — so this is most likely an array of
+	// device-id strings, possibly a plain string. Clients that don't need it should skip it.
+	SupportedDeviceIds jx.Raw `json:"supportedDeviceIds"`
 }
 
 // GetFavoriteId returns the value of FavoriteId.
@@ -2284,7 +2322,7 @@ func (s *FavoriteListing) GetSupportedDevices() []jx.Raw {
 }
 
 // GetSupportedDeviceIds returns the value of SupportedDeviceIds.
-func (s *FavoriteListing) GetSupportedDeviceIds() []int {
+func (s *FavoriteListing) GetSupportedDeviceIds() jx.Raw {
 	return s.SupportedDeviceIds
 }
 
@@ -2364,7 +2402,7 @@ func (s *FavoriteListing) SetSupportedDevices(val []jx.Raw) {
 }
 
 // SetSupportedDeviceIds sets the value of SupportedDeviceIds.
-func (s *FavoriteListing) SetSupportedDeviceIds(val []int) {
+func (s *FavoriteListing) SetSupportedDeviceIds(val jx.Raw) {
 	s.SupportedDeviceIds = val
 }
 
@@ -3178,8 +3216,35 @@ type GetTrainingSessionSummaryNotFound struct{}
 
 func (*GetTrainingSessionSummaryNotFound) getTrainingSessionSummaryRes() {}
 
-// GetTrainingTargetNotFound is response for GetTrainingTarget operation.
-type GetTrainingTargetNotFound struct{}
+type GetTrainingTargetForbidden struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetTrainingTargetForbidden) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*GetTrainingTargetForbidden) getTrainingTargetRes() {}
+
+type GetTrainingTargetNotFound struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetTrainingTargetNotFound) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
 
 func (*GetTrainingTargetNotFound) getTrainingTargetRes() {}
 
@@ -3198,13 +3263,17 @@ type GetTrainingTargetOK struct {
 	//    null (each phase carries its own). All three values verified from captured POST bodies
 	//    (2026-05-25).
 	Type GetTrainingTargetOKType `json:"type"`
-	// Display name shown in the diary. A server-side content filter (libinjection-style SQL-injection
-	// heuristic, whole-string and prefix-sensitive) rejects some innocuous names with a `400`
-	// `ValidationError` on field `trainingSessionTarget.name`, on both create and update. Don't pre-filter
-	// client-side; on that rejection, prefix or reword the name and retry (probed 2026-07-22).
+	// Display name shown in the diary, at most 45 characters counted as UTF-16 code units (Java
+	// `String.length()`: an emoji counts 2) — 46 → `400` on `trainingSessionTarget.name` with the same
+	// generic message as the content filter below, on create and update (probed 2026-09-29). A server-side
+	// content filter (libinjection-style SQL-injection heuristic, whole-string and prefix-sensitive)
+	// rejects some innocuous names with a `400` `ValidationError` on field `trainingSessionTarget.name`,
+	// on both create and update. Don't pre-filter client-side; on that rejection, prefix or reword the
+	// name and retry (probed 2026-07-22).
 	Name string `json:"name"`
-	// Free-text notes. The create form sends an empty string when not provided, but the server stores and
-	// returns `null` on read-back — so this must be nullable to decode a target created without a
+	// Free-text notes, at most 500 characters (501 → `400` on `trainingSessionTarget.description`;
+	// probed 2026-09-29). The create form sends an empty string when not provided, but the server stores
+	// and returns `null` on read-back — so this must be nullable to decode a target created without a
 	// description.
 	Description OptNilString `json:"description"`
 	// Local date-time of the planned workout, ISO 8601 without timezone offset (e.g. "2026-05-24T10:00").
@@ -6854,6 +6923,10 @@ type PhaseLeaf struct {
 	ID OptNilFloat64 `json:"id"`
 	// Constant `"PHASE"` discriminator for leaf phases.
 	PhaseType PhaseLeafPhaseType `json:"phaseType"`
+	// At most 45 characters (UTF-16 code units). ⚠ Over-length → `400` `phases.[i].name` on create but
+	// the parent target / favorite is still half-created (name + datetime, no exercise targets) and, for a
+	// target, keeps its time slot — see `POST /api/trainingtarget` (probed 2026-09-29).
+	//
 	// Free-text phase label shown per-phase in the workout breakdown (e.g. `Warm-up`, `Work`, `Recovery`,
 	// `Cool-down` — verified on a live named-phase target). Independent of `intensityType`: a
 	// `NONE`-intensity phase still carries its own name. Required when `intensityType` is not
@@ -11497,13 +11570,17 @@ type TrainingTargetCreate struct {
 	//    null (each phase carries its own). All three values verified from captured POST bodies
 	//    (2026-05-25).
 	Type TrainingTargetCreateType `json:"type"`
-	// Display name shown in the diary. A server-side content filter (libinjection-style SQL-injection
-	// heuristic, whole-string and prefix-sensitive) rejects some innocuous names with a `400`
-	// `ValidationError` on field `trainingSessionTarget.name`, on both create and update. Don't pre-filter
-	// client-side; on that rejection, prefix or reword the name and retry (probed 2026-07-22).
+	// Display name shown in the diary, at most 45 characters counted as UTF-16 code units (Java
+	// `String.length()`: an emoji counts 2) — 46 → `400` on `trainingSessionTarget.name` with the same
+	// generic message as the content filter below, on create and update (probed 2026-09-29). A server-side
+	// content filter (libinjection-style SQL-injection heuristic, whole-string and prefix-sensitive)
+	// rejects some innocuous names with a `400` `ValidationError` on field `trainingSessionTarget.name`,
+	// on both create and update. Don't pre-filter client-side; on that rejection, prefix or reword the
+	// name and retry (probed 2026-07-22).
 	Name string `json:"name"`
-	// Free-text notes. The create form sends an empty string when not provided, but the server stores and
-	// returns `null` on read-back — so this must be nullable to decode a target created without a
+	// Free-text notes, at most 500 characters (501 → `400` on `trainingSessionTarget.description`;
+	// probed 2026-09-29). The create form sends an empty string when not provided, but the server stores
+	// and returns `null` on read-back — so this must be nullable to decode a target created without a
 	// description.
 	Description OptNilString `json:"description"`
 	// Local date-time of the planned workout, ISO 8601 without timezone offset (e.g. "2026-05-24T10:00").
@@ -11748,6 +11825,22 @@ func (*UpdateTrainingSessionDataNotFound) updateTrainingSessionDataRes() {}
 type UpdateTrainingSessionDataOK struct{}
 
 func (*UpdateTrainingSessionDataOK) updateTrainingSessionDataRes() {}
+
+type UpdateTrainingTargetBadRequestTextPlain struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s UpdateTrainingTargetBadRequestTextPlain) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*UpdateTrainingTargetBadRequestTextPlain) updateTrainingTargetRes() {}
 
 // UpdateTrainingTargetOK is response for UpdateTrainingTarget operation.
 type UpdateTrainingTargetOK struct{}

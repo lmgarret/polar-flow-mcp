@@ -3976,13 +3976,9 @@ func (s *FavoriteListing) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.SupportedDeviceIds != nil {
+		if len(s.SupportedDeviceIds) != 0 {
 			e.FieldStart("supportedDeviceIds")
-			e.ArrStart()
-			for _, elem := range s.SupportedDeviceIds {
-				e.Int(elem)
-			}
-			e.ArrEnd()
+			e.Raw(s.SupportedDeviceIds)
 		}
 	}
 }
@@ -4175,17 +4171,9 @@ func (s *FavoriteListing) Decode(d *jx.Decoder) error {
 			}
 		case "supportedDeviceIds":
 			if err := func() error {
-				s.SupportedDeviceIds = make([]int, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem int
-					v, err := d.Int()
-					elem = int(v)
-					if err != nil {
-						return err
-					}
-					s.SupportedDeviceIds = append(s.SupportedDeviceIds, elem)
-					return nil
-				}); err != nil {
+				v, err := d.RawAppend(nil)
+				s.SupportedDeviceIds = jx.Raw(v)
+				if err != nil {
 					return err
 				}
 				return nil
