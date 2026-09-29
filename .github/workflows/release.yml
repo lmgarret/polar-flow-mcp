@@ -38,7 +38,7 @@ jobs:
       - name: Find previous tag
         id: prev_tag
         run: |
-          PREV=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          PREV=$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || echo "")
           # nosovj/llm-release-action both (a) validates current_version as strict
           # semver and (b) uses it as a git ref (git log <current_version>..HEAD).
           # A legacy two-component vX.Y tag satisfies (b) but not (a); a bare vX.Y.0
@@ -77,7 +77,7 @@ jobs:
       - name: Generate commit log
         id: commitlog
         run: |
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
           LOG=$(git log --oneline "${PREVIOUS_TAG}..HEAD" 2>/dev/null || git log --oneline)
           {
             echo "log<<COMMITLOG_EOF"
