@@ -82,7 +82,16 @@ func ensureStructured(result *mcpgo.CallToolResult) {
 			break
 		}
 	}
-	result.StructuredContent = map[string]any{"type": "notice", "message": msg}
+	result.StructuredContent = noticePayload("notice", msg)
+}
+
+// noticePayload is the widget payload for a result with no data to show. The
+// MCP-app UIs render it as a notice card; kind is "notice" (a plain statement
+// such as "No target with id 7.") or "cancelled" (the user declined a
+// confirmation). Tool errors need no payload — the UIs render isError results
+// as an "error" notice from their text.
+func noticePayload(kind, message string) map[string]any {
+	return map[string]any{"type": "notice", "kind": kind, "message": message}
 }
 
 func uiMeta(resourceURI string) *mcpgo.Meta {

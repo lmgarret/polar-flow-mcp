@@ -124,7 +124,7 @@ func TestWithLogging_BackfillsStructuredContent(t *testing.T) {
 	})
 	res, _ := h(context.Background(), req(nil))
 	sc, _ := res.StructuredContent.(map[string]any)
-	if sc["type"] != "notice" || sc["message"] != "No target with id 7." {
+	if sc["type"] != "notice" || sc["kind"] != "notice" || sc["message"] != "No target with id 7." {
 		t.Fatalf("structuredContent = %#v", res.StructuredContent)
 	}
 

@@ -67,10 +67,11 @@ func requireConfirm(
 			return nil, true
 		}
 		slog.Info("tool: not confirmed", "tool", tool, "action", answer.Action)
-		return mcpgo.NewToolResultText(
-			"Cancelled: the user did not confirm. Nothing was created, changed, or deleted. " +
-				"Do not retry unless the user asks again.",
-		), false
+		const msg = "Cancelled: the user did not confirm. Nothing was created, changed, or deleted. " +
+			"Do not retry unless the user asks again."
+		result := mcpgo.NewToolResultText(msg)
+		result.StructuredContent = noticePayload("cancelled", msg)
+		return result, false
 	}
 	if !canElicit(ctx) {
 		return nil, true
