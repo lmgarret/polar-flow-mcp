@@ -183,7 +183,19 @@ func encodeCreateFavoriteResponse(response CreateFavoriteRes, w http.ResponseWri
 
 func encodeCreateSportProfileResponse(response CreateSportProfileRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
-	case *SportProfile:
+	case *CreateSportProfileOK:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(200)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CreateSportProfileCreated:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(201)
 
@@ -204,6 +216,12 @@ func encodeCreateSportProfileResponse(response CreateSportProfileRes, w http.Res
 		if _, err := e.WriteTo(w); err != nil {
 			return errors.Wrap(err, "write")
 		}
+
+		return nil
+
+	case *CreateSportProfileInternalServerError:
+		w.WriteHeader(500)
+		span.SetStatus(codes.Error, http.StatusText(500))
 
 		return nil
 

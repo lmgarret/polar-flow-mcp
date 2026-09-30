@@ -206,3 +206,67 @@ func zoneThresholds(body gen.SportProfileBody) *ZoneThresholds {
 func round2(v float64) float64 { return math.Round(v*100) / 100 }
 
 func roundInt(v float64) int { return int(math.Round(v)) }
+
+// Zone-edit limits: Flow validates these server-side (400) — they are
+// checked before sending. HR and power limits must be whole numbers.
+const (
+	MinHRBPM       = 15
+	MaxHRBPM       = 240
+	MinSpeedKmh    = 1.0
+	MaxSpeedKmh    = openSpeedKmh
+	MaxPowerW      = openPowerW
+	MinZoneSpanBPM = 2 // HR and power zones must span ≥ 2; speed has no minimum
+)
+
+// ZoneEdit is a requested change to one zone list: Bounds are the ascending
+// zone boundaries (Z1 lower … Z5 upper; for speed and power the Z5 upper may
+// be omitted for an open-ended top zone), or Reset returns the list to
+// Polar's computed defaults.
+type ZoneEdit struct {
+	Bounds []float64
+	Reset  bool
+}
+
+// ZoneSources are the wire setting-source constants of one zone list.
+type ZoneSources struct{ Free, Default string }
+
+// ApplyZoneEdits returns stored with the edits applied, ready for
+// update-zones. An edited list becomes "free" (hand-entered); a reset list is
+// sent with its DEFAULT source, which makes Flow recompute it. Lists without
+// an edit keep their stored limits and source. Flow requires all three
+// sources, so an unset one is sent as DEFAULT.
+func ApplyZoneEdits(stored gen.SportProfileZoneLimits, hr, speed, power *ZoneEdit, hrSrc, speedSrc, powerSrc ZoneSources) gen.SportProfileZoneLimits {
+	out := gen.SportProfileZoneLimits{
+		HeartRateZones:         stored.HeartRateZones,
+		SpeedZones:             stored.SpeedZones,
+		PowerZones:             stored.PowerZones,
+		HeartRateSettingSource: stored.HeartRateSettingSource,
+		SpeedSettingSource:     stored.SpeedSettingSource,
+		PowerSettingSource:     stored.PowerSettingSource,
+	}
+	apply := func(zones *[]gen.ZoneLimit, src *gen.OptString, e *ZoneEdit, s ZoneSources, open float64) {
+		switch {
+		case e == nil:
+		case e.Reset:
+			src.SetTo(s.Default)
+		default:
+			b := e.Bounds
+			if len(b) == 5 {
+				b = append(append([]float64{}, b...), open)
+			}
+			z := make([]gen.ZoneLimit, 0, 5)
+			for i := 0; i+1 < len(b); i++ {
+				z = append(z, gen.ZoneLimit{LowerLimit: b[i], HigherLimit: b[i+1]})
+			}
+			*zones = z
+			src.SetTo(s.Free)
+		}
+		if src.Or("") == "" {
+			src.SetTo(s.Default)
+		}
+	}
+	apply(&out.HeartRateZones, &out.HeartRateSettingSource, hr, hrSrc, 0)
+	apply(&out.SpeedZones, &out.SpeedSettingSource, speed, speedSrc, openSpeedKmh)
+	apply(&out.PowerZones, &out.PowerSettingSource, power, powerSrc, openPowerW)
+	return out
+}

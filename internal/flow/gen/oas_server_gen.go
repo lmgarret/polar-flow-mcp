@@ -661,6 +661,13 @@ type Handler interface {
 	//  - each zone spans ≥ 2 units;
 	//  - ranges: HR [15, 240] bpm, speed [1.0, 399.0] km/h, power [0, 2000] W.
 	//
+	// Probed 2026-09-30: only `settings.zoneLimits` is read — other settings are kept even when omitted.
+	// All three `*SettingSource` fields are required (a missing one → 400
+	// `… setting source is missing from profile settings`), so send every list, not just the edited one.
+	// A `…_DEFAULT` source makes the server recompute that list and ignore the limits sent. A `…_FREE`
+	// power list reads back with calculation method `…_UNKNOWN`. The stored `modified` is the server's
+	// write time, not the value sent.
+	//
 	// ⚠ `modified` must be newer than the stored profile's `modified`, else 409
 	// `A newer profile exists: Incoming sport profile is older than what is stored`. `userId` must be the
 	// session user. Requires `X-Requested-With: XMLHttpRequest`.

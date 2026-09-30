@@ -28,7 +28,7 @@ type fakeFlow struct {
 }
 
 type fakeReq struct {
-	Method, Path, Body, XRequestedWith string
+	Method, Path, Body, XRequestedWith, Query string
 }
 
 type fakeResp struct {
@@ -51,7 +51,7 @@ func (f *fakeFlow) serve(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
 	key := r.Method + " " + r.URL.Path
 	f.mu.Lock()
-	f.reqs = append(f.reqs, fakeReq{r.Method, r.URL.Path, string(body), r.Header.Get("X-Requested-With")})
+	f.reqs = append(f.reqs, fakeReq{r.Method, r.URL.Path, string(body), r.Header.Get("X-Requested-With"), r.URL.RawQuery})
 	queue := f.routes[key]
 	var resp fakeResp
 	ok := len(queue) > 0

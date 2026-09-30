@@ -211,7 +211,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("Polar sport id (1 = running, 2 = cycling, 23 = swimming; "+
 				"list_sports has them all). Omit to list every stored sport profile.")),
 	)
-	bindUI(&tz, "ui://polar-flow/zones.html")
+	bindUI(&tz, zonesUI)
 	s.AddTool(tz, withLogging("get_training_zones", GetTrainingZonesHandler(fc)))
 
 	ct := mcpgo.NewTool("create_training_target",
@@ -519,6 +519,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 	s.AddTool(gsd, withLogging("get_training_session_details", GetTrainingSessionDetailsHandler(fc)))
 
 	registerFavoriteAndSessionEditTools(s, fc)
+	registerProfileAndActivityTools(s, fc)
 }
 
 // phaseItemSchema returns the JSON-schema for one entry of the `phases` array.

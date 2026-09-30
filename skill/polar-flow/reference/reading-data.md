@@ -16,6 +16,8 @@ these tools are read-only and safe to call freely. Dates are ISO `YYYY-MM-DD`.
 | Monthly/quarterly totals | `get_progress_summary` | Distributions; default last 90d. |
 | I need raw diary entries | `get_calendar_events` | Low-level fallback. |
 | What pace / HR / watts is zone N? | `get_training_zones` | Per sport; pass `sport_id`. |
+| Steps / active time / daily HR | `get_daily_activity` | Default last 7 days; ≤ 31. One day → intraday curves. |
+| How did I sleep? | `get_sleep` | Default last 14 nights; ≤ 365. Keyed by wake-up date. |
 | What templates / routes do I have? | `list_favorites` | `kind` filters templates vs routes. |
 | Show me a route | `get_route` | Waypoints, down-sampled. |
 

@@ -61,6 +61,14 @@ and scheduling a favorite answers with distance and duration as *strings*
 Scheduling also needs its own datetime form, `YYYY-MM-DDTHH:MM:SS.sss+00:00`,
 whose offset Polar ignores.
 
+**Activity and sleep** add minutes: the 24/7 activity timeline reports active
+time, sleep and every intensity band in minutes (converted to seconds), step
+distance in metres, the daily goal as a percentage, and intraday samples as
+epoch milliseconds that encode the *local* wall clock (rendered as `HH:MM`).
+Days without device data arrive as zeros and are reported as `null`. Sleep
+times carry an offset whose local wall clock is kept, plus separate
+second offsets to the moments of falling asleep and waking.
+
 **Routes** are uploaded as trackpoints with a cumulative distance in metres
 (haversine for GPX, the file's own distances for TCX) and read back as
 waypoints with a synthesized per-point sequence number, which the adapter drops.
@@ -80,6 +88,9 @@ a nullable integer on read. Field names drift too — `hrAverage` vs `hrAvg`,
 - `internal/convert/dto_favorites.go` / `dto_sessions.go` — favorite, route,
   scheduled-target and session-edit mappers (including the favorite copy of a
   training target and the session edit body built from the live summary).
+- `internal/convert/dto_zones.go` / `dto_activity.go` / `dto_sleep.go` — zones
+  and zone edits, daily activity, and sleep nights (stage totals and the
+  hypnogram, derived the way Flow's own sleep report does).
 - `internal/convert/route.go` — the GPX/TCX parser and route validation used by
   `import_route`.
 - `internal/convert/sport.go` — `SportCategory(name, id)`, the single source of

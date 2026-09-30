@@ -173,6 +173,9 @@ The server reads `/.env` on startup via `godotenv` — credentials are in memory
 | `get_user_info` | Linked Polar account identity + profile basics |
 | `list_sports` | Full Polar sport-id → name catalogue (the `sport_id` values for targets/sessions) |
 | `get_training_zones` | Heart-rate / speed (pace) / power zones 1–5 of a sport in bpm, km/h (min/km) and W — what the zone numbers on targets mean |
+| `create_sport_profile` | Create a sport's profile with Polar's default zones (idempotent) |
+| `update_training_zones` | Set a sport's HR / speed / power zones by hand, or reset them to Polar's defaults |
+| `delete_sport_profile` | Delete a sport's profile (confirms first; Polar keeps the last one) |
 | `create_training_target` | Schedule a target (warmup / repeat / cooldown phases) |
 | `list_training_targets` | Targets in a date range |
 | `delete_training_target` | Delete a target by ID |
@@ -184,6 +187,8 @@ The server reads `/.env` on startup via `godotenv` — credentials are in memory
 | `get_training_session_summary` | Summary view of one session |
 | `get_training_session_details` | Lap and sample detail of one session |
 | `get_progress_summary` | Aggregated training totals over a range |
+| `get_daily_activity` | 24/7 activity per day: steps, active time, calories, intensity bands, day/night HR; intraday curves for one day |
+| `get_sleep` | Recorded nights: sleep times, duration, Sleep Score, continuity, stages and hypnogram |
 | `create_training_session` | Log a manually-entered completed session (writes real data — coach must only call on explicit user request) |
 | `edit_training_session` | Edit a completed session: note, feeling (1–5), and — on manual sessions — name, sport, duration, distance, HR, kcal, speed |
 | `delete_training_session` | Delete a completed session by ID |

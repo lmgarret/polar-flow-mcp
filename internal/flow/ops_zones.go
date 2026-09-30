@@ -2,9 +2,11 @@ package flow
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -116,4 +118,137 @@ func readBody(r io.Reader) string {
 		return s
 	}
 	return "(empty body)"
+}
+
+// Zone setting sources a write can choose per list: FREE keeps hand-entered
+// limits, DEFAULT makes Flow recompute the list (the limits sent are ignored).
+const (
+	HRSourceFree       = "HEART_RATE_ZONE_SETTING_SOURCE_FREE"
+	SpeedSourceFree    = "SPEED_ZONE_SETTING_SOURCE_FREE"
+	PowerSourceFree    = "POWER_ZONE_SETTING_SOURCE_FREE"
+	HRSourceDefault    = hrSourceDefault
+	SpeedSourceDefault = speedSourceDefault
+	PowerSourceDefault = powerSourceDefault
+)
+
+// ErrUnknownSport is returned when Flow refuses a sport id (create answers an
+// empty 500 for an id outside /api/sports/sports).
+var ErrUnknownSport = errors.New("flow: unknown sport id")
+
+// ErrLastSportProfile is returned when deleting the account's only sport
+// profile, which Flow refuses.
+var ErrLastSportProfile = errors.New("flow: the last sport profile cannot be deleted")
+
+// CreateSportProfile creates the sport profile for sportID with Polar's
+// default settings and zones, via POST /api/sports/profiles/create/{sportId}.
+// It is idempotent: when a profile already exists Flow answers 200 with the
+// stored profile and changes nothing — created reports which case it was.
+func (c *Client) CreateSportProfile(ctx context.Context, sportID int) (p *gen.SportProfile, created bool, err error) {
+	res, err := c.API.CreateSportProfile(ctx, gen.CreateSportProfileParams{
+		SportId:        sportID,
+		XRequestedWith: gen.XRequestedWithXMLHttpRequest,
+	})
+	if err != nil {
+		return nil, false, wrapFlowError("create sport profile", err)
+	}
+	switch v := res.(type) {
+	case *gen.CreateSportProfileCreated:
+		return (*gen.SportProfile)(v), true, nil
+	case *gen.CreateSportProfileOK:
+		return (*gen.SportProfile)(v), false, nil
+	case *gen.CreateSportProfileInternalServerError:
+		return nil, false, ErrUnknownSport
+	case *gen.Unauthorized:
+		return nil, false, ErrLoginFailed
+	default:
+		return nil, false, fmt.Errorf("flow: create sport profile: unexpected response %T", res)
+	}
+}
+
+// UpdateSportProfileZones saves the zones of a stored profile via
+// POST /api/sports/profiles/{uuid}/update-zones. p is the stored profile (from
+// GetSportProfile) with zl its new zone limits. Flow reads only
+// settings.zoneLimits, requires all three setting sources, and recomputes any
+// list whose source is DEFAULT. userID must be the signed-in account's id.
+func (c *Client) UpdateSportProfileZones(ctx context.Context, userID int64, p *gen.SportProfile, zl gen.SportProfileZoneLimits) error {
+	id, err := uuid.Parse(p.UUID)
+	if err != nil {
+		return fmt.Errorf("flow: update zones: profile has an unexpected id %q", p.UUID)
+	}
+	// Flow stores its own write time and 409s a write whose modified is not
+	// newer. It reports that time truncated to the second, so a write within
+	// the same second as the last one (right after create) must still clear
+	// it: stay a full second ahead of the stored value, whatever the clock.
+	modified := time.Now().UTC()
+	if stored, ok := p.Modified.Get(); ok && modified.Before(stored.Add(time.Second)) {
+		modified = stored.Add(time.Second)
+	}
+	body := &gen.SportProfileWriteRequest{
+		UUID:     p.UUID,
+		UserId:   int(userID),
+		Modified: gen.NewOptDateTime(modified),
+		Profile: gen.SportProfileBody{
+			SportId: p.Profile.SportId,
+			Settings: gen.NewOptSportProfileBodySettings(gen.SportProfileBodySettings{
+				ZoneLimits: gen.NewOptSportProfileZoneLimits(zl),
+			}),
+		},
+	}
+	res, err := c.API.UpdateSportProfileZones(ctx, body, gen.UpdateSportProfileZonesParams{
+		ID:             id,
+		XRequestedWith: gen.XRequestedWithXMLHttpRequest,
+	})
+	if err != nil {
+		return wrapFlowError("update zones", err)
+	}
+	switch v := res.(type) {
+	case *gen.UpdateSportProfileZonesOK:
+		return nil
+	case *gen.UpdateSportProfileZonesBadRequest:
+		return fmt.Errorf("flow: update zones rejected: %s", zoneValidationMessage(readBody(v.Data)))
+	case *gen.UpdateSportProfileZonesConflict:
+		return fmt.Errorf("flow: update zones: the profile changed meanwhile, retry: %s", readBody(v.Data))
+	case *gen.Unauthorized:
+		return ErrLoginFailed
+	default:
+		return fmt.Errorf("flow: update zones: unexpected response %T", res)
+	}
+}
+
+// zoneValidationMessage trims Flow's validation 400 ("Invalid update sport
+// profile request for user … with message 'Invalid request: Profile validation
+// failed with N error(s): …'") down to the list of errors.
+func zoneValidationMessage(body string) string {
+	const marker = "error(s): "
+	if i := strings.Index(body, marker); i >= 0 {
+		return strings.TrimSuffix(body[i+len(marker):], "'")
+	}
+	return body
+}
+
+// DeleteSportProfile deletes a stored sport profile. Flow answers 200 for a
+// uuid that does not exist, so callers check existence first; deleting the
+// last profile is refused (ErrLastSportProfile).
+func (c *Client) DeleteSportProfile(ctx context.Context, id uuid.UUID) error {
+	res, err := c.API.DeleteSportProfile(ctx, gen.DeleteSportProfileParams{
+		ID:             id,
+		XRequestedWith: gen.XRequestedWithXMLHttpRequest,
+	})
+	if err != nil {
+		return wrapFlowError("delete sport profile", err)
+	}
+	switch v := res.(type) {
+	case *gen.DeleteSportProfileOK:
+		return nil
+	case *gen.DeleteSportProfileBadRequest:
+		msg := readBody(v.Data)
+		if strings.Contains(msg, "last active profile") {
+			return ErrLastSportProfile
+		}
+		return fmt.Errorf("flow: delete sport profile: %s", msg)
+	case *gen.Unauthorized:
+		return ErrLoginFailed
+	default:
+		return fmt.Errorf("flow: delete sport profile: unexpected response %T", res)
+	}
 }

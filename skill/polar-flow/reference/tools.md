@@ -36,6 +36,34 @@ user typed the limits) or `default` (Polar's defaults, computed without
 saving). Without `sport_id`: every stored profile, possibly none. Use it to
 turn "4:30/km" or "220 W" into a `speed_zone` / `power_zone` number.
 
+### `create_sport_profile`
+- `sport_id` **req**
+
+Creates the sport's profile with Polar's default zones and settings. Idempotent
+— an existing profile is returned unchanged. Needed before
+`update_training_zones` can edit that sport. Returns the zones like
+`get_training_zones`.
+
+### `update_training_zones`
+- `sport_id` **req** — the sport must have a stored profile
+- `heart_rate_bpm` — 6 ascending whole bpm (Z1 lower … Z5 upper), 15–240,
+  each zone ≥ 2 bpm
+- `speed_kmh` — 5 or 6 ascending km/h, 1–399 (5 = open-ended Z5). Always km/h,
+  even for running: 5:00/km = 12 km/h
+- `power_w` — 5 or 6 ascending whole watts, 0–2000, each zone ≥ 2 W
+- `reset` — any of `"heart_rate"`, `"speed"`, `"power"`: back to Polar's defaults
+
+Lists are zone **boundaries**, so zones are contiguous by construction. Unnamed
+lists stay as they are. Returns the saved zones (read back). Example:
+`{"sport_id": 1, "heart_rate_bpm": [115, 134, 153, 172, 182, 192]}`.
+
+### `delete_sport_profile`
+- `sport_id` **req**
+
+Deletes the sport's profile (its zones fall back to Polar's defaults). Says
+"nothing to delete" when there is none; Polar refuses the account's last
+profile. Asks the user to confirm where the host supports it.
+
 ---
 
 ## Planned training targets
@@ -132,6 +160,27 @@ only when the user asks about splits or the within-session trace.
 Aggregated totals + distributions (session count, distance, duration, HR-zone
 time, per-sport mix, training-benefit mix). Accounts with no sessions return
 zeros rather than an error.
+
+### `get_daily_activity`
+- `from_date` — first day (default: today − 6 days)
+- `to_date` — last day (default: today; ≤ 31 days after `from_date`)
+
+Per day: `steps`, `step_distance_m`, `active_time_s`, `kcal`,
+`activity_goal_pct`, `inactivity_alerts`, `sleep_s`, `intensity` (seconds per
+band: `sleep_s`, `sedentary_s`, `light_s`, `moderate_s`, `vigorous_s`),
+`heart_rate` (`day_min_bpm`, `day_max_bpm`, `night_min_bpm`). Days without
+device data have `has_data: false` and null metrics — they are not zero-step
+days. A single-day call adds intraday `samples` (`{"t": "HH:MM", "v": …}`).
+
+### `get_sleep`
+- `from_date` — first wake-up date (default: today − 13 days)
+- `to_date` — last wake-up date (default: today; ≤ 365 days after `from_date`)
+
+Per night (keyed by the wake-up `date`): `fell_asleep`, `woke_up`, `sleep_s`,
+`score` (0–100 or null), `continuity_index` (1–5), `sleep_cycles`, `rating`,
+`stages` (`light_s`, `deep_s`, `rem_s`, `unknown_s`; Sleep Plus Stages devices
+only), `interruptions_s`, and a `hypnogram` of `{stage, start_s, end_s}`.
+`averages` covers the range. Empty without a sleep-tracking device.
 
 ---
 

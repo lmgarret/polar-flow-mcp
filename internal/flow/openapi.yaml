@@ -1095,6 +1095,21 @@ paths:
         - ranges: HR [15, 240] bpm, speed [1.0, 399.0] km/h, power [0, 2000] W.
 
 
+        Probed 2026-09-30: only `settings.zoneLimits` is read — other settings
+
+        are kept even when omitted. All three `*SettingSource` fields are
+
+        required (a missing one → 400 `… setting source is missing from profile
+
+        settings`), so send every list, not just the edited one. A `…_DEFAULT`
+
+        source makes the server recompute that list and ignore the limits sent.
+
+        A `…_FREE` power list reads back with calculation method `…_UNKNOWN`.
+
+        The stored `modified` is the server''s write time, not the value sent.
+
+
         ⚠ `modified` must be **newer** than the stored profile''s `modified`,
 
         else **409** `A newer profile exists: Incoming sport profile is older
@@ -1170,6 +1185,13 @@ paths:
         example: 2
       - $ref: '#/components/parameters/XRequestedWith'
       responses:
+        '200':
+          description: A profile for this sport already exists. Nothing is changed; the body is the stored profile (probed
+            2026-09-30).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SportProfile'
         '201':
           description: The created profile.
           content:
@@ -1178,6 +1200,8 @@ paths:
                 $ref: '#/components/schemas/SportProfile'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Unknown `sportId` (e.g. 999). Empty body (probed 2026-09-30).
   /api/sports/profile-list-catalog:
     get:
       summary: Read the device's sport-profile list order
@@ -6733,21 +6757,21 @@ components:
           properties:
             dailyActivityGoal:
               type: number
-              description: User's configured daily activity goal (units depend on goal type).
+              description: Progress towards the daily activity goal, in **percent** (the web UI renders it as `<n>%`).
             activeTime:
               type: integer
-              description: Active time in seconds.
+              description: Active time in **minutes** (the web UI passes it as `durationMinutes`; read from the bundle 2026-09-30).
             distanceFromSteps:
               type: number
               format: float
-              description: Distance from steps in **kilometres** (UI rounds to integer metres).
+              description: Distance from steps in **metres** (the web UI feeds it to its metre-based `toDistance`; read from the bundle 2026-09-30).
             stepCount:
               type: integer
             kiloCalories:
               type: integer
             sleepDuration:
               type: integer
-              description: Sleep duration in seconds.
+              description: Sleep duration in **minutes**.
             inactivityAlertCount:
               type: integer
             sleepPlus:
@@ -6767,15 +6791,25 @@ components:
               items: {}
               description: 'Down-sampled activity intensity timeline (length ≤
 
-                `maxSampleCount`). Empty on a device-less account; element
+                `maxSampleCount`). Empty on a device-less account. Per the web
 
-                shape TBD with a real capture.
+                UI (bundle read 2026-09-30, no populated capture): `{time, value}`,
+
+                `time` an epoch ms holding the local wall clock as if UTC,
+
+                `value` the activity level compared against `activityZoneLimits`
+
+                (below `activityZoneLimits[1]` reads as non-wear). Left untyped
+
+                until a capture confirms it.
 
                 '
             activityTimelineIcons:
               type: array
               items: {}
-              description: Icons overlaid on the timeline (training sessions, alarms). Element shape TBD.
+              description: 'Icons overlaid on the timeline. Per the web UI: `{activityTimelineIconType, localTime, distance,
+                duration, kiloCalories, sportName, url, hr}`, types incl. `ACTIVITY_TIMELINE_ICON_TYPE_SLEEP` / `…_WAKE_UP`.
+                Unconfirmed.'
             activityZoneLimits:
               type: array
               items:
@@ -6793,7 +6827,8 @@ components:
             heartRateTimelineSamples:
               type: array
               items: {}
-              description: 24h HR samples (down-sampled to ≤ `maxSampleCount`). Empty on device-less account.
+              description: '24h HR samples (down-sampled to ≤ `maxSampleCount`). Empty on device-less account. Per the web
+                UI: `{time, value}` like `activityTimelineSamples`, `value` in bpm, `0` = gap. Unconfirmed.'
             heartRateSummary:
               type: object
               properties:
@@ -6815,14 +6850,16 @@ components:
             highSessionTimelineList:
               type: array
               items: {}
-              description: High-intensity sessions within the day. Element shape TBD.
+              description: 'High-intensity periods within the day. Per the web UI: `{startTime, endTime}`. Unconfirmed.'
             trainingTimelineList:
               type: array
               items: {}
-              description: Scheduled / completed training sessions within the day. Element shape TBD.
+              description: 'Training sessions within the day. Per the web UI: `{startTime, endTime}`. Unconfirmed.'
         activityScoreData:
           type: object
-          description: Time spent in each activity-intensity bucket (seconds).
+          description: Time spent in each activity-intensity bucket, in **minutes** (the web UI's `valueMinutes`). `null` for
+            days past the last synced data (observed 2026-09-30).
+          nullable: true
           properties:
             sleepDuration:
               type: integer
@@ -6836,7 +6873,9 @@ components:
               type: integer
         activityBenefitFeedbackData:
           type: object
-          description: Qualitative feedback Polar surfaces under "Activity benefit".
+          description: Qualitative feedback Polar surfaces under "Activity benefit". `null` for days past the last synced
+            data (observed 2026-09-30).
+          nullable: true
           properties:
             mvpa:
               type: string
@@ -7383,9 +7422,11 @@ components:
           type: integer
           description: 'Offset in **seconds** added to `sleepStartTime` to get the "fell
 
-            asleep" moment. Polar splits the bedtime / asleep-time distinction
+            asleep" moment (web UI: `jsonDatetimeAsMoment(sleepStartTime).add(sleepStartOffset,
 
-            across these two fields.
+            "seconds")`, bundle read 2026-09-30). `sleepWakeStates[].offsetFromStart`
+
+            counts from `sleepStartTime`, before this offset.
 
             '
         sleepEndOffset:
@@ -7438,9 +7479,15 @@ components:
 
             DEEP (code 3 → `nonrem3`), REM (code 1 → `rem`), UNKNOWN (code 4),
 
-            and INTERRUPTIONS (special path that toggles `longInterruption`).
+            and INTERRUPTIONS (code 0, carrying `longInterruption`). Each entry
 
-            # TODO: verify codes against device documentation.
+            starts a segment lasting until the next entry (the last one until
+
+            wake-up). Deep sleep only counts on a Sleep Plus Stages night (one
+
+            with `sleepCycles` > 0 or any code 1/2 entry). Codes read from the web
+
+            UI bundle 2026-09-30 — unconfirmed by a capture.
 
             '
           items:
@@ -7448,7 +7495,7 @@ components:
             properties:
               sleepWakeState:
                 type: integer
-                description: Stage code (1=REM, 2=light, 3=deep, 4=unknown — verified mapping).
+                description: Stage code (0=wake/interruption, 1=REM, 2=light, 3=deep, 4=unknown — from the web UI bundle).
               offsetFromStart:
                 type: integer
                 description: Seconds from the start of the night.

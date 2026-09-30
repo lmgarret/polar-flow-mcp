@@ -46,7 +46,11 @@ func TestToolUIBindings(t *testing.T) {
 		"save_target_as_favorite": favoritesUI,
 		"schedule_favorite":       favoritesUI,
 		"edit_training_session":   "ui://polar-flow/sessions.html",
-		"get_training_zones":      "ui://polar-flow/zones.html",
+		"get_training_zones":      zonesUI,
+		"create_sport_profile":    zonesUI,
+		"update_training_zones":   zonesUI,
+		"get_daily_activity":      activityUI,
+		"get_sleep":               sleepUI,
 	}
 	for name, uri := range want {
 		if bound[name] != uri {

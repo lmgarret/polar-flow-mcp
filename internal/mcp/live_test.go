@@ -355,3 +355,73 @@ func TestLiveTrainingZones(t *testing.T) {
 		t.Fatalf("cycling should have power zones: %v", sports)
 	}
 }
+
+// TestLiveSportProfileRoundTrip creates a cycling profile, sets free heart-rate
+// and power zones, resets them, and deletes the profile. It skips when the
+// account already has a cycling profile, so it never touches one it did not
+// create.
+//
+//nolint:gocyclo // one sequential live scenario
+func TestLiveSportProfileRoundTrip(t *testing.T) {
+	fc := liveClient(t)
+	ctx := context.Background()
+	id := flow.SportProfileUUID(2)
+	if _, ok, err := fc.GetSportProfile(ctx, id); err != nil || ok {
+		t.Skipf("account already has a cycling profile (or read failed: %v)", err)
+	}
+	res := liveCall(t, CreateSportProfileHandler(fc), map[string]any{"sport_id": 2.0})
+	t.Cleanup(func() { _ = fc.DeleteSportProfile(ctx, id) })
+	if !strings.Contains(resultText(res), "Created") {
+		t.Fatalf("create: %s", resultText(res))
+	}
+	res = liveCall(t, CreateSportProfileHandler(fc), map[string]any{"sport_id": 2.0})
+	if !strings.Contains(resultText(res), "already exists") {
+		t.Fatalf("second create: %s", resultText(res))
+	}
+
+	res = liveCall(t, UpdateTrainingZonesHandler(fc), map[string]any{
+		"sport_id": 2.0, "heart_rate_bpm": []any{100.0, 120.0, 140.0, 155.0, 170.0, 185.0},
+		"power_w": []any{100.0, 150.0, 200.0, 250.0, 300.0},
+	})
+	sp := asMap(asArr(payload(t, res)["sports"])[0])
+	if z := asMap(asArr(dig(sp, "heart_rate", "zones"))[0]); z["min_bpm"] != 100.0 || dig(sp, "heart_rate", "setting") != "free" {
+		t.Fatalf("hr not saved: %v", sp["heart_rate"])
+	}
+	if z := asMap(asArr(dig(sp, "power", "zones"))[4]); z["min_w"] != 300.0 || z["max_w"] != nil {
+		t.Fatalf("power not saved: %v", sp["power"])
+	}
+	// A second write right away must not trip Flow's stale-modified 409.
+	res = liveCall(t, UpdateTrainingZonesHandler(fc), map[string]any{"sport_id": 2.0, "reset": []any{"heart_rate", "power"}})
+	sp = asMap(asArr(payload(t, res)["sports"])[0])
+	if dig(sp, "heart_rate", "setting") != "default" || dig(sp, "power", "setting") != "default" {
+		t.Fatalf("reset not applied: %v", sp)
+	}
+	t.Logf("%s", resultText(res))
+
+	res = liveCall(t, DeleteSportProfileHandler(fc), map[string]any{"sport_id": 2.0})
+	if !strings.Contains(resultText(res), "Deleted") {
+		t.Fatalf("delete: %s", resultText(res))
+	}
+	res = liveCall(t, DeleteSportProfileHandler(fc), map[string]any{"sport_id": 2.0})
+	if !strings.Contains(resultText(res), "nothing to delete") {
+		t.Fatalf("second delete: %s", resultText(res))
+	}
+}
+
+// TestLiveActivityAndSleep reads a week of activity, one day with curves, and
+// a month of sleep. Read-only.
+func TestLiveActivityAndSleep(t *testing.T) {
+	fc := liveClient(t)
+	res := liveCall(t, GetDailyActivityHandler(fc), map[string]any{})
+	if days := asArr(payload(t, res)["days"]); len(days) != 7 {
+		t.Fatalf("days = %d", len(days))
+	}
+	t.Logf("%s", resultText(res))
+	today := time.Now().Format("2006-01-02")
+	res = liveCall(t, GetDailyActivityHandler(fc), map[string]any{"from_date": today, "to_date": today})
+	if days := asArr(payload(t, res)["days"]); len(days) != 1 {
+		t.Fatalf("days = %v", days)
+	}
+	res = liveCall(t, GetSleepHandler(fc), map[string]any{"from_date": time.Now().AddDate(0, -1, 0).Format("2006-01-02")})
+	t.Logf("%s", resultText(res))
+}

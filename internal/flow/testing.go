@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 
 	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
@@ -14,7 +15,12 @@ import (
 // an httptest server that fakes Flow's wire shapes. Not for production use.
 func NewForTesting(baseURL string) (*Client, error) {
 	jar := newCookieJar()
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("flow: parse test base URL: %w", err)
+	}
 	c := &Client{
+		sleepURL:   u,
 		logger:     slog.Default(),
 		httpClient: &http.Client{Jar: jar},
 	}

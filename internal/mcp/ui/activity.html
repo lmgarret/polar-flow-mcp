@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Activity</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0d0d0d;color:#f0f0f0;font-family:-apple-system,'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px}
+body{padding:12px 14px;overflow-x:hidden}
+.card{background:#111;border:1px solid #1c1c1c;border-radius:14px;padding:12px 14px}
+.card + .card{margin-top:10px}
+.hdr{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.title{font-size:1.05rem;font-weight:800;letter-spacing:-.02em}
+.range{font-size:.7rem;color:#666}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.chip{background:#161616;border:1px solid #1e1e1e;border-radius:8px;padding:3px 9px;font-size:.7rem;color:#bbb;white-space:nowrap}
+.chip b{color:#f0f0f0;font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:10px}
+.tile{background:#141414;border:1px solid #1e1e1e;border-radius:11px;padding:8px 10px}
+.tile-lbl{font-size:.56rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#777}
+.tile-val{font-size:1.15rem;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
+.tile-sub{font-size:.62rem;color:#555;margin-top:1px}
+.sec-lbl{font-size:.58rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a;margin:10px 0 6px}
+.bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:#1a1a1a}
+.bar span{display:block;height:100%}
+.i-sleep{background:#4a4fb0}.i-sed{background:#5a5a5a}.i-light{background:#3b8fd9}.i-mod{background:#57c46b}.i-vig{background:#e4002b}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:.62rem;color:#777}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.days{display:flex;flex-direction:column;gap:6px}
+.day{display:grid;grid-template-columns:78px 1fr 120px;gap:10px;align-items:center;font-size:.76rem}
+.day-date{color:#bbb;font-variant-numeric:tabular-nums}
+.day-date small{display:block;color:#555;font-size:.6rem}
+.day-nums{text-align:right;color:#ddd;font-variant-numeric:tabular-nums;white-space:nowrap}
+.day-nums small{display:block;color:#555;font-size:.62rem}
+.day.nodata{opacity:.45}
+.steps-chart{width:100%;height:90px;display:block}
+.curve{width:100%;height:110px;display:block}
+.empty-state{color:#4a4a4a;font-size:.8rem;font-style:italic;padding:8px 0}
+.loading{color:#4a4a4a;font-size:.8rem;font-style:italic}
+.fade-in{animation:fadeIn .22s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media (max-width:520px){.chips{margin-left:0;width:100%}.day{grid-template-columns:64px 1fr 92px}}
+/* Notice card — rejections, "nothing to show" statements, cancellations */
+.notice{display:flex;gap:12px;align-items:flex-start;background:#111;border:1px solid #1c1c1c;border-left:3px solid var(--nc);border-radius:12px;padding:12px 14px;animation:fadeIn .22s ease}
+.notice-ico{width:26px;height:26px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--nbg)}
+.notice-ico svg{width:15px;height:15px;stroke:var(--nc);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.notice-body{min-width:0}
+.notice-kind{font-size:.58rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--nc);margin-bottom:3px}
+.notice-msg{font-size:.8rem;line-height:1.4;color:#d0d0d0;white-space:pre-wrap;overflow-wrap:anywhere}
+.notice-error{--nc:#ff5566;--nbg:#2a0409}
+.notice-notice{--nc:#5aa0d8;--nbg:#0d2d42}
+.notice-cancelled{--nc:#8a8a8a;--nbg:#1c1c1c}
+</style>
+</head>
+<body>
+<div id="root" class="loading">Loading…</div>
+<script>
+const pending = new Map(); let msgId = 0;
+window.addEventListener("message", e => {
+  const m = e.data; if (!m || m.jsonrpc !== "2.0") return;
+  if (m.id != null && pending.has(m.id)) {
+    const {resolve,reject} = pending.get(m.id); pending.delete(m.id);
+    m.error ? reject(new Error(m.error?.message ?? "RPC error")) : resolve(m.result);
+  } else if (m.method === "ui/notifications/tool-result") dispatch(m.params, render);
+  else if (m.method === "ui/notifications/tool-cancelled") { gotResult = true; renderNotice("cancelled", "The tool call was cancelled."); }
+});
+function rpc(method, params) {
+  const id = ++msgId;
+  return new Promise((resolve,reject) => { pending.set(id,{resolve,reject}); window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*"); });
+}
+// Current MCP-app hosts (Claude Desktop, 2026-07) drop structuredContent from
+// the tool-result they forward to the iframe, so the data is read from the
+// tagged {"type":...} JSON text block the server also emits. structuredContent
+// is still preferred for hosts that honour it.
+function extractPayload(params) {
+  if (params && params.structuredContent) return params.structuredContent;
+  const content = (params && params.content) || [];
+  for (let i = content.length - 1; i >= 0; i--) {
+    const c = content[i];
+    if (c && c.type === "text" && typeof c.text === "string" && c.text.trim()[0] === "{") {
+      try { const p = JSON.parse(c.text); if (p && typeof p.type === "string") return p; } catch (_) {}
+    }
+  }
+  return null;
+}
+// ── Notices ────────────────────────────────────────────
+// A tool call that has no data to show — a rejected argument, "No target with
+// id 7.", a declined confirmation — used to leave this app on "Loading…".
+// Every result now renders: data payloads go to the view, everything else to a
+// notice card. Error results carry no payload (only text), plain statements get
+// a {"type":"notice"} payload from the server, and a host that drops
+// structuredContent still leaves the text block to read.
+const NOTICE_META = {
+  error:     {label: "Rejected",        icon: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><path d="M12 16.5h.01"/>'},
+  notice:    {label: "Nothing to show", icon: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.5h.01"/>'},
+  cancelled: {label: "Cancelled",       icon: '<circle cx="12" cy="12" r="9"/><path d="m8.5 8.5 7 7"/><path d="m15.5 8.5-7 7"/>'},
+};
+function resultText(params) {
+  const c = ((params && params.content) || []).find(c => c && c.type === "text" && typeof c.text === "string");
+  return c ? c.text : "";
+}
+function noticeHTML(kind, message) {
+  const m = NOTICE_META[kind] ?? NOTICE_META.notice;
+  const e = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return `<div class="notice notice-${kind in NOTICE_META ? kind : "notice"}" role="status">
+    <div class="notice-ico"><svg viewBox="0 0 24 24">${m.icon}</svg></div>
+    <div class="notice-body"><div class="notice-kind">${m.label}</div><div class="notice-msg">${e(message || "No data to display.")}</div></div>
+  </div>`;
+}
+function renderNotice(kind, message) {
+  const root = document.getElementById("root");
+  root.className = "";
+  root.innerHTML = noticeHTML(kind, message);
+}
+// noticeFor returns the notice a tool result should show instead of the view,
+// or null when it carries a data payload for the view.
+function noticeFor(params) {
+  if (params && params.isError) return {kind: "error", message: resultText(params)};
+  const p = extractPayload(params);
+  if (p && p.type === "notice") return {kind: p.kind ?? "notice", message: p.message ?? resultText(params)};
+  if (!p) return {kind: "notice", message: resultText(params)};
+  return null;
+}
+let gotResult = false;
+function dispatch(params, view) {
+  gotResult = true;
+  const n = noticeFor(params);
+  if (n) renderNotice(n.kind, n.message);
+  else view(extractPayload(params));
+}
+// Nothing arrived (host never forwarded the result): say so instead of a
+// spinner forever. A late result still replaces this.
+setTimeout(() => { if (!gotResult) renderNotice("notice", "No data received from the tool yet."); }, 20000);
+rpc("ui/initialize",{protocolVersion:"2026-01-26",appInfo:{name:"polar-activity-ui",version:"1.0"},appCapabilities:{availableDisplayModes:["inline"]}})
+  .then(()=>window.parent.postMessage({jsonrpc:"2.0",method:"ui/notifications/initialized",params:{}},"*"));
+
+const esc = s => String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const fmtDur = s => { if (s == null) return "–"; const m = Math.round(s/60); return m >= 60 ? `${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")}` : `${m} min`; };
+const fmtNum = n => n == null ? "–" : Number(n).toLocaleString("en-US");
+const dayName = d => new Date(d + "T00:00:00Z").toLocaleDateString("en-GB", {weekday:"short", day:"numeric", month:"short", timeZone:"UTC"});
+const BANDS = [["sleep_s","i-sleep","Rest / sleep"],["sedentary_s","i-sed","Sedentary"],["light_s","i-light","Light"],["moderate_s","i-mod","Moderate"],["vigorous_s","i-vig","Vigorous"]];
+
+function intensityBar(it) {
+  if (!it) return `<div class="bar"></div>`;
+  const total = BANDS.reduce((a,[k]) => a + (it[k]||0), 0) || 1;
+  return `<div class="bar">${BANDS.map(([k,c,l]) => it[k] ? `<span class="${c}" style="width:${(it[k]/total*100).toFixed(2)}%" title="${esc(l)}: ${esc(fmtDur(it[k]))}"></span>` : "").join("")}</div>`;
+}
+const legend = () => `<div class="legend">${BANDS.map(([,c,l]) => `<span><i class="${c}"></i>${esc(l)}</span>`).join("")}</div>`;
+
+function tile(lbl, val, sub) {
+  return `<div class="tile"><div class="tile-lbl">${esc(lbl)}</div><div class="tile-val">${esc(val)}</div>${sub ? `<div class="tile-sub">${esc(sub)}</div>` : ""}</div>`;
+}
+
+// Steps per day as SVG bars; days without data leave a gap.
+function stepsChart(days) {
+  const max = Math.max(1, ...days.map(d => d.steps || 0));
+  const w = 100 / days.length;
+  const bars = days.map((d, i) => {
+    if (!d.has_data) return "";
+    const h = Math.max(1, (d.steps || 0) / max * 80);
+    return `<rect x="${(i*w + w*0.15).toFixed(2)}" y="${(86-h).toFixed(2)}" width="${(w*0.7).toFixed(2)}" height="${h.toFixed(2)}" rx="0.8" fill="#e4002b"><title>${esc(d.date)}: ${esc(fmtNum(d.steps))} steps</title></rect>`;
+  }).join("");
+  return `<svg class="steps-chart" viewBox="0 0 100 90" preserveAspectRatio="none">${bars}<line x1="0" y1="86.5" x2="100" y2="86.5" stroke="#222" stroke-width="0.4"/></svg>`;
+}
+
+// Intraday curve: activity level as an area, heart rate as a line (own scale).
+function curve(samples) {
+  const toX = t => { const [h,m] = t.split(":").map(Number); return (h*60+m) / 1440 * 100; };
+  const act = samples.activity || [], hr = samples.heart_rate || [];
+  if (!act.length && !hr.length) return "";
+  const amax = Math.max(1, ...act.map(p => p.v));
+  const area = act.length ? `<path d="M${toX(act[0].t)},100 ${act.map(p => `L${toX(p.t).toFixed(2)},${(100 - p.v/amax*90).toFixed(2)}`).join(" ")} L${toX(act[act.length-1].t)},100 Z" fill="rgba(59,143,217,.35)" stroke="#3b8fd9" stroke-width="0.5" vector-effect="non-scaling-stroke"/>` : "";
+  let line = "";
+  if (hr.length) {
+    const lo = Math.min(...hr.map(p => p.v)) - 5, hi = Math.max(...hr.map(p => p.v)) + 5;
+    line = `<polyline points="${hr.map(p => `${toX(p.t).toFixed(2)},${(100 - (p.v-lo)/(hi-lo)*90).toFixed(2)}`).join(" ")}" fill="none" stroke="#e4002b" stroke-width="1.2" vector-effect="non-scaling-stroke"/>`;
+  }
+  const ticks = [0,6,12,18,24].map(h => `<line x1="${h/24*100}" y1="0" x2="${h/24*100}" y2="100" stroke="#1e1e1e" stroke-width="0.3"/>`).join("");
+  return `<div class="sec-lbl">Intraday · <span style="color:#3b8fd9">activity</span>${hr.length ? ` · <span style="color:#e4002b">heart rate</span>` : ""} · 00–24 h</div>
+    <svg class="curve" viewBox="0 0 100 100" preserveAspectRatio="none">${ticks}${area}${line}</svg>`;
+}
+
+function singleDay(d) {
+  if (!d.has_data) return `<div class="empty-state">No activity data for ${esc(dayName(d.date))} — 24/7 activity comes from a Polar device synced to Flow.</div>`;
+  const hr = d.heart_rate || {};
+  const tiles = [
+    tile("Steps", fmtNum(d.steps), d.step_distance_m != null ? `${(d.step_distance_m/1000).toFixed(1)} km` : ""),
+    tile("Active time", fmtDur(d.active_time_s), d.activity_goal_pct != null ? `${Math.round(d.activity_goal_pct)} % of goal` : ""),
+    tile("Calories", d.kcal != null ? `${fmtNum(d.kcal)} kcal` : "–", ""),
+    tile("Sleep", d.sleep_s ? fmtDur(d.sleep_s) : "–", d.inactivity_alerts ? `${d.inactivity_alerts} inactivity alert${d.inactivity_alerts === 1 ? "" : "s"}` : ""),
+    (hr.day_min_bpm || hr.day_max_bpm || hr.night_min_bpm) ? tile("Heart rate", `${hr.day_min_bpm ?? "–"}–${hr.day_max_bpm ?? "–"}`, hr.night_min_bpm ? `night low ${hr.night_min_bpm} bpm` : "bpm") : "",
+  ].join("");
+  return `<div class="tiles">${tiles}</div>
+    <div class="sec-lbl">Time by intensity</div>${intensityBar(d.intensity)}${legend()}
+    ${d.samples ? curve(d.samples) : ""}`;
+}
+
+function multiDay(days) {
+  const rows = days.slice().reverse().map(d => d.has_data
+    ? `<div class="day"><div class="day-date">${esc(dayName(d.date))}<small>${d.activity_goal_pct != null ? `${Math.round(d.activity_goal_pct)} % goal` : ""}</small></div>${intensityBar(d.intensity)}<div class="day-nums">${esc(fmtNum(d.steps))} steps<small>${esc(fmtDur(d.active_time_s))} active · ${esc(fmtNum(d.kcal))} kcal</small></div></div>`
+    : `<div class="day nodata"><div class="day-date">${esc(dayName(d.date))}</div><div class="bar"></div><div class="day-nums">no data</div></div>`).join("");
+  return `<div class="sec-lbl">Steps per day</div>${stepsChart(days)}
+    <div class="sec-lbl">Days</div><div class="days">${rows}</div>${legend()}`;
+}
+
+function render(sc) {
+  if (!sc || sc.type !== "daily_activity") return;
+  const root = document.getElementById("root");
+  root.className = "";
+  const days = Array.isArray(sc.days) ? sc.days : [];
+  const s = sc.summary || {};
+  const range = sc.from_date === sc.to_date ? dayName(sc.from_date) : `${dayName(sc.from_date)} – ${dayName(sc.to_date)}`;
+  const chips = s.days_with_data && days.length > 1 ? [
+    `<b>${s.days_with_data}</b>/${days.length} days`,
+    `<b>${fmtNum(s.avg_steps)}</b> steps/day`,
+    `<b>${fmtDur(s.avg_active_time_s)}</b> active/day`,
+    s.avg_sleep_s ? `<b>${fmtDur(s.avg_sleep_s)}</b> sleep` : "",
+  ].filter(Boolean).map(c => `<span class="chip">${c}</span>`).join("") : "";
+  let body;
+  if (!s.days_with_data && days.length > 1) body = `<div class="empty-state">No activity data in this range — 24/7 activity comes from a Polar device synced to Flow.</div>`;
+  else body = days.length === 1 ? singleDay(days[0]) : multiDay(days);
+  root.innerHTML = `<div class="card fade-in"><div class="hdr"><span class="title">Daily activity</span><span class="range">${esc(range)}</span><div class="chips">${chips}</div></div>${body}</div>`;
+}
+</script>
+</body>
+</html>

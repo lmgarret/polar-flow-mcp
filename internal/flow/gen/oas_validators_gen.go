@@ -403,6 +403,22 @@ func (s *CalendarEvent) Validate() error {
 	return nil
 }
 
+func (s *CreateSportProfileCreated) Validate() error {
+	alias := (*SportProfile)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *CreateSportProfileOK) Validate() error {
+	alias := (*SportProfile)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *CurrentUserResponse) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
