@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
@@ -52,21 +53,9 @@ func GetDailyActivityHandler(fc *flow.Client) toolHandler {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		single := from.Equal(to)
-		// loadFour(D) answers [D-2, D+1]: step D by 4 from from+2 until the
-		// window reaches to.
-		days := map[string]convert.DailyActivity{}
-		for d := from.AddDate(0, 0, 2); !d.AddDate(0, 0, -2).After(to); d = d.AddDate(0, 0, 4) {
-			byDate, err := fc.ActivityTimelineFour(ctx, d, activitySampleCount)
-			if err != nil {
-				return mcpgo.NewToolResultError(err.Error()), nil
-			}
-			for key, day := range byDate {
-				date, perr := time.Parse(isoDate, key)
-				if perr != nil || date.Before(from) || date.After(to) {
-					continue
-				}
-				days[key] = convert.FromWireActivityDay(date, day, single)
-			}
+		days, err := fetchActivity(ctx, fc, from, to, single)
+		if err != nil {
+			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		out := make([]convert.DailyActivity, 0, len(days))
 		for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
@@ -87,6 +76,53 @@ func GetDailyActivityHandler(fc *flow.Client) toolHandler {
 		}
 		return widgetResultText(activityText(out, summary), payload), nil
 	}
+}
+
+// activityFetchConcurrency bounds the parallel loadFour requests. A 31-day
+// range needs 8 of them; one after the other they were slow enough that an MCP
+// client's call failed once (seen live 2026-10-02).
+const activityFetchConcurrency = 4
+
+// fetchActivity loads the days in [from, to], keyed by YYYY-MM-DD.
+// loadFour(D) answers [D-2, D+1], so the windows are D = from+2, +4, … until
+// one reaches to; they are fetched in parallel.
+func fetchActivity(ctx context.Context, fc *flow.Client, from, to time.Time, withSamples bool) (map[string]convert.DailyActivity, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	var (
+		mu       sync.Mutex
+		wg       sync.WaitGroup
+		firstErr error
+		days     = map[string]convert.DailyActivity{}
+		slots    = make(chan struct{}, activityFetchConcurrency)
+	)
+	for d := from.AddDate(0, 0, 2); !d.AddDate(0, 0, -2).After(to); d = d.AddDate(0, 0, 4) {
+		wg.Add(1)
+		go func(d time.Time) {
+			defer wg.Done()
+			slots <- struct{}{}
+			defer func() { <-slots }()
+			byDate, err := fc.ActivityTimelineFour(ctx, d, activitySampleCount)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				if firstErr == nil {
+					firstErr = err
+					cancel()
+				}
+				return
+			}
+			for key, day := range byDate {
+				date, perr := time.Parse(isoDate, key)
+				if perr != nil || date.Before(from) || date.After(to) {
+					continue
+				}
+				days[key] = convert.FromWireActivityDay(date, day, withSamples)
+			}
+		}(d)
+	}
+	wg.Wait()
+	return days, firstErr
 }
 
 func activityText(days []convert.DailyActivity, s convert.ActivitySummary) string {

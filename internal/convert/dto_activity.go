@@ -23,7 +23,10 @@ import (
 // DailyActivity is one day of 24/7 activity tracking. Every metric is null
 // when HasData is false: Flow answers zeros for days with no synced device
 // data and a null panel for days after the last sync, and both mean "no data"
-// rather than "a day of zero steps".
+// rather than "a day of zero steps". An all-zero panel is no data even when
+// lastSync is set: on a synced account Flow stamps lastSync on future days
+// too (seen live 2026-10-02 for tomorrow), and a worn device never reports
+// zero calories.
 type DailyActivity struct {
 	Date             string             `json:"date"`
 	HasData          bool               `json:"has_data"`
@@ -34,7 +37,7 @@ type DailyActivity struct {
 	KCal             *int               `json:"kcal"`
 	SleepS           *int               `json:"sleep_s"`
 	InactivityAlerts *int               `json:"inactivity_alerts"`
-	SleepPlus        bool               `json:"sleep_plus,omitempty"`
+	SleepPlus        bool               `json:"sleep_plus"`
 	LastSync         *string            `json:"last_sync"`
 	Intensity        *ActivityIntensity `json:"intensity"`
 	HeartRate        *DailyHeartRate    `json:"heart_rate"`
@@ -96,7 +99,7 @@ func FromWireActivityDay(date time.Time, d gen.ActivityTimelineDay, withSamples 
 	panel, ok := d.DataPanelData.Get()
 	graph, _ := d.ActivityGraphData.Get()
 	lastSync, synced := graph.LastSync.Get()
-	if !ok || (!synced && panelIsEmpty(panel)) {
+	if !ok || panelIsEmpty(panel) {
 		return out
 	}
 	out.HasData = true

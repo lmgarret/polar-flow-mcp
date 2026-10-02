@@ -456,8 +456,11 @@ A single-day call adds `samples`: the intraday activity level and heart rate at
 10-minute resolution, as `{"t": "HH:MM", "v": …}` in local time. A `summary`
 totals the days with data.
 
-Flow answers days without device data with zeros; those days have
-`has_data: false` and null metrics instead. Flow's minutes are converted to
+Flow answers days without device data — and future days — with zeros; those
+days have `has_data: false` and null metrics instead. On days with data,
+`heart_rate`, `intensity` and `benefit` are still `null` when Flow has nothing
+for them, and `benefit`'s lists (`improves`, `promotes`, `aids`) are omitted
+when empty. `sleep_plus` is always a boolean. Flow's minutes are converted to
 seconds and its step distance is already metres. Fetched four days per request.
 
 ### `get_sleep`
@@ -471,9 +474,13 @@ One entry per recorded night, keyed by the wake-up `date`: `fell_asleep` /
 `woke_up` (local, ISO 8601), `sleep_s`, `score` (Sleep Score 0–100, null when
 Polar has none), `continuity_index` (1–5), `continuity_class`, `sleep_cycles`,
 `rating` (the user's own), `stages` (`light_s` / `deep_s` / `rem_s` /
-`unknown_s`, Sleep Plus Stages devices only), `interruptions_s` /
-`long_interruptions_s`, and a `hypnogram` of `{stage, start_s, end_s}` segments
-in seconds after falling asleep. `averages` summarizes the range.
+`unknown_s`; `null` on nights without Sleep Plus Stages), `interruptions_s` /
+`long_interruptions_s`, and a `hypnogram` of `{stage, start_s, end_s, long?}`
+segments in seconds after falling asleep. `stage` is one of `wake`, `light`,
+`deep`, `rem`, `unknown` — or `sleep` on nights without stages, where Polar
+only tells asleep from awake. The first segment can start a little after 0
+(an awake stretch before falling asleep is cut off). `averages` summarizes the
+range.
 
 Flow's sleep report only answers windows of 30–365 days, so shorter requests
 are widened and filtered. Its field meanings are taken from the Flow web UI's
