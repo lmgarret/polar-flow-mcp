@@ -333,10 +333,26 @@ right-hand "week totals" strip in the Polar Flow diary.
 Range is capped at **45 days** by the server. Larger ranges return a 400
 that's surfaced as a tool error.
 
-**Response:** JSON array of week-summary objects — one per ISO week in range.
-The element shape is currently TBD upstream: the objects come back empty
-(`[{}, {}, …]`) even on accounts with recorded sessions, so the tool surfaces the
-raw JSON as-is for callers to adapt as the spec firms up.
+**Response:** `{"type": "week_summary", "weeks": [...]}`, one entry per week
+in range that holds data (empty weeks are omitted):
+
+| Field | Unit / format |
+|-------|---------------|
+| `week` | ISO week number (Flow sends no year) |
+| `week_start` | Monday of that week, `YYYY-MM-DD`, resolved against the requested range |
+| `number_of_sessions` | count |
+| `total_duration_s` | seconds |
+| `total_distance_m` | metres — a manual session whose distance was only set per exercise counts 0 |
+| `total_kcal` | kcal |
+| `step_count` | device steps; omitted when 0 |
+
+```json
+{"week": 22, "week_start": "2026-05-25", "number_of_sessions": 1,
+ "total_duration_s": 1800, "total_distance_m": 0, "total_kcal": 250}
+```
+
+Flow's 24/7 activity and sleep fields on the same payload are dropped until
+their units are pinned.
 
 ## `get_progress_summary`
 

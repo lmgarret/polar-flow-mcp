@@ -3065,22 +3065,28 @@ paths:
                   example: 30.5.2026
       responses:
         '200':
-          description: 'One entry per ISO week touched by the range. Empty array when no
-
-            sessions are recorded. # TODO: capture a populated week to learn
-
-            the element shape (likely
-
-            `{weekNumber, totalDuration, totalDistance, totalCalories, …}`).
-
-            '
+          description: One entry per week touched by the range that holds data. Empty array when nothing is recorded.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: object
-              example: []
+                  $ref: '#/components/schemas/CalendarWeekSummary'
+              example:
+              - distance: 0.0
+                calories: 250
+                durationMillis: 1800000
+                exeCount: 0
+                traininigSessionsCount: 1
+                activeTime: 0
+                inActiveTime: 0
+                sleepTime: 0
+                sleepQuality: 0.0
+                stepCount: 0
+                distanceFromSteps: 0.0
+                inactivityAlertCount: 0
+                sleepPlus: false
+                week: 22
         '400':
           description: 'Range invalid (reversed, > 45 days) or date format not `D.M.YYYY`.
 
@@ -3189,6 +3195,115 @@ components:
         '
       example: 81371573
   schemas:
+    CalendarWeekSummary:
+      type: object
+      description: 'One week of the diary''s right-hand "week totals" strip, returned by
+
+        `POST /training/getCalendarWeekSummary`.
+
+
+        Captured 2026-10-02 on a week holding one manual session (30 min,
+
+        250 kcal). The legacy calendar view (`Calendar.get.weekSummary`) reads
+
+        only `week`, `durationMillis`, `distance` and `calories`, matching each
+
+        entry to a calendar row by `week`; the units below for those four come
+
+        from how it renders them (`getSecondsAsDuration(durationMillis / 1000)`,
+
+        `metersToKm(distance)`, kcal). The 24/7 activity and sleep fields were
+
+        all zero on this device-less account — their units are unverified.
+
+        '
+      required:
+      - week
+      - durationMillis
+      - distance
+      - calories
+      - traininigSessionsCount
+      properties:
+        week:
+          type: integer
+          description: 'Week number — ISO 8601 for a Monday-first user (25–31 May 2026 →
+
+            22). Carries no year, so a range spanning New Year yields e.g. 52
+
+            then 1. # TODO: verify for a Sunday-first `firstDayOfWeek` user.
+
+            '
+          example: 22
+        durationMillis:
+          type: integer
+          format: int64
+          description: Total training duration of the week, **milliseconds**.
+          example: 1800000
+        distance:
+          type: number
+          format: double
+          description: 'Total training distance of the week, **metres**. A session whose own
+
+            `distance` is null counts as 0 (the observed manual session carried
+
+            5000 m only at the exercise level and summed to `0.0`).
+
+            '
+          example: 0
+        calories:
+          type: integer
+          description: Total training energy of the week, kcal.
+          example: 250
+        traininigSessionsCount:
+          type: integer
+          description: 'Number of training sessions in the week. The key is misspelled
+
+            (`traininig`) on the wire — keep it verbatim.
+
+            '
+          example: 1
+        exeCount:
+          type: integer
+          description: '`0` with one manual session recorded. # TODO: verify meaning
+
+            (exercises recorded by a device?).
+
+            '
+          example: 0
+        activeTime:
+          type: integer
+          description: 24/7 active time.
+          example: 0
+        inActiveTime:
+          type: integer
+          description: 24/7 inactive time.
+          example: 0
+        sleepTime:
+          type: integer
+          description: Sleep time.
+          example: 0
+        sleepQuality:
+          type: number
+          format: double
+          description: Sleep quality.
+          example: 0
+        stepCount:
+          type: integer
+          description: Steps counted by a device over the week.
+          example: 0
+        distanceFromSteps:
+          type: number
+          format: double
+          description: Distance estimated from steps.
+          example: 0
+        inactivityAlertCount:
+          type: integer
+          description: Inactivity alerts raised over the week.
+          example: 0
+        sleepPlus:
+          type: boolean
+          description: Whether Sleep Plus data backs the sleep fields.
+          example: false
     PhaseLeaf:
       type: object
       description: 'A leaf training phase (no nested phases). A single PhaseLeaf placed directly in `exerciseTargets[].phases`
@@ -7729,21 +7844,25 @@ components:
           description: Time spent in each HR zone across all sessions. Element shape TBD.
           items:
             type: object
+            additionalProperties: true
         totalFitFatZonesList:
           type: array
           description: Time in fit/fat-burning zones. Element shape TBD.
           items:
             type: object
+            additionalProperties: true
         totalPowerZoneList:
           type: array
           description: Time in cycling power zones. Element shape TBD.
           items:
             type: object
+            additionalProperties: true
         totalSpeedZoneList:
           type: array
           description: Time in speed/pace zones. Element shape TBD.
           items:
             type: object
+            additionalProperties: true
         totalTrainingSessionCount:
           type: integer
           description: Total number of training sessions in the date range.

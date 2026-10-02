@@ -1,6 +1,10 @@
 package convert
 
-import "github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
+import (
+	"time"
+
+	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
+)
 
 // This file holds the canonical response DTOs and their gen.* → DTO mappers.
 // Each DTO uses the conventions documented in units.go: durations in seconds
@@ -253,6 +257,50 @@ func FromWireProgressSummary(p *gen.ProgressViewSummary, fromDate, toDate string
 	}
 	if len(p.TrainingBenefitDistributionList) > 0 {
 		out.TrainingBenefitBreakdown = p.TrainingBenefitDistributionList
+	}
+	return out
+}
+
+// WeekSummary is the canonical form of one gen.CalendarWeekSummary entry. The
+// wire carries only a week number (no year), so WeekStart is resolved against
+// the requested range. The 24/7 activity and sleep fields are left out: their
+// units are not pinned in the spec.
+type WeekSummary struct {
+	Week             int     `json:"week"`
+	WeekStart        string  `json:"week_start,omitempty"`
+	NumberOfSessions int     `json:"number_of_sessions"`
+	TotalDurationS   int     `json:"total_duration_s"`
+	TotalDistanceM   float64 `json:"total_distance_m"`
+	TotalKcal        int     `json:"total_kcal"`
+	StepCount        int     `json:"step_count,omitempty"`
+}
+
+// FromWireWeekSummaries maps the week-summary entries for a [from, to] request.
+// Each wire week number is matched to the ISO week (Monday start) inside the
+// range to recover its year; WeekStart stays empty if none matches.
+func FromWireWeekSummaries(items []gen.CalendarWeekSummary, from, to time.Time) []WeekSummary {
+	starts := map[int]string{}
+	monday := from.AddDate(0, 0, -((int(from.Weekday()) + 6) % 7))
+	for d := monday; !d.After(to); d = d.AddDate(0, 0, 7) {
+		_, wk := d.ISOWeek()
+		if _, seen := starts[wk]; !seen {
+			starts[wk] = d.Format("2006-01-02")
+		}
+	}
+	out := make([]WeekSummary, 0, len(items))
+	for _, w := range items {
+		ws := WeekSummary{
+			Week:             w.Week,
+			WeekStart:        starts[w.Week],
+			NumberOfSessions: w.TraininigSessionsCount,
+			TotalDurationS:   MillisToSeconds(w.DurationMillis),
+			TotalDistanceM:   w.Distance,
+			TotalKcal:        w.Calories,
+		}
+		if v, ok := w.StepCount.Get(); ok {
+			ws.StepCount = v
+		}
+		out = append(out, ws)
 	}
 	return out
 }

@@ -227,13 +227,10 @@ func (c *Client) UpdateTrainingTarget(ctx context.Context, id int64, body *gen.T
 	}
 }
 
-// GetCalendarWeekSummary returns one entry per ISO week intersecting [from, to].
-// Polar caps the range at 45 days and rejects ISO-8601 dates — formatted internally
-// as D.M.YYYY. Empty array when no sessions fall in the range.
-//
-// The per-item schema is not yet pinned in the spec (test accounts return `[]`),
-// so callers get back the raw items as ogen sees them.
-func (c *Client) GetCalendarWeekSummary(ctx context.Context, from, to time.Time) ([]gen.GetCalendarWeekSummaryOKItem, error) {
+// GetCalendarWeekSummary returns one entry per week intersecting [from, to] that
+// holds data. Polar caps the range at 45 days and rejects ISO-8601 dates —
+// formatted internally as D.M.YYYY. Empty array when nothing is recorded.
+func (c *Client) GetCalendarWeekSummary(ctx context.Context, from, to time.Time) ([]gen.CalendarWeekSummary, error) {
 	if to.Sub(from) > 45*24*time.Hour {
 		return nil, fmt.Errorf("flow: calendar week summary: range exceeds Polar's 45-day limit")
 	}
@@ -246,7 +243,7 @@ func (c *Client) GetCalendarWeekSummary(ctx context.Context, from, to time.Time)
 	}
 	switch v := res.(type) {
 	case *gen.GetCalendarWeekSummaryOKApplicationJSON:
-		return []gen.GetCalendarWeekSummaryOKItem(*v), nil
+		return []gen.CalendarWeekSummary(*v), nil
 	case *gen.GetCalendarWeekSummaryBadRequest:
 		return nil, fmt.Errorf("flow: calendar week summary: bad request (check date range)")
 	case *gen.Unauthorized:
