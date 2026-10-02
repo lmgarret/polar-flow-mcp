@@ -169,8 +169,8 @@ Per day: `steps`, `step_distance_m`, `active_time_s`, `kcal`,
 `activity_goal_pct`, `inactivity_alerts`, `sleep_s`, `intensity` (seconds per
 band: `sleep_s`, `sedentary_s`, `light_s`, `moderate_s`, `vigorous_s`),
 `heart_rate` (`day_min_bpm`, `day_max_bpm`, `night_min_bpm`). Days without
-device data have `has_data: false` and null metrics — they are not zero-step
-days. A single-day call adds intraday `samples` (`{"t": "HH:MM", "v": …}`).
+device data (and future days) have `has_data: false` and null metrics — they
+are not zero-step days. `heart_rate`, `intensity` and `benefit` can be null. A single-day call adds intraday `samples` (`{"t": "HH:MM", "v": …}`).
 
 ### `get_sleep`
 - `from_date` — first wake-up date (default: today − 13 days)
@@ -178,8 +178,10 @@ days. A single-day call adds intraday `samples` (`{"t": "HH:MM", "v": …}`).
 
 Per night (keyed by the wake-up `date`): `fell_asleep`, `woke_up`, `sleep_s`,
 `score` (0–100 or null), `continuity_index` (1–5), `sleep_cycles`, `rating`,
-`stages` (`light_s`, `deep_s`, `rem_s`, `unknown_s`; Sleep Plus Stages devices
-only), `interruptions_s`, and a `hypnogram` of `{stage, start_s, end_s}`.
+`stages` (`light_s`, `deep_s`, `rem_s`, `unknown_s`; null on nights without
+Sleep Plus Stages), `interruptions_s`, and a `hypnogram` of `{stage, start_s,
+end_s}` with stage `wake` / `light` / `deep` / `rem` / `unknown`, or `sleep` on
+nights without stages.
 `averages` covers the range. Empty without a sleep-tracking device.
 
 ---

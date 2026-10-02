@@ -43,10 +43,10 @@ func widgetPayload(t *testing.T, res *mcpgo.CallToolResult, wantType string) map
 //nolint:gocyclo // one sequential scenario
 func TestGetDailyActivity_RangeStepsFourDaysAtATime(t *testing.T) {
 	ff := newFakeFlow(t)
+	// The windows are fetched in parallel, so every call gets the same body
+	// (the fake routes by path only); the handler keeps the days in range.
 	ff.on("GET", "/api/activity-timeline/loadFour", 200, "application/json", fourDays(map[string]string{
 		"2026-09-20": emptyDay, "2026-09-21": emptyDay, "2026-09-22": syncedDay, "2026-09-23": emptyDay,
-	}))
-	ff.on("GET", "/api/activity-timeline/loadFour", 200, "application/json", fourDays(map[string]string{
 		"2026-09-24": emptyDay, "2026-09-25": emptyDay, "2026-09-26": emptyDay, "2026-09-27": emptyDay,
 	}))
 	res := callTool(t, GetDailyActivityHandler(ff.client()), map[string]any{"from_date": "2026-09-21", "to_date": "2026-09-26"})
@@ -57,12 +57,17 @@ func TestGetDailyActivity_RangeStepsFourDaysAtATime(t *testing.T) {
 	if len(reqs) != 2 {
 		t.Fatalf("requests = %+v, want 2 loadFour calls", reqs)
 	}
-	for i, want := range []string{"2026-09-23", "2026-09-27"} {
-		q, _ := url.ParseQuery(reqs[i].Query)
+	got := map[string]bool{}
+	for _, r := range reqs {
+		q, _ := url.ParseQuery(r.Query)
 		// A tiny maxSampleCount 500s on days with device data; always ask for the full curve.
-		if q.Get("day") != want || q.Get("maxSampleCount") != "144" {
-			t.Fatalf("request %d query = %q, want day=%s maxSampleCount=144", i, reqs[i].Query, want)
+		if q.Get("maxSampleCount") != "144" {
+			t.Fatalf("query = %q, want maxSampleCount=144", r.Query)
 		}
+		got[q.Get("day")] = true
+	}
+	if !got["2026-09-23"] || !got["2026-09-27"] {
+		t.Fatalf("windows = %v, want days 2026-09-23 and 2026-09-27", got)
 	}
 	p := widgetPayload(t, res, "daily_activity")
 	days, _ := p["days"].([]any)
@@ -224,5 +229,37 @@ func TestGetSleep_NullScoreAndOffsets(t *testing.T) {
 	n := obj(nights[0])
 	if n["score"] != nil || n["fell_asleep"] != "2026-09-28T23:00:00" || n["sleep_s"] != 28800.0 {
 		t.Fatalf("null-score night = %v", n)
+	}
+}
+
+// On a synced account Flow stamps lastSync on future days too, with an
+// all-zero panel (seen live 2026-10-02 for tomorrow): still no data.
+func TestGetDailyActivity_ZeroDayWithLastSyncIsNoData(t *testing.T) {
+	ff := newFakeFlow(t)
+	tomorrow := strings.Replace(emptyDay, `"lastSync":null`, `"lastSync":1790683200000`, 1)
+	ff.on("GET", "/api/activity-timeline/loadFour", 200, "application/json", fourDays(map[string]string{
+		"2026-10-02": syncedDay, "2026-10-03": tomorrow,
+	}))
+	res := callTool(t, GetDailyActivityHandler(ff.client()), map[string]any{"from_date": "2026-10-02", "to_date": "2026-10-03"})
+	if res.IsError {
+		t.Fatalf("error: %s", resultText(res))
+	}
+	p := widgetPayload(t, res, "daily_activity")
+	days, _ := p["days"].([]any)
+	if d := obj(days[1]); d["has_data"] != false || d["steps"] != nil || d["sleep_plus"] != false {
+		t.Fatalf("tomorrow = %v", d)
+	}
+	if s := obj(p["summary"]); s["days_with_data"] != 1.0 {
+		t.Fatalf("summary = %v", s)
+	}
+}
+
+// One failing window fails the call with Flow's error, not a partial range.
+func TestGetDailyActivity_WindowErrorFailsCall(t *testing.T) {
+	ff := newFakeFlow(t)
+	ff.on("GET", "/api/activity-timeline/loadFour", 500, "text/plain", "Failed to load activity timeline data")
+	res := callTool(t, GetDailyActivityHandler(ff.client()), map[string]any{"from_date": "2026-09-01", "to_date": "2026-09-20"})
+	if !res.IsError || !strings.Contains(resultText(res), "Failed to load activity timeline data") {
+		t.Fatalf("result = %v %q", res.IsError, resultText(res))
 	}
 }

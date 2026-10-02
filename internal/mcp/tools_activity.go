@@ -91,8 +91,9 @@ func registerProfileAndActivityTools(s *server.MCPServer, fc *flow.Client) {
 				"sedentary / light / moderate / vigorous, seconds), the day's low / high and night-low "+
 				"heart rate (bpm), and Polar's activity-benefit feedback. A single-day call also returns "+
 				"the intraday activity and heart-rate curves (10-minute points, local HH:MM).\n\n"+
-				"Days without synced device data have has_data false and null metrics — Flow reports "+
-				"them as zeros, which are not real readings. Range ≤ 31 days; default: the last 7 days.\n\n"+
+				"Days without synced device data (including future days) have has_data false and null "+
+				"metrics — Flow reports them as zeros, which are not real readings. heart_rate, intensity "+
+				"and benefit are null when Flow has nothing for them. Range ≤ 31 days; default: the last 7 days.\n\n"+
 				"Example: {\"from_date\": \"2026-09-29\", \"to_date\": \"2026-09-29\"} for one day with curves.",
 		),
 		mcpgo.WithString("from_date",
@@ -106,8 +107,9 @@ func registerProfileAndActivityTools(s *server.MCPServer, fc *flow.Client) {
 			"Recorded nights of sleep from a Polar device (Flow's sleep report), each keyed by the date "+
 				"the user woke up: fell-asleep and woke-up times (local, ISO 8601), time asleep (seconds), "+
 				"Sleep Score (0–100), continuity (1–5), sleep cycles, the user's own rating, time in light / "+
-				"deep / REM sleep and interruptions (seconds; stages only on Sleep Plus Stages devices), and "+
-				"a hypnogram (state segments in seconds after falling asleep). Also returns averages over "+
+				"deep / REM sleep and interruptions (seconds; stages is null on nights without Sleep Plus "+
+				"Stages), and a hypnogram (segments in seconds after falling asleep; stage is wake, light, "+
+				"deep, rem or unknown — or sleep on nights without stages). Also returns averages over "+
 				"the range. Empty when no sleep-tracking device is synced.\n\n"+
 				"Range ≤ 365 days; default: the last 14 nights. Example: {\"from_date\": \"2026-09-01\", "+
 				"\"to_date\": \"2026-09-30\"}.",
