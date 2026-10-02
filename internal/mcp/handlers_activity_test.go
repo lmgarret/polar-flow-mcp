@@ -59,8 +59,9 @@ func TestGetDailyActivity_RangeStepsFourDaysAtATime(t *testing.T) {
 	}
 	for i, want := range []string{"2026-09-23", "2026-09-27"} {
 		q, _ := url.ParseQuery(reqs[i].Query)
-		if q.Get("day") != want || q.Get("maxSampleCount") != "1" {
-			t.Fatalf("request %d query = %q, want day=%s maxSampleCount=1", i, reqs[i].Query, want)
+		// A tiny maxSampleCount 500s on days with device data; always ask for the full curve.
+		if q.Get("day") != want || q.Get("maxSampleCount") != "144" {
+			t.Fatalf("request %d query = %q, want day=%s maxSampleCount=144", i, reqs[i].Query, want)
 		}
 	}
 	p := widgetPayload(t, res, "daily_activity")
@@ -202,4 +203,26 @@ func mustJSON(t *testing.T, v any) string {
 		t.Fatal(err)
 	}
 	return string(b)
+}
+
+// A real account's 365-day report held a night with "sleepScore": null, which
+// used to fail the whole report's decode (seen live 2026-10-01). Null offsets
+// count as 0, like moment.add(null) in the web UI.
+func TestGetSleep_NullScoreAndOffsets(t *testing.T) {
+	ff := newFakeFlow(t)
+	night := strings.NewReplacer(`"sleepScore":78.46`, `"sleepScore":null`,
+		`"sleepStartOffset":600`, `"sleepStartOffset":null`, `"sleepEndOffset":-300`, `"sleepEndOffset":null`).Replace(sleepNight)
+	ff.on("GET", "/api/sleep/report", 200, "application/json", "["+night+","+sleepNight+"]")
+	res := callTool(t, GetSleepHandler(ff.client()), map[string]any{"from_date": "2026-09-01", "to_date": "2026-09-29"})
+	if res.IsError {
+		t.Fatalf("error: %s", resultText(res))
+	}
+	nights, _ := widgetPayload(t, res, "sleep_report")["nights"].([]any)
+	if len(nights) != 2 {
+		t.Fatalf("nights = %v", nights)
+	}
+	n := obj(nights[0])
+	if n["score"] != nil || n["fell_asleep"] != "2026-09-28T23:00:00" || n["sleep_s"] != 28800.0 {
+		t.Fatalf("null-score night = %v", n)
+	}
 }
