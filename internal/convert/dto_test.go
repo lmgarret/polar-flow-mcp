@@ -1,7 +1,10 @@
 package convert
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/lmgarret/polar-flow-mcp/internal/flow/gen"
 )
@@ -125,5 +128,43 @@ func TestFromWireProgressSummary_ZeroAccount(t *testing.T) {
 	got := FromWireProgressSummary(&gen.ProgressViewSummary{}, "2026-04-01", "2026-07-01")
 	if got.NumberOfSessions != 0 || got.TotalDurationS != 0 || got.TotalDistanceM != 0 {
 		t.Errorf("zero account should map to zeros, got %+v", got)
+	}
+}
+
+// The zone-list element shape is not pinned; the open-map model must keep the
+// keys rather than decode each element to an empty struct.
+func TestFromWireProgressSummary_ZoneListKeepsKeys(t *testing.T) {
+	var p gen.ProgressViewSummary
+	if err := json.Unmarshal([]byte(`{"totalHeartRateZoneList":[{"zoneIndex":1,"durationMillis":60000}]}`), &p); err != nil {
+		t.Fatal(err)
+	}
+	b, err := json.Marshal(FromWireProgressSummary(&p, "", "").HeartRateZones)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), `"durationMillis":60000`) {
+		t.Fatalf("heart_rate_zones = %s", b)
+	}
+}
+
+func TestFromWireWeekSummaries_WeekStartAcrossNewYear(t *testing.T) {
+	from := time.Date(2026, 12, 24, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2027, 1, 6, 0, 0, 0, 0, time.UTC)
+	got := FromWireWeekSummaries([]gen.CalendarWeekSummary{
+		{Week: 53, DurationMillis: 3600500, Calories: 300, TraininigSessionsCount: 2, StepCount: gen.NewOptInt(9000)},
+		{Week: 1, Distance: 10000},
+		{Week: 30},
+	}, from, to)
+	if len(got) != 3 {
+		t.Fatalf("got %+v", got)
+	}
+	if got[0].WeekStart != "2026-12-28" || got[0].TotalDurationS != 3600 || got[0].NumberOfSessions != 2 || got[0].StepCount != 9000 {
+		t.Errorf("week 53 = %+v", got[0])
+	}
+	if got[1].WeekStart != "2027-01-04" || got[1].TotalDistanceM != 10000 {
+		t.Errorf("week 1 = %+v", got[1])
+	}
+	if got[2].WeekStart != "" {
+		t.Errorf("week outside range should have no start: %+v", got[2])
 	}
 }

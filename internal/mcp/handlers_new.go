@@ -108,7 +108,7 @@ func GetCalendarWeekSummaryHandler(fc *flow.Client) func(context.Context, mcpgo.
 		if err != nil {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		return widgetResult(map[string]any{"type": "week_summary", "weeks": items}), nil
+		return widgetResult(map[string]any{"type": "week_summary", "weeks": convert.FromWireWeekSummaries(items, from, to)}), nil
 	}
 }
 

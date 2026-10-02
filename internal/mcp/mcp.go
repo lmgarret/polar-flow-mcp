@@ -379,7 +379,12 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"\"week totals\" strip in the Polar Flow diary. Use for weekly volume trends "+
 				"rather than per-session detail. The range must be ≤ 45 days (wider is rejected "+
 				"by the server); from_date must be on or before to_date. "+
-				"Default range: today - 28 days through today.",
+				"Default range: today - 28 days through today. Each week: week (ISO week number), "+
+				"week_start (its Monday, YYYY-MM-DD), number_of_sessions, total_duration_s (seconds), "+
+				"total_distance_m (metres; manual sessions whose distance was only set per exercise "+
+				"count 0), total_kcal, step_count (device steps). Weeks with nothing recorded are "+
+				"omitted. Example: {\"week\":22,\"week_start\":\"2026-05-25\",\"number_of_sessions\":1,"+
+				"\"total_duration_s\":1800,\"total_distance_m\":0,\"total_kcal\":250}.",
 		),
 		mcpgo.WithString("from_date",
 			mcpgo.Description("Start date, ISO 8601 YYYY-MM-DD (default: today - 28 days).")),

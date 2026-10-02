@@ -108,9 +108,9 @@ The two hand-written trimmed structs in `internal/flow` — `UserInfo` and
 
 Read normalisation currently covers the headline fields of
 `list_training_sessions`, `get_training_session_summary`,
-`get_progress_summary`, the favorites tools (`list_favorites`, `get_favorite`,
-`schedule_favorite`) and `get_route`. Deep, partly-unpinned payloads — training-target phase
-trees (`get_training_target`), session lap/sample detail
-(`get_training_session_details`), the week-summary strip, and the progress
+`get_progress_summary`, `get_calendar_week_summary`, the favorites tools
+(`list_favorites`, `get_favorite`, `schedule_favorite`) and `get_route`. Deep,
+partly-unpinned payloads — training-target phase trees (`get_training_target`),
+session lap/sample detail (`get_training_session_details`) and the progress
 breakdown lists — are passed through from the wire unchanged. `get_calendar_events`
 is intentionally the raw, unfiltered escape hatch.

@@ -1035,6 +1035,190 @@ func (s *CalendarEvent) SetTimestamp(val OptInt) {
 	s.Timestamp = val
 }
 
+// One week of the diary's right-hand "week totals" strip, returned by
+// `POST /training/getCalendarWeekSummary`.
+//
+// Captured 2026-10-02 on a week holding one manual session (30 min, 250 kcal). The legacy calendar
+// view (`Calendar.get.weekSummary`) reads only `week`, `durationMillis`, `distance` and `calories`,
+// matching each entry to a calendar row by `week`; the units below for those four come from how it
+// renders them (`getSecondsAsDuration(durationMillis / 1000)`, `metersToKm(distance)`, kcal). The 24/7
+// activity and sleep fields were all zero on this device-less account — their units are unverified.
+// Ref: #/components/schemas/CalendarWeekSummary
+type CalendarWeekSummary struct {
+	// Week number — ISO 8601 for a Monday-first user (25–31 May 2026 → 22). Carries no year, so a
+	// range spanning New Year yields e.g. 52 then 1. # TODO: verify for a Sunday-first `firstDayOfWeek`
+	// user.
+	Week int `json:"week"`
+	// Total training duration of the week, milliseconds.
+	DurationMillis int64 `json:"durationMillis"`
+	// Total training distance of the week, metres. A session whose own `distance` is null counts as 0 (the
+	// observed manual session carried 5000 m only at the exercise level and summed to `0.0`).
+	Distance float64 `json:"distance"`
+	// Total training energy of the week, kcal.
+	Calories int `json:"calories"`
+	// Number of training sessions in the week. The key is misspelled (`traininig`) on the wire — keep it
+	// verbatim.
+	TraininigSessionsCount int `json:"traininigSessionsCount"`
+	// `0` with one manual session recorded. # TODO: verify meaning (exercises recorded by a device?).
+	ExeCount OptInt `json:"exeCount"`
+	// 24/7 active time.
+	ActiveTime OptInt `json:"activeTime"`
+	// 24/7 inactive time.
+	InActiveTime OptInt `json:"inActiveTime"`
+	// Sleep time.
+	SleepTime OptInt `json:"sleepTime"`
+	// Sleep quality.
+	SleepQuality OptFloat64 `json:"sleepQuality"`
+	// Steps counted by a device over the week.
+	StepCount OptInt `json:"stepCount"`
+	// Distance estimated from steps.
+	DistanceFromSteps OptFloat64 `json:"distanceFromSteps"`
+	// Inactivity alerts raised over the week.
+	InactivityAlertCount OptInt `json:"inactivityAlertCount"`
+	// Whether Sleep Plus data backs the sleep fields.
+	SleepPlus OptBool `json:"sleepPlus"`
+}
+
+// GetWeek returns the value of Week.
+func (s *CalendarWeekSummary) GetWeek() int {
+	return s.Week
+}
+
+// GetDurationMillis returns the value of DurationMillis.
+func (s *CalendarWeekSummary) GetDurationMillis() int64 {
+	return s.DurationMillis
+}
+
+// GetDistance returns the value of Distance.
+func (s *CalendarWeekSummary) GetDistance() float64 {
+	return s.Distance
+}
+
+// GetCalories returns the value of Calories.
+func (s *CalendarWeekSummary) GetCalories() int {
+	return s.Calories
+}
+
+// GetTraininigSessionsCount returns the value of TraininigSessionsCount.
+func (s *CalendarWeekSummary) GetTraininigSessionsCount() int {
+	return s.TraininigSessionsCount
+}
+
+// GetExeCount returns the value of ExeCount.
+func (s *CalendarWeekSummary) GetExeCount() OptInt {
+	return s.ExeCount
+}
+
+// GetActiveTime returns the value of ActiveTime.
+func (s *CalendarWeekSummary) GetActiveTime() OptInt {
+	return s.ActiveTime
+}
+
+// GetInActiveTime returns the value of InActiveTime.
+func (s *CalendarWeekSummary) GetInActiveTime() OptInt {
+	return s.InActiveTime
+}
+
+// GetSleepTime returns the value of SleepTime.
+func (s *CalendarWeekSummary) GetSleepTime() OptInt {
+	return s.SleepTime
+}
+
+// GetSleepQuality returns the value of SleepQuality.
+func (s *CalendarWeekSummary) GetSleepQuality() OptFloat64 {
+	return s.SleepQuality
+}
+
+// GetStepCount returns the value of StepCount.
+func (s *CalendarWeekSummary) GetStepCount() OptInt {
+	return s.StepCount
+}
+
+// GetDistanceFromSteps returns the value of DistanceFromSteps.
+func (s *CalendarWeekSummary) GetDistanceFromSteps() OptFloat64 {
+	return s.DistanceFromSteps
+}
+
+// GetInactivityAlertCount returns the value of InactivityAlertCount.
+func (s *CalendarWeekSummary) GetInactivityAlertCount() OptInt {
+	return s.InactivityAlertCount
+}
+
+// GetSleepPlus returns the value of SleepPlus.
+func (s *CalendarWeekSummary) GetSleepPlus() OptBool {
+	return s.SleepPlus
+}
+
+// SetWeek sets the value of Week.
+func (s *CalendarWeekSummary) SetWeek(val int) {
+	s.Week = val
+}
+
+// SetDurationMillis sets the value of DurationMillis.
+func (s *CalendarWeekSummary) SetDurationMillis(val int64) {
+	s.DurationMillis = val
+}
+
+// SetDistance sets the value of Distance.
+func (s *CalendarWeekSummary) SetDistance(val float64) {
+	s.Distance = val
+}
+
+// SetCalories sets the value of Calories.
+func (s *CalendarWeekSummary) SetCalories(val int) {
+	s.Calories = val
+}
+
+// SetTraininigSessionsCount sets the value of TraininigSessionsCount.
+func (s *CalendarWeekSummary) SetTraininigSessionsCount(val int) {
+	s.TraininigSessionsCount = val
+}
+
+// SetExeCount sets the value of ExeCount.
+func (s *CalendarWeekSummary) SetExeCount(val OptInt) {
+	s.ExeCount = val
+}
+
+// SetActiveTime sets the value of ActiveTime.
+func (s *CalendarWeekSummary) SetActiveTime(val OptInt) {
+	s.ActiveTime = val
+}
+
+// SetInActiveTime sets the value of InActiveTime.
+func (s *CalendarWeekSummary) SetInActiveTime(val OptInt) {
+	s.InActiveTime = val
+}
+
+// SetSleepTime sets the value of SleepTime.
+func (s *CalendarWeekSummary) SetSleepTime(val OptInt) {
+	s.SleepTime = val
+}
+
+// SetSleepQuality sets the value of SleepQuality.
+func (s *CalendarWeekSummary) SetSleepQuality(val OptFloat64) {
+	s.SleepQuality = val
+}
+
+// SetStepCount sets the value of StepCount.
+func (s *CalendarWeekSummary) SetStepCount(val OptInt) {
+	s.StepCount = val
+}
+
+// SetDistanceFromSteps sets the value of DistanceFromSteps.
+func (s *CalendarWeekSummary) SetDistanceFromSteps(val OptFloat64) {
+	s.DistanceFromSteps = val
+}
+
+// SetInactivityAlertCount sets the value of InactivityAlertCount.
+func (s *CalendarWeekSummary) SetInactivityAlertCount(val OptInt) {
+	s.InactivityAlertCount = val
+}
+
+// SetSleepPlus sets the value of SleepPlus.
+func (s *CalendarWeekSummary) SetSleepPlus(val OptBool) {
+	s.SleepPlus = val
+}
+
 type ChangeFavoriteSportBadRequest struct {
 	Data io.Reader
 }
@@ -2982,11 +3166,9 @@ func (s GetCalendarWeekSummaryBadRequest) Read(p []byte) (n int, err error) {
 
 func (*GetCalendarWeekSummaryBadRequest) getCalendarWeekSummaryRes() {}
 
-type GetCalendarWeekSummaryOKApplicationJSON []GetCalendarWeekSummaryOKItem
+type GetCalendarWeekSummaryOKApplicationJSON []CalendarWeekSummary
 
 func (*GetCalendarWeekSummaryOKApplicationJSON) getCalendarWeekSummaryRes() {}
-
-type GetCalendarWeekSummaryOKItem struct{}
 
 type GetCalendarWeekSummaryReq struct {
 	// Inclusive start date, `D.M.YYYY`.
@@ -8351,13 +8533,49 @@ func (s *ProgressViewSummarySportDistributions) SetDistance(val []SportDistribut
 	s.Distance = val
 }
 
-type ProgressViewSummaryTotalFitFatZonesListItem struct{}
+type ProgressViewSummaryTotalFitFatZonesListItem map[string]jx.Raw
 
-type ProgressViewSummaryTotalHeartRateZoneListItem struct{}
+func (s *ProgressViewSummaryTotalFitFatZonesListItem) init() ProgressViewSummaryTotalFitFatZonesListItem {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
 
-type ProgressViewSummaryTotalPowerZoneListItem struct{}
+type ProgressViewSummaryTotalHeartRateZoneListItem map[string]jx.Raw
 
-type ProgressViewSummaryTotalSpeedZoneListItem struct{}
+func (s *ProgressViewSummaryTotalHeartRateZoneListItem) init() ProgressViewSummaryTotalHeartRateZoneListItem {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type ProgressViewSummaryTotalPowerZoneListItem map[string]jx.Raw
+
+func (s *ProgressViewSummaryTotalPowerZoneListItem) init() ProgressViewSummaryTotalPowerZoneListItem {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type ProgressViewSummaryTotalSpeedZoneListItem map[string]jx.Raw
+
+func (s *ProgressViewSummaryTotalSpeedZoneListItem) init() ProgressViewSummaryTotalSpeedZoneListItem {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
 
 type ProgressViewSummaryTrainingBenefitDistributionListItem struct {
 	// Benefit category code, e.g. `"NONE"` (placeholder). Other values TBD.
