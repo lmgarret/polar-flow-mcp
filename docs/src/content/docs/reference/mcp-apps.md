@@ -6,7 +6,7 @@ sidebar:
 ---
 
 Hosts that support [MCP Apps](https://modelcontextprotocol.io/) render most
-tool results as an inline widget instead of raw JSON. The seven UIs are embedded
+tool results as an inline widget instead of raw JSON. The nine UIs are embedded
 in the binary and served as `ui://polar-flow/*.html` resources; each tool
 advertises its UI in `_meta.ui.resourceUri`. Hosts without MCP-app support get
 the same data as the usual text/JSON result.
@@ -79,9 +79,28 @@ Tool: `get_user_info`.
 
 ## Training zones — `zones.html`
 
-Tool: `get_training_zones`.
+Tools: `get_training_zones`, `create_sport_profile`, `update_training_zones`
+(the write tools add a line saying what was saved).
 
 ![Heart-rate, pace and power zones per sport](../../../assets/mcp-apps/zones.webp)
+
+## Daily activity — `activity.html`
+
+Tool: `get_daily_activity`. A range shows steps per day and each day's time by
+intensity; a single day shows its headline numbers and the intraday activity
+and heart-rate curves.
+
+![Steps per day and time by intensity over a week](../../../assets/mcp-apps/activity-week.webp)
+
+![One day with its intraday activity and heart-rate curves](../../../assets/mcp-apps/activity-day.webp)
+
+## Sleep — `sleep.html`
+
+Tool: `get_sleep`. One row per night: a hypnogram strip (light / deep / REM /
+awake), time asleep, bed and wake times, Sleep Score and continuity, with
+averages for the range.
+
+![Nights with hypnogram strips and Sleep Scores](../../../assets/mcp-apps/sleep.webp)
 
 ## Notices — every UI
 

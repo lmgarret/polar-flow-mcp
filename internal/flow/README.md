@@ -18,7 +18,8 @@ from the OpenAPI spec in [`../../../polar-openapi-maker/`](https://github.com/lm
 | `client.go`, `login.go`, `cookies.go`, `jwt.go`, `errors.go`, `ops.go`, `transport_tls.go` | Hand-written wrapper around `gen.Client` |
 | `ops_favorites.go` | Favorites, routes and scheduling (`/api/favoritetarget`, `/api/favorites/*`, `/training/target/createTargetFromFavourite`) |
 | `ops_sessions.go` | Session existence check, delete, full edit (`editTraining`) and partial note/feeling update |
-| `ops_zones.go` | Sport profiles and training zones: list / read a stored profile, and `DefaultSportZones` via the non-persisting `POST /api/sports/profiles/{uuid}/recalculate` |
+| `ops_zones.go` | Sport profiles and training zones: list / read / create / delete a profile, save zones (`update-zones`), and `DefaultSportZones` via the non-persisting `POST /api/sports/profiles/{uuid}/recalculate` |
+| `ops_activity.go` | 24/7 activity (`/api/activity-timeline/loadFour`) and sleep (`sleep-api.flow.polar.com/api/sleep/report`, reached through `gen.WithServerURL`) |
 | `sports.go` | Cached sport catalogue behind `SportName` (sport-id validation for write tools) |
 | `testing.go` | `NewForTesting(baseURL)` — a Client against an `httptest` server, no login (tests only) |
 
@@ -76,6 +77,22 @@ other semantic changes.
   profile uuid (`0f000000-0080-0000-0000-<sportId hex>`, see
   `SportProfileUUID`) without saving, so `DefaultSportZones` needs no write.
   It requires the caller's own `userId` in the body.
+- **Sport-profile writes.** `create/{sportId}` is idempotent (200 + the stored
+  profile when one exists, 201 when new; an unknown sport is an empty 500 →
+  `ErrUnknownSport`). `update-zones` reads only `settings.zoneLimits`, needs
+  all three `*SettingSource` fields (a `…_DEFAULT` one makes Flow recompute that
+  list), wants HR and power limits as integers, and 409s a `modified` not newer
+  than the stored one — which Flow reports truncated to the second, so
+  `UpdateSportProfileZones` sends at least stored + 1 s. `DELETE` answers 200
+  for an unknown uuid and 400 for the last profile (`ErrLastSportProfile`).
+- **Sleep on another host.** The sleep report lives on
+  `sleep-api.flow.polar.com` (the `.flow.polar.com` `FLOW_SESSION` cookie
+  reaches it), needs `X-Requested-With` even on GET, only answers 30–365-day
+  windows (`SleepNights` widens and filters), and its 401 is not Flow's
+  `NotAuthenticated` body — so `SleepNights` refreshes and retries once itself.
+- **Activity units.** `activity-timeline` durations are minutes and
+  `distanceFromSteps` metres (read from the web UI's bundle); future days null
+  `dataPanelData`, `activityScoreData` and `activityBenefitFeedbackData`.
 
 ## Architecture
 

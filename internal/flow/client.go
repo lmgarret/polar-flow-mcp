@@ -42,6 +42,10 @@ type Client struct {
 	// sports caches the sport catalogue for id validation (see SportName).
 	sports sportCatalog
 
+	// sleepURL is the sleep API's origin (a separate subdomain that shares the
+	// FLOW_SESSION cookie); see SleepNights.
+	sleepURL *url.URL
+
 	// API is the generated ogen client. Use it for raw access if a method on
 	// Client doesn't cover an operation.
 	API *gen.Client
@@ -70,8 +74,9 @@ func New(ctx context.Context, cfg Config) (*Client, error) {
 		return nil, fmt.Errorf("flow: build TLS transport: %w", txErr)
 	}
 	c := &Client{
-		cfg:    cfg,
-		logger: cfg.Logger,
+		cfg:      cfg,
+		logger:   cfg.Logger,
+		sleepURL: &url.URL{Scheme: "https", Host: "sleep-api.flow.polar.com"},
 		httpClient: &http.Client{
 			Timeout:   cfg.HTTPTimeout,
 			Jar:       jar,

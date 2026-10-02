@@ -2525,6 +2525,82 @@ func (s *ClubModel) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes CreateSportProfileCreated as json.
+func (s *CreateSportProfileCreated) Encode(e *jx.Encoder) {
+	unwrapped := (*SportProfile)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes CreateSportProfileCreated from json.
+func (s *CreateSportProfileCreated) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CreateSportProfileCreated to nil")
+	}
+	var unwrapped SportProfile
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = CreateSportProfileCreated(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *CreateSportProfileCreated) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CreateSportProfileCreated) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CreateSportProfileOK as json.
+func (s *CreateSportProfileOK) Encode(e *jx.Encoder) {
+	unwrapped := (*SportProfile)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes CreateSportProfileOK from json.
+func (s *CreateSportProfileOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CreateSportProfileOK to nil")
+	}
+	var unwrapped SportProfile
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = CreateSportProfileOK(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *CreateSportProfileOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CreateSportProfileOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode implements json.Marshaler.
 func (s *CurrentUserResponse) Encode(e *jx.Encoder) {
 	e.ObjStart()
@@ -7365,39 +7441,6 @@ func (s *OptActivityMiniPoint) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes ActivityTimelineDayActivityBenefitFeedbackData as json.
-func (o OptActivityTimelineDayActivityBenefitFeedbackData) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes ActivityTimelineDayActivityBenefitFeedbackData from json.
-func (o *OptActivityTimelineDayActivityBenefitFeedbackData) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptActivityTimelineDayActivityBenefitFeedbackData to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptActivityTimelineDayActivityBenefitFeedbackData) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptActivityTimelineDayActivityBenefitFeedbackData) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes ActivityTimelineDayActivityGraphData as json.
 func (o OptActivityTimelineDayActivityGraphData) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -7460,39 +7503,6 @@ func (s OptActivityTimelineDayActivityGraphDataHeartRateSummary) MarshalJSON() (
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptActivityTimelineDayActivityGraphDataHeartRateSummary) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes ActivityTimelineDayActivityScoreData as json.
-func (o OptActivityTimelineDayActivityScoreData) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes ActivityTimelineDayActivityScoreData from json.
-func (o *OptActivityTimelineDayActivityScoreData) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptActivityTimelineDayActivityScoreData to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptActivityTimelineDayActivityScoreData) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptActivityTimelineDayActivityScoreData) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -8165,6 +8175,104 @@ func (s OptLocalizationInfoTimeFormatSeparator) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptLocalizationInfoTimeFormatSeparator) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ActivityTimelineDayActivityBenefitFeedbackData as json.
+func (o OptNilActivityTimelineDayActivityBenefitFeedbackData) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ActivityTimelineDayActivityBenefitFeedbackData from json.
+func (o *OptNilActivityTimelineDayActivityBenefitFeedbackData) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilActivityTimelineDayActivityBenefitFeedbackData to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v ActivityTimelineDayActivityBenefitFeedbackData
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilActivityTimelineDayActivityBenefitFeedbackData) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilActivityTimelineDayActivityBenefitFeedbackData) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ActivityTimelineDayActivityScoreData as json.
+func (o OptNilActivityTimelineDayActivityScoreData) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ActivityTimelineDayActivityScoreData from json.
+func (o *OptNilActivityTimelineDayActivityScoreData) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilActivityTimelineDayActivityScoreData to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v ActivityTimelineDayActivityScoreData
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilActivityTimelineDayActivityScoreData) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilActivityTimelineDayActivityScoreData) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

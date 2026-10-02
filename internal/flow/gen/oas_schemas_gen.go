@@ -68,10 +68,12 @@ type ActivityTimelineDay struct {
 	DataPanelData OptNilActivityTimelineDayDataPanelData `json:"dataPanelData"`
 	// Time-series samples + zone limits for the day's activity chart.
 	ActivityGraphData OptActivityTimelineDayActivityGraphData `json:"activityGraphData"`
-	// Time spent in each activity-intensity bucket (seconds).
-	ActivityScoreData OptActivityTimelineDayActivityScoreData `json:"activityScoreData"`
-	// Qualitative feedback Polar surfaces under "Activity benefit".
-	ActivityBenefitFeedbackData OptActivityTimelineDayActivityBenefitFeedbackData `json:"activityBenefitFeedbackData"`
+	// Time spent in each activity-intensity bucket, in minutes (the web UI's `valueMinutes`). `null` for
+	// days past the last synced data (observed 2026-09-30).
+	ActivityScoreData OptNilActivityTimelineDayActivityScoreData `json:"activityScoreData"`
+	// Qualitative feedback Polar surfaces under "Activity benefit". `null` for days past the last synced
+	// data (observed 2026-09-30).
+	ActivityBenefitFeedbackData OptNilActivityTimelineDayActivityBenefitFeedbackData `json:"activityBenefitFeedbackData"`
 	// Mini-trend data for the "/diary" mini-graph row. Self-contained snapshot per day.
 	MiniGraphData OptActivityTimelineDayMiniGraphData `json:"miniGraphData"`
 }
@@ -87,12 +89,12 @@ func (s *ActivityTimelineDay) GetActivityGraphData() OptActivityTimelineDayActiv
 }
 
 // GetActivityScoreData returns the value of ActivityScoreData.
-func (s *ActivityTimelineDay) GetActivityScoreData() OptActivityTimelineDayActivityScoreData {
+func (s *ActivityTimelineDay) GetActivityScoreData() OptNilActivityTimelineDayActivityScoreData {
 	return s.ActivityScoreData
 }
 
 // GetActivityBenefitFeedbackData returns the value of ActivityBenefitFeedbackData.
-func (s *ActivityTimelineDay) GetActivityBenefitFeedbackData() OptActivityTimelineDayActivityBenefitFeedbackData {
+func (s *ActivityTimelineDay) GetActivityBenefitFeedbackData() OptNilActivityTimelineDayActivityBenefitFeedbackData {
 	return s.ActivityBenefitFeedbackData
 }
 
@@ -112,12 +114,12 @@ func (s *ActivityTimelineDay) SetActivityGraphData(val OptActivityTimelineDayAct
 }
 
 // SetActivityScoreData sets the value of ActivityScoreData.
-func (s *ActivityTimelineDay) SetActivityScoreData(val OptActivityTimelineDayActivityScoreData) {
+func (s *ActivityTimelineDay) SetActivityScoreData(val OptNilActivityTimelineDayActivityScoreData) {
 	s.ActivityScoreData = val
 }
 
 // SetActivityBenefitFeedbackData sets the value of ActivityBenefitFeedbackData.
-func (s *ActivityTimelineDay) SetActivityBenefitFeedbackData(val OptActivityTimelineDayActivityBenefitFeedbackData) {
+func (s *ActivityTimelineDay) SetActivityBenefitFeedbackData(val OptNilActivityTimelineDayActivityBenefitFeedbackData) {
 	s.ActivityBenefitFeedbackData = val
 }
 
@@ -126,7 +128,8 @@ func (s *ActivityTimelineDay) SetMiniGraphData(val OptActivityTimelineDayMiniGra
 	s.MiniGraphData = val
 }
 
-// Qualitative feedback Polar surfaces under "Activity benefit".
+// Qualitative feedback Polar surfaces under "Activity benefit". `null` for days past the last synced
+// data (observed 2026-09-30).
 type ActivityTimelineDayActivityBenefitFeedbackData struct {
 	// Moderate-to-vigorous physical activity bucket. `"NONE"` observed on empty account; other values TBD.
 	Mvpa OptString `json:"mvpa"`
@@ -192,19 +195,25 @@ type ActivityTimelineDayActivityGraphData struct {
 	// Epoch ms of last device sync that contributed to this day. Null when no device data.
 	LastSync OptNilInt `json:"lastSync"`
 	// Down-sampled activity intensity timeline (length ≤ `maxSampleCount`). Empty on a device-less
-	// account; element shape TBD with a real capture.
+	// account. Per the web UI (bundle read 2026-09-30, no populated capture): `{time, value}`, `time` an
+	// epoch ms holding the local wall clock as if UTC, `value` the activity level compared against
+	// `activityZoneLimits` (below `activityZoneLimits[1]` reads as non-wear). Left untyped until a capture
+	// confirms it.
 	ActivityTimelineSamples []jx.Raw `json:"activityTimelineSamples"`
-	// Icons overlaid on the timeline (training sessions, alarms). Element shape TBD.
+	// Icons overlaid on the timeline. Per the web UI:
+	// `{activityTimelineIconType, localTime, distance, duration, kiloCalories, sportName, url, hr}`, types
+	// incl. `ACTIVITY_TIMELINE_ICON_TYPE_SLEEP` / `…_WAKE_UP`. Unconfirmed.
 	ActivityTimelineIcons []jx.Raw `json:"activityTimelineIcons"`
 	// Seven floats defining the upper bounds of activity-intensity zones for this user/day.
 	// Server-synthesized from physical profile even without device data.
 	ActivityZoneLimits []float32 `json:"activityZoneLimits"`
-	// 24h HR samples (down-sampled to ≤ `maxSampleCount`). Empty on device-less account.
+	// 24h HR samples (down-sampled to ≤ `maxSampleCount`). Empty on device-less account. Per the web UI:
+	// `{time, value}` like `activityTimelineSamples`, `value` in bpm, `0` = gap. Unconfirmed.
 	HeartRateTimelineSamples []jx.Raw                                                `json:"heartRateTimelineSamples"`
 	HeartRateSummary         OptActivityTimelineDayActivityGraphDataHeartRateSummary `json:"heartRateSummary"`
-	// High-intensity sessions within the day. Element shape TBD.
+	// High-intensity periods within the day. Per the web UI: `{startTime, endTime}`. Unconfirmed.
 	HighSessionTimelineList []jx.Raw `json:"highSessionTimelineList"`
-	// Scheduled / completed training sessions within the day. Element shape TBD.
+	// Training sessions within the day. Per the web UI: `{startTime, endTime}`. Unconfirmed.
 	TrainingTimelineList []jx.Raw `json:"trainingTimelineList"`
 }
 
@@ -363,7 +372,8 @@ func (s *ActivityTimelineDayActivityGraphDataHeartRateSummary) SetNightMinimumDa
 	s.NightMinimumDateTime = val
 }
 
-// Time spent in each activity-intensity bucket (seconds).
+// Time spent in each activity-intensity bucket, in minutes (the web UI's `valueMinutes`). `null` for
+// days past the last synced data (observed 2026-09-30).
 type ActivityTimelineDayActivityScoreData struct {
 	SleepDuration     OptInt `json:"sleepDuration"`
 	SedentaryDuration OptInt `json:"sedentaryDuration"`
@@ -424,15 +434,16 @@ func (s *ActivityTimelineDayActivityScoreData) SetVigorousDuration(val OptInt) {
 
 // Top-line metrics shown on the "Activity" page. `null` for days past the last synced data.
 type ActivityTimelineDayDataPanelData struct {
-	// User's configured daily activity goal (units depend on goal type).
+	// Progress towards the daily activity goal, in percent (the web UI renders it as `<n>%`).
 	DailyActivityGoal OptFloat64 `json:"dailyActivityGoal"`
-	// Active time in seconds.
+	// Active time in minutes (the web UI passes it as `durationMinutes`; read from the bundle 2026-09-30).
 	ActiveTime OptInt `json:"activeTime"`
-	// Distance from steps in kilometres (UI rounds to integer metres).
+	// Distance from steps in metres (the web UI feeds it to its metre-based `toDistance`; read from the
+	// bundle 2026-09-30).
 	DistanceFromSteps OptFloat32 `json:"distanceFromSteps"`
 	StepCount         OptInt     `json:"stepCount"`
 	KiloCalories      OptInt     `json:"kiloCalories"`
-	// Sleep duration in seconds.
+	// Sleep duration in minutes.
 	SleepDuration        OptInt `json:"sleepDuration"`
 	InactivityAlertCount OptInt `json:"inactivityAlertCount"`
 	// True if `Sleep Plus` (premium sleep tracking) data is available for the day.
@@ -1321,6 +1332,19 @@ func (*CreateFavoriteCreated) createFavoriteRes() {}
 type CreateFavoriteInternalServerError struct{}
 
 func (*CreateFavoriteInternalServerError) createFavoriteRes() {}
+
+type CreateSportProfileCreated SportProfile
+
+func (*CreateSportProfileCreated) createSportProfileRes() {}
+
+// CreateSportProfileInternalServerError is response for CreateSportProfile operation.
+type CreateSportProfileInternalServerError struct{}
+
+func (*CreateSportProfileInternalServerError) createSportProfileRes() {}
+
+type CreateSportProfileOK SportProfile
+
+func (*CreateSportProfileOK) createSportProfileRes() {}
 
 type CreateTargetFromFavoriteBadRequest struct {
 	Data io.Reader
@@ -4207,52 +4231,6 @@ func (o OptActivityMiniPoint) Or(d ActivityMiniPoint) ActivityMiniPoint {
 	return d
 }
 
-// NewOptActivityTimelineDayActivityBenefitFeedbackData returns new OptActivityTimelineDayActivityBenefitFeedbackData with value set to v.
-func NewOptActivityTimelineDayActivityBenefitFeedbackData(v ActivityTimelineDayActivityBenefitFeedbackData) OptActivityTimelineDayActivityBenefitFeedbackData {
-	return OptActivityTimelineDayActivityBenefitFeedbackData{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptActivityTimelineDayActivityBenefitFeedbackData is optional ActivityTimelineDayActivityBenefitFeedbackData.
-type OptActivityTimelineDayActivityBenefitFeedbackData struct {
-	Value ActivityTimelineDayActivityBenefitFeedbackData
-	Set   bool
-}
-
-// IsSet returns true if OptActivityTimelineDayActivityBenefitFeedbackData was set.
-func (o OptActivityTimelineDayActivityBenefitFeedbackData) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptActivityTimelineDayActivityBenefitFeedbackData) Reset() {
-	var v ActivityTimelineDayActivityBenefitFeedbackData
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptActivityTimelineDayActivityBenefitFeedbackData) SetTo(v ActivityTimelineDayActivityBenefitFeedbackData) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptActivityTimelineDayActivityBenefitFeedbackData) Get() (v ActivityTimelineDayActivityBenefitFeedbackData, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptActivityTimelineDayActivityBenefitFeedbackData) Or(d ActivityTimelineDayActivityBenefitFeedbackData) ActivityTimelineDayActivityBenefitFeedbackData {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptActivityTimelineDayActivityGraphData returns new OptActivityTimelineDayActivityGraphData with value set to v.
 func NewOptActivityTimelineDayActivityGraphData(v ActivityTimelineDayActivityGraphData) OptActivityTimelineDayActivityGraphData {
 	return OptActivityTimelineDayActivityGraphData{
@@ -4339,52 +4317,6 @@ func (o OptActivityTimelineDayActivityGraphDataHeartRateSummary) Get() (v Activi
 
 // Or returns value if set, or given parameter if does not.
 func (o OptActivityTimelineDayActivityGraphDataHeartRateSummary) Or(d ActivityTimelineDayActivityGraphDataHeartRateSummary) ActivityTimelineDayActivityGraphDataHeartRateSummary {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptActivityTimelineDayActivityScoreData returns new OptActivityTimelineDayActivityScoreData with value set to v.
-func NewOptActivityTimelineDayActivityScoreData(v ActivityTimelineDayActivityScoreData) OptActivityTimelineDayActivityScoreData {
-	return OptActivityTimelineDayActivityScoreData{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptActivityTimelineDayActivityScoreData is optional ActivityTimelineDayActivityScoreData.
-type OptActivityTimelineDayActivityScoreData struct {
-	Value ActivityTimelineDayActivityScoreData
-	Set   bool
-}
-
-// IsSet returns true if OptActivityTimelineDayActivityScoreData was set.
-func (o OptActivityTimelineDayActivityScoreData) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptActivityTimelineDayActivityScoreData) Reset() {
-	var v ActivityTimelineDayActivityScoreData
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptActivityTimelineDayActivityScoreData) SetTo(v ActivityTimelineDayActivityScoreData) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptActivityTimelineDayActivityScoreData) Get() (v ActivityTimelineDayActivityScoreData, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptActivityTimelineDayActivityScoreData) Or(d ActivityTimelineDayActivityScoreData) ActivityTimelineDayActivityScoreData {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -5305,6 +5237,142 @@ func (o OptLocalizationInfoTimeFormatSeparator) Get() (v LocalizationInfoTimeFor
 
 // Or returns value if set, or given parameter if does not.
 func (o OptLocalizationInfoTimeFormatSeparator) Or(d LocalizationInfoTimeFormatSeparator) LocalizationInfoTimeFormatSeparator {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilActivityTimelineDayActivityBenefitFeedbackData returns new OptNilActivityTimelineDayActivityBenefitFeedbackData with value set to v.
+func NewOptNilActivityTimelineDayActivityBenefitFeedbackData(v ActivityTimelineDayActivityBenefitFeedbackData) OptNilActivityTimelineDayActivityBenefitFeedbackData {
+	return OptNilActivityTimelineDayActivityBenefitFeedbackData{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilActivityTimelineDayActivityBenefitFeedbackData is optional nullable ActivityTimelineDayActivityBenefitFeedbackData.
+type OptNilActivityTimelineDayActivityBenefitFeedbackData struct {
+	Value ActivityTimelineDayActivityBenefitFeedbackData
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilActivityTimelineDayActivityBenefitFeedbackData was set.
+func (o OptNilActivityTimelineDayActivityBenefitFeedbackData) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilActivityTimelineDayActivityBenefitFeedbackData) Reset() {
+	var v ActivityTimelineDayActivityBenefitFeedbackData
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilActivityTimelineDayActivityBenefitFeedbackData) SetTo(v ActivityTimelineDayActivityBenefitFeedbackData) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilActivityTimelineDayActivityBenefitFeedbackData) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilActivityTimelineDayActivityBenefitFeedbackData) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v ActivityTimelineDayActivityBenefitFeedbackData
+	o.Value = v
+}
+
+// IsEmpty returns true if the field was omitted from the payload (not Set and not Null).
+func (o OptNilActivityTimelineDayActivityBenefitFeedbackData) IsEmpty() bool {
+	return !o.Set && !o.Null
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilActivityTimelineDayActivityBenefitFeedbackData) Get() (v ActivityTimelineDayActivityBenefitFeedbackData, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilActivityTimelineDayActivityBenefitFeedbackData) Or(d ActivityTimelineDayActivityBenefitFeedbackData) ActivityTimelineDayActivityBenefitFeedbackData {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilActivityTimelineDayActivityScoreData returns new OptNilActivityTimelineDayActivityScoreData with value set to v.
+func NewOptNilActivityTimelineDayActivityScoreData(v ActivityTimelineDayActivityScoreData) OptNilActivityTimelineDayActivityScoreData {
+	return OptNilActivityTimelineDayActivityScoreData{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilActivityTimelineDayActivityScoreData is optional nullable ActivityTimelineDayActivityScoreData.
+type OptNilActivityTimelineDayActivityScoreData struct {
+	Value ActivityTimelineDayActivityScoreData
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilActivityTimelineDayActivityScoreData was set.
+func (o OptNilActivityTimelineDayActivityScoreData) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilActivityTimelineDayActivityScoreData) Reset() {
+	var v ActivityTimelineDayActivityScoreData
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilActivityTimelineDayActivityScoreData) SetTo(v ActivityTimelineDayActivityScoreData) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilActivityTimelineDayActivityScoreData) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilActivityTimelineDayActivityScoreData) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v ActivityTimelineDayActivityScoreData
+	o.Value = v
+}
+
+// IsEmpty returns true if the field was omitted from the payload (not Set and not Null).
+func (o OptNilActivityTimelineDayActivityScoreData) IsEmpty() bool {
+	return !o.Set && !o.Null
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilActivityTimelineDayActivityScoreData) Get() (v ActivityTimelineDayActivityScoreData, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilActivityTimelineDayActivityScoreData) Or(d ActivityTimelineDayActivityScoreData) ActivityTimelineDayActivityScoreData {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -9996,8 +10064,9 @@ type SleepNight struct {
 	SleepStartTime string `json:"sleepStartTime"`
 	// ISO datetime of wake-up. Paired with `sleepEndOffset`.
 	SleepEndTime string `json:"sleepEndTime"`
-	// Offset in seconds added to `sleepStartTime` to get the "fell asleep" moment. Polar splits the
-	// bedtime / asleep-time distinction across these two fields.
+	// Offset in seconds added to `sleepStartTime` to get the "fell asleep" moment (web UI:
+	// `jsonDatetimeAsMoment(sleepStartTime).add(sleepStartOffset, "seconds")`, bundle read 2026-09-30).
+	// `sleepWakeStates[].offsetFromStart` counts from `sleepStartTime`, before this offset.
 	SleepStartOffset int `json:"sleepStartOffset"`
 	// Offset in seconds added to `sleepEndTime` (wake-up offset).
 	SleepEndOffset int `json:"sleepEndOffset"`
@@ -10017,9 +10086,10 @@ type SleepNight struct {
 	// Time-series of sleep-state transitions detected by the device. Element shape inferred from JS:
 	// `{sleepWakeState: 1|2|3|4|…, offsetFromStart: <seconds>, longInterruption?: boolean}`. The JS
 	// sorts/groups these into LIGHT (code 2 → `nonrem12`), DEEP (code 3 → `nonrem3`), REM (code 1 →
-	// `rem`), UNKNOWN (code 4), and INTERRUPTIONS (special path that toggles `longInterruption`).
-	//
-	// # TODO: verify codes against device documentation.
+	// `rem`), UNKNOWN (code 4), and INTERRUPTIONS (code 0, carrying `longInterruption`). Each entry starts
+	// a segment lasting until the next entry (the last one until wake-up). Deep sleep only counts on a
+	// Sleep Plus Stages night (one with `sleepCycles` > 0 or any code 1/2 entry). Codes read from the web
+	// UI bundle 2026-09-30 — unconfirmed by a capture.
 	SleepWakeStates []SleepNightSleepWakeStatesItem `json:"sleepWakeStates"`
 	// Pre-grouped stage intervals — present only on accounts/devices with Sleep Plus Stages enabled. The
 	// JS bundle constructs this client-side from `sleepWakeStates`, but the same keys appear server-side
@@ -10148,7 +10218,7 @@ func (s *SleepNight) SetStages(val OptSleepNightStages) {
 }
 
 type SleepNightSleepWakeStatesItem struct {
-	// Stage code (1=REM, 2=light, 3=deep, 4=unknown — verified mapping).
+	// Stage code (0=wake/interruption, 1=REM, 2=light, 3=deep, 4=unknown — from the web UI bundle).
 	SleepWakeState OptInt `json:"sleepWakeState"`
 	// Seconds from the start of the night.
 	OffsetFromStart OptInt `json:"offsetFromStart"`
@@ -10443,7 +10513,6 @@ func (s *SportProfile) SetAdditionalProps(val SportProfileAdditional) {
 	s.AdditionalProps = val
 }
 
-func (*SportProfile) createSportProfileRes()      {}
 func (*SportProfile) getSportProfileRes()         {}
 func (*SportProfile) recalculateSportProfileRes() {}
 

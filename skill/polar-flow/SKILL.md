@@ -4,10 +4,12 @@ description: >-
   Drive the polar-flow-mcp tools to read and write a Polar Flow training diary:
   plan, edit and delete training targets; read completed sessions, lap detail,
   weekly and progress summaries; log, edit or delete sessions; read the
-  athlete's heart-rate / pace / power zones; manage favorites (workout
+  athlete's heart-rate / pace / power zones and edit them per sport profile;
+  read 24/7 daily activity and sleep; manage favorites (workout
   templates), schedule them on dates, and import or read GPS routes. Use
   whenever a task calls a polar-flow-mcp tool (e.g. create_training_target,
-  list_training_sessions, get_training_zones, create_favorite,
+  list_training_sessions, get_training_zones, update_training_zones,
+  get_daily_activity, get_sleep, create_favorite,
   schedule_favorite, import_route, edit_training_session) or asks how to
   schedule, template, edit or read workouts, zones or routes in Polar Flow.
   Covers tool mechanics, parameter shapes, units and error handling — not
@@ -39,7 +41,7 @@ decide *what* training to prescribe.
 If the polar-flow-mcp tools are not in your available tool list, the server
 isn't connected — see `reference/troubleshooting.md` before doing anything else.
 
-## The 28 tools at a glance
+## The 33 tools at a glance
 
 Use the **exact** names below. Reads are safe to call freely; writes change the
 user's diary.
@@ -50,6 +52,10 @@ user's diary.
 | `get_user_info` | R | Identity + country for the linked account. Call once to confirm setup. |
 | `list_sports` | R | Full Polar sport-id → name catalogue (the `sport_id` values everywhere). |
 | `get_training_zones` | R | What HR / speed (pace) / power zones 1–5 mean in bpm, km/h (min/km) and W for a sport. |
+| **Sport profiles & zones (writes)** | | |
+| `create_sport_profile` | W | Create a sport's profile with Polar's default zones (idempotent). |
+| `update_training_zones` | W | Set a sport's HR / speed / power zones by hand, or reset them to defaults. |
+| `delete_sport_profile` | W | Delete a sport's profile. Polar keeps the last one. |
 | **Planned workouts (targets)** | | |
 | `list_training_targets` | R | Planned workouts in a date range (id, title, time). |
 | `get_training_target` | R | Full normalized body of one target — read before editing. |
@@ -63,6 +69,9 @@ user's diary.
 | `get_training_session_summary` | R | Totals for one completed session. |
 | `get_training_session_details` | R | Laps + samples for one session. Heavy payload. |
 | `get_progress_summary` | R | Aggregated totals/distributions over a range. |
+| **24/7 activity & sleep** | | |
+| `get_daily_activity` | R | Steps, active time, kcal, intensity bands, day/night HR per day (≤ 31 days). |
+| `get_sleep` | R | Recorded nights: sleep times, duration, Sleep Score, stages (≤ 365 days). |
 | **Completed sessions (writes)** | | |
 | `create_training_session` | W | ⚠ Log a *completed* off-watch session. **User-initiated only.** |
 | `edit_training_session` | W | Change note/feeling (any session); other fields on manual sessions only. |

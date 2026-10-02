@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-polar-flow-mcp exposes twenty-seven tools backed by the
+polar-flow-mcp exposes thirty-three tools backed by the
 [ogen](https://github.com/ogen-go/ogen)-generated client in `internal/flow/`.
 All tools act as the single Polar Flow account configured via `POLAR_EMAIL` /
 `POLAR_PASSWORD`.
@@ -16,12 +16,13 @@ themselves are bad.
 
 ## User confirmation on writes
 
-Four tools touch real diary data and ask the user to confirm before they run:
+Five tools touch real diary data and ask the user to confirm before they run:
 [`create_training_session`](#create_training_session), which writes a session
-that counts toward Polar's training-load model, and the three irreversible
+that counts toward Polar's training-load model, and the four irreversible
 deletes — [`delete_training_target`](#delete_training_target),
-[`delete_training_session`](#delete_training_session) and
-[`delete_favorite`](#delete_favorite).
+[`delete_training_session`](#delete_training_session),
+[`delete_favorite`](#delete_favorite) and
+[`delete_sport_profile`](#delete_sport_profile).
 
 The mechanism is an MCP [elicitation](https://modelcontextprotocol.io/): the
 tool answers the first call with "I need confirmation", the host puts the
@@ -107,6 +108,62 @@ target pace, wattage or heart rate.
   heart-rate zones only).
 - `thresholds` carries MAS (km/h), MAP and FTP (W) where they apply; `estimated`
   means Polar derived them from physical info rather than a test.
+
+## Sport profiles and zone edits
+
+A **sport profile** holds a sport's training zones and watch settings. Most
+accounts store only a few; [`get_training_zones`](#get_training_zones) reports
+Polar's computed defaults for the rest. A profile is keyed by its sport
+(Polar's profile uuid is derived from the `sport_id`), so these tools take
+`sport_id` — validated against [`list_sports`](#list_sports). Changes reach a
+paired watch on its next sync.
+
+### `create_sport_profile`
+
+| Argument | Type | Required |
+|----------|------|----------|
+| `sport_id` | integer | yes |
+
+Creates the profile with Polar's default settings and zones. Idempotent: when
+the sport already has a profile nothing changes and the stored one is returned
+(the text says which). **Response:** the same `training_zones` payload as
+`get_training_zones`, plus a `notice` sentence.
+
+### `update_training_zones`
+
+| Argument | Type | Notes |
+|----------|------|-------|
+| `sport_id` | integer | required; the sport must have a stored profile |
+| `heart_rate_bpm` | number[6] | whole bpm, 15–240, each zone ≥ 2 bpm |
+| `speed_kmh` | number[5 or 6] | km/h, 1–399 — **always km/h**, even for sports shown as pace |
+| `power_w` | number[5 or 6] | whole watts, 0–2000, each zone ≥ 2 W |
+| `reset` | string[] | `heart_rate`, `speed`, `power` — back to Polar's computed defaults |
+
+Each list is the ascending zone **boundaries**, Z1 lower first: zone *n* is
+`[value n, value n+1)`, so zones are contiguous by construction. Give 5 speed or
+power values to leave Z5 open-ended. Lists not mentioned keep their stored
+limits; a list cannot be both set and reset. Every rule above is checked before
+a request goes out (Flow's own 400 lists every violation in one long line).
+Swimming and strength-type sports only have heart-rate zones.
+
+```json
+{"sport_id": 1, "heart_rate_bpm": [115, 134, 153, 172, 182, 192], "reset": ["speed"]}
+```
+
+**Response:** the zones read back after the save (`setting: "free"` on the
+hand-entered lists), as a `training_zones` payload with a `notice`.
+
+### `delete_sport_profile`
+
+| Argument | Type | Required |
+|----------|------|----------|
+| `sport_id` | integer | yes |
+
+Deletes the profile — its zones fall back to Polar's defaults. Reports
+"nothing to delete" when the sport has none (Flow itself answers `200` either
+way, so the tool checks first). Polar refuses to delete the account's last
+profile. Asks the user to confirm first where the host supports it — see
+[User confirmation on writes](#user-confirmation-on-writes).
 
 ## `create_training_target`
 
@@ -377,6 +434,51 @@ user asks about pace splits, HR zone time, or per-lap stats.
 | Argument | Type | Required |
 |----------|------|----------|
 | `session_id` | integer | yes |
+
+## Activity and sleep
+
+24/7 data a Polar device syncs to Flow. On an account without such a device
+both tools return empty results rather than errors.
+
+### `get_daily_activity`
+
+| Argument | Type | Default |
+|----------|------|---------|
+| `from_date` | `YYYY-MM-DD` | today − 6 days |
+| `to_date` | `YYYY-MM-DD` | today; at most 31 days after `from_date` |
+
+One entry per day: `steps`, `step_distance_m`, `active_time_s`, `kcal`,
+`activity_goal_pct` (% of the daily activity goal), `inactivity_alerts`,
+`sleep_s`, `intensity` (seconds in `sleep_s` / `sedentary_s` / `light_s` /
+`moderate_s` / `vigorous_s`), `heart_rate` (`day_min_bpm`, `day_max_bpm`,
+`night_min_bpm`), `benefit` (Polar's activity-benefit feedback) and `last_sync`.
+A single-day call adds `samples`: the intraday activity level and heart rate at
+10-minute resolution, as `{"t": "HH:MM", "v": …}` in local time. A `summary`
+totals the days with data.
+
+Flow answers days without device data with zeros; those days have
+`has_data: false` and null metrics instead. Flow's minutes are converted to
+seconds and its step distance is already metres. Fetched four days per request.
+
+### `get_sleep`
+
+| Argument | Type | Default |
+|----------|------|---------|
+| `from_date` | `YYYY-MM-DD` | today − 13 days |
+| `to_date` | `YYYY-MM-DD` | today; at most 365 days after `from_date` |
+
+One entry per recorded night, keyed by the wake-up `date`: `fell_asleep` /
+`woke_up` (local, ISO 8601), `sleep_s`, `score` (Sleep Score 0–100, null when
+Polar has none), `continuity_index` (1–5), `continuity_class`, `sleep_cycles`,
+`rating` (the user's own), `stages` (`light_s` / `deep_s` / `rem_s` /
+`unknown_s`, Sleep Plus Stages devices only), `interruptions_s` /
+`long_interruptions_s`, and a `hypnogram` of `{stage, start_s, end_s}` segments
+in seconds after falling asleep. `averages` summarizes the range.
+
+Flow's sleep report only answers windows of 30–365 days, so shorter requests
+are widened and filtered. Its field meanings are taken from the Flow web UI's
+own code — the test account has no sleep-tracking device, so they are not yet
+confirmed against a populated capture.
 
 ## Favorites and routes
 
