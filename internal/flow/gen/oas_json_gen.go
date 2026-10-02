@@ -7362,6 +7362,52 @@ func (s *NilFloat64) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes int as json.
+func (o NilInt) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.Int(int(o.Value))
+}
+
+// Decode decodes int from json.
+func (o *NilInt) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilInt to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v int
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	v, err := d.Int()
+	if err != nil {
+		return err
+	}
+	o.Value = int(v)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilInt) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilInt) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes string as json.
 func (o NilString) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -14921,11 +14967,11 @@ func (s *SleepNight) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("sleepStartOffset")
-		e.Int(s.SleepStartOffset)
+		s.SleepStartOffset.Encode(e)
 	}
 	{
 		e.FieldStart("sleepEndOffset")
-		e.Int(s.SleepEndOffset)
+		s.SleepEndOffset.Encode(e)
 	}
 	{
 		if s.SleepScore.Set {
@@ -15038,9 +15084,7 @@ func (s *SleepNight) Decode(d *jx.Decoder) error {
 		case "sleepStartOffset":
 			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
-				v, err := d.Int()
-				s.SleepStartOffset = int(v)
-				if err != nil {
+				if err := s.SleepStartOffset.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -15050,9 +15094,7 @@ func (s *SleepNight) Decode(d *jx.Decoder) error {
 		case "sleepEndOffset":
 			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
-				v, err := d.Int()
-				s.SleepEndOffset = int(v)
-				if err != nil {
+				if err := s.SleepEndOffset.Decode(d); err != nil {
 					return err
 				}
 				return nil

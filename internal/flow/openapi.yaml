@@ -2460,7 +2460,7 @@ paths:
 
           (`activityTimelineSamples`, `heartRateTimelineSamples`). Server
 
-          downsamples beyond this. Defaults appear to be 200 in the UI.
+          downsamples beyond this. Defaults appear to be 200 in the UI. ⚠ On a real account (2026-10-01), calls with `maxSampleCount=1` answered **500** `Failed to load activity timeline data` while the same days with 144 worked (a device-less account accepts 1). The small value is the suspected cause — send ≥ 144 like the UI''s 200. # TODO: verify
 
           '
       responses:
@@ -2507,6 +2507,7 @@ paths:
         schema:
           type: integer
           default: 200
+        description: 'Maximum timeline samples per array; Flow downsamples beyond this. ⚠ On a real account (2026-10-01), calls with `maxSampleCount=1` answered **500** `Failed to load activity timeline data` while the same days with 144 worked (a device-less account accepts 1). The small value is the suspected cause — send ≥ 144 like the UI''s 200. # TODO: verify'
       responses:
         '200':
           description: Activity timeline payload for 4 days, keyed by date.
@@ -7420,7 +7421,8 @@ components:
           example: '2026-05-26T07:02:00'
         sleepStartOffset:
           type: integer
-          description: 'Offset in **seconds** added to `sleepStartTime` to get the "fell
+          nullable: true
+          description: 'Nullable as a precaution (# TODO: verify; a null sleepScore was seen live 2026-10-01). Offset in **seconds** added to `sleepStartTime` to get the "fell
 
             asleep" moment (web UI: `jsonDatetimeAsMoment(sleepStartTime).add(sleepStartOffset,
 
@@ -7431,7 +7433,8 @@ components:
             '
         sleepEndOffset:
           type: integer
-          description: Offset in seconds added to `sleepEndTime` (wake-up offset).
+          nullable: true
+          description: 'Offset in seconds added to `sleepEndTime` (wake-up offset). Nullable as a precaution (# TODO: verify).'
         sleepScore:
           type: number
           minimum: 0
@@ -7440,7 +7443,12 @@ components:
 
             `0` as "no score" (excluded from averages). Polar calls this "Sleep Score".
 
+            **Can be `null`** (observed live 2026-10-01 on a real account, within a 365-day
+
+            report); treat like `0`.
+
             '
+          nullable: true
         continuityClass:
           type: integer
           description: Bucketed class of `continuityIndex` (integer); null when no data.

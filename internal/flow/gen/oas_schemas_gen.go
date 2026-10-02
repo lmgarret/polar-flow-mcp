@@ -4140,6 +4140,51 @@ func (o NilFloat64) Or(d float64) float64 {
 	return d
 }
 
+// NewNilInt returns new NilInt with value set to v.
+func NewNilInt(v int) NilInt {
+	return NilInt{
+		Value: v,
+	}
+}
+
+// NilInt is nullable int.
+type NilInt struct {
+	Value int
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilInt) SetTo(v int) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilInt) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilInt) SetToNull() {
+	o.Null = true
+	var v int
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilInt) Get() (v int, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilInt) Or(d int) int {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilString returns new NilString with value set to v.
 func NewNilString(v string) NilString {
 	return NilString{
@@ -10064,15 +10109,18 @@ type SleepNight struct {
 	SleepStartTime string `json:"sleepStartTime"`
 	// ISO datetime of wake-up. Paired with `sleepEndOffset`.
 	SleepEndTime string `json:"sleepEndTime"`
-	// Offset in seconds added to `sleepStartTime` to get the "fell asleep" moment (web UI:
+	// Nullable as a precaution (# TODO: verify; a null sleepScore was seen live 2026-10-01). Offset in
+	// seconds added to `sleepStartTime` to get the "fell asleep" moment (web UI:
 	// `jsonDatetimeAsMoment(sleepStartTime).add(sleepStartOffset, "seconds")`, bundle read 2026-09-30).
 	// `sleepWakeStates[].offsetFromStart` counts from `sleepStartTime`, before this offset.
-	SleepStartOffset int `json:"sleepStartOffset"`
-	// Offset in seconds added to `sleepEndTime` (wake-up offset).
-	SleepEndOffset int `json:"sleepEndOffset"`
+	SleepStartOffset NilInt `json:"sleepStartOffset"`
+	// Offset in seconds added to `sleepEndTime` (wake-up offset). Nullable as a precaution (# TODO:
+	// verify).
+	SleepEndOffset NilInt `json:"sleepEndOffset"`
 	// Overall sleep score 0–100 (a float, e.g. 72.5762). The JS bundle treats `0` as "no score"
-	// (excluded from averages). Polar calls this "Sleep Score".
-	SleepScore OptFloat64 `json:"sleepScore"`
+	// (excluded from averages). Polar calls this "Sleep Score". Can be `null` (observed live 2026-10-01 on
+	// a real account, within a 365-day report); treat like `0`.
+	SleepScore OptNilFloat64 `json:"sleepScore"`
 	// Bucketed class of `continuityIndex` (integer); null when no data.
 	ContinuityClass OptNilInt `json:"continuityClass"`
 	// Count of detected sleep cycles. Used in the summary table.
@@ -10113,17 +10161,17 @@ func (s *SleepNight) GetSleepEndTime() string {
 }
 
 // GetSleepStartOffset returns the value of SleepStartOffset.
-func (s *SleepNight) GetSleepStartOffset() int {
+func (s *SleepNight) GetSleepStartOffset() NilInt {
 	return s.SleepStartOffset
 }
 
 // GetSleepEndOffset returns the value of SleepEndOffset.
-func (s *SleepNight) GetSleepEndOffset() int {
+func (s *SleepNight) GetSleepEndOffset() NilInt {
 	return s.SleepEndOffset
 }
 
 // GetSleepScore returns the value of SleepScore.
-func (s *SleepNight) GetSleepScore() OptFloat64 {
+func (s *SleepNight) GetSleepScore() OptNilFloat64 {
 	return s.SleepScore
 }
 
@@ -10173,17 +10221,17 @@ func (s *SleepNight) SetSleepEndTime(val string) {
 }
 
 // SetSleepStartOffset sets the value of SleepStartOffset.
-func (s *SleepNight) SetSleepStartOffset(val int) {
+func (s *SleepNight) SetSleepStartOffset(val NilInt) {
 	s.SleepStartOffset = val
 }
 
 // SetSleepEndOffset sets the value of SleepEndOffset.
-func (s *SleepNight) SetSleepEndOffset(val int) {
+func (s *SleepNight) SetSleepEndOffset(val NilInt) {
 	s.SleepEndOffset = val
 }
 
 // SetSleepScore sets the value of SleepScore.
-func (s *SleepNight) SetSleepScore(val OptFloat64) {
+func (s *SleepNight) SetSleepScore(val OptNilFloat64) {
 	s.SleepScore = val
 }
 

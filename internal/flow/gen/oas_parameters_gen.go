@@ -1285,6 +1285,10 @@ type GetActivityTimelineParams struct {
 	Day time.Time
 	// Maximum number of timeline samples returned per array (`activityTimelineSamples`,
 	// `heartRateTimelineSamples`). Server downsamples beyond this. Defaults appear to be 200 in the UI.
+	// ⚠ On a real account (2026-10-01), calls with `maxSampleCount=1` answered 500
+	// `Failed to load activity timeline data` while the same days with 144 worked (a device-less account
+	// accepts 1). The small value is the suspected cause — send ≥ 144 like the UI's 200. # TODO:
+	// verify.
 	MaxSampleCount OptInt `json:",omitempty,omitzero"`
 }
 
@@ -1422,7 +1426,11 @@ func decodeGetActivityTimelineParams(args [0]string, argsEscaped bool, r *http.R
 
 // GetActivityTimelineFourParams is parameters of getActivityTimelineFour operation.
 type GetActivityTimelineFourParams struct {
-	Day            time.Time
+	Day time.Time
+	// Maximum timeline samples per array; Flow downsamples beyond this. ⚠ On a real account
+	// (2026-10-01), calls with `maxSampleCount=1` answered 500 `Failed to load activity timeline data`
+	// while the same days with 144 worked (a device-less account accepts 1). The small value is the
+	// suspected cause — send ≥ 144 like the UI's 200. # TODO: verify.
 	MaxSampleCount OptInt `json:",omitempty,omitzero"`
 }
 

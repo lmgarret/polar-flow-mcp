@@ -17,8 +17,12 @@ import (
 // its cap keeps a call to 8 requests; sleep is one request of ≤ 365 days.
 const (
 	maxActivityDays = 31
-	// Intraday samples (single-day calls only): Flow downsamples each series
-	// to this many points — 10-minute resolution over a day.
+	// Intraday samples per series: Flow downsamples to this many points —
+	// 10-minute resolution over a day. Sent on every call, even when the
+	// samples are dropped (multi-day ranges): on a real account, calls with
+	// maxSampleCount 1 failed with a 500 "Failed to load activity timeline
+	// data" while single-day calls with 144 worked (2026-10-01). The web UI
+	// always sends 200.
 	activitySampleCount = 144
 )
 
@@ -48,15 +52,11 @@ func GetDailyActivityHandler(fc *flow.Client) toolHandler {
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
 		single := from.Equal(to)
-		samples := 1
-		if single {
-			samples = activitySampleCount
-		}
 		// loadFour(D) answers [D-2, D+1]: step D by 4 from from+2 until the
 		// window reaches to.
 		days := map[string]convert.DailyActivity{}
 		for d := from.AddDate(0, 0, 2); !d.AddDate(0, 0, -2).After(to); d = d.AddDate(0, 0, 4) {
-			byDate, err := fc.ActivityTimelineFour(ctx, d, samples)
+			byDate, err := fc.ActivityTimelineFour(ctx, d, activitySampleCount)
 			if err != nil {
 				return mcpgo.NewToolResultError(err.Error()), nil
 			}

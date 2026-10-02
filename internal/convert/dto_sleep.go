@@ -80,8 +80,9 @@ func FromWireSleepNight(n gen.SleepNight) (SleepNight, bool) {
 	if !ok1 || !ok2 {
 		return SleepNight{}, false
 	}
-	asleep := start.Add(time.Duration(n.SleepStartOffset) * time.Second)
-	woke := end.Add(time.Duration(n.SleepEndOffset) * time.Second)
+	// A null offset counts as 0, as moment.add(null) does in the web UI.
+	asleep := start.Add(time.Duration(n.SleepStartOffset.Or(0)) * time.Second)
+	woke := end.Add(time.Duration(n.SleepEndOffset.Or(0)) * time.Second)
 	out := SleepNight{
 		Date:       n.Date.Format(ISODate),
 		FellAsleep: asleep.Format(sleepClockLayout),
@@ -132,7 +133,7 @@ func sleepScalars(n gen.SleepNight, out *SleepNight) {
 func sleepHypnogram(n gen.SleepNight, wokeRaw int, stagesNight bool, out *SleepNight) SleepStages {
 	var stages SleepStages
 	out.Hypnogram = []SleepSegment{}
-	startOff := n.SleepStartOffset
+	startOff := n.SleepStartOffset.Or(0)
 	for i, s := range n.SleepWakeStates {
 		segEnd := wokeRaw
 		if i+1 < len(n.SleepWakeStates) {
