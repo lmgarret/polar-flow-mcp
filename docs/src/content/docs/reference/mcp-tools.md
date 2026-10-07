@@ -444,12 +444,69 @@ from the wire's ISO-8601 `PTxxM`), `distance_m`, `hr_avg` / `hr_max` (bpm),
 
 ## `get_training_session_details`
 
-Lap- and sample-level details for a completed session. Use this when the
-user asks about pace splits, HR zone time, or per-lap stats.
+The detail of a completed session, compact enough to read whole (~12 KB for a
+one-hour interval run, against ~500 KB on the wire). Use it for zone time,
+interval splits, laps or hills.
 
 | Argument | Type | Required |
 |----------|------|----------|
 | `session_id` | integer | yes |
+
+**Response:** `{id, exercises: [...]}`, one entry per sport, each with:
+
+- `duration_s`, `distance_m`, `calories`, `ascent_m` / `descent_m`,
+  `running_index`, `recovery_time_s`, and `{avg, max, min}` of `hr_bpm`,
+  `speed_kmh`, `power_w`, `cadence`;
+- `zones` — `hr` / `speed` / `power` lists of `{zone, min, max, time_s}`
+  (bounds in bpm, km/h, W; `max` null on an open top zone; speed zones add
+  `distance_m`);
+- `target` — when the session was started from a planned training target:
+  `name`, `type`, `reached` and `reps`, one row per executed phase repetition in
+  order (a 3 × (8 min + 3 min walk) block gives six rows between warm-up and
+  cool-down): `index`, `phase`, `phase_index`, `repetition`, `start_s` / `end_s`
+  (seconds from the exercise start), `duration_s`, `distance_m`,
+  `avg_speed_kmh` / `max_speed_kmh`, `pace_s_per_km`, `hr_avg` / `hr_max`,
+  `power_avg_w` / `power_max_w`, `cadence_avg`, the planned `target_zone`
+  (`{type: hr|speed|power, lower, upper}`), `in_zone_s` and `finished`;
+- `laps` — recorded laps, passed through raw (`automatic` / `manual`);
+- `hills` — detected climbs and descents: `type`, `start_s`, `duration_s`,
+  `distance_m`, `elevation_m`, `avg_incline_pct`, `hr_avg`, `avg_speed_kmh`,
+  `power_avg_w`;
+- `samples` — the series `get_training_session_samples` can return.
+
+The per-second traces are not included. A manually entered session has no
+zones, reps or samples.
+
+## `get_training_session_samples`
+
+A session's recorded curves averaged into fixed time buckets, as equal-length
+columns. Flow records at 1 s; the tool resamples server-side so the result
+stays small (a one-hour run at the default 60 s is 62 rows, about 1 KB).
+
+| Argument | Type | Default |
+|----------|------|---------|
+| `session_id` | integer | required |
+| `metrics` | array of `hr`, `speed`, `pace`, `power`, `cadence`, `altitude`, `distance`, `temperature` | `["hr", "speed"]` |
+| `resolution_s` | integer, 1–3600 | 60 |
+| `rep` | integer — index into `get_training_session_details`' `target.reps` | whole session |
+| `from_s` / `to_s` | integer, seconds from the exercise start | whole session |
+| `exercise_id` | integer — exercise of a multi-sport session | the first |
+
+`rep` and `from_s`/`to_s` cannot be combined. At most 1000 rows: a finer
+resolution is coarsened to fit, and `resolution_s` in the result is the one
+used.
+
+**Response:** `{session_id, exercise_id, rep?, from_s, to_s, resolution_s,
+points, columns}` where `columns` holds `t_s` (bucket start) and one column per
+metric — `hr_bpm`, `speed_kmh`, `pace_s_per_km` (from the bucket's average
+speed), `power_w`, `cadence`, `altitude_m`, `distance_m` (last value in the
+bucket), `temperature_c`. A bucket without a reading is `null`.
+
+```json
+{"session_id": 9000000001, "rep": 4, "metrics": ["hr", "pace"], "resolution_s": 30}
+→ {"from_s": 1452, "to_s": 1932, "resolution_s": 30, "points": 16,
+   "columns": {"t_s": [1452, 1482, …], "hr_bpm": [142, 158, …], "pace_s_per_km": [341, 311, …]}}
+```
 
 ## Activity and sleep
 

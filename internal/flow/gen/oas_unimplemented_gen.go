@@ -345,8 +345,8 @@ func (UnimplementedHandler) GetCalendarEvents(ctx context.Context, params GetCal
 //     and partial-week ranges are OK — the "week aligned" label in the error is misleading; the
 //     server does not require Monday-aligned dates.
 //
-// Returns an array of week-summary objects on success. Empty array (`[]`) when no sessions fall in the
-// range — element shape on populated accounts is TBD.
+// Returns an array of `CalendarWeekSummary` objects on success — one per week holding data; empty
+// array (`[]`) when nothing is recorded in the range. Populated shape captured 2026-10-02.
 //
 // POST /training/getCalendarWeekSummary
 func (UnimplementedHandler) GetCalendarWeekSummary(ctx context.Context, req *GetCalendarWeekSummaryReq, params GetCalendarWeekSummaryParams) (r GetCalendarWeekSummaryRes, _ error) {
@@ -795,9 +795,11 @@ func (UnimplementedHandler) UpdateFavorite(ctx context.Context, req *Favorite, p
 // Probed 2026-09-30: only `settings.zoneLimits` is read — other settings are kept even when omitted.
 // All three `*SettingSource` fields are required (a missing one → 400
 // `… setting source is missing from profile settings`), so send every list, not just the edited one.
-// A `…_DEFAULT` source makes the server recompute that list and ignore the limits sent. A `…_FREE`
-// power list reads back with calculation method `…_UNKNOWN`. The stored `modified` is the server's
-// write time, not the value sent.
+// A `…_DEFAULT` source makes the server recompute that list and ignore the limits sent. HR and power
+// limits must be integers (`2000.5` → 400 `Not an int32 value`); speed may be fractional and has no
+// minimum zone span. A `…_FREE` power list reads back with calculation method `…_UNKNOWN`. The
+// stored `modified` is the server's write time, reported truncated to the second — send at least
+// stored + 1 s, or a write right after create can 409.
 //
 // ⚠ `modified` must be newer than the stored profile's `modified`, else 409
 // `A newer profile exists: Incoming sport profile is older than what is stored`. `userId` must be the

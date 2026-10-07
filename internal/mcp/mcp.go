@@ -10,11 +10,13 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"strconv"
 	"time"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/lmgarret/polar-flow-mcp/internal/convert"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow"
 )
 
@@ -457,7 +459,8 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithDescription(
 			"Return the summary view of one completed training session by id: totals such as "+
 				"duration, distance, average/max HR, calories, and sport. Use "+
-				"get_training_session_details for lap and sample-level data.",
+				"get_training_session_details for zones, interval reps and laps, and "+
+				"get_training_session_samples for the HR / pace / power curves.",
 		),
 		mcpgo.WithNumber("session_id", mcpgo.Required(),
 			mcpgo.Description("Numeric session id from list_training_sessions.")),
@@ -512,16 +515,61 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 
 	gsd := mcpgo.NewTool("get_training_session_details",
 		mcpgo.WithDescription(
-			"Return lap-level detail for one completed training session: per-lap splits "+
-				"(time, distance, average/max HR) and the HR time-in-zone distribution behind "+
-				"the summary. Use it when you need splits or the zone breakdown, not just totals. "+
-				"(Raw per-second sample traces are omitted — they are large and not generally useful.)",
+			"Return the detail of one completed training session, compact enough to read whole:\n"+
+				"  • per exercise: duration_s, distance_m, calories, ascent/descent_m, and avg/max/min of "+
+				"hr_bpm, speed_kmh, power_w, cadence;\n"+
+				"  • zones — time_s (and distance_m for speed) in each HR / speed / power zone, with the "+
+				"zone bounds in bpm, km/h, W;\n"+
+				"  • target.reps — when the session was started from a planned training target, one row "+
+				"per executed phase repetition in order (warm-up, each work and recovery rep, cool-down): "+
+				"phase name, start_s/end_s from the exercise start, duration_s, distance_m, avg/max speed "+
+				"in km/h with pace_s_per_km, avg/max HR, power, cadence, the planned target_zone and "+
+				"in_zone_s. Comparing reps answers \"how even were my intervals\" and shows HR drift "+
+				"across reps;\n"+
+				"  • laps (raw, when pressed or auto-lapped) and hills (detected climbs/descents);\n"+
+				"  • samples — which recorded series get_training_session_samples can return.\n"+
+				"The per-second sample traces are not included; fetch them resampled with "+
+				"get_training_session_samples. A manually entered session has no zones, reps or samples.",
 		),
 		mcpgo.WithNumber("session_id", mcpgo.Required(),
 			mcpgo.Description("Numeric session id from list_training_sessions.")),
 	)
 	bindUI(&gsd, "ui://polar-flow/sessions.html")
 	s.AddTool(gsd, withLogging("get_training_session_details", GetTrainingSessionDetailsHandler(fc)))
+
+	s.AddTool(mcpgo.NewTool("get_training_session_samples",
+		mcpgo.WithDescription(
+			"Return a completed session's recorded curves — heart rate, speed or pace, power, cadence, "+
+				"altitude, distance — averaged into fixed time buckets, as columns of equal length "+
+				"(t_s = bucket start in seconds from the exercise start; a bucket without a reading is "+
+				"null). Use it to look inside a session: HR drift within a steady effort or a rep, pace "+
+				"fade, how quickly HR recovered between reps. Narrow the window to one interval with rep "+
+				"(the index from get_training_session_details' target.reps) or with from_s/to_s, and keep "+
+				"the resolution coarse — a 1 h run at the default 60 s is 60 rows. At most "+
+				strconv.Itoa(convert.MaxSamplePoints)+" rows: a finer resolution is coarsened to fit "+
+				"(resolution_s in the result is the one used). Manually entered sessions have no samples.\n\n"+
+				"Example — HR and pace through the 4th rep, every 15 s:\n"+
+				"  {\"session_id\": 9000000001, \"rep\": 4, \"metrics\": [\"hr\", \"pace\"], \"resolution_s\": 15}",
+		),
+		mcpgo.WithNumber("session_id", mcpgo.Required(),
+			mcpgo.Description("Numeric session id from list_training_sessions.")),
+		mcpgo.WithArray("metrics",
+			mcpgo.Items(map[string]any{"type": "string", "enum": convert.SampleMetricNames}),
+			mcpgo.Description("Series to return (default [\"hr\", \"speed\"]): hr (bpm), speed (km/h), "+
+				"pace (seconds per km, from the bucket's average speed), power (W), cadence (rpm / steps per "+
+				"minute), altitude (m), distance (cumulative m, last value in the bucket), temperature (°C).")),
+		mcpgo.WithInteger("resolution_s", mcpgo.Min(1), mcpgo.Max(3600), mcpgo.DefaultNumber(defaultSampleResolutionS),
+			mcpgo.Description("Bucket width in seconds (default 60). Recording is 1 s.")),
+		mcpgo.WithInteger("rep", mcpgo.Min(1),
+			mcpgo.Description("Limit to one rep of the planned target: its 1-based index in "+
+				"get_training_session_details' target.reps. Not combinable with from_s/to_s.")),
+		mcpgo.WithInteger("from_s", mcpgo.Min(0),
+			mcpgo.Description("Window start in seconds from the exercise start (default 0).")),
+		mcpgo.WithInteger("to_s", mcpgo.Min(1),
+			mcpgo.Description("Window end in seconds from the exercise start (default: the end).")),
+		mcpgo.WithInteger("exercise_id", mcpgo.Min(1),
+			mcpgo.Description("Exercise of a multi-sport session (default: the first).")),
+	), withLogging("get_training_session_samples", GetTrainingSessionSamplesHandler(fc)))
 
 	registerFavoriteAndSessionEditTools(s, fc)
 	registerProfileAndActivityTools(s, fc)

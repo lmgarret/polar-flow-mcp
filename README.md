@@ -185,7 +185,8 @@ The server reads `/.env` on startup via `godotenv` — credentials are in memory
 | `get_calendar_week_summary` | Per-ISO-week totals strip (≤45-day range) |
 | `list_training_sessions` | Completed sessions in a date range |
 | `get_training_session_summary` | Summary view of one session |
-| `get_training_session_details` | Lap and sample detail of one session |
+| `get_training_session_details` | Compact detail of one session: totals, time in HR / speed / power zones, per-rep splits of a planned target (pace, HR, power), laps, hills |
+| `get_training_session_samples` | A session's HR / speed / pace / power / cadence / altitude curves, averaged into fixed buckets; one rep or a time window at a time |
 | `get_progress_summary` | Aggregated training totals over a range |
 | `get_daily_activity` | 24/7 activity per day: steps, active time, calories, intensity bands, day/night HR; intraday curves for one day |
 | `get_sleep` | Recorded nights: sleep times, duration, Sleep Score, continuity, stages and hypnogram |

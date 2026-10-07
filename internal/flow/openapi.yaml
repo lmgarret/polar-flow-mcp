@@ -1105,9 +1105,15 @@ paths:
 
         source makes the server recompute that list and ignore the limits sent.
 
-        A `…_FREE` power list reads back with calculation method `…_UNKNOWN`.
+        HR and power limits must be integers (`2000.5` → 400 `Not an int32
 
-        The stored `modified` is the server''s write time, not the value sent.
+        value`); speed may be fractional and has no minimum zone span. A `…_FREE`
+
+        power list reads back with calculation method `…_UNKNOWN`. The stored
+
+        `modified` is the server''s write time, reported truncated to the second
+
+        — send at least stored + 1 s, or a write right after create can 409.
 
 
         ⚠ `modified` must be **newer** than the stored profile''s `modified`,
@@ -1186,8 +1192,11 @@ paths:
       - $ref: '#/components/parameters/XRequestedWith'
       responses:
         '200':
-          description: A profile for this sport already exists. Nothing is changed; the body is the stored profile (probed
-            2026-09-30).
+          description: 'A profile for this sport already exists. Nothing is changed; the body
+
+            is the stored profile (probed 2026-09-30).
+
+            '
           content:
             application/json:
               schema:
@@ -2460,7 +2469,11 @@ paths:
 
           (`activityTimelineSamples`, `heartRateTimelineSamples`). Server
 
-          downsamples beyond this. Defaults appear to be 200 in the UI. ⚠ On a real account (2026-10-01), calls with `maxSampleCount=1` answered **500** `Failed to load activity timeline data` while the same days with 144 worked (a device-less account accepts 1). The small value is the suspected cause — send ≥ 144 like the UI''s 200. # TODO: verify
+          downsamples beyond this. Defaults appear to be 200 in the UI.
+
+          ⚠ On a real account (2026-10-01), calls with `maxSampleCount=1` answered **500** `Failed to load activity timeline
+          data` while the same days with 144 worked (a device-less account accepts 1). The small value is the suspected cause
+          — send ≥ 144 like the UI''s 200. # TODO: verify
 
           '
       responses:
@@ -2507,7 +2520,10 @@ paths:
         schema:
           type: integer
           default: 200
-        description: 'Maximum timeline samples per array; Flow downsamples beyond this. ⚠ On a real account (2026-10-01), calls with `maxSampleCount=1` answered **500** `Failed to load activity timeline data` while the same days with 144 worked (a device-less account accepts 1). The small value is the suspected cause — send ≥ 144 like the UI''s 200. # TODO: verify'
+        description: 'Maximum timeline samples per array; Flow downsamples beyond this. ⚠ On a real account (2026-10-01),
+          calls with `maxSampleCount=1` answered **500** `Failed to load activity timeline data` while the same days with
+          144 worked (a device-less account accepts 1). The small value is the suspected cause — send ≥ 144 like the UI''s
+          200. # TODO: verify'
       responses:
         '200':
           description: Activity timeline payload for 4 days, keyed by date.
@@ -3037,9 +3053,9 @@ paths:
         \ of from (...) is not a valid date: Text '...' could not be\n  parsed at index 4`).\n- `to` must be ≥ `from` (reversed\
         \ → `400 from (...) date must be before\n  to (...) date`).\n- **`to - from ≤ 45 days`** (\"Maximum week aligned range\
         \ is 45,\n  requested N\" beyond that). Same-day and partial-week ranges are OK —\n  the \"week aligned\" label in\
-        \ the error is misleading; the server does\n  not require Monday-aligned dates.\n\nReturns an array of week-summary\
-        \ objects on success. Empty array (`[]`)\nwhen no sessions fall in the range — element shape on populated accounts\n\
-        is TBD.\n"
+        \ the error is misleading; the server does\n  not require Monday-aligned dates.\n\nReturns an array of `CalendarWeekSummary`\
+        \ objects on success — one per\nweek holding data; empty array (`[]`) when nothing is recorded in the\nrange. Populated\
+        \ shape captured 2026-10-02.\n"
       operationId: getCalendarWeekSummary
       tags:
       - calendar
@@ -3065,28 +3081,38 @@ paths:
                   example: 30.5.2026
       responses:
         '200':
-          description: One entry per week touched by the range that holds data. Empty array when nothing is recorded.
+          description: 'One entry per week touched by the range that holds data. Empty
+
+            array when nothing is recorded.
+
+            '
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/CalendarWeekSummary'
-              example:
-              - distance: 0.0
-                calories: 250
-                durationMillis: 1800000
-                exeCount: 0
-                traininigSessionsCount: 1
-                activeTime: 0
-                inActiveTime: 0
-                sleepTime: 0
-                sleepQuality: 0.0
-                stepCount: 0
-                distanceFromSteps: 0.0
-                inactivityAlertCount: 0
-                sleepPlus: false
-                week: 22
+              examples:
+                populated:
+                  summary: One manual session in ISO week 22 (captured 2026-10-02)
+                  value:
+                  - distance: 0
+                    calories: 250
+                    durationMillis: 1800000
+                    exeCount: 0
+                    traininigSessionsCount: 1
+                    activeTime: 0
+                    inActiveTime: 0
+                    sleepTime: 0
+                    sleepQuality: 0
+                    stepCount: 0
+                    distanceFromSteps: 0
+                    inactivityAlertCount: 0
+                    sleepPlus: false
+                    week: 22
+                empty:
+                  summary: Nothing recorded in the range
+                  value: []
         '400':
           description: 'Range invalid (reversed, > 45 days) or date format not `D.M.YYYY`.
 
@@ -3195,115 +3221,6 @@ components:
         '
       example: 81371573
   schemas:
-    CalendarWeekSummary:
-      type: object
-      description: 'One week of the diary''s right-hand "week totals" strip, returned by
-
-        `POST /training/getCalendarWeekSummary`.
-
-
-        Captured 2026-10-02 on a week holding one manual session (30 min,
-
-        250 kcal). The legacy calendar view (`Calendar.get.weekSummary`) reads
-
-        only `week`, `durationMillis`, `distance` and `calories`, matching each
-
-        entry to a calendar row by `week`; the units below for those four come
-
-        from how it renders them (`getSecondsAsDuration(durationMillis / 1000)`,
-
-        `metersToKm(distance)`, kcal). The 24/7 activity and sleep fields were
-
-        all zero on this device-less account — their units are unverified.
-
-        '
-      required:
-      - week
-      - durationMillis
-      - distance
-      - calories
-      - traininigSessionsCount
-      properties:
-        week:
-          type: integer
-          description: 'Week number — ISO 8601 for a Monday-first user (25–31 May 2026 →
-
-            22). Carries no year, so a range spanning New Year yields e.g. 52
-
-            then 1. # TODO: verify for a Sunday-first `firstDayOfWeek` user.
-
-            '
-          example: 22
-        durationMillis:
-          type: integer
-          format: int64
-          description: Total training duration of the week, **milliseconds**.
-          example: 1800000
-        distance:
-          type: number
-          format: double
-          description: 'Total training distance of the week, **metres**. A session whose own
-
-            `distance` is null counts as 0 (the observed manual session carried
-
-            5000 m only at the exercise level and summed to `0.0`).
-
-            '
-          example: 0
-        calories:
-          type: integer
-          description: Total training energy of the week, kcal.
-          example: 250
-        traininigSessionsCount:
-          type: integer
-          description: 'Number of training sessions in the week. The key is misspelled
-
-            (`traininig`) on the wire — keep it verbatim.
-
-            '
-          example: 1
-        exeCount:
-          type: integer
-          description: '`0` with one manual session recorded. # TODO: verify meaning
-
-            (exercises recorded by a device?).
-
-            '
-          example: 0
-        activeTime:
-          type: integer
-          description: 24/7 active time.
-          example: 0
-        inActiveTime:
-          type: integer
-          description: 24/7 inactive time.
-          example: 0
-        sleepTime:
-          type: integer
-          description: Sleep time.
-          example: 0
-        sleepQuality:
-          type: number
-          format: double
-          description: Sleep quality.
-          example: 0
-        stepCount:
-          type: integer
-          description: Steps counted by a device over the week.
-          example: 0
-        distanceFromSteps:
-          type: number
-          format: double
-          description: Distance estimated from steps.
-          example: 0
-        inactivityAlertCount:
-          type: integer
-          description: Inactivity alerts raised over the week.
-          example: 0
-        sleepPlus:
-          type: boolean
-          description: Whether Sleep Plus data backs the sleep fields.
-          example: false
     PhaseLeaf:
       type: object
       description: 'A leaf training phase (no nested phases). A single PhaseLeaf placed directly in `exerciseTargets[].phases`
@@ -5534,76 +5451,590 @@ components:
           maximumAerobicSpeed: null
         hasRRsamples: false
         trimmed: false
+    SampleSeries:
+      type: object
+      description: 'One evenly-spaced time series of a session''s samples (captured from a
+
+        device-recorded run 2026-10-07). `values[i]` was recorded at
+
+        `i × interval` from the exercise''s `startTime`. A value is `null` where
+
+        the sensor had no reading (e.g. the first seconds of altitude/cadence).
+
+        Units are the metric''s: bpm (`HEART_RATE`), **km/h** (`SPEED`, even when
+
+        the UI shows pace), cumulative metres (`DISTANCE`), metres (`ALTITUDE`),
+
+        W (`POWER`), rpm/spm (`CADENCE`), °C (`TEMPERATURE`), kcal/min
+
+        (`*_KCAL_PER_MIN`).
+
+        '
+      required:
+      - samples
+      properties:
+        samples:
+          type: object
+          required:
+          - values
+          - interval
+          properties:
+            interval:
+              type: string
+              description: 'ISO 8601 duration between consecutive values. Observed `PT1S` (1 Hz)
+
+                for sensor metrics and `PT30S` for the `*_KCAL_PER_MIN` series.
+
+                '
+              example: PT1S
+            values:
+              type: array
+              description: Sample values, oldest first. A 1 h session at 1 Hz holds ~3 600.
+              items:
+                type: number
+                nullable: true
+      example:
+        samples:
+          interval: PT1S
+          values:
+          - 120
+          - 122
+          - 126
+          - 129
+    CoordinateSample:
+      type: object
+      description: One GPS fix of a recorded session.
+      required:
+      - latitude
+      - longitude
+      - time
+      properties:
+        latitude:
+          type: number
+          description: WGS84 latitude, decimal degrees.
+          example: 48.838001
+        longitude:
+          type: number
+          description: WGS84 longitude, decimal degrees.
+          example: 2.440151
+        altitude:
+          type: number
+          description: GPS altitude in metres (coarser than the barometric `ALTITUDE` series).
+          example: 66.1
+          nullable: true
+        time:
+          type: string
+          description: 'Offset from the exercise''s `startTime` as an ISO 8601 duration
+
+            (`PT4.013S`, `PT1H1M23.013S`). Fixes are roughly 1 s apart but not
+
+            evenly spaced, so unlike `SampleSeries` each carries its own time.
+
+            '
+          example: PT4.013S
+    CoordinateSeries:
+      type: object
+      description: 'The session''s GPS track. Unlike the other metrics it is a list of
+
+        timestamped fixes rather than an evenly-spaced `{values, interval}` series.
+
+        '
+      required:
+      - samples
+      properties:
+        samples:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoordinateSample'
     SampleBlock:
       type: object
-      description: 'Per-exercise time-series samples, one entry per recorded metric. Each value is
+      description: 'Per-exercise time series, one entry per metric. A metric is `null` when
 
-        `null` until a device populates it (a manually-entered session has every metric
+        the device did not record it — every metric for a manually-entered
 
-        null — verified via capture 23-analysis-details.json). The populated value shape
+        session (capture 23-analysis-details.json). Populated metrics are a
 
-        is not yet captured — likely an array of numbers or an object
+        `SampleSeries` (`{samples: {values, interval}}`), except `COORDINATE`,
 
-        `{samplingRate, values:[]}`. TODO: confirm with a device-uploaded session.
+        which is a list of timestamped GPS fixes. Shapes confirmed 2026-10-07
+
+        from a device-recorded run (`PT1S` sensors, `PT30S` energy series).
+
+        This block is ~95% of the response (~500 KB for a 1 h run).
 
         '
       properties:
         HEART_RATE:
-          description: Heart-rate samples (bpm), or null.
-          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Heart rate, bpm (1 Hz).
         SPEED:
-          description: Speed samples, or null.
-          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Speed, **km/h** (1 Hz) — the UI's pace chart is derived from it.
         DISTANCE:
-          description: Cumulative distance samples, or null.
-          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Cumulative distance from the start, metres (1 Hz).
         CADENCE:
-          description: Cadence samples (rpm/spm), or null.
-          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Cadence, rpm / steps-per-minute (1 Hz).
         ALTITUDE:
-          description: Altitude samples (m), or null.
-          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Barometric altitude, metres (1 Hz).
         POWER:
-          description: Power samples (W), or null.
-          nullable: true
-        POWER_BALANCE:
-          description: Left/right power balance samples, or null.
-          nullable: true
-        LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE:
-          description: Left-pedal crank force samples, or null.
-          nullable: true
-        RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE:
-          description: Right-pedal crank force samples, or null.
-          nullable: true
-        STRIDE_LENGTH:
-          description: Stride-length samples (m), or null.
-          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Power, W (1 Hz) — running power on a run.
         TEMPERATURE:
-          description: Ambient temperature samples (°C), or null.
-          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Watch temperature, °C (1 Hz).
+        FAT_KCAL_PER_MIN:
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Energy from fat, kcal/min (`PT30S`).
+        CARB_KCAL_PER_MIN:
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Energy from carbohydrate, kcal/min (`PT30S`).
+        PROTEIN_KCAL_PER_MIN:
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Energy from protein, kcal/min (`PT30S`).
+        POWER_BALANCE:
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Left/right power balance. Null in captures.
+        LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE:
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Left-pedal crank force. Null in captures.
+        RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE:
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Right-pedal crank force. Null in captures.
+        STRIDE_LENGTH:
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Stride length, m. Null in captures.
         BODY_TEMPERATURE:
-          description: Body temperature samples (°C), or null.
-          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/SampleSeries'
+          - type: 'null'
+          description: Body temperature, °C. Null in captures.
+        COORDINATE:
+          oneOf:
+          - $ref: '#/components/schemas/CoordinateSeries'
+          - type: 'null'
+          description: GPS track (timestamped fixes); null without GPS.
       example:
-        HEART_RATE: null
+        HEART_RATE:
+          samples:
+            interval: PT1S
+            values:
+            - 120
+            - 122
+            - 126
+        SPEED:
+          samples:
+            interval: PT1S
+            values:
+            - 5.21
+            - 6.31
+            - 8.76
+        DISTANCE:
+          samples:
+            interval: PT1S
+            values:
+            - 2.1
+            - 13.5
+            - 34.8
+        POWER:
+          samples:
+            interval: PT1S
+            values:
+            - 147
+            - 177
+            - 241
+        ALTITUDE:
+          samples:
+            interval: PT1S
+            values:
+            - null
+            - 66.09
+            - 66.33
+        CADENCE:
+          samples:
+            interval: PT1S
+            values:
+            - null
+            - 58
+            - 75
+        FAT_KCAL_PER_MIN:
+          samples:
+            interval: PT30S
+            values:
+            - 2.67
+            - 2.92
+        COORDINATE:
+          samples:
+          - latitude: 48.838001
+            longitude: 2.440151
+            altitude: 66.1
+            time: PT4.013S
         TEMPERATURE: null
-        CADENCE: null
-        RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE: null
         STRIDE_LENGTH: null
-        ALTITUDE: null
-        SPEED: null
-        BODY_TEMPERATURE: null
-        POWER: null
-        DISTANCE: null
         POWER_BALANCE: null
+        BODY_TEMPERATURE: null
         LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE: null
+        RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE: null
+    SessionZone:
+      type: object
+      description: 'Time spent in one zone of a recorded session. `lowerLimit`/`higherLimit`
+
+        are the zone bounds in the list''s unit: bpm (`HEART_RATE`), **km/h**
+
+        (`SPEED`), W (`POWER`) — the zones of the sport profile at recording time.
+
+        '
+      properties:
+        lowerLimit:
+          type: number
+          description: Inclusive lower bound (bpm, km/h or W).
+          example: 143
+        higherLimit:
+          type: number
+          description: Exclusive upper bound (bpm, km/h or W).
+          example: 162
+        inZone:
+          type: string
+          description: Time in the zone as an ISO 8601 duration (`PT2138S`, `PT533.5S`).
+          example: PT2138S
+          nullable: true
+        distance:
+          type: number
+          description: Metres covered in the zone. Set on `SPEED` zones only; null for HR/power.
+          example: 1196.2
+          nullable: true
+        zoneIndex:
+          type: integer
+          description: 1-based zone number (1 = lowest).
+          example: 3
+        created:
+          type: string
+          description: Always null in captures.
+          nullable: true
+        modified:
+          type: string
+          description: Always null in captures.
+          nullable: true
+    SessionZones:
+      type: object
+      description: 'Per-metric time-in-zone lists of one exercise, five zones each, lowest
+
+        first. Empty object for a manual session. Captured 2026-10-07 from a
+
+        device-recorded run carrying HR, speed and power.
+
+        '
+      properties:
+        HEART_RATE:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionZone'
+        SPEED:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionZone'
+        POWER:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionZone'
+    PeriodTime:
+      type: object
+      description: A wall-clock instant of a `PeriodData` node.
+      properties:
+        localDateTime:
+          type: string
+          description: '**Local** wall-clock time despite the trailing `Z`
+
+            (`2026-01-15T10:00:00.696Z` for a 10:00 local start); add nothing.
+
+            '
+          example: '2026-01-15T10:00:00.696Z'
+        timezoneOffsetInMilliseconds:
+          type: integer
+          description: The local UTC offset in ms (3 600 000 = UTC+1).
+          example: 3600000
+    PeriodValue:
+      type: object
+      description: A typed value inside `PeriodData.data`; exactly one of the two is set.
+      properties:
+        numValue:
+          type: number
+          nullable: true
+        stringValue:
+          type: string
+          nullable: true
+    PeriodData:
+      type: object
+      description: 'A node of the session''s period tree (captured 2026-10-07): the root is the
+
+        `TRAINING_SESSION`, its child the `EXERCISE`, whose children are the
+
+        detected `UPHILL` / `DOWNHILL` segments behind the altitude chart. Values
+
+        sit in `data`, keyed by name. Observed on `EXERCISE`:
+
+        `TOTAL_UPHILL_COUNT`, `TOTAL_DOWNHILL_COUNT`, `TOTAL_UPHILL_DISTANCE`,
+
+        `TOTAL_DOWNHILL_DISTANCE` (m). On each hill segment: `UPHILL_NUMBER` /
+
+        `DOWNHILL_NUMBER`, `DISTANCE` (m), **`DURATION` (ms)**, `ASCENT` /
+
+        `DESCENT` (m), `START_ALTITUDE` / `END_ALTITUDE` (m), `AVG_INCLINE` (%),
+
+        `AVG_SPEED` / `MAX_SPEED` (km/h), `AVG_HEART_RATE` / `MAX_HEART_RATE`,
+
+        `AVG_POWER` / `MAX_POWER`, `AVG_CADENCE` / `MAX_CADENCE`. On the root:
+
+        `READONLY_IS_TEST` (string `"false"`).
+
+        '
+      properties:
+        type:
+          type: string
+          description: Node kind — observed `TRAINING_SESSION`, `EXERCISE`, `UPHILL`, `DOWNHILL`.
+          example: UPHILL
+        startTime:
+          $ref: '#/components/schemas/PeriodTime'
+        endTime:
+          $ref: '#/components/schemas/PeriodTime'
+        data:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/PeriodValue'
+        subperiods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PeriodData'
+    SessionStatistic:
+      type: object
+      description: Average / max / min of one metric over a span; any may be null.
+      properties:
+        avg:
+          type: number
+          nullable: true
+        max:
+          type: number
+          nullable: true
+        min:
+          type: number
+          nullable: true
+        modified:
+          type: string
+          description: Always null in captures.
+          nullable: true
+    PhaseRepetitionResult:
+      type: object
+      description: 'The recorded result of one executed phase of a planned (PHASED) target —
+
+        one element per phase **repetition**, in execution order. A
+
+        `3 × (8 min work + 3 min walk)` repeat therefore yields six elements between
+
+        the warm-up and cool-down. These are the numbered segments the web UI draws
+
+        over the analysis charts. Durations are ISO 8601 strings, speeds **km/h**,
+
+        distances metres.
+
+        '
+      properties:
+        phaseIndex:
+          type: integer
+          description: 1-based index into `exercisePhaseModels` (which planned phase this was).
+          example: 2
+        repetitionIndex:
+          type: integer
+          description: 0-based position in execution order across the whole session.
+          example: 3
+        phaseRepetitionIndex:
+          type: integer
+          description: 1-based repetition number of this phase (2 = second time this phase ran).
+          example: 2
+        splitTime:
+          type: string
+          description: Elapsed time from the exercise start to the **end** of this repetition (ISO 8601 duration).
+          example: PT32M12.388S
+        duration:
+          type: string
+          description: Duration of this repetition (ISO 8601).
+          example: PT8M
+        splitDistance:
+          type: number
+          description: Metres covered in this repetition (equal to `distance` in captures).
+          example: 1442.1
+          nullable: true
+        distance:
+          type: number
+          description: Metres covered in this repetition.
+          example: 1442.1
+          nullable: true
+        inZone:
+          type: string
+          description: Time inside the phase's target zone (ISO 8601); null when the phase has no zone.
+          example: PT392S
+          nullable: true
+        heartRateStatistic:
+          $ref: '#/components/schemas/SessionStatistic'
+        speedStatistic:
+          $ref: '#/components/schemas/SessionStatistic'
+        cadenceStatistic:
+          $ref: '#/components/schemas/SessionStatistic'
+        powerStatistic:
+          $ref: '#/components/schemas/SessionStatistic'
+        ascent:
+          type: number
+          description: Metres climbed in this repetition; null in captures.
+          nullable: true
+        descent:
+          type: number
+          description: Metres descended in this repetition; null in captures.
+          nullable: true
+        finished:
+          type: boolean
+          description: False when the athlete skipped/stopped before the phase's goal.
+    PhaseResultModel:
+      type: object
+      description: One planned phase of the target the session executed (flattened, no repeat nesting).
+      properties:
+        phaseIndex:
+          type: integer
+          description: 1-based phase index, referenced by `PhaseRepetitionResult.phaseIndex`.
+          example: 2
+        name:
+          type: string
+          description: Phase name as planned.
+          example: Work
+          nullable: true
+        zoneType:
+          type: string
+          description: Intensity basis — observed `HEART_RATE_ZONES` and `NONE`. Likely also the target's other intensity
+            types.
+          example: HEART_RATE_ZONES
+          nullable: true
+        lowerZone:
+          type: integer
+          description: Lower target zone (1–5); null when `zoneType` is `NONE`.
+          example: 4
+          nullable: true
+        upperZone:
+          type: integer
+          description: Upper target zone (1–5); null when `zoneType` is `NONE`.
+          example: 4
+          nullable: true
+    ExerciseTargetResult:
+      type: object
+      description: 'How an exercise went against the training target it was recorded for
+
+        (captured 2026-10-07 from a PHASED interval target). Present only when the
+
+        session was started from a target (`hasTrainingTarget=true` in the history
+
+        listing).
+
+        '
+      properties:
+        sportReference:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: Polar sport id.
+        name:
+          type: string
+          description: Target name.
+          nullable: true
+        type:
+          type: string
+          description: Target type — `PHASED` observed; presumably also `VOLUME` / `STEADY_RACE_PACE`.
+          example: PHASED
+          nullable: true
+        duration:
+          type: string
+          description: Planned duration for a VOLUME target; null for PHASED.
+          nullable: true
+        distance:
+          type: number
+          description: Planned distance (m) for a VOLUME target; null for PHASED.
+          nullable: true
+        kiloCalories:
+          type: number
+          description: Planned calories for a VOLUME target; null for PHASED.
+          nullable: true
+        targetReached:
+          type: boolean
+          description: Whether Flow considers the target achieved.
+          nullable: true
+        exercisePhaseRepetitionModels:
+          type: array
+          description: Recorded result of every executed phase repetition, in order.
+          items:
+            $ref: '#/components/schemas/PhaseRepetitionResult'
+          nullable: true
+        exercisePhaseModels:
+          type: array
+          description: The planned phases, by `phaseIndex`.
+          items:
+            $ref: '#/components/schemas/PhaseResultModel'
+          nullable: true
+        exerciseRacePaceResultData:
+          description: Race-pace result; null for PHASED targets. Shape not captured.
+        racePaceSpeed:
+          type: number
+          description: Race-pace target speed; null for PHASED targets.
+          nullable: true
+        completeRoundModels:
+          description: Null in captures. Shape not captured.
+        externalSourceIdentifier:
+          type: string
+          nullable: true
+        onDemandTypeTarget:
+          type: boolean
+          nullable: true
     SessionDetails:
       type: object
-      description: 'Response of GET /api/training/analysis/{id}/details. Time-series
+      description: 'Response of GET /api/training/analysis/{id}/details — everything the
 
-        samples, laps, zones, etc. For a manual session all
+        web UI''s session-analysis charts draw: per-second samples, time in zones,
 
-        `samples[*][METRIC]` are null.
+        laps, the hill segments, and (for a session started from a planned target)
+
+        the per-phase results. Every per-exercise block is keyed by exerciseId.
+
+        For a manual session all `samples[*][METRIC]` are null and `zones` is
+
+        empty. Populated shapes captured 2026-10-07 from a device-recorded
+
+        interval run (PHASED target, no laps pressed).
 
         '
       properties:
@@ -5633,16 +6064,20 @@ components:
           type: object
           description: 'Time-in-zone distributions, keyed by exerciseId. Empty
 
-            object for manual sessions; populated by device upload.
-
-            Shape when populated TBD.
+            object for manual sessions.
 
             '
           additionalProperties:
-            type: object
-            additionalProperties: true
+            $ref: '#/components/schemas/SessionZones'
         laps:
           type: object
+          description: 'Laps keyed by exerciseId. Empty on a device session whose segments
+
+            came from a planned target (those are in `exerciseResultTargetData`).
+
+            Element shape not captured yet. # TODO: capture a session with laps
+
+            '
           additionalProperties:
             type: object
             properties:
@@ -5653,8 +6088,10 @@ components:
                 type: array
                 items: {}
         periodData:
-          description: Opaque per-period payload; null when absent. Left untyped (free-form) so it accepts both null and an
-            object, since ogen does not honour nullable on an empty object schema.
+          description: The session's period tree (session → exercise → hill segments); null when absent.
+          oneOf:
+          - $ref: '#/components/schemas/PeriodData'
+          - type: 'null'
         swimDatas:
           type: object
           description: Per-exercise swim metrics; empty unless swim sport.
@@ -5673,14 +6110,19 @@ components:
           additionalProperties: true
         exerciseResultTargetData:
           type: object
-          description: 'Comparison to a planned training target. Populated only when
+          description: 'Result against the planned training target, keyed by exerciseId.
 
-            the session was linked to a target (`hasTrainingTarget=true`
+            Empty unless the session was started from a target
 
-            in the history listing).
+            (`hasTrainingTarget=true` in the history listing). For a PHASED
+
+            target this carries per-repetition splits — the numbered segments
+
+            of the analysis charts.
 
             '
-          additionalProperties: true
+          additionalProperties:
+            $ref: '#/components/schemas/ExerciseTargetResult'
       example:
         id: 8349588454
         periodDataUuid: null
@@ -6876,11 +7318,12 @@ components:
               description: Progress towards the daily activity goal, in **percent** (the web UI renders it as `<n>%`).
             activeTime:
               type: integer
-              description: Active time in **minutes** (the web UI passes it as `durationMinutes`; read from the bundle 2026-09-30).
+              description: Active time in **minutes** (the web UI passes it as `durationMinutes`; bundle read 2026-09-30).
             distanceFromSteps:
               type: number
               format: float
-              description: Distance from steps in **metres** (the web UI feeds it to its metre-based `toDistance`; read from the bundle 2026-09-30).
+              description: Distance from steps in **metres** (the web UI feeds it to its metre-based `toDistance`; bundle
+                read 2026-09-30).
             stepCount:
               type: integer
             kiloCalories:
@@ -6907,17 +7350,17 @@ components:
               items: {}
               description: 'Down-sampled activity intensity timeline (length ≤
 
-                `maxSampleCount`). Empty on a device-less account. Per the web
+                `maxSampleCount`). Empty on a device-less account. Per the web UI
 
-                UI (bundle read 2026-09-30, no populated capture): `{time, value}`,
+                (bundle read 2026-09-30, no populated capture): `{time, value}`,
 
-                `time` an epoch ms holding the local wall clock as if UTC,
+                `time` an epoch ms holding the local wall clock as if UTC, `value`
 
-                `value` the activity level compared against `activityZoneLimits`
+                the activity level compared against `activityZoneLimits` (below
 
-                (below `activityZoneLimits[1]` reads as non-wear). Left untyped
+                `activityZoneLimits[1]` reads as non-wear). # TODO: verify on a
 
-                until a capture confirms it.
+                device-synced account.
 
                 '
             activityTimelineIcons:
@@ -6925,7 +7368,7 @@ components:
               items: {}
               description: 'Icons overlaid on the timeline. Per the web UI: `{activityTimelineIconType, localTime, distance,
                 duration, kiloCalories, sportName, url, hr}`, types incl. `ACTIVITY_TIMELINE_ICON_TYPE_SLEEP` / `…_WAKE_UP`.
-                Unconfirmed.'
+                # TODO: verify'
             activityZoneLimits:
               type: array
               items:
@@ -6944,7 +7387,7 @@ components:
               type: array
               items: {}
               description: '24h HR samples (down-sampled to ≤ `maxSampleCount`). Empty on device-less account. Per the web
-                UI: `{time, value}` like `activityTimelineSamples`, `value` in bpm, `0` = gap. Unconfirmed.'
+                UI: `{time, value}` like `activityTimelineSamples`, `value` in bpm, `0` = gap. # TODO: verify'
             heartRateSummary:
               type: object
               properties:
@@ -6966,16 +7409,20 @@ components:
             highSessionTimelineList:
               type: array
               items: {}
-              description: 'High-intensity periods within the day. Per the web UI: `{startTime, endTime}`. Unconfirmed.'
+              description: 'High-intensity periods within the day. Per the web UI: `{startTime, endTime}`. # TODO: verify'
             trainingTimelineList:
               type: array
               items: {}
-              description: 'Training sessions within the day. Per the web UI: `{startTime, endTime}`. Unconfirmed.'
+              description: 'Training sessions within the day. Per the web UI: `{startTime, endTime}`. # TODO: verify'
         activityScoreData:
           type: object
-          description: Time spent in each activity-intensity bucket, in **minutes** (the web UI's `valueMinutes`). `null` for
-            days past the last synced data (observed 2026-09-30).
-          nullable: true
+          description: 'Time spent in each activity-intensity bucket, in **minutes** (the web
+
+            UI''s `valueMinutes`). `null` for days past the last synced data
+
+            (observed 2026-09-30).
+
+            '
           properties:
             sleepDuration:
               type: integer
@@ -6987,11 +7434,14 @@ components:
               type: integer
             vigorousDuration:
               type: integer
+          nullable: true
         activityBenefitFeedbackData:
           type: object
-          description: Qualitative feedback Polar surfaces under "Activity benefit". `null` for days past the last synced
-            data (observed 2026-09-30).
-          nullable: true
+          description: 'Qualitative feedback Polar surfaces under "Activity benefit". `null` for
+
+            days past the last synced data (observed 2026-09-30).
+
+            '
           properties:
             mvpa:
               type: string
@@ -7015,6 +7465,7 @@ components:
               type: array
               items:
                 type: string
+          nullable: true
         miniGraphData:
           type: object
           description: Mini-trend data for the "/diary" mini-graph row. Self-contained snapshot per day.
@@ -7536,20 +7987,22 @@ components:
           example: '2026-05-26T07:02:00'
         sleepStartOffset:
           type: integer
-          nullable: true
-          description: 'Nullable as a precaution (# TODO: verify; a null sleepScore was seen live 2026-10-01). Offset in **seconds** added to `sleepStartTime` to get the "fell
+          description: 'Offset in **seconds** added to `sleepStartTime` to get the "fell
 
-            asleep" moment (web UI: `jsonDatetimeAsMoment(sleepStartTime).add(sleepStartOffset,
+            asleep" moment (web UI: `jsonDatetimeAsMoment(sleepStartTime)
 
-            "seconds")`, bundle read 2026-09-30). `sleepWakeStates[].offsetFromStart`
+            .add(sleepStartOffset, "seconds")`, bundle read 2026-09-30).
 
-            counts from `sleepStartTime`, before this offset.
+            `sleepWakeStates[].offsetFromStart` counts from `sleepStartTime`,
+
+            before this offset.
 
             '
+          nullable: true
         sleepEndOffset:
           type: integer
+          description: Offset in seconds added to `sleepEndTime` (wake-up offset).
           nullable: true
-          description: 'Offset in seconds added to `sleepEndTime` (wake-up offset). Nullable as a precaution (# TODO: verify).'
         sleepScore:
           type: number
           minimum: 0
@@ -7558,9 +8011,9 @@ components:
 
             `0` as "no score" (excluded from averages). Polar calls this "Sleep Score".
 
-            **Can be `null`** (observed live 2026-10-01 on a real account, within a 365-day
+            **Can be `null`** (seen live 2026-10-01 on a real account, within a
 
-            report); treat like `0`.
+            365-day report — a strict decoder failed the whole report); treat like `0`.
 
             '
           nullable: true
@@ -7606,11 +8059,11 @@ components:
 
             starts a segment lasting until the next entry (the last one until
 
-            wake-up). Deep sleep only counts on a Sleep Plus Stages night (one
+            wake-up). Deep sleep only counts on a Sleep Plus Stages night (one with
 
-            with `sleepCycles` > 0 or any code 1/2 entry). Codes read from the web
+            `sleepCycles` > 0 or any code 1/2 entry). Codes read from the web UI
 
-            UI bundle 2026-09-30 — unconfirmed by a capture.
+            bundle 2026-09-30. # TODO: verify on a device-synced account.
 
             '
           items:
@@ -7780,13 +8233,15 @@ components:
 
         `sportName: "Aucune donnée relative au sport"` (localised) and
 
-        `distributionPercent: 100.0`. # TODO: verify shape on an account with
+        `distributionPercent: 100.0`. Re-checked 2026-10-02 with one manual
 
-        recorded sessions — element shapes for the zone lists are likely
+        session (avg HR only, no samples): distributions and totals fill in, the
 
-        `[{zoneIndex, durationMillis, percent}]` but the empty arrays don''t
+        four zone lists stay `[]` — they need recorded HR/power/speed samples.
 
-        expose them.
+        # TODO: verify zone-list element shape (likely
+
+        `[{zoneIndex, durationMillis, percent}]`); modeled as open maps until then.
 
         '
       properties:
@@ -7925,6 +8380,115 @@ components:
         totalCalories: 0
         totalAscent: 0
         totalDescent: 0
+    CalendarWeekSummary:
+      type: object
+      description: 'One week of the diary''s right-hand "week totals" strip, returned by
+
+        `POST /training/getCalendarWeekSummary`.
+
+
+        Captured 2026-10-02 on a week holding one manual session (30 min,
+
+        250 kcal). The legacy calendar view (`Calendar.get.weekSummary`) reads
+
+        only `week`, `durationMillis`, `distance` and `calories`, matching each
+
+        entry to a calendar row by `week`; the units below for those four come
+
+        from how it renders them (`getSecondsAsDuration(durationMillis / 1000)`,
+
+        `metersToKm(distance)`, kcal). The 24/7 activity and sleep fields were
+
+        all zero on this device-less account — their units are unverified.
+
+        '
+      required:
+      - week
+      - durationMillis
+      - distance
+      - calories
+      - traininigSessionsCount
+      properties:
+        week:
+          type: integer
+          description: 'Week number — ISO 8601 for a Monday-first user (25–31 May 2026 →
+
+            22). Carries no year, so a range spanning New Year yields e.g. 52
+
+            then 1. # TODO: verify for a Sunday-first `firstDayOfWeek` user.
+
+            '
+          example: 22
+        durationMillis:
+          type: integer
+          format: int64
+          description: Total training duration of the week, **milliseconds**.
+          example: 1800000
+        distance:
+          type: number
+          format: double
+          description: 'Total training distance of the week, **metres**. A session whose own
+
+            `distance` is null counts as 0 (the observed manual session carried
+
+            5000 m only at the exercise level and summed to `0.0`).
+
+            '
+          example: 0
+        calories:
+          type: integer
+          description: Total training energy of the week, kcal.
+          example: 250
+        traininigSessionsCount:
+          type: integer
+          description: 'Number of training sessions in the week. The key is misspelled
+
+            (`traininig`) on the wire — keep it verbatim.
+
+            '
+          example: 1
+        exeCount:
+          type: integer
+          description: '`0` with one manual session recorded. # TODO: verify meaning
+
+            (exercises recorded by a device?).
+
+            '
+          example: 0
+        activeTime:
+          type: integer
+          description: 24/7 active time.
+          example: 0
+        inActiveTime:
+          type: integer
+          description: 24/7 inactive time.
+          example: 0
+        sleepTime:
+          type: integer
+          description: Sleep time.
+          example: 0
+        sleepQuality:
+          type: number
+          format: double
+          description: Sleep quality.
+          example: 0
+        stepCount:
+          type: integer
+          description: Steps counted by a device over the week.
+          example: 0
+        distanceFromSteps:
+          type: number
+          format: double
+          description: Distance estimated from steps.
+          example: 0
+        inactivityAlertCount:
+          type: integer
+          description: Inactivity alerts raised over the week.
+          example: 0
+        sleepPlus:
+          type: boolean
+          description: Whether Sleep Plus data backs the sleep fields.
+          example: false
   responses:
     Unauthorized:
       description: 'Session cookie missing or expired. The body is a small JSON object with an `error` code and a `redirect`

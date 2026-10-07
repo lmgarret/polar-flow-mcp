@@ -132,6 +132,14 @@ var isoDurationRE = regexp.MustCompile(`^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(
 // "PT1H2M3S") — the form SessionSummary.duration uses — into whole seconds.
 // Returns ok=false when the string is empty or not a recognised duration.
 func ISO8601DurationToSeconds(s string) (int, bool) {
+	secs, ok := ISO8601DurationToSecondsF(s)
+	return int(secs), ok
+}
+
+// ISO8601DurationToSecondsF is ISO8601DurationToSeconds keeping the fraction
+// ("PT4.013S" → 4.013) — for sample offsets and phase splits, where truncating
+// every term would drift the boundaries.
+func ISO8601DurationToSecondsF(s string) (float64, bool) {
 	s = strings.TrimSpace(s)
 	if s == "" || s == "P" || s == "PT" {
 		return 0, false
@@ -152,7 +160,7 @@ func ISO8601DurationToSeconds(s string) (int, bool) {
 		}
 		total += v * mult
 	}
-	return int(total), true
+	return total, true
 }
 
 // wireDatetimeLayouts are the datetime encodings observed across Flow read
