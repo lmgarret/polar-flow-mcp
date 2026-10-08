@@ -26,32 +26,51 @@ the running server — they are two separate steps.
 
 ## Install the skill
 
-### Option 1: Claude Desktop or Claude Code
+### Option 1: Claude Code plugin marketplace
 
-Works when you run Claude Desktop or Claude Code on your local machine:
+The repository is also a Claude Code plugin marketplace. Add it and install
+the `polar-flow` plugin, which carries the skill:
 
-1. Locate your Claude skills directory. On Claude Code this is typically
-   `~/.claude/skills/`.
-2. Copy (or symlink) the whole `polar-flow/` directory into it (the `reference/`
-   files must travel with `SKILL.md`):
+```bash
+/plugin marketplace add lmgarret/polar-flow-mcp
+/plugin install polar-flow@polar-flow-mcp
+```
 
-   ```bash
-   cp -r skill/polar-flow ~/.claude/skills/
-   ```
+The skill then loads as `polar-flow:polar-flow` and follows `main` whenever
+you run `/plugin marketplace update`. To stay on the skill matching your
+server release instead, add the marketplace at that tag:
+`/plugin marketplace add lmgarret/polar-flow-mcp@v1.2.3`.
 
-3. Restart Claude. The skill is auto-discovered and active for all
-   conversations.
+The plugin installs only the skill — connect the server separately (below).
 
-### Option 2: Claude.ai project file upload
+### Option 2: `.skill` file from a release
 
-Works for Claude.ai conversations via the Projects feature:
+Every [GitHub release](https://github.com/lmgarret/polar-flow-mcp/releases)
+carries a `polar-flow.skill` asset — the skill for that version, as a zip with
+`polar-flow/SKILL.md` at its root. The rolling `edge` pre-release carries one
+built from `main`.
 
-1. Open your Claude.ai project (or create one for training management).
-2. Upload the files under `skill/polar-flow/` (`SKILL.md` and the `reference/`
-   pages) as project files.
-3. The skill becomes active for all chats in that project — no restart needed.
+- **Claude.ai / Claude Desktop**: upload `polar-flow.skill` in the Skills
+  section of the settings.
+- **Claude Code without the marketplace**: unzip it into your skills
+  directory:
 
-Both methods give Claude identical guidance and tool-calling behaviour.
+  ```bash
+  unzip polar-flow.skill -d ~/.claude/skills/
+  ```
+
+To build it from a checkout, run `make skill` (writes `bin/polar-flow.skill`).
+
+### Option 3: Copy from a checkout
+
+Copy (or symlink) the whole `polar-flow/` directory into `~/.claude/skills/`
+— the `reference/` files must travel with `SKILL.md` — then restart Claude:
+
+```bash
+cp -r skill/polar-flow ~/.claude/skills/
+```
+
+All options give Claude identical guidance and tool-calling behaviour.
 
 ## Connect Claude to your server
 

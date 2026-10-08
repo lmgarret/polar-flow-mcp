@@ -124,6 +124,9 @@ jobs:
             echo '```'
           } > "$RUNNER_TEMP/notes.md"
 
+      - name: Package Claude skill
+        run: make skill
+
       - name: Publish rolling edge release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -137,7 +140,8 @@ jobs:
             --title "edge" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             --prerelease \
-            --latest=false
+            --latest=false \
+            bin/polar-flow.skill
 
   docker-pr:
     name: Docker (PR preview)

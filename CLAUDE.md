@@ -34,7 +34,11 @@ and silent refresh.
    (which tool fits, full-replace edits, safe writes, read-back → update
    translation). Per-tool parameters, units and limits belong in the tool
    descriptions in `internal/mcp` — don't copy them into the skill. Behaviour
-   checks live in `skill/evals/polar-flow.json`.
+   checks live in `skill/evals/polar-flow.json`. It ships two ways:
+   `.claude-plugin/marketplace.json` (the repo is a Claude Code marketplace;
+   plugin `polar-flow`, root `skill/`, no `plugin.json` — validate with
+   `claude plugin validate .`) and `make skill` → `bin/polar-flow.skill`,
+   attached to every `v*` release and the `edge` pre-release.
 
 ## Project Conventions
 
