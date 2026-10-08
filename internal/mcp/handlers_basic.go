@@ -201,7 +201,11 @@ func GetTrainingSessionSummaryHandler(fc *flow.Client) func(context.Context, mcp
 	}
 }
 
-// GetTrainingSessionDetailsHandler returns lap/sample-level detail for a session.
+// GetTrainingSessionDetailsHandler returns the compact detail view of a
+// session: headline figures, time in zones, per-rep splits of a planned
+// target, laps and hills. The raw response also carries ~500 KB of per-second
+// samples per hour; those stay out of the result (and so out of the model's
+// context) — get_training_session_samples serves them resampled.
 func GetTrainingSessionDetailsHandler(fc *flow.Client) func(context.Context, mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 	return func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 		id, ok := requireInt(req, "session_id")
@@ -215,16 +219,11 @@ func GetTrainingSessionDetailsHandler(fc *flow.Client) func(context.Context, mcp
 			}
 			return mcpgo.NewToolResultError(err.Error()), nil
 		}
-		// The raw SessionDetails carries a large per-second Samples tree (plus
-		// several free-form jx.Raw blocks) that the UI never uses and that can
-		// break json.Marshal (NaN/huge). Send only what the detail view reads:
-		// per-exercise stats, HR zones, and laps.
-		return widgetResult(map[string]any{"type": "session_details", "details": map[string]any{
-			"id":        details.ID,
-			"exercises": details.Exercises,
-			"zones":     details.Zones,
-			"laps":      details.Laps,
-		}}), nil
+		dto := convert.FromWireSessionDetails(details)
+		if dto.ID == 0 {
+			dto.ID = id
+		}
+		return widgetResult(map[string]any{"type": "session_details", "details": dto}), nil
 	}
 }
 

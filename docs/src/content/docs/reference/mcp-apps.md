@@ -30,6 +30,20 @@ session in this same summary view:
 
 ![One session's summary with its heart-rate zone bar](../../../assets/mcp-apps/session-summary.webp)
 
+**Details ›** under the summary — or a `get_training_session_details` result —
+opens the detail view: the totals, the heart-rate zone bar, an intervals table
+when the session was started from a planned target (one row per rep: time,
+distance, pace or speed, HR, power, target zone and the share of time spent in
+it), laps when recorded, and the heart-rate, pace (or speed), power and
+altitude curves with the reps marked along the top. Hovering the curves reads
+out the values at that moment.
+
+The curves are not part of the tool result. The widget fetches them itself
+with `get_training_session_samples` at about 600 points, so the per-second data
+never enters the conversation.
+
+![A session's detail view: intervals table and curves](../../../assets/mcp-apps/session-details.webp)
+
 ## Training targets — `targets.html`
 
 Tools: `list_training_targets`, `get_training_target`,

@@ -28,7 +28,7 @@ tools are available, the server isn't connected: say so and stop.
 | The user wants… | Use |
 |---|---|
 | What's planned | `list_training_targets` → `get_training_target` |
-| What was done | `list_training_sessions` → `get_training_session_summary`; `get_training_session_details` only for splits, laps or per-sample traces (large) |
+| What was done | `list_training_sessions` → `get_training_session_summary`; `get_training_session_details` for zones, interval reps (pace / HR per rep) and laps; `get_training_session_samples` for the HR / pace curve inside one rep or window |
 | Weekly totals / longer trends | `get_calendar_week_summary` (≤ 45 days) / `get_progress_summary` |
 | Steps, daily HR / sleep | `get_daily_activity` / `get_sleep` |
 | What zone N means, or which zone a pace / wattage / bpm falls in | `get_training_zones(sport_id)` |

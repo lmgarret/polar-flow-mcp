@@ -111,6 +111,9 @@ Read normalisation currently covers the headline fields of
 `get_progress_summary`, `get_calendar_week_summary`, the favorites tools
 (`list_favorites`, `get_favorite`, `schedule_favorite`) and `get_route`. Deep,
 partly-unpinned payloads — training-target phase trees (`get_training_target`),
-session lap/sample detail (`get_training_session_details`) and the progress
-breakdown lists — are passed through from the wire unchanged. `get_calendar_events`
+recorded laps inside `get_training_session_details` (element shape not captured
+yet) and the progress breakdown lists — are passed through from the wire
+unchanged. The rest of `get_training_session_details` (zones, per-rep splits,
+hills) and the resampled curves of `get_training_session_samples` follow the
+contract. `get_calendar_events`
 is intentionally the raw, unfiltered escape hatch.

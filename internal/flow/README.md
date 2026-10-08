@@ -22,6 +22,7 @@ from the OpenAPI spec in [`../../../polar-openapi-maker/`](https://github.com/lm
 | `ops_activity.go` | 24/7 activity (`/api/activity-timeline/loadFour`) and sleep (`sleep-api.flow.polar.com/api/sleep/report`, reached through `gen.WithServerURL`) |
 | `sports.go` | Cached sport catalogue behind `SportName` (sport-id validation for write tools) |
 | `testing.go` | `NewForTesting(baseURL)` — a Client against an `httptest` server, no login (tests only) |
+| `testdata/` | Anonymized wire captures for tests — `session-details-intervals.json` is a device-recorded interval run: ids, names and time of day replaced, GPS and altitude synthetic, HR remapped with slow noise, speed/power/cadence/kcal rescaled, every statistic recomputed from the masked series, series thinned to 5 s |
 
 ## Regeneration
 

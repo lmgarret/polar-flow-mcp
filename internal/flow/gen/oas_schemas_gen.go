@@ -197,23 +197,23 @@ type ActivityTimelineDayActivityGraphData struct {
 	// Down-sampled activity intensity timeline (length ≤ `maxSampleCount`). Empty on a device-less
 	// account. Per the web UI (bundle read 2026-09-30, no populated capture): `{time, value}`, `time` an
 	// epoch ms holding the local wall clock as if UTC, `value` the activity level compared against
-	// `activityZoneLimits` (below `activityZoneLimits[1]` reads as non-wear). Left untyped until a capture
-	// confirms it.
+	// `activityZoneLimits` (below `activityZoneLimits[1]` reads as non-wear). # TODO: verify on a
+	// device-synced account.
 	ActivityTimelineSamples []jx.Raw `json:"activityTimelineSamples"`
 	// Icons overlaid on the timeline. Per the web UI:
 	// `{activityTimelineIconType, localTime, distance, duration, kiloCalories, sportName, url, hr}`, types
-	// incl. `ACTIVITY_TIMELINE_ICON_TYPE_SLEEP` / `…_WAKE_UP`. Unconfirmed.
+	// incl. `ACTIVITY_TIMELINE_ICON_TYPE_SLEEP` / `…_WAKE_UP`. # TODO: verify.
 	ActivityTimelineIcons []jx.Raw `json:"activityTimelineIcons"`
 	// Seven floats defining the upper bounds of activity-intensity zones for this user/day.
 	// Server-synthesized from physical profile even without device data.
 	ActivityZoneLimits []float32 `json:"activityZoneLimits"`
 	// 24h HR samples (down-sampled to ≤ `maxSampleCount`). Empty on device-less account. Per the web UI:
-	// `{time, value}` like `activityTimelineSamples`, `value` in bpm, `0` = gap. Unconfirmed.
+	// `{time, value}` like `activityTimelineSamples`, `value` in bpm, `0` = gap. # TODO: verify.
 	HeartRateTimelineSamples []jx.Raw                                                `json:"heartRateTimelineSamples"`
 	HeartRateSummary         OptActivityTimelineDayActivityGraphDataHeartRateSummary `json:"heartRateSummary"`
-	// High-intensity periods within the day. Per the web UI: `{startTime, endTime}`. Unconfirmed.
+	// High-intensity periods within the day. Per the web UI: `{startTime, endTime}`. # TODO: verify.
 	HighSessionTimelineList []jx.Raw `json:"highSessionTimelineList"`
-	// Training sessions within the day. Per the web UI: `{startTime, endTime}`. Unconfirmed.
+	// Training sessions within the day. Per the web UI: `{startTime, endTime}`. # TODO: verify.
 	TrainingTimelineList []jx.Raw `json:"trainingTimelineList"`
 }
 
@@ -436,10 +436,10 @@ func (s *ActivityTimelineDayActivityScoreData) SetVigorousDuration(val OptInt) {
 type ActivityTimelineDayDataPanelData struct {
 	// Progress towards the daily activity goal, in percent (the web UI renders it as `<n>%`).
 	DailyActivityGoal OptFloat64 `json:"dailyActivityGoal"`
-	// Active time in minutes (the web UI passes it as `durationMinutes`; read from the bundle 2026-09-30).
+	// Active time in minutes (the web UI passes it as `durationMinutes`; bundle read 2026-09-30).
 	ActiveTime OptInt `json:"activeTime"`
-	// Distance from steps in metres (the web UI feeds it to its metre-based `toDistance`; read from the
-	// bundle 2026-09-30).
+	// Distance from steps in metres (the web UI feeds it to its metre-based `toDistance`; bundle read
+	// 2026-09-30).
 	DistanceFromSteps OptFloat32 `json:"distanceFromSteps"`
 	StepCount         OptInt     `json:"stepCount"`
 	KiloCalories      OptInt     `json:"kiloCalories"`
@@ -1496,6 +1496,77 @@ func (s *ClubModel) SetDuration(val OptInt) {
 	s.Duration = val
 }
 
+// One GPS fix of a recorded session.
+// Ref: #/components/schemas/CoordinateSample
+type CoordinateSample struct {
+	// WGS84 latitude, decimal degrees.
+	Latitude float64 `json:"latitude"`
+	// WGS84 longitude, decimal degrees.
+	Longitude float64 `json:"longitude"`
+	// GPS altitude in metres (coarser than the barometric `ALTITUDE` series).
+	Altitude OptNilFloat64 `json:"altitude"`
+	// Offset from the exercise's `startTime` as an ISO 8601 duration (`PT4.013S`, `PT1H1M23.013S`). Fixes
+	// are roughly 1 s apart but not evenly spaced, so unlike `SampleSeries` each carries its own time.
+	Time string `json:"time"`
+}
+
+// GetLatitude returns the value of Latitude.
+func (s *CoordinateSample) GetLatitude() float64 {
+	return s.Latitude
+}
+
+// GetLongitude returns the value of Longitude.
+func (s *CoordinateSample) GetLongitude() float64 {
+	return s.Longitude
+}
+
+// GetAltitude returns the value of Altitude.
+func (s *CoordinateSample) GetAltitude() OptNilFloat64 {
+	return s.Altitude
+}
+
+// GetTime returns the value of Time.
+func (s *CoordinateSample) GetTime() string {
+	return s.Time
+}
+
+// SetLatitude sets the value of Latitude.
+func (s *CoordinateSample) SetLatitude(val float64) {
+	s.Latitude = val
+}
+
+// SetLongitude sets the value of Longitude.
+func (s *CoordinateSample) SetLongitude(val float64) {
+	s.Longitude = val
+}
+
+// SetAltitude sets the value of Altitude.
+func (s *CoordinateSample) SetAltitude(val OptNilFloat64) {
+	s.Altitude = val
+}
+
+// SetTime sets the value of Time.
+func (s *CoordinateSample) SetTime(val string) {
+	s.Time = val
+}
+
+// The session's GPS track. Unlike the other metrics it is a list of timestamped fixes rather than an
+// evenly-spaced `{values, interval}` series.
+// Ref: #/components/schemas/CoordinateSeries
+type CoordinateSeries struct {
+	Samples []CoordinateSample `json:"samples"`
+}
+
+// GetSamples returns the value of Samples.
+func (s *CoordinateSeries) GetSamples() []CoordinateSample {
+	return s.Samples
+}
+
+// SetSamples sets the value of Samples.
+func (s *CoordinateSeries) SetSamples(val []CoordinateSample) {
+	s.Samples = val
+}
+
 type CreateFavoriteCreated struct {
 	Data io.Reader
 }
@@ -1929,6 +2000,193 @@ func (s *ExerciseTarget) SetPhases(val []Phase) {
 
 // SetID sets the value of ID.
 func (s *ExerciseTarget) SetID(val OptNilFloat64) {
+	s.ID = val
+}
+
+// How an exercise went against the training target it was recorded for (captured 2026-10-07 from a
+// PHASED interval target). Present only when the session was started from a target
+// (`hasTrainingTarget=true` in the history listing).
+// Ref: #/components/schemas/ExerciseTargetResult
+type ExerciseTargetResult struct {
+	SportReference OptExerciseTargetResultSportReference `json:"sportReference"`
+	// Target name.
+	Name OptNilString `json:"name"`
+	// Target type — `PHASED` observed; presumably also `VOLUME` / `STEADY_RACE_PACE`.
+	Type OptNilString `json:"type"`
+	// Planned duration for a VOLUME target; null for PHASED.
+	Duration OptNilString `json:"duration"`
+	// Planned distance (m) for a VOLUME target; null for PHASED.
+	Distance OptNilFloat64 `json:"distance"`
+	// Planned calories for a VOLUME target; null for PHASED.
+	KiloCalories OptNilFloat64 `json:"kiloCalories"`
+	// Whether Flow considers the target achieved.
+	TargetReached OptNilBool `json:"targetReached"`
+	// Recorded result of every executed phase repetition, in order.
+	ExercisePhaseRepetitionModels OptNilPhaseRepetitionResultArray `json:"exercisePhaseRepetitionModels"`
+	// The planned phases, by `phaseIndex`.
+	ExercisePhaseModels OptNilPhaseResultModelArray `json:"exercisePhaseModels"`
+	// Race-pace result; null for PHASED targets. Shape not captured.
+	ExerciseRacePaceResultData jx.Raw `json:"exerciseRacePaceResultData"`
+	// Race-pace target speed; null for PHASED targets.
+	RacePaceSpeed OptNilFloat64 `json:"racePaceSpeed"`
+	// Null in captures. Shape not captured.
+	CompleteRoundModels      jx.Raw       `json:"completeRoundModels"`
+	ExternalSourceIdentifier OptNilString `json:"externalSourceIdentifier"`
+	OnDemandTypeTarget       OptNilBool   `json:"onDemandTypeTarget"`
+}
+
+// GetSportReference returns the value of SportReference.
+func (s *ExerciseTargetResult) GetSportReference() OptExerciseTargetResultSportReference {
+	return s.SportReference
+}
+
+// GetName returns the value of Name.
+func (s *ExerciseTargetResult) GetName() OptNilString {
+	return s.Name
+}
+
+// GetType returns the value of Type.
+func (s *ExerciseTargetResult) GetType() OptNilString {
+	return s.Type
+}
+
+// GetDuration returns the value of Duration.
+func (s *ExerciseTargetResult) GetDuration() OptNilString {
+	return s.Duration
+}
+
+// GetDistance returns the value of Distance.
+func (s *ExerciseTargetResult) GetDistance() OptNilFloat64 {
+	return s.Distance
+}
+
+// GetKiloCalories returns the value of KiloCalories.
+func (s *ExerciseTargetResult) GetKiloCalories() OptNilFloat64 {
+	return s.KiloCalories
+}
+
+// GetTargetReached returns the value of TargetReached.
+func (s *ExerciseTargetResult) GetTargetReached() OptNilBool {
+	return s.TargetReached
+}
+
+// GetExercisePhaseRepetitionModels returns the value of ExercisePhaseRepetitionModels.
+func (s *ExerciseTargetResult) GetExercisePhaseRepetitionModels() OptNilPhaseRepetitionResultArray {
+	return s.ExercisePhaseRepetitionModels
+}
+
+// GetExercisePhaseModels returns the value of ExercisePhaseModels.
+func (s *ExerciseTargetResult) GetExercisePhaseModels() OptNilPhaseResultModelArray {
+	return s.ExercisePhaseModels
+}
+
+// GetExerciseRacePaceResultData returns the value of ExerciseRacePaceResultData.
+func (s *ExerciseTargetResult) GetExerciseRacePaceResultData() jx.Raw {
+	return s.ExerciseRacePaceResultData
+}
+
+// GetRacePaceSpeed returns the value of RacePaceSpeed.
+func (s *ExerciseTargetResult) GetRacePaceSpeed() OptNilFloat64 {
+	return s.RacePaceSpeed
+}
+
+// GetCompleteRoundModels returns the value of CompleteRoundModels.
+func (s *ExerciseTargetResult) GetCompleteRoundModels() jx.Raw {
+	return s.CompleteRoundModels
+}
+
+// GetExternalSourceIdentifier returns the value of ExternalSourceIdentifier.
+func (s *ExerciseTargetResult) GetExternalSourceIdentifier() OptNilString {
+	return s.ExternalSourceIdentifier
+}
+
+// GetOnDemandTypeTarget returns the value of OnDemandTypeTarget.
+func (s *ExerciseTargetResult) GetOnDemandTypeTarget() OptNilBool {
+	return s.OnDemandTypeTarget
+}
+
+// SetSportReference sets the value of SportReference.
+func (s *ExerciseTargetResult) SetSportReference(val OptExerciseTargetResultSportReference) {
+	s.SportReference = val
+}
+
+// SetName sets the value of Name.
+func (s *ExerciseTargetResult) SetName(val OptNilString) {
+	s.Name = val
+}
+
+// SetType sets the value of Type.
+func (s *ExerciseTargetResult) SetType(val OptNilString) {
+	s.Type = val
+}
+
+// SetDuration sets the value of Duration.
+func (s *ExerciseTargetResult) SetDuration(val OptNilString) {
+	s.Duration = val
+}
+
+// SetDistance sets the value of Distance.
+func (s *ExerciseTargetResult) SetDistance(val OptNilFloat64) {
+	s.Distance = val
+}
+
+// SetKiloCalories sets the value of KiloCalories.
+func (s *ExerciseTargetResult) SetKiloCalories(val OptNilFloat64) {
+	s.KiloCalories = val
+}
+
+// SetTargetReached sets the value of TargetReached.
+func (s *ExerciseTargetResult) SetTargetReached(val OptNilBool) {
+	s.TargetReached = val
+}
+
+// SetExercisePhaseRepetitionModels sets the value of ExercisePhaseRepetitionModels.
+func (s *ExerciseTargetResult) SetExercisePhaseRepetitionModels(val OptNilPhaseRepetitionResultArray) {
+	s.ExercisePhaseRepetitionModels = val
+}
+
+// SetExercisePhaseModels sets the value of ExercisePhaseModels.
+func (s *ExerciseTargetResult) SetExercisePhaseModels(val OptNilPhaseResultModelArray) {
+	s.ExercisePhaseModels = val
+}
+
+// SetExerciseRacePaceResultData sets the value of ExerciseRacePaceResultData.
+func (s *ExerciseTargetResult) SetExerciseRacePaceResultData(val jx.Raw) {
+	s.ExerciseRacePaceResultData = val
+}
+
+// SetRacePaceSpeed sets the value of RacePaceSpeed.
+func (s *ExerciseTargetResult) SetRacePaceSpeed(val OptNilFloat64) {
+	s.RacePaceSpeed = val
+}
+
+// SetCompleteRoundModels sets the value of CompleteRoundModels.
+func (s *ExerciseTargetResult) SetCompleteRoundModels(val jx.Raw) {
+	s.CompleteRoundModels = val
+}
+
+// SetExternalSourceIdentifier sets the value of ExternalSourceIdentifier.
+func (s *ExerciseTargetResult) SetExternalSourceIdentifier(val OptNilString) {
+	s.ExternalSourceIdentifier = val
+}
+
+// SetOnDemandTypeTarget sets the value of OnDemandTypeTarget.
+func (s *ExerciseTargetResult) SetOnDemandTypeTarget(val OptNilBool) {
+	s.OnDemandTypeTarget = val
+}
+
+type ExerciseTargetResultSportReference struct {
+	// Polar sport id.
+	ID OptInt `json:"id"`
+}
+
+// GetID returns the value of ID.
+func (s *ExerciseTargetResultSportReference) GetID() OptInt {
+	return s.ID
+}
+
+// SetID sets the value of ID.
+func (s *ExerciseTargetResultSportReference) SetID(val OptInt) {
 	s.ID = val
 }
 
@@ -4780,6 +5038,52 @@ func (o OptDateTime) Or(d time.Time) time.Time {
 	return d
 }
 
+// NewOptExerciseTargetResultSportReference returns new OptExerciseTargetResultSportReference with value set to v.
+func NewOptExerciseTargetResultSportReference(v ExerciseTargetResultSportReference) OptExerciseTargetResultSportReference {
+	return OptExerciseTargetResultSportReference{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptExerciseTargetResultSportReference is optional ExerciseTargetResultSportReference.
+type OptExerciseTargetResultSportReference struct {
+	Value ExerciseTargetResultSportReference
+	Set   bool
+}
+
+// IsSet returns true if OptExerciseTargetResultSportReference was set.
+func (o OptExerciseTargetResultSportReference) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptExerciseTargetResultSportReference) Reset() {
+	var v ExerciseTargetResultSportReference
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptExerciseTargetResultSportReference) SetTo(v ExerciseTargetResultSportReference) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptExerciseTargetResultSportReference) Get() (v ExerciseTargetResultSportReference, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptExerciseTargetResultSportReference) Or(d ExerciseTargetResultSportReference) ExerciseTargetResultSportReference {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptFavoriteExerciseTargetType returns new OptFavoriteExerciseTargetType with value set to v.
 func NewOptFavoriteExerciseTargetType(v FavoriteExerciseTargetType) OptFavoriteExerciseTargetType {
 	return OptFavoriteExerciseTargetType{
@@ -5674,6 +5978,142 @@ func (o OptNilActivityTimelineDayDataPanelData) Or(d ActivityTimelineDayDataPane
 	return d
 }
 
+// NewOptNilBool returns new OptNilBool with value set to v.
+func NewOptNilBool(v bool) OptNilBool {
+	return OptNilBool{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilBool is optional nullable bool.
+type OptNilBool struct {
+	Value bool
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilBool was set.
+func (o OptNilBool) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilBool) Reset() {
+	var v bool
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilBool) SetTo(v bool) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilBool) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilBool) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v bool
+	o.Value = v
+}
+
+// IsEmpty returns true if the field was omitted from the payload (not Set and not Null).
+func (o OptNilBool) IsEmpty() bool {
+	return !o.Set && !o.Null
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilBool) Get() (v bool, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilBool) Or(d bool) bool {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilCoordinateSeries returns new OptNilCoordinateSeries with value set to v.
+func NewOptNilCoordinateSeries(v CoordinateSeries) OptNilCoordinateSeries {
+	return OptNilCoordinateSeries{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilCoordinateSeries is optional nullable CoordinateSeries.
+type OptNilCoordinateSeries struct {
+	Value CoordinateSeries
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilCoordinateSeries was set.
+func (o OptNilCoordinateSeries) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilCoordinateSeries) Reset() {
+	var v CoordinateSeries
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilCoordinateSeries) SetTo(v CoordinateSeries) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilCoordinateSeries) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilCoordinateSeries) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v CoordinateSeries
+	o.Value = v
+}
+
+// IsEmpty returns true if the field was omitted from the payload (not Set and not Null).
+func (o OptNilCoordinateSeries) IsEmpty() bool {
+	return !o.Set && !o.Null
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilCoordinateSeries) Get() (v CoordinateSeries, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilCoordinateSeries) Or(d CoordinateSeries) CoordinateSeries {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilFloat64 returns new OptNilFloat64 with value set to v.
 func NewOptNilFloat64(v float64) OptNilFloat64 {
 	return OptNilFloat64{
@@ -5946,6 +6386,278 @@ func (o OptNilInt64) Or(d int64) int64 {
 	return d
 }
 
+// NewOptNilPeriodData returns new OptNilPeriodData with value set to v.
+func NewOptNilPeriodData(v PeriodData) OptNilPeriodData {
+	return OptNilPeriodData{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilPeriodData is optional nullable PeriodData.
+type OptNilPeriodData struct {
+	Value PeriodData
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilPeriodData was set.
+func (o OptNilPeriodData) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilPeriodData) Reset() {
+	var v PeriodData
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilPeriodData) SetTo(v PeriodData) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilPeriodData) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilPeriodData) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v PeriodData
+	o.Value = v
+}
+
+// IsEmpty returns true if the field was omitted from the payload (not Set and not Null).
+func (o OptNilPeriodData) IsEmpty() bool {
+	return !o.Set && !o.Null
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilPeriodData) Get() (v PeriodData, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilPeriodData) Or(d PeriodData) PeriodData {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilPhaseRepetitionResultArray returns new OptNilPhaseRepetitionResultArray with value set to v.
+func NewOptNilPhaseRepetitionResultArray(v []PhaseRepetitionResult) OptNilPhaseRepetitionResultArray {
+	return OptNilPhaseRepetitionResultArray{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilPhaseRepetitionResultArray is optional nullable []PhaseRepetitionResult.
+type OptNilPhaseRepetitionResultArray struct {
+	Value []PhaseRepetitionResult
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilPhaseRepetitionResultArray was set.
+func (o OptNilPhaseRepetitionResultArray) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilPhaseRepetitionResultArray) Reset() {
+	var v []PhaseRepetitionResult
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilPhaseRepetitionResultArray) SetTo(v []PhaseRepetitionResult) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilPhaseRepetitionResultArray) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilPhaseRepetitionResultArray) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v []PhaseRepetitionResult
+	o.Value = v
+}
+
+// IsEmpty returns true if the field was omitted from the payload (not Set and not Null).
+func (o OptNilPhaseRepetitionResultArray) IsEmpty() bool {
+	return !o.Set && !o.Null
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilPhaseRepetitionResultArray) Get() (v []PhaseRepetitionResult, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilPhaseRepetitionResultArray) Or(d []PhaseRepetitionResult) []PhaseRepetitionResult {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilPhaseResultModelArray returns new OptNilPhaseResultModelArray with value set to v.
+func NewOptNilPhaseResultModelArray(v []PhaseResultModel) OptNilPhaseResultModelArray {
+	return OptNilPhaseResultModelArray{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilPhaseResultModelArray is optional nullable []PhaseResultModel.
+type OptNilPhaseResultModelArray struct {
+	Value []PhaseResultModel
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilPhaseResultModelArray was set.
+func (o OptNilPhaseResultModelArray) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilPhaseResultModelArray) Reset() {
+	var v []PhaseResultModel
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilPhaseResultModelArray) SetTo(v []PhaseResultModel) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilPhaseResultModelArray) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilPhaseResultModelArray) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v []PhaseResultModel
+	o.Value = v
+}
+
+// IsEmpty returns true if the field was omitted from the payload (not Set and not Null).
+func (o OptNilPhaseResultModelArray) IsEmpty() bool {
+	return !o.Set && !o.Null
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilPhaseResultModelArray) Get() (v []PhaseResultModel, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilPhaseResultModelArray) Or(d []PhaseResultModel) []PhaseResultModel {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilSampleSeries returns new OptNilSampleSeries with value set to v.
+func NewOptNilSampleSeries(v SampleSeries) OptNilSampleSeries {
+	return OptNilSampleSeries{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilSampleSeries is optional nullable SampleSeries.
+type OptNilSampleSeries struct {
+	Value SampleSeries
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilSampleSeries was set.
+func (o OptNilSampleSeries) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilSampleSeries) Reset() {
+	var v SampleSeries
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilSampleSeries) SetTo(v SampleSeries) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilSampleSeries) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilSampleSeries) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v SampleSeries
+	o.Value = v
+}
+
+// IsEmpty returns true if the field was omitted from the payload (not Set and not Null).
+func (o OptNilSampleSeries) IsEmpty() bool {
+	return !o.Set && !o.Null
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilSampleSeries) Get() (v SampleSeries, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilSampleSeries) Or(d SampleSeries) SampleSeries {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilString returns new OptNilString with value set to v.
 func NewOptNilString(v string) OptNilString {
 	return OptNilString{
@@ -6144,6 +6856,98 @@ func (o OptNilURI) Get() (v url.URL, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilURI) Or(d url.URL) url.URL {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptPeriodDataData returns new OptPeriodDataData with value set to v.
+func NewOptPeriodDataData(v PeriodDataData) OptPeriodDataData {
+	return OptPeriodDataData{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptPeriodDataData is optional PeriodDataData.
+type OptPeriodDataData struct {
+	Value PeriodDataData
+	Set   bool
+}
+
+// IsSet returns true if OptPeriodDataData was set.
+func (o OptPeriodDataData) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptPeriodDataData) Reset() {
+	var v PeriodDataData
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptPeriodDataData) SetTo(v PeriodDataData) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptPeriodDataData) Get() (v PeriodDataData, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptPeriodDataData) Or(d PeriodDataData) PeriodDataData {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptPeriodTime returns new OptPeriodTime with value set to v.
+func NewOptPeriodTime(v PeriodTime) OptPeriodTime {
+	return OptPeriodTime{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptPeriodTime is optional PeriodTime.
+type OptPeriodTime struct {
+	Value PeriodTime
+	Set   bool
+}
+
+// IsSet returns true if OptPeriodTime was set.
+func (o OptPeriodTime) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptPeriodTime) Reset() {
+	var v PeriodTime
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptPeriodTime) SetTo(v PeriodTime) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptPeriodTime) Get() (v PeriodTime, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptPeriodTime) Or(d PeriodTime) PeriodTime {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -6794,6 +7598,52 @@ func (o OptSessionExerciseTrainingStatistic) Or(d SessionExerciseTrainingStatist
 	return d
 }
 
+// NewOptSessionStatistic returns new OptSessionStatistic with value set to v.
+func NewOptSessionStatistic(v SessionStatistic) OptSessionStatistic {
+	return OptSessionStatistic{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSessionStatistic is optional SessionStatistic.
+type OptSessionStatistic struct {
+	Value SessionStatistic
+	Set   bool
+}
+
+// IsSet returns true if OptSessionStatistic was set.
+func (o OptSessionStatistic) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSessionStatistic) Reset() {
+	var v SessionStatistic
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSessionStatistic) SetTo(v SessionStatistic) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSessionStatistic) Get() (v SessionStatistic, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSessionStatistic) Or(d SessionStatistic) SessionStatistic {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSessionSummaryExercises returns new OptSessionSummaryExercises with value set to v.
 func NewOptSessionSummaryExercises(v SessionSummaryExercises) OptSessionSummaryExercises {
 	return OptSessionSummaryExercises{
@@ -7438,6 +8288,142 @@ func (o OptURI) Or(d url.URL) url.URL {
 	return d
 }
 
+// A node of the session's period tree (captured 2026-10-07): the root is the `TRAINING_SESSION`, its
+// child the `EXERCISE`, whose children are the detected `UPHILL` / `DOWNHILL` segments behind the
+// altitude chart. Values sit in `data`, keyed by name. Observed on `EXERCISE`: `TOTAL_UPHILL_COUNT`,
+// `TOTAL_DOWNHILL_COUNT`, `TOTAL_UPHILL_DISTANCE`, `TOTAL_DOWNHILL_DISTANCE` (m). On each hill
+// segment: `UPHILL_NUMBER` / `DOWNHILL_NUMBER`, `DISTANCE` (m), `DURATION` (ms), `ASCENT` / `DESCENT`
+// (m), `START_ALTITUDE` / `END_ALTITUDE` (m), `AVG_INCLINE` (%), `AVG_SPEED` / `MAX_SPEED` (km/h),
+// `AVG_HEART_RATE` / `MAX_HEART_RATE`, `AVG_POWER` / `MAX_POWER`, `AVG_CADENCE` / `MAX_CADENCE`. On
+// the root: `READONLY_IS_TEST` (string `"false"`).
+// Ref: #/components/schemas/PeriodData
+type PeriodData struct {
+	// Node kind — observed `TRAINING_SESSION`, `EXERCISE`, `UPHILL`, `DOWNHILL`.
+	Type       OptString         `json:"type"`
+	StartTime  OptPeriodTime     `json:"startTime"`
+	EndTime    OptPeriodTime     `json:"endTime"`
+	Data       OptPeriodDataData `json:"data"`
+	Subperiods []PeriodData      `json:"subperiods"`
+}
+
+// GetType returns the value of Type.
+func (s *PeriodData) GetType() OptString {
+	return s.Type
+}
+
+// GetStartTime returns the value of StartTime.
+func (s *PeriodData) GetStartTime() OptPeriodTime {
+	return s.StartTime
+}
+
+// GetEndTime returns the value of EndTime.
+func (s *PeriodData) GetEndTime() OptPeriodTime {
+	return s.EndTime
+}
+
+// GetData returns the value of Data.
+func (s *PeriodData) GetData() OptPeriodDataData {
+	return s.Data
+}
+
+// GetSubperiods returns the value of Subperiods.
+func (s *PeriodData) GetSubperiods() []PeriodData {
+	return s.Subperiods
+}
+
+// SetType sets the value of Type.
+func (s *PeriodData) SetType(val OptString) {
+	s.Type = val
+}
+
+// SetStartTime sets the value of StartTime.
+func (s *PeriodData) SetStartTime(val OptPeriodTime) {
+	s.StartTime = val
+}
+
+// SetEndTime sets the value of EndTime.
+func (s *PeriodData) SetEndTime(val OptPeriodTime) {
+	s.EndTime = val
+}
+
+// SetData sets the value of Data.
+func (s *PeriodData) SetData(val OptPeriodDataData) {
+	s.Data = val
+}
+
+// SetSubperiods sets the value of Subperiods.
+func (s *PeriodData) SetSubperiods(val []PeriodData) {
+	s.Subperiods = val
+}
+
+type PeriodDataData map[string]PeriodValue
+
+func (s *PeriodDataData) init() PeriodDataData {
+	m := *s
+	if m == nil {
+		m = map[string]PeriodValue{}
+		*s = m
+	}
+	return m
+}
+
+// A wall-clock instant of a `PeriodData` node.
+// Ref: #/components/schemas/PeriodTime
+type PeriodTime struct {
+	// Local wall-clock time despite the trailing `Z` (`2026-01-15T10:00:00.696Z` for a 10:00 local start);
+	// add nothing.
+	LocalDateTime OptString `json:"localDateTime"`
+	// The local UTC offset in ms (3 600 000 = UTC+1).
+	TimezoneOffsetInMilliseconds OptInt `json:"timezoneOffsetInMilliseconds"`
+}
+
+// GetLocalDateTime returns the value of LocalDateTime.
+func (s *PeriodTime) GetLocalDateTime() OptString {
+	return s.LocalDateTime
+}
+
+// GetTimezoneOffsetInMilliseconds returns the value of TimezoneOffsetInMilliseconds.
+func (s *PeriodTime) GetTimezoneOffsetInMilliseconds() OptInt {
+	return s.TimezoneOffsetInMilliseconds
+}
+
+// SetLocalDateTime sets the value of LocalDateTime.
+func (s *PeriodTime) SetLocalDateTime(val OptString) {
+	s.LocalDateTime = val
+}
+
+// SetTimezoneOffsetInMilliseconds sets the value of TimezoneOffsetInMilliseconds.
+func (s *PeriodTime) SetTimezoneOffsetInMilliseconds(val OptInt) {
+	s.TimezoneOffsetInMilliseconds = val
+}
+
+// A typed value inside `PeriodData.data`; exactly one of the two is set.
+// Ref: #/components/schemas/PeriodValue
+type PeriodValue struct {
+	NumValue    OptNilFloat64 `json:"numValue"`
+	StringValue OptNilString  `json:"stringValue"`
+}
+
+// GetNumValue returns the value of NumValue.
+func (s *PeriodValue) GetNumValue() OptNilFloat64 {
+	return s.NumValue
+}
+
+// GetStringValue returns the value of StringValue.
+func (s *PeriodValue) GetStringValue() OptNilString {
+	return s.StringValue
+}
+
+// SetNumValue sets the value of NumValue.
+func (s *PeriodValue) SetNumValue(val OptNilFloat64) {
+	s.NumValue = val
+}
+
+// SetStringValue sets the value of StringValue.
+func (s *PeriodValue) SetStringValue(val OptNilString) {
+	s.StringValue = val
+}
+
 // A single phase within a PHASED training target's exerciseTarget.phases array. Verified from captured
 // POST bodies for HEART_RATE_ZONES, SPEED_ZONES, POWER_ZONES, and NONE intensity variants and for both
 // `phaseChangeType` values (AUTOMATIC, MANUAL). Repeat groups carry `phaseType:"REPEAT"` (NOT "GROUP"
@@ -7956,6 +8942,256 @@ func (s *PhaseRepeatPhaseType) UnmarshalText(data []byte) error {
 	}
 }
 
+// The recorded result of one executed phase of a planned (PHASED) target — one element per phase
+// repetition, in execution order. A `3 × (8 min work + 3 min walk)` repeat therefore yields six
+// elements between the warm-up and cool-down. These are the numbered segments the web UI draws over
+// the analysis charts. Durations are ISO 8601 strings, speeds km/h, distances metres.
+// Ref: #/components/schemas/PhaseRepetitionResult
+type PhaseRepetitionResult struct {
+	// 1-based index into `exercisePhaseModels` (which planned phase this was).
+	PhaseIndex OptInt `json:"phaseIndex"`
+	// 0-based position in execution order across the whole session.
+	RepetitionIndex OptInt `json:"repetitionIndex"`
+	// 1-based repetition number of this phase (2 = second time this phase ran).
+	PhaseRepetitionIndex OptInt `json:"phaseRepetitionIndex"`
+	// Elapsed time from the exercise start to the end of this repetition (ISO 8601 duration).
+	SplitTime OptString `json:"splitTime"`
+	// Duration of this repetition (ISO 8601).
+	Duration OptString `json:"duration"`
+	// Metres covered in this repetition (equal to `distance` in captures).
+	SplitDistance OptNilFloat64 `json:"splitDistance"`
+	// Metres covered in this repetition.
+	Distance OptNilFloat64 `json:"distance"`
+	// Time inside the phase's target zone (ISO 8601); null when the phase has no zone.
+	InZone             OptNilString        `json:"inZone"`
+	HeartRateStatistic OptSessionStatistic `json:"heartRateStatistic"`
+	SpeedStatistic     OptSessionStatistic `json:"speedStatistic"`
+	CadenceStatistic   OptSessionStatistic `json:"cadenceStatistic"`
+	PowerStatistic     OptSessionStatistic `json:"powerStatistic"`
+	// Metres climbed in this repetition; null in captures.
+	Ascent OptNilFloat64 `json:"ascent"`
+	// Metres descended in this repetition; null in captures.
+	Descent OptNilFloat64 `json:"descent"`
+	// False when the athlete skipped/stopped before the phase's goal.
+	Finished OptBool `json:"finished"`
+}
+
+// GetPhaseIndex returns the value of PhaseIndex.
+func (s *PhaseRepetitionResult) GetPhaseIndex() OptInt {
+	return s.PhaseIndex
+}
+
+// GetRepetitionIndex returns the value of RepetitionIndex.
+func (s *PhaseRepetitionResult) GetRepetitionIndex() OptInt {
+	return s.RepetitionIndex
+}
+
+// GetPhaseRepetitionIndex returns the value of PhaseRepetitionIndex.
+func (s *PhaseRepetitionResult) GetPhaseRepetitionIndex() OptInt {
+	return s.PhaseRepetitionIndex
+}
+
+// GetSplitTime returns the value of SplitTime.
+func (s *PhaseRepetitionResult) GetSplitTime() OptString {
+	return s.SplitTime
+}
+
+// GetDuration returns the value of Duration.
+func (s *PhaseRepetitionResult) GetDuration() OptString {
+	return s.Duration
+}
+
+// GetSplitDistance returns the value of SplitDistance.
+func (s *PhaseRepetitionResult) GetSplitDistance() OptNilFloat64 {
+	return s.SplitDistance
+}
+
+// GetDistance returns the value of Distance.
+func (s *PhaseRepetitionResult) GetDistance() OptNilFloat64 {
+	return s.Distance
+}
+
+// GetInZone returns the value of InZone.
+func (s *PhaseRepetitionResult) GetInZone() OptNilString {
+	return s.InZone
+}
+
+// GetHeartRateStatistic returns the value of HeartRateStatistic.
+func (s *PhaseRepetitionResult) GetHeartRateStatistic() OptSessionStatistic {
+	return s.HeartRateStatistic
+}
+
+// GetSpeedStatistic returns the value of SpeedStatistic.
+func (s *PhaseRepetitionResult) GetSpeedStatistic() OptSessionStatistic {
+	return s.SpeedStatistic
+}
+
+// GetCadenceStatistic returns the value of CadenceStatistic.
+func (s *PhaseRepetitionResult) GetCadenceStatistic() OptSessionStatistic {
+	return s.CadenceStatistic
+}
+
+// GetPowerStatistic returns the value of PowerStatistic.
+func (s *PhaseRepetitionResult) GetPowerStatistic() OptSessionStatistic {
+	return s.PowerStatistic
+}
+
+// GetAscent returns the value of Ascent.
+func (s *PhaseRepetitionResult) GetAscent() OptNilFloat64 {
+	return s.Ascent
+}
+
+// GetDescent returns the value of Descent.
+func (s *PhaseRepetitionResult) GetDescent() OptNilFloat64 {
+	return s.Descent
+}
+
+// GetFinished returns the value of Finished.
+func (s *PhaseRepetitionResult) GetFinished() OptBool {
+	return s.Finished
+}
+
+// SetPhaseIndex sets the value of PhaseIndex.
+func (s *PhaseRepetitionResult) SetPhaseIndex(val OptInt) {
+	s.PhaseIndex = val
+}
+
+// SetRepetitionIndex sets the value of RepetitionIndex.
+func (s *PhaseRepetitionResult) SetRepetitionIndex(val OptInt) {
+	s.RepetitionIndex = val
+}
+
+// SetPhaseRepetitionIndex sets the value of PhaseRepetitionIndex.
+func (s *PhaseRepetitionResult) SetPhaseRepetitionIndex(val OptInt) {
+	s.PhaseRepetitionIndex = val
+}
+
+// SetSplitTime sets the value of SplitTime.
+func (s *PhaseRepetitionResult) SetSplitTime(val OptString) {
+	s.SplitTime = val
+}
+
+// SetDuration sets the value of Duration.
+func (s *PhaseRepetitionResult) SetDuration(val OptString) {
+	s.Duration = val
+}
+
+// SetSplitDistance sets the value of SplitDistance.
+func (s *PhaseRepetitionResult) SetSplitDistance(val OptNilFloat64) {
+	s.SplitDistance = val
+}
+
+// SetDistance sets the value of Distance.
+func (s *PhaseRepetitionResult) SetDistance(val OptNilFloat64) {
+	s.Distance = val
+}
+
+// SetInZone sets the value of InZone.
+func (s *PhaseRepetitionResult) SetInZone(val OptNilString) {
+	s.InZone = val
+}
+
+// SetHeartRateStatistic sets the value of HeartRateStatistic.
+func (s *PhaseRepetitionResult) SetHeartRateStatistic(val OptSessionStatistic) {
+	s.HeartRateStatistic = val
+}
+
+// SetSpeedStatistic sets the value of SpeedStatistic.
+func (s *PhaseRepetitionResult) SetSpeedStatistic(val OptSessionStatistic) {
+	s.SpeedStatistic = val
+}
+
+// SetCadenceStatistic sets the value of CadenceStatistic.
+func (s *PhaseRepetitionResult) SetCadenceStatistic(val OptSessionStatistic) {
+	s.CadenceStatistic = val
+}
+
+// SetPowerStatistic sets the value of PowerStatistic.
+func (s *PhaseRepetitionResult) SetPowerStatistic(val OptSessionStatistic) {
+	s.PowerStatistic = val
+}
+
+// SetAscent sets the value of Ascent.
+func (s *PhaseRepetitionResult) SetAscent(val OptNilFloat64) {
+	s.Ascent = val
+}
+
+// SetDescent sets the value of Descent.
+func (s *PhaseRepetitionResult) SetDescent(val OptNilFloat64) {
+	s.Descent = val
+}
+
+// SetFinished sets the value of Finished.
+func (s *PhaseRepetitionResult) SetFinished(val OptBool) {
+	s.Finished = val
+}
+
+// One planned phase of the target the session executed (flattened, no repeat nesting).
+// Ref: #/components/schemas/PhaseResultModel
+type PhaseResultModel struct {
+	// 1-based phase index, referenced by `PhaseRepetitionResult.phaseIndex`.
+	PhaseIndex OptInt `json:"phaseIndex"`
+	// Phase name as planned.
+	Name OptNilString `json:"name"`
+	// Intensity basis — observed `HEART_RATE_ZONES` and `NONE`. Likely also the target's other intensity
+	// types.
+	ZoneType OptNilString `json:"zoneType"`
+	// Lower target zone (1–5); null when `zoneType` is `NONE`.
+	LowerZone OptNilInt `json:"lowerZone"`
+	// Upper target zone (1–5); null when `zoneType` is `NONE`.
+	UpperZone OptNilInt `json:"upperZone"`
+}
+
+// GetPhaseIndex returns the value of PhaseIndex.
+func (s *PhaseResultModel) GetPhaseIndex() OptInt {
+	return s.PhaseIndex
+}
+
+// GetName returns the value of Name.
+func (s *PhaseResultModel) GetName() OptNilString {
+	return s.Name
+}
+
+// GetZoneType returns the value of ZoneType.
+func (s *PhaseResultModel) GetZoneType() OptNilString {
+	return s.ZoneType
+}
+
+// GetLowerZone returns the value of LowerZone.
+func (s *PhaseResultModel) GetLowerZone() OptNilInt {
+	return s.LowerZone
+}
+
+// GetUpperZone returns the value of UpperZone.
+func (s *PhaseResultModel) GetUpperZone() OptNilInt {
+	return s.UpperZone
+}
+
+// SetPhaseIndex sets the value of PhaseIndex.
+func (s *PhaseResultModel) SetPhaseIndex(val OptInt) {
+	s.PhaseIndex = val
+}
+
+// SetName sets the value of Name.
+func (s *PhaseResultModel) SetName(val OptNilString) {
+	s.Name = val
+}
+
+// SetZoneType sets the value of ZoneType.
+func (s *PhaseResultModel) SetZoneType(val OptNilString) {
+	s.ZoneType = val
+}
+
+// SetLowerZone sets the value of LowerZone.
+func (s *PhaseResultModel) SetLowerZone(val OptNilInt) {
+	s.LowerZone = val
+}
+
+// SetUpperZone sets the value of UpperZone.
+func (s *PhaseResultModel) SetUpperZone(val OptNilInt) {
+	s.UpperZone = val
+}
+
 // Fitness/health parameters used to derive zones and training feedback. Note: field names differ from
 // the POST /settings form (e.g. `height` here vs `heightCm` there) — see
 // `docs/endpoints/account.md`.
@@ -8338,9 +9574,13 @@ func (s *PhysicalInfoTrainingBackground) UnmarshalText(data []byte) error {
 // Schema captured 2026-05-26 on an account with zero sessions —
 // `captures/responses/16-progress-summary-empty.json`. Numeric fields are zero; distribution lists
 // contain a single placeholder entry with `sportName: "Aucune donnée relative au sport"` (localised)
-// and `distributionPercent: 100.0`. # TODO: verify shape on an account with recorded sessions —
-// element shapes for the zone lists are likely `[{zoneIndex, durationMillis, percent}]` but the empty
-// arrays don't expose them.
+// and `distributionPercent: 100.0`. Re-checked 2026-10-02 with one manual session (avg HR only, no
+// samples): distributions and totals fill in, the four zone lists stay `[]` — they need recorded
+// HR/power/speed samples.
+//
+// # TODO: verify zone-list element shape (likely
+//
+// `[{zoneIndex, durationMillis, percent}]`); modeled as open maps until then.
 // Ref: #/components/schemas/ProgressViewSummary
 type ProgressViewSummary struct {
 	// Per-metric sport-distribution breakdowns. Each entry is a list of `SportDistributionEntry` summing
@@ -8927,156 +10167,254 @@ func (s *RoutePoint) SetTime(val OptString) {
 	s.Time = val
 }
 
-// Per-exercise time-series samples, one entry per recorded metric. Each value is `null` until a device
-// populates it (a manually-entered session has every metric null — verified via capture
-// 23-analysis-details.json). The populated value shape is not yet captured — likely an array of
-// numbers or an object `{samplingRate, values:[]}`. TODO: confirm with a device-uploaded session.
+// Per-exercise time series, one entry per metric. A metric is `null` when the device did not record it
+// — every metric for a manually-entered session (capture 23-analysis-details.json). Populated
+// metrics are a `SampleSeries` (`{samples: {values, interval}}`), except `COORDINATE`, which is a list
+// of timestamped GPS fixes. Shapes confirmed 2026-10-07 from a device-recorded run (`PT1S` sensors,
+// `PT30S` energy series). This block is ~95% of the response (~500 KB for a 1 h run).
 // Ref: #/components/schemas/SampleBlock
 type SampleBlock struct {
-	// Heart-rate samples (bpm), or null.
-	HEARTRATE jx.Raw `json:"HEART_RATE"`
-	// Speed samples, or null.
-	SPEED jx.Raw `json:"SPEED"`
-	// Cumulative distance samples, or null.
-	DISTANCE jx.Raw `json:"DISTANCE"`
-	// Cadence samples (rpm/spm), or null.
-	CADENCE jx.Raw `json:"CADENCE"`
-	// Altitude samples (m), or null.
-	ALTITUDE jx.Raw `json:"ALTITUDE"`
-	// Power samples (W), or null.
-	POWER jx.Raw `json:"POWER"`
-	// Left/right power balance samples, or null.
-	POWERBALANCE jx.Raw `json:"POWER_BALANCE"`
-	// Left-pedal crank force samples, or null.
-	LEFTPEDALCRANKBASEDPOSITIVEFORCE jx.Raw `json:"LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE"`
-	// Right-pedal crank force samples, or null.
-	RIGHTPEDALCRANKBASEDPOSITIVEFORCE jx.Raw `json:"RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE"`
-	// Stride-length samples (m), or null.
-	STRIDELENGTH jx.Raw `json:"STRIDE_LENGTH"`
-	// Ambient temperature samples (°C), or null.
-	TEMPERATURE jx.Raw `json:"TEMPERATURE"`
-	// Body temperature samples (°C), or null.
-	BODYTEMPERATURE jx.Raw `json:"BODY_TEMPERATURE"`
+	// Heart rate, bpm (1 Hz).
+	HEARTRATE OptNilSampleSeries `json:"HEART_RATE"`
+	// Speed, km/h (1 Hz) — the UI's pace chart is derived from it.
+	SPEED OptNilSampleSeries `json:"SPEED"`
+	// Cumulative distance from the start, metres (1 Hz).
+	DISTANCE OptNilSampleSeries `json:"DISTANCE"`
+	// Cadence, rpm / steps-per-minute (1 Hz).
+	CADENCE OptNilSampleSeries `json:"CADENCE"`
+	// Barometric altitude, metres (1 Hz).
+	ALTITUDE OptNilSampleSeries `json:"ALTITUDE"`
+	// Power, W (1 Hz) — running power on a run.
+	POWER OptNilSampleSeries `json:"POWER"`
+	// Watch temperature, °C (1 Hz).
+	TEMPERATURE OptNilSampleSeries `json:"TEMPERATURE"`
+	// Energy from fat, kcal/min (`PT30S`).
+	FATKCALPERMIN OptNilSampleSeries `json:"FAT_KCAL_PER_MIN"`
+	// Energy from carbohydrate, kcal/min (`PT30S`).
+	CARBKCALPERMIN OptNilSampleSeries `json:"CARB_KCAL_PER_MIN"`
+	// Energy from protein, kcal/min (`PT30S`).
+	PROTEINKCALPERMIN OptNilSampleSeries `json:"PROTEIN_KCAL_PER_MIN"`
+	// Left/right power balance. Null in captures.
+	POWERBALANCE OptNilSampleSeries `json:"POWER_BALANCE"`
+	// Left-pedal crank force. Null in captures.
+	LEFTPEDALCRANKBASEDPOSITIVEFORCE OptNilSampleSeries `json:"LEFT_PEDAL_CRANK_BASED_POSITIVE_FORCE"`
+	// Right-pedal crank force. Null in captures.
+	RIGHTPEDALCRANKBASEDPOSITIVEFORCE OptNilSampleSeries `json:"RIGHT_PEDAL_CRANK_BASED_POSITIVE_FORCE"`
+	// Stride length, m. Null in captures.
+	STRIDELENGTH OptNilSampleSeries `json:"STRIDE_LENGTH"`
+	// Body temperature, °C. Null in captures.
+	BODYTEMPERATURE OptNilSampleSeries `json:"BODY_TEMPERATURE"`
+	// GPS track (timestamped fixes); null without GPS.
+	COORDINATE OptNilCoordinateSeries `json:"COORDINATE"`
 }
 
 // GetHEARTRATE returns the value of HEARTRATE.
-func (s *SampleBlock) GetHEARTRATE() jx.Raw {
+func (s *SampleBlock) GetHEARTRATE() OptNilSampleSeries {
 	return s.HEARTRATE
 }
 
 // GetSPEED returns the value of SPEED.
-func (s *SampleBlock) GetSPEED() jx.Raw {
+func (s *SampleBlock) GetSPEED() OptNilSampleSeries {
 	return s.SPEED
 }
 
 // GetDISTANCE returns the value of DISTANCE.
-func (s *SampleBlock) GetDISTANCE() jx.Raw {
+func (s *SampleBlock) GetDISTANCE() OptNilSampleSeries {
 	return s.DISTANCE
 }
 
 // GetCADENCE returns the value of CADENCE.
-func (s *SampleBlock) GetCADENCE() jx.Raw {
+func (s *SampleBlock) GetCADENCE() OptNilSampleSeries {
 	return s.CADENCE
 }
 
 // GetALTITUDE returns the value of ALTITUDE.
-func (s *SampleBlock) GetALTITUDE() jx.Raw {
+func (s *SampleBlock) GetALTITUDE() OptNilSampleSeries {
 	return s.ALTITUDE
 }
 
 // GetPOWER returns the value of POWER.
-func (s *SampleBlock) GetPOWER() jx.Raw {
+func (s *SampleBlock) GetPOWER() OptNilSampleSeries {
 	return s.POWER
 }
 
+// GetTEMPERATURE returns the value of TEMPERATURE.
+func (s *SampleBlock) GetTEMPERATURE() OptNilSampleSeries {
+	return s.TEMPERATURE
+}
+
+// GetFATKCALPERMIN returns the value of FATKCALPERMIN.
+func (s *SampleBlock) GetFATKCALPERMIN() OptNilSampleSeries {
+	return s.FATKCALPERMIN
+}
+
+// GetCARBKCALPERMIN returns the value of CARBKCALPERMIN.
+func (s *SampleBlock) GetCARBKCALPERMIN() OptNilSampleSeries {
+	return s.CARBKCALPERMIN
+}
+
+// GetPROTEINKCALPERMIN returns the value of PROTEINKCALPERMIN.
+func (s *SampleBlock) GetPROTEINKCALPERMIN() OptNilSampleSeries {
+	return s.PROTEINKCALPERMIN
+}
+
 // GetPOWERBALANCE returns the value of POWERBALANCE.
-func (s *SampleBlock) GetPOWERBALANCE() jx.Raw {
+func (s *SampleBlock) GetPOWERBALANCE() OptNilSampleSeries {
 	return s.POWERBALANCE
 }
 
 // GetLEFTPEDALCRANKBASEDPOSITIVEFORCE returns the value of LEFTPEDALCRANKBASEDPOSITIVEFORCE.
-func (s *SampleBlock) GetLEFTPEDALCRANKBASEDPOSITIVEFORCE() jx.Raw {
+func (s *SampleBlock) GetLEFTPEDALCRANKBASEDPOSITIVEFORCE() OptNilSampleSeries {
 	return s.LEFTPEDALCRANKBASEDPOSITIVEFORCE
 }
 
 // GetRIGHTPEDALCRANKBASEDPOSITIVEFORCE returns the value of RIGHTPEDALCRANKBASEDPOSITIVEFORCE.
-func (s *SampleBlock) GetRIGHTPEDALCRANKBASEDPOSITIVEFORCE() jx.Raw {
+func (s *SampleBlock) GetRIGHTPEDALCRANKBASEDPOSITIVEFORCE() OptNilSampleSeries {
 	return s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE
 }
 
 // GetSTRIDELENGTH returns the value of STRIDELENGTH.
-func (s *SampleBlock) GetSTRIDELENGTH() jx.Raw {
+func (s *SampleBlock) GetSTRIDELENGTH() OptNilSampleSeries {
 	return s.STRIDELENGTH
 }
 
-// GetTEMPERATURE returns the value of TEMPERATURE.
-func (s *SampleBlock) GetTEMPERATURE() jx.Raw {
-	return s.TEMPERATURE
-}
-
 // GetBODYTEMPERATURE returns the value of BODYTEMPERATURE.
-func (s *SampleBlock) GetBODYTEMPERATURE() jx.Raw {
+func (s *SampleBlock) GetBODYTEMPERATURE() OptNilSampleSeries {
 	return s.BODYTEMPERATURE
 }
 
+// GetCOORDINATE returns the value of COORDINATE.
+func (s *SampleBlock) GetCOORDINATE() OptNilCoordinateSeries {
+	return s.COORDINATE
+}
+
 // SetHEARTRATE sets the value of HEARTRATE.
-func (s *SampleBlock) SetHEARTRATE(val jx.Raw) {
+func (s *SampleBlock) SetHEARTRATE(val OptNilSampleSeries) {
 	s.HEARTRATE = val
 }
 
 // SetSPEED sets the value of SPEED.
-func (s *SampleBlock) SetSPEED(val jx.Raw) {
+func (s *SampleBlock) SetSPEED(val OptNilSampleSeries) {
 	s.SPEED = val
 }
 
 // SetDISTANCE sets the value of DISTANCE.
-func (s *SampleBlock) SetDISTANCE(val jx.Raw) {
+func (s *SampleBlock) SetDISTANCE(val OptNilSampleSeries) {
 	s.DISTANCE = val
 }
 
 // SetCADENCE sets the value of CADENCE.
-func (s *SampleBlock) SetCADENCE(val jx.Raw) {
+func (s *SampleBlock) SetCADENCE(val OptNilSampleSeries) {
 	s.CADENCE = val
 }
 
 // SetALTITUDE sets the value of ALTITUDE.
-func (s *SampleBlock) SetALTITUDE(val jx.Raw) {
+func (s *SampleBlock) SetALTITUDE(val OptNilSampleSeries) {
 	s.ALTITUDE = val
 }
 
 // SetPOWER sets the value of POWER.
-func (s *SampleBlock) SetPOWER(val jx.Raw) {
+func (s *SampleBlock) SetPOWER(val OptNilSampleSeries) {
 	s.POWER = val
 }
 
+// SetTEMPERATURE sets the value of TEMPERATURE.
+func (s *SampleBlock) SetTEMPERATURE(val OptNilSampleSeries) {
+	s.TEMPERATURE = val
+}
+
+// SetFATKCALPERMIN sets the value of FATKCALPERMIN.
+func (s *SampleBlock) SetFATKCALPERMIN(val OptNilSampleSeries) {
+	s.FATKCALPERMIN = val
+}
+
+// SetCARBKCALPERMIN sets the value of CARBKCALPERMIN.
+func (s *SampleBlock) SetCARBKCALPERMIN(val OptNilSampleSeries) {
+	s.CARBKCALPERMIN = val
+}
+
+// SetPROTEINKCALPERMIN sets the value of PROTEINKCALPERMIN.
+func (s *SampleBlock) SetPROTEINKCALPERMIN(val OptNilSampleSeries) {
+	s.PROTEINKCALPERMIN = val
+}
+
 // SetPOWERBALANCE sets the value of POWERBALANCE.
-func (s *SampleBlock) SetPOWERBALANCE(val jx.Raw) {
+func (s *SampleBlock) SetPOWERBALANCE(val OptNilSampleSeries) {
 	s.POWERBALANCE = val
 }
 
 // SetLEFTPEDALCRANKBASEDPOSITIVEFORCE sets the value of LEFTPEDALCRANKBASEDPOSITIVEFORCE.
-func (s *SampleBlock) SetLEFTPEDALCRANKBASEDPOSITIVEFORCE(val jx.Raw) {
+func (s *SampleBlock) SetLEFTPEDALCRANKBASEDPOSITIVEFORCE(val OptNilSampleSeries) {
 	s.LEFTPEDALCRANKBASEDPOSITIVEFORCE = val
 }
 
 // SetRIGHTPEDALCRANKBASEDPOSITIVEFORCE sets the value of RIGHTPEDALCRANKBASEDPOSITIVEFORCE.
-func (s *SampleBlock) SetRIGHTPEDALCRANKBASEDPOSITIVEFORCE(val jx.Raw) {
+func (s *SampleBlock) SetRIGHTPEDALCRANKBASEDPOSITIVEFORCE(val OptNilSampleSeries) {
 	s.RIGHTPEDALCRANKBASEDPOSITIVEFORCE = val
 }
 
 // SetSTRIDELENGTH sets the value of STRIDELENGTH.
-func (s *SampleBlock) SetSTRIDELENGTH(val jx.Raw) {
+func (s *SampleBlock) SetSTRIDELENGTH(val OptNilSampleSeries) {
 	s.STRIDELENGTH = val
 }
 
-// SetTEMPERATURE sets the value of TEMPERATURE.
-func (s *SampleBlock) SetTEMPERATURE(val jx.Raw) {
-	s.TEMPERATURE = val
+// SetBODYTEMPERATURE sets the value of BODYTEMPERATURE.
+func (s *SampleBlock) SetBODYTEMPERATURE(val OptNilSampleSeries) {
+	s.BODYTEMPERATURE = val
 }
 
-// SetBODYTEMPERATURE sets the value of BODYTEMPERATURE.
-func (s *SampleBlock) SetBODYTEMPERATURE(val jx.Raw) {
-	s.BODYTEMPERATURE = val
+// SetCOORDINATE sets the value of COORDINATE.
+func (s *SampleBlock) SetCOORDINATE(val OptNilCoordinateSeries) {
+	s.COORDINATE = val
+}
+
+// One evenly-spaced time series of a session's samples (captured from a device-recorded run
+// 2026-10-07). `values[i]` was recorded at `i × interval` from the exercise's `startTime`. A value is
+// `null` where the sensor had no reading (e.g. the first seconds of altitude/cadence). Units are the
+// metric's: bpm (`HEART_RATE`), km/h (`SPEED`, even when the UI shows pace), cumulative metres
+// (`DISTANCE`), metres (`ALTITUDE`), W (`POWER`), rpm/spm (`CADENCE`), °C (`TEMPERATURE`), kcal/min
+// (`*_KCAL_PER_MIN`).
+// Ref: #/components/schemas/SampleSeries
+type SampleSeries struct {
+	Samples SampleSeriesSamples `json:"samples"`
+}
+
+// GetSamples returns the value of Samples.
+func (s *SampleSeries) GetSamples() SampleSeriesSamples {
+	return s.Samples
+}
+
+// SetSamples sets the value of Samples.
+func (s *SampleSeries) SetSamples(val SampleSeriesSamples) {
+	s.Samples = val
+}
+
+type SampleSeriesSamples struct {
+	// ISO 8601 duration between consecutive values. Observed `PT1S` (1 Hz) for sensor metrics and `PT30S`
+	// for the `*_KCAL_PER_MIN` series.
+	Interval string `json:"interval"`
+	// Sample values, oldest first. A 1 h session at 1 Hz holds ~3 600.
+	Values []NilFloat64 `json:"values"`
+}
+
+// GetInterval returns the value of Interval.
+func (s *SampleSeriesSamples) GetInterval() string {
+	return s.Interval
+}
+
+// GetValues returns the value of Values.
+func (s *SampleSeriesSamples) GetValues() []NilFloat64 {
+	return s.Values
+}
+
+// SetInterval sets the value of Interval.
+func (s *SampleSeriesSamples) SetInterval(val string) {
+	s.Interval = val
+}
+
+// SetValues sets the value of Values.
+func (s *SampleSeriesSamples) SetValues(val []NilFloat64) {
+	s.Values = val
 }
 
 type SaveSportProfileOK struct {
@@ -9120,8 +10458,11 @@ func (s *SessionCookie) SetRoles(val []string) {
 	s.Roles = val
 }
 
-// Response of GET /api/training/analysis/{id}/details. Time-series samples, laps, zones, etc. For a
-// manual session all `samples[*][METRIC]` are null.
+// Response of GET /api/training/analysis/{id}/details — everything the web UI's session-analysis
+// charts draw: per-second samples, time in zones, laps, the hill segments, and (for a session started
+// from a planned target) the per-phase results. Every per-exercise block is keyed by exerciseId. For a
+// manual session all `samples[*][METRIC]` are null and `zones` is empty. Populated shapes captured
+// 2026-10-07 from a device-recorded interval run (PHASED target, no laps pressed).
 // Ref: #/components/schemas/SessionDetails
 type SessionDetails struct {
 	// Training session id (matches the `{id}` in the path).
@@ -9132,13 +10473,14 @@ type SessionDetails struct {
 	// Object keyed by exerciseId, each containing a per-metric sample block. All metrics null for manual
 	// sessions.
 	Samples OptSessionDetailsSamples `json:"samples"`
-	// Time-in-zone distributions, keyed by exerciseId. Empty object for manual sessions; populated by
-	// device upload. Shape when populated TBD.
+	// Time-in-zone distributions, keyed by exerciseId. Empty object for manual sessions.
 	Zones OptSessionDetailsZones `json:"zones"`
-	Laps  OptSessionDetailsLaps  `json:"laps"`
-	// Opaque per-period payload; null when absent. Left untyped (free-form) so it accepts both null and an
-	// object, since ogen does not honour nullable on an empty object schema.
-	PeriodData jx.Raw `json:"periodData"`
+	// Laps keyed by exerciseId. Empty on a device session whose segments came from a planned target (those
+	// are in `exerciseResultTargetData`). Element shape not captured yet. # TODO: capture a session with
+	// laps.
+	Laps OptSessionDetailsLaps `json:"laps"`
+	// The session's period tree (session → exercise → hill segments); null when absent.
+	PeriodData OptNilPeriodData `json:"periodData"`
 	// Per-exercise swim metrics; empty unless swim sport.
 	SwimDatas OptSessionDetailsSwimDatas `json:"swimDatas"`
 	// Per-exercise pause-time arrays, keyed by exerciseId. Left untyped (free-form) because a key's value
@@ -9149,8 +10491,9 @@ type SessionDetails struct {
 	DefaultHrZones jx.Raw `json:"defaultHrZones"`
 	// Parsing/quality issues, keyed by exerciseId. Empty when clean.
 	Errors OptSessionDetailsErrors `json:"errors"`
-	// Comparison to a planned training target. Populated only when the session was linked to a target
-	// (`hasTrainingTarget=true` in the history listing).
+	// Result against the planned training target, keyed by exerciseId. Empty unless the session was
+	// started from a target (`hasTrainingTarget=true` in the history listing). For a PHASED target this
+	// carries per-repetition splits — the numbered segments of the analysis charts.
 	ExerciseResultTargetData OptSessionDetailsExerciseResultTargetData `json:"exerciseResultTargetData"`
 }
 
@@ -9185,7 +10528,7 @@ func (s *SessionDetails) GetLaps() OptSessionDetailsLaps {
 }
 
 // GetPeriodData returns the value of PeriodData.
-func (s *SessionDetails) GetPeriodData() jx.Raw {
+func (s *SessionDetails) GetPeriodData() OptNilPeriodData {
 	return s.PeriodData
 }
 
@@ -9245,7 +10588,7 @@ func (s *SessionDetails) SetLaps(val OptSessionDetailsLaps) {
 }
 
 // SetPeriodData sets the value of PeriodData.
-func (s *SessionDetails) SetPeriodData(val jx.Raw) {
+func (s *SessionDetails) SetPeriodData(val OptNilPeriodData) {
 	s.PeriodData = val
 }
 
@@ -9288,14 +10631,15 @@ func (s *SessionDetailsErrors) init() SessionDetailsErrors {
 	return m
 }
 
-// Comparison to a planned training target. Populated only when the session was linked to a target
-// (`hasTrainingTarget=true` in the history listing).
-type SessionDetailsExerciseResultTargetData map[string]jx.Raw
+// Result against the planned training target, keyed by exerciseId. Empty unless the session was
+// started from a target (`hasTrainingTarget=true` in the history listing). For a PHASED target this
+// carries per-repetition splits — the numbered segments of the analysis charts.
+type SessionDetailsExerciseResultTargetData map[string]ExerciseTargetResult
 
 func (s *SessionDetailsExerciseResultTargetData) init() SessionDetailsExerciseResultTargetData {
 	m := *s
 	if m == nil {
-		m = map[string]jx.Raw{}
+		m = map[string]ExerciseTargetResult{}
 		*s = m
 	}
 	return m
@@ -9312,6 +10656,9 @@ func (s *SessionDetailsExercises) init() SessionDetailsExercises {
 	return m
 }
 
+// Laps keyed by exerciseId. Empty on a device session whose segments came from a planned target (those
+// are in `exerciseResultTargetData`). Element shape not captured yet. # TODO: capture a session with
+// laps.
 type SessionDetailsLaps map[string]SessionDetailsLapsItem
 
 func (s *SessionDetailsLaps) init() SessionDetailsLaps {
@@ -9373,25 +10720,13 @@ func (s *SessionDetailsSwimDatas) init() SessionDetailsSwimDatas {
 	return m
 }
 
-// Time-in-zone distributions, keyed by exerciseId. Empty object for manual sessions; populated by
-// device upload. Shape when populated TBD.
-type SessionDetailsZones map[string]SessionDetailsZonesItem
+// Time-in-zone distributions, keyed by exerciseId. Empty object for manual sessions.
+type SessionDetailsZones map[string]SessionZones
 
 func (s *SessionDetailsZones) init() SessionDetailsZones {
 	m := *s
 	if m == nil {
-		m = map[string]SessionDetailsZonesItem{}
-		*s = m
-	}
-	return m
-}
-
-type SessionDetailsZonesItem map[string]jx.Raw
-
-func (s *SessionDetailsZonesItem) init() SessionDetailsZonesItem {
-	m := *s
-	if m == nil {
-		m = map[string]jx.Raw{}
+		m = map[string]SessionZones{}
 		*s = m
 	}
 	return m
@@ -9810,6 +11145,56 @@ func (s *SessionExerciseTrainingStatisticItem) SetAvg(val OptNilFloat64) {
 // SetMin sets the value of Min.
 func (s *SessionExerciseTrainingStatisticItem) SetMin(val OptNilFloat64) {
 	s.Min = val
+}
+
+// Average / max / min of one metric over a span; any may be null.
+// Ref: #/components/schemas/SessionStatistic
+type SessionStatistic struct {
+	Avg OptNilFloat64 `json:"avg"`
+	Max OptNilFloat64 `json:"max"`
+	Min OptNilFloat64 `json:"min"`
+	// Always null in captures.
+	Modified OptNilString `json:"modified"`
+}
+
+// GetAvg returns the value of Avg.
+func (s *SessionStatistic) GetAvg() OptNilFloat64 {
+	return s.Avg
+}
+
+// GetMax returns the value of Max.
+func (s *SessionStatistic) GetMax() OptNilFloat64 {
+	return s.Max
+}
+
+// GetMin returns the value of Min.
+func (s *SessionStatistic) GetMin() OptNilFloat64 {
+	return s.Min
+}
+
+// GetModified returns the value of Modified.
+func (s *SessionStatistic) GetModified() OptNilString {
+	return s.Modified
+}
+
+// SetAvg sets the value of Avg.
+func (s *SessionStatistic) SetAvg(val OptNilFloat64) {
+	s.Avg = val
+}
+
+// SetMax sets the value of Max.
+func (s *SessionStatistic) SetMax(val OptNilFloat64) {
+	s.Max = val
+}
+
+// SetMin sets the value of Min.
+func (s *SessionStatistic) SetMin(val OptNilFloat64) {
+	s.Min = val
+}
+
+// SetModified sets the value of Modified.
+func (s *SessionStatistic) SetModified(val OptNilString) {
+	s.Modified = val
 }
 
 // Response of GET /api/training/analysis/{id}/summary. Field-name and unit conventions inconsistent
@@ -10310,6 +11695,136 @@ func (s *SessionSummaryTrainingUserInfo) SetCountryCode(val OptNilString) {
 	s.CountryCode = val
 }
 
+// Time spent in one zone of a recorded session. `lowerLimit`/`higherLimit` are the zone bounds in the
+// list's unit: bpm (`HEART_RATE`), km/h (`SPEED`), W (`POWER`) — the zones of the sport profile at
+// recording time.
+// Ref: #/components/schemas/SessionZone
+type SessionZone struct {
+	// Inclusive lower bound (bpm, km/h or W).
+	LowerLimit OptFloat64 `json:"lowerLimit"`
+	// Exclusive upper bound (bpm, km/h or W).
+	HigherLimit OptFloat64 `json:"higherLimit"`
+	// Time in the zone as an ISO 8601 duration (`PT2138S`, `PT533.5S`).
+	InZone OptNilString `json:"inZone"`
+	// Metres covered in the zone. Set on `SPEED` zones only; null for HR/power.
+	Distance OptNilFloat64 `json:"distance"`
+	// 1-based zone number (1 = lowest).
+	ZoneIndex OptInt `json:"zoneIndex"`
+	// Always null in captures.
+	Created OptNilString `json:"created"`
+	// Always null in captures.
+	Modified OptNilString `json:"modified"`
+}
+
+// GetLowerLimit returns the value of LowerLimit.
+func (s *SessionZone) GetLowerLimit() OptFloat64 {
+	return s.LowerLimit
+}
+
+// GetHigherLimit returns the value of HigherLimit.
+func (s *SessionZone) GetHigherLimit() OptFloat64 {
+	return s.HigherLimit
+}
+
+// GetInZone returns the value of InZone.
+func (s *SessionZone) GetInZone() OptNilString {
+	return s.InZone
+}
+
+// GetDistance returns the value of Distance.
+func (s *SessionZone) GetDistance() OptNilFloat64 {
+	return s.Distance
+}
+
+// GetZoneIndex returns the value of ZoneIndex.
+func (s *SessionZone) GetZoneIndex() OptInt {
+	return s.ZoneIndex
+}
+
+// GetCreated returns the value of Created.
+func (s *SessionZone) GetCreated() OptNilString {
+	return s.Created
+}
+
+// GetModified returns the value of Modified.
+func (s *SessionZone) GetModified() OptNilString {
+	return s.Modified
+}
+
+// SetLowerLimit sets the value of LowerLimit.
+func (s *SessionZone) SetLowerLimit(val OptFloat64) {
+	s.LowerLimit = val
+}
+
+// SetHigherLimit sets the value of HigherLimit.
+func (s *SessionZone) SetHigherLimit(val OptFloat64) {
+	s.HigherLimit = val
+}
+
+// SetInZone sets the value of InZone.
+func (s *SessionZone) SetInZone(val OptNilString) {
+	s.InZone = val
+}
+
+// SetDistance sets the value of Distance.
+func (s *SessionZone) SetDistance(val OptNilFloat64) {
+	s.Distance = val
+}
+
+// SetZoneIndex sets the value of ZoneIndex.
+func (s *SessionZone) SetZoneIndex(val OptInt) {
+	s.ZoneIndex = val
+}
+
+// SetCreated sets the value of Created.
+func (s *SessionZone) SetCreated(val OptNilString) {
+	s.Created = val
+}
+
+// SetModified sets the value of Modified.
+func (s *SessionZone) SetModified(val OptNilString) {
+	s.Modified = val
+}
+
+// Per-metric time-in-zone lists of one exercise, five zones each, lowest first. Empty object for a
+// manual session. Captured 2026-10-07 from a device-recorded run carrying HR, speed and power.
+// Ref: #/components/schemas/SessionZones
+type SessionZones struct {
+	HEARTRATE []SessionZone `json:"HEART_RATE"`
+	SPEED     []SessionZone `json:"SPEED"`
+	POWER     []SessionZone `json:"POWER"`
+}
+
+// GetHEARTRATE returns the value of HEARTRATE.
+func (s *SessionZones) GetHEARTRATE() []SessionZone {
+	return s.HEARTRATE
+}
+
+// GetSPEED returns the value of SPEED.
+func (s *SessionZones) GetSPEED() []SessionZone {
+	return s.SPEED
+}
+
+// GetPOWER returns the value of POWER.
+func (s *SessionZones) GetPOWER() []SessionZone {
+	return s.POWER
+}
+
+// SetHEARTRATE sets the value of HEARTRATE.
+func (s *SessionZones) SetHEARTRATE(val []SessionZone) {
+	s.HEARTRATE = val
+}
+
+// SetSPEED sets the value of SPEED.
+func (s *SessionZones) SetSPEED(val []SessionZone) {
+	s.SPEED = val
+}
+
+// SetPOWER sets the value of POWER.
+func (s *SessionZones) SetPOWER(val []SessionZone) {
+	s.POWER = val
+}
+
 // A single recorded night of sleep on a Polar device with `Sleep Plus Stages` support. Field semantics
 // reconstructed from the Polar Flow JS bundle (`/flow-ui-mono/static/js/async/1608.16456f2f.js`) —
 // no live capture with data was possible on the test account, so element shapes for nested arrays
@@ -10327,17 +11842,15 @@ type SleepNight struct {
 	SleepStartTime string `json:"sleepStartTime"`
 	// ISO datetime of wake-up. Paired with `sleepEndOffset`.
 	SleepEndTime string `json:"sleepEndTime"`
-	// Nullable as a precaution (# TODO: verify; a null sleepScore was seen live 2026-10-01). Offset in
-	// seconds added to `sleepStartTime` to get the "fell asleep" moment (web UI:
-	// `jsonDatetimeAsMoment(sleepStartTime).add(sleepStartOffset, "seconds")`, bundle read 2026-09-30).
+	// Offset in seconds added to `sleepStartTime` to get the "fell asleep" moment (web UI:
+	// `jsonDatetimeAsMoment(sleepStartTime) .add(sleepStartOffset, "seconds")`, bundle read 2026-09-30).
 	// `sleepWakeStates[].offsetFromStart` counts from `sleepStartTime`, before this offset.
 	SleepStartOffset NilInt `json:"sleepStartOffset"`
-	// Offset in seconds added to `sleepEndTime` (wake-up offset). Nullable as a precaution (# TODO:
-	// verify).
+	// Offset in seconds added to `sleepEndTime` (wake-up offset).
 	SleepEndOffset NilInt `json:"sleepEndOffset"`
 	// Overall sleep score 0–100 (a float, e.g. 72.5762). The JS bundle treats `0` as "no score"
-	// (excluded from averages). Polar calls this "Sleep Score". Can be `null` (observed live 2026-10-01 on
-	// a real account, within a 365-day report); treat like `0`.
+	// (excluded from averages). Polar calls this "Sleep Score". Can be `null` (seen live 2026-10-01 on a
+	// real account, within a 365-day report — a strict decoder failed the whole report); treat like `0`.
 	SleepScore OptNilFloat64 `json:"sleepScore"`
 	// Bucketed class of `continuityIndex` (integer); null when no data.
 	ContinuityClass OptNilInt `json:"continuityClass"`
@@ -10355,7 +11868,7 @@ type SleepNight struct {
 	// `rem`), UNKNOWN (code 4), and INTERRUPTIONS (code 0, carrying `longInterruption`). Each entry starts
 	// a segment lasting until the next entry (the last one until wake-up). Deep sleep only counts on a
 	// Sleep Plus Stages night (one with `sleepCycles` > 0 or any code 1/2 entry). Codes read from the web
-	// UI bundle 2026-09-30 — unconfirmed by a capture.
+	// UI bundle 2026-09-30. # TODO: verify on a device-synced account.
 	SleepWakeStates []SleepNightSleepWakeStatesItem `json:"sleepWakeStates"`
 	// Pre-grouped stage intervals — present only on accounts/devices with Sleep Plus Stages enabled. The
 	// JS bundle constructs this client-side from `sleepWakeStates`, but the same keys appear server-side

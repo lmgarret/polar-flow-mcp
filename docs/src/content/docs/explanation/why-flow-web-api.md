@@ -89,7 +89,7 @@ trusted-network barrier).
 | Schedule a structured workout | `create_training_target` |
 | List / read / edit / delete targets | `list_training_targets`, `get_training_target`, `update_training_target`, `delete_training_target` |
 | Read the calendar & weekly totals | `get_calendar_events`, `get_calendar_week_summary` |
-| Read completed sessions | `list_training_sessions`, `get_training_session_summary`, `get_training_session_details` |
+| Read completed sessions | `list_training_sessions`, `get_training_session_summary`, `get_training_session_details`, `get_training_session_samples` |
 | Aggregate progress over a range | `get_progress_summary` |
 | Log a manual session | `create_training_session` |
 
