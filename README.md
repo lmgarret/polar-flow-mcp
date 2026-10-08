@@ -211,6 +211,21 @@ support MCP elicitation. Where the client cannot
 be asked, the call proceeds unconfirmed — see
 [User confirmation on writes](https://lmgarret.github.io/polar-flow-mcp/reference/mcp-tools/#user-confirmation-on-writes).
 
+## Claude skill
+
+The `polar-flow` skill (`skill/polar-flow/`) teaches Claude how to use these
+tools together — which one fits, full-replace edits, safe writes. Install it
+from the plugin marketplace in this repo (Claude Code):
+
+```
+/plugin marketplace add lmgarret/polar-flow-mcp
+/plugin install polar-flow@polar-flow-mcp
+```
+
+or download `polar-flow.skill` from a [release](https://github.com/lmgarret/polar-flow-mcp/releases/latest)
+and upload it in Claude.ai. See
+[Install the polar-flow skill](https://lmgarret.github.io/polar-flow-mcp/guides/install-the-skill/).
+
 ## Configuration
 
 See [`.env.example`](.env.example). Required:

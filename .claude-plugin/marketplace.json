@@ -1,0 +1,20 @@
+{
+  "name": "polar-flow-mcp",
+  "description": "The polar-flow skill: how to drive the polar-flow-mcp tools together.",
+  "owner": {
+    "name": "lmgarret",
+    "url": "https://github.com/lmgarret"
+  },
+  "plugins": [
+    {
+      "name": "polar-flow",
+      "source": "./skill",
+      "description": "Cross-tool rules and workflows for the polar-flow-mcp server: which tool fits, full-replace edits, safe writes. Does not install the server itself.",
+      "homepage": "https://lmgarret.github.io/polar-flow-mcp/guides/install-the-skill/",
+      "repository": "https://github.com/lmgarret/polar-flow-mcp",
+      "license": "MIT",
+      "keywords": ["polar", "polar-flow", "training", "mcp"],
+      "skills": ["./polar-flow"]
+    }
+  ]
+}

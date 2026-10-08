@@ -124,6 +124,10 @@ jobs:
             echo "${IMAGE}:latest        # newest stable release"
             echo '```'
             echo ""
+            echo "### Claude skill"
+            echo ""
+            echo "\`polar-flow.skill\` (below) is the [polar-flow skill](https://lmgarret.github.io/polar-flow-mcp/guides/install-the-skill/) for this release: upload it in Claude.ai, or unzip it into \`~/.claude/skills/\`."
+            echo ""
             echo "<details><summary>Full commit log</summary>"
             echo ""
             echo '```'
@@ -178,6 +182,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Package Claude skill
+        run: make skill
+
       - name: Create versioned release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
@@ -185,3 +194,4 @@ jobs:
           name: ${{ needs.resolve-version.outputs.tag }}
           body: ${{ needs.resolve-version.outputs.body }}
           generate_release_notes: false
+          files: bin/polar-flow.skill
