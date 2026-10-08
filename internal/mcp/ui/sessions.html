@@ -158,13 +158,24 @@ window.addEventListener("message", e => {
   } else if (m.method === "ui/notifications/tool-result") dispatch(m.params, onToolResult);
   else if (m.method === "ui/notifications/tool-cancelled") { gotResult = true; renderNotice("cancelled", "The tool call was cancelled."); }
 });
-function rpc(method, params) {
+// Server calls made from the app (tools/call) give up after 15 s: a host that
+// cannot reach the server (an auth proxy dropping the call, a bridge route on
+// another worker) may never answer, which used to leave a spinner forever.
+const CALL_TIMEOUT_MS = 15000;
+function rpc(method, params, timeoutMs) {
   const id = ++msgId;
   return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject });
+    let timer = null;
+    const done = fn => v => { clearTimeout(timer); pending.delete(id); fn(v); };
+    pending.set(id, { resolve: done(resolve), reject: done(reject) });
+    if (timeoutMs) timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error(`the host did not answer ${params?.name ?? method} within ${timeoutMs / 1000} s`));
+    }, timeoutMs);
     window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
   });
 }
+const callTool = (name, args) => rpc("tools/call", { name, arguments: args }, CALL_TIMEOUT_MS);
 // Current MCP-app hosts (Claude Desktop, 2026-07) drop structuredContent from
 // the forwarded tool-result, so read the tagged {"type":...} JSON text block the
 // server also emits. structuredContent is still preferred when the host sends it.
@@ -395,7 +406,7 @@ async function openSession(id) {
   root.className = "";
   root.innerHTML = `<div class="loading"><span class="spinner"></span>Loading…</div>`;
   try {
-    const result = await rpc("tools/call", { name: "get_training_session_summary", arguments: { session_id: Number(id) } });
+    const result = await callTool("get_training_session_summary", { session_id: Number(id) });
     const n = noticeFor(result);
     if (n) {
       root.innerHTML = noticeHTML(n.kind, n.message) +
@@ -406,7 +417,8 @@ async function openSession(id) {
     root.innerHTML = summaryHTML(sc?.summary ?? sc?.data ?? sc, session, true, true) +
       `<button class="det-btn" onclick="openDetails('${esc(id)}')">Details ›</button>`;
   } catch (err) {
-    root.innerHTML = `<div class="empty-state">Could not load session: ${esc(err.message)}</div>`;
+    root.innerHTML = `<div class="empty-state">Could not load session: ${esc(err.message)}</div>` +
+      `<button class="back-btn" onclick="backToList()">‹ Back</button>`;
   }
 }
 // Drill from a summary into the details view (zones, reps, curves).
@@ -414,7 +426,7 @@ async function openDetails(id) {
   const root = document.getElementById("root");
   root.innerHTML = `<div class="loading"><span class="spinner"></span>Loading…</div>`;
   try {
-    const result = await rpc("tools/call", { name: "get_training_session_details", arguments: { session_id: Number(id) } });
+    const result = await callTool("get_training_session_details", { session_id: Number(id) });
     const n = noticeFor(result);
     if (n) { root.innerHTML = noticeHTML(n.kind, n.message); return; }
     renderDirectDetails(extractPayload(result), true);
@@ -567,8 +579,8 @@ async function loadCurves(sessionId, ex, cat, reps) {
   // ~600 points across the session: fine enough to draw, small enough to ship.
   const resolution = Math.max(1, Math.ceil((ex.duration_s || 3600) / 600));
   try {
-    const result = await rpc("tools/call", { name: "get_training_session_samples", arguments: {
-      session_id: Number(sessionId), exercise_id: ex.exercise_id, metrics: defs.map(d => d.metric), resolution_s: resolution } });
+    const result = await callTool("get_training_session_samples", {
+      session_id: Number(sessionId), exercise_id: ex.exercise_id, metrics: defs.map(d => d.metric), resolution_s: resolution });
     const p = noticeFor(result) ? null : extractPayload(result);
     if (!p || !p.columns) { el.innerHTML = ""; return; }
     const pace = !cat || PACE_KM_CATS.has(cat);
