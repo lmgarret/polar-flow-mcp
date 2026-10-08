@@ -141,7 +141,7 @@ If something failed, check `LOG_LEVEL=debug` for the request / refresh trace.
 - [Create and manage training targets](/polar-flow-mcp/guides/create-training-targets/) — phase
   vocabulary and worked examples.
 - [Install the polar-flow skill](/polar-flow-mcp/guides/install-the-skill/) — teach Claude
-  which tool to call and the exact parameter shapes.
+  which tool to call and how to chain them safely.
 - [MCP tools reference](/polar-flow-mcp/reference/mcp-tools/) — full argument schemas.
 - [Expose the server securely](/polar-flow-mcp/guides/expose-securely/) — public access for
   Claude.ai (Caddy + Authelia).

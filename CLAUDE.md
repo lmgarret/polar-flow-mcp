@@ -30,6 +30,11 @@ and silent refresh.
    which needs the D2 binary on `PATH` (`go install oss.terrastruct.com/d2@v0.9.0`,
    or the release tarball — CI installs it). Build/preview with
    `cd docs && npm ci && npm run build` (or `npm run dev`).
+4. **Skill**: `skill/polar-flow/` holds only cross-tool rules and workflows
+   (which tool fits, full-replace edits, safe writes, read-back → update
+   translation). Per-tool parameters, units and limits belong in the tool
+   descriptions in `internal/mcp` — don't copy them into the skill. Behaviour
+   checks live in `skill/evals/polar-flow.json`.
 
 ## Project Conventions
 

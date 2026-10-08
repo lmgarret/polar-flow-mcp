@@ -1,16 +1,18 @@
 ---
 title: Install the polar-flow skill
-description: Install the polar-flow skill so Claude knows which tool to call and the exact parameter shapes, and connect your Claude client to the server.
+description: Install the polar-flow skill so Claude picks the right tool, follows the safe-write rules and chains multi-step edits, and connect your Claude client to the server.
 sidebar:
   order: 4
 ---
 
-The `polar-flow` skill tells Claude how to drive the polar-flow-mcp tools
-correctly — which tool does what, the exact parameter shapes, the units the API
-expects, and how to handle failures — so you can speak in plain language rather
-than remembering API parameters. It ships in the repository under
-`skill/polar-flow/`: a `SKILL.md` entry point plus a `reference/` directory of
-on-demand detail pages.
+The `polar-flow` skill tells Claude how to use the polar-flow-mcp tools
+together — which tool fits a request, the rules that span tools (full-replace
+updates, never inventing session history, confirming writes, turning a pace or
+wattage into a zone), and multi-step workflows such as editing a planned
+workout. Per-tool parameters, units and limits live in the tools' own
+descriptions, which every MCP client receives with or without the skill. It
+ships in the repository under `skill/polar-flow/`: a `SKILL.md` entry point
+plus a `reference/` directory of on-demand detail pages.
 
 :::note
 The `polar-flow` skill covers only the *mechanics* of calling the tools. It

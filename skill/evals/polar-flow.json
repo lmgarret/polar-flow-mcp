@@ -1,0 +1,45 @@
+[
+  {
+    "skills": ["polar-flow"],
+    "query": "Move my run planned for Thursday to Friday, same time.",
+    "expected_behavior": [
+      "Finds the target with list_training_targets, then reads it with get_training_target",
+      "Calls update_training_target with the name, sport, time and every phase carried over from the read-back; only the date changes",
+      "Takes each phase's goal from goalType, so a distance phase is not sent as a duration goal"
+    ]
+  },
+  {
+    "skills": ["polar-flow"],
+    "query": "Plan 4x8 min on the bike at 250 W next Tuesday at 7am with 3 min easy between.",
+    "expected_behavior": [
+      "Calls get_training_zones with the cycling sport_id before choosing a zone",
+      "Uses the power_zone whose [min, max) range contains 250 W, not a guess from percentages",
+      "Creates one repeat phase with reps 4, goal.duration_s 480 and recovery.duration_s 180"
+    ]
+  },
+  {
+    "skills": ["polar-flow"],
+    "query": "I think I forgot to log yesterday's run, should I?",
+    "expected_behavior": [
+      "Does not call create_training_session",
+      "May read list_training_sessions to check, then offers to log it and asks for the details"
+    ]
+  },
+  {
+    "skills": ["polar-flow"],
+    "query": "Rename my 'Easy 45' favorite to 'Easy 45 Z2'.",
+    "expected_behavior": [
+      "Finds the favorite_id with list_favorites",
+      "Uses rename_favorite, not update_favorite"
+    ]
+  },
+  {
+    "skills": ["polar-flow"],
+    "query": "Put three easy 40-minute runs in my diary on Monday, Wednesday and Friday next week.",
+    "expected_behavior": [
+      "Confirms the plan once before writing",
+      "Creates the targets one at a time and reports each id",
+      "Ends with list_training_targets over that week"
+    ]
+  }
+]
