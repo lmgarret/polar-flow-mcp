@@ -14,8 +14,8 @@ examples.
 
 :::tip
 Install the [polar-flow skill](/polar-flow-mcp/guides/install-the-skill/) first. It teaches Claude
-which tool to call and the exact parameter shapes, so you can speak in plain
-language rather than tool arguments.
+which tool to call and how to chain reads and writes safely, so you can speak
+in plain language rather than tool arguments.
 :::
 
 ## Intensity vocabulary

@@ -1,153 +1,82 @@
-# Planned training targets
+# Building and editing planned workouts
 
-How to build, edit, and delete planned workouts with `create_training_target`,
-`update_training_target`, `get_training_target`, and `delete_training_target`.
-This is the most error-prone area of the API — get the units and the `phases`
-shape right and everything round-trips.
+## Contents
+- Choosing a shape
+- Intensity
+- Editing: turning the read-back into update arguments
+- What an update can't keep
 
-## Units & formats (non-negotiable)
+## Choosing a shape
 
-| Field | Unit / format | Example |
-|-------|---------------|---------|
-| `date` | ISO `YYYY-MM-DD` | `2026-06-02` |
-| `time` | 24h `HH:MM` | `09:00` |
-| `distance_m` | **metres** (the Flow UI shows km) | `5000` = 5 km |
-| `duration_s` | **seconds** | `600` = 10 min |
-| `intensity.hr_zone` | integer 1–5 (heart-rate zone index) | `4` |
-| `intensity.power_zone` | integer 1–5 (power zone index) | `4` |
-| `intensity.speed_zone` | integer 1–5 (speed/pace zone index) | `4` |
-| `sport_id` | Polar sport id | `1` = running; e.g. `2` cycling, `23` swimming. `list_sports` for all ids |
+| The user asks for… | Send to `create_training_target` |
+|---|---|
+| A slot with no structure ("run Sunday") | No `phases` and no goal. This is an open VOLUME target |
+| One total goal ("35 min easy", "10 km") | No `phases`, top-level `duration_s` or `distance_m` (VOLUME) |
+| One continuous zoned effort by **time** ("40 min at threshold") | A single `warmup` phase with `intensity` and a custom `name` |
+| One continuous zoned effort by **distance** ("8 km at tempo") | `repeat` with `reps: 2` and half the distance, or ask the user. A distance-goal block has to be a `repeat`, and `reps` must be at least 2 |
+| Structured intervals | `warmup` → `repeat` (`goal` + optional `recovery`) → `cooldown` |
 
-The tools never accept km, miles, or `HH:MM:SS`. Convert before calling.
+There is no "main" phase type. `warmup` / `cooldown` take only a duration, and
+the `name` field relabels them.
 
-**`hr_zone` / `power_zone` / `speed_zone` are all zone INDICES 1–5, never raw
-units.** Polar Flow does not accept a literal bpm, watt, or km/h (or min/km)
-threshold on a phase — only a zone number. Each zone's actual physical range
-(e.g. what "power zone 4" means in watts) is computed server-side from the
-athlete's sport profile. If a user asks for "220 watts" or "4:30/km", call
-`get_training_zones` with the workout's `sport_id` and use the zone whose
-`[min, max)` range contains the value (for pace, compare against
-`slowest_pace_s_per_km` / `fastest_pace_s_per_km`) — there is no tool-side way
-to send a raw value through. `power_zone` additionally requires a power-capable sport (e.g.
-cycling, `sport_id` `2`) to mean anything on the device/app side, though the
-API itself does not reject it on other sports.
+## Intensity
 
-## Two target shapes
+Each phase takes at most one of `hr_zone`, `speed_zone`, `power_zone` (all zone
+numbers 1–5) or `label`. Pass a label when the user speaks in effort terms. Use
+`hr_zone` only when they name a zone number. Labels map to HR zones:
 
-`create_training_target` produces one of two shapes depending on `phases`:
+| `label` | HR zone |
+|---|---|
+| `easy` | 1–2 |
+| `aerobic` | 2 |
+| `tempo` | 3 |
+| `threshold` | 4 |
+| `vo2max` | 5 |
 
-- **No `phases`** → an **open VOLUME target**: a named placeholder on the
-  calendar with no structured goal. (The tool does not expose a top-level
-  distance/duration goal for VOLUME targets — if the user wants a specific
-  "run 10 km easy" goal with structure, express it as a single-`repeat` phase,
-  otherwise the VOLUME target is just a scheduled slot.)
-- **With `phases`** → a **PHASED workout** built from the ordered phase list.
+For a pace, wattage or bpm, read `get_training_zones` for the sport and pick
+the zone whose `[min, max)` contains it. For pace, compare against
+`slowest_pace_s_per_km` / `fastest_pace_s_per_km`. `power_zone` only means
+something on power-capable sports such as cycling.
 
-## The `phases` array
+## Editing: turning the read-back into update arguments
 
-`phases` is an ordered list. Each element has a `type` and type-specific fields.
+`get_training_target` returns Polar's raw format, not the `phases` format that
+`update_training_target` takes. Translate it, keeping every field you are not
+asked to change:
 
-### `warmup` / `cooldown`
-A single block, duration-goaled only (no `distance_m`/`goal`).
+| Read back (`exerciseTargets[0].phases[]`) | Send |
+|---|---|
+| Top-level `phaseType: "PHASE"` | `warmup` (before any repeat) or `cooldown` (after it), with `name` and `duration_s` from `duration` (`HH:MM:SS` → seconds) |
+| `phaseType: "REPEAT"`, `repeatCount: N`, `phases: [work, recovery?]` | `repeat`, `reps: N`. Take `goal` from the work leaf, `recovery.duration_s` from the second leaf, and keep both names |
+| `goalType: "DISTANCE"` | `goal.distance_m` = `distance`. **Ignore** the `"00:00:00"` duration Polar adds to distance phases |
+| `goalType: "DURATION"` | `goal.duration_s` = `duration` in seconds |
+| `intensityType` `HEART_RATE_ZONES` / `SPEED_ZONES` / `POWER_ZONES`, `lowerZone` = `upperZone` = Z | `hr_zone` / `speed_zone` / `power_zone`: Z |
+| `HEART_RATE_ZONES` 1–2 | `label: "easy"` |
+| `intensityType: "NONE"` (zones read back as `0`) | Omit `intensity` |
 
-```json
-{ "type": "warmup", "duration_s": 600 }
-```
+Always decide whether a phase is a distance or duration goal from `goalType`,
+never from which field is filled in. Also carry over the top-level `name`,
+`description`, `sport_id` (`exerciseTargets[0].sportId`), and the date and time
+(`datetime`). For a VOLUME target (`type: "VOLUME"`, no phases), send
+`duration_s` from `exerciseTargets[0].duration` (`HH:MM:SS` → seconds) or
+`distance_m` from `.distance`.
 
-```json
-{ "type": "warmup", "duration_s": 2400, "name": "Tempo run",
-  "intensity": { "label": "tempo" } }
-```
+The update result returns the saved target, so there's no need to read it
+again afterwards.
 
-- `duration_s` **required**, > 0.
-- `intensity` optional — same shape as `repeat`'s (see below). Omit for open
-  intensity (no zone), which is what the "easy warmup" example above does.
-  Setting it turns the block into a zoned effort — this is also how you model
-  a single continuous zoned block with a duration goal (e.g. "40 min at
-  threshold"): give it a custom `name` and set `intensity`, without wrapping
-  it in `repeat`. (A distance-goaled single block still needs `repeat` — see
-  below.)
+## What an update can't keep
 
-### `repeat`
-An interval block repeated `reps` times, with an optional recovery between reps.
+The `phases` format can't express everything Polar stores. If the target has
+any of the following, tell the user what would be lost before updating:
 
-```json
-{
-  "type": "repeat",
-  "reps": 5,
-  "goal": { "distance_m": 1000 },
-  "intensity": { "label": "threshold" },
-  "recovery": { "duration_s": 120 }
-}
-```
+- More than one `exerciseTargets` entry (multi-sport). Only the first sport survives.
+- `phaseChangeType: "MANUAL"`. Every phase becomes automatic.
+- A recovery phase with a zone. It becomes zone-free.
+- A top-level distance phase, or a repeat with more than two phases.
 
-- `reps` **required**, **≥ 2**.
-- `goal` **required** — set **exactly one** of `distance_m` or `duration_s`.
-- `intensity` optional — `{ "label": … }`, `{ "hr_zone": 1-5 }`,
-  `{ "power_zone": 1-5 }`, or `{ "speed_zone": 1-5 }`. Set at most one; if
-  several are given the precedence is `hr_zone` > `power_zone` > `speed_zone`
-  > `label`. Omit for open intensity. Label→zone mapping is in `SKILL.md`.
-- `recovery` optional — `{ "duration_s": … }`, an easy block inserted between
-  reps.
+## Name rejections
 
-**There is no standalone "main" phase type.** A single continuous *duration*-goaled
-effort (zoned or not) is a lone `warmup`/`cooldown` phase (see above) — use a
-custom `name` if "Warm-up"/"Cool-down" doesn't fit. A single continuous
-*distance*-goaled effort still needs `repeat` (`reps ≥ 2`); for no structure
-at all, omit `phases` and use a VOLUME target instead.
-
-## Worked example — full session
-
-10 min warmup → 5×1 km @ threshold w/ 2 min jog recovery → 10 min cooldown,
-running, Tuesday 2026-06-02 at 09:00:
-
-```
-create_training_target(
-  name = "5x1km Threshold",
-  date = "2026-06-02",
-  time = "09:00",
-  sport_id = 1,
-  phases = [
-    { "type": "warmup", "duration_s": 600 },
-    { "type": "repeat", "reps": 5,
-      "goal": { "distance_m": 1000 },
-      "intensity": { "label": "threshold" },
-      "recovery": { "duration_s": 120 } },
-    { "type": "cooldown", "duration_s": 600 }
-  ]
-)
-```
-
-Returns the new numeric target id.
-
-## Editing: the full-replace rule
-
-`update_training_target` **replaces the entire target**. It is not a patch —
-fields you omit are cleared, not preserved. Always:
-
-1. `get_training_target(target_id)` to read the current body.
-2. Modify the part you want to change in that body.
-3. `update_training_target(target_id, …complete body…)`. On success it returns
-   the same server-normalized view as `get_training_target`, so you can confirm
-   the change landed from that result without a separate re-read.
-
-**Example — move a session to a different day** (keep everything else):
-
-1. `list_training_targets` → find the `target_id`.
-2. `get_training_target(target_id)` → read name, sport, phases, etc.
-3. `update_training_target(target_id, name=<same>, date="2026-06-04",
-   time=<same>, sport_id=<same>, phases=<same as read>)`.
-
-Do **not** send only `target_id` + `date` — that would wipe the name and
-phases.
-
-## Deleting
-
-`delete_training_target(target_id)` is permanent. Confirm with the user, then
-call it. A non-existent or foreign id is reported as a no-op, not an error.
-
-## Reusing a workout
-
-To keep a target as a reusable template, use `save_target_as_favorite`. To put
-an existing template in the diary, use `schedule_favorite`, which creates a
-new target. See `reference/favorites-and-routes.md`.
+Polar runs a content filter on target names that sometimes rejects harmless
+names with an error on `trainingSessionTarget.name`. Reword the name or add a
+short prefix, then retry. A clash with another target at the same minute is
+also rejected, so pick another time.

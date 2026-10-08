@@ -302,8 +302,8 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 	s.AddTool(mcpgo.NewTool("delete_training_target",
 		mcpgo.WithDescription(
 			"Permanently delete a scheduled training target by its numeric id. Irreversible. "+
-				"Use list_training_targets to find the id. No-ops (reports \"no target with id\") "+
-				"if the id does not exist or belongs to another account.\n\n"+
+				"Use list_training_targets to find the id. Reports \"no target with id\" if the id "+
+				"does not exist; another account's id is an error.\n\n"+
 				"Hosts that support elicitation put the deletion to the user for confirmation "+
 				"first; a result saying the user did not confirm means the target is still "+
 				"there, and is not an error to retry around.",
