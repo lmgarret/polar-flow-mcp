@@ -1,0 +1,1429 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-g5ptsecz"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>MCP tools | polar-flow-mcp</title><link rel="canonical" href="https://lmgarret.github.io/polar-flow-mcp/reference/mcp-tools/"/><link rel="sitemap" href="/polar-flow-mcp/sitemap-index.xml"/><link rel="shortcut icon" href="/polar-flow-mcp/favicon.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.3.5"/><meta name="generator" content="Starlight v0.42.4"/><meta property="og:title" content="MCP tools"/><meta property="og:type" content="article"/><meta property="og:url" content="https://lmgarret.github.io/polar-flow-mcp/reference/mcp-tools/"/><meta property="og:locale" content="en"/><meta property="og:description" content="Every MCP tool polar-flow-mcp exposes, with arguments, defaults, and response shapes."/><meta property="og:site_name" content="polar-flow-mcp"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Every MCP tool polar-flow-mcp exposes, with arguments, defaults, and response shapes."/><script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script><template id="theme-icons"><svg aria-hidden="true" class="light astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg><svg aria-hidden="true" class="dark astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg><svg aria-hidden="true" class="auto astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg></template><link rel="stylesheet" href="/polar-flow-mcp/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/polar-flow-mcp/_astro/common.CYYQrvcY.css"><style>@layer starlight.components{.card:where(.astro-oag6qnet){--sl-card-border:var(--sl-color-purple);--sl-card-bg:var(--sl-color-purple-low);border:1px solid var(--sl-color-gray-5);background-color:var(--sl-color-black);flex-direction:column;gap:clamp(.5rem,.125rem + 1vw,1rem);padding:clamp(1rem,.125rem + 3vw,2.5rem)}.card:where(.astro-oag6qnet):nth-child(4n+1){--sl-card-border:var(--sl-color-orange);--sl-card-bg:var(--sl-color-orange-low)}.card:where(.astro-oag6qnet):nth-child(4n+3){--sl-card-border:var(--sl-color-green);--sl-card-bg:var(--sl-color-green-low)}.card:where(.astro-oag6qnet):nth-child(4n+4){--sl-card-border:var(--sl-color-red);--sl-card-bg:var(--sl-color-red-low)}.card:where(.astro-oag6qnet):nth-child(4n+5){--sl-card-border:var(--sl-color-blue);--sl-card-bg:var(--sl-color-blue-low)}.title:where(.astro-oag6qnet){font-weight:600;font-size:var(--sl-text-h4);color:var(--sl-color-white);line-height:var(--sl-line-height-headings);align-items:center;gap:1rem}.card:where(.astro-oag6qnet) .icon:where(.astro-oag6qnet){border:1px solid var(--sl-card-border);background-color:var(--sl-card-bg);border-radius:.25rem;flex-shrink:0;padding:.2em}.card:where(.astro-oag6qnet) .body:where(.astro-oag6qnet){font-size:clamp(var(--sl-text-sm), calc(.5rem + 1vw), var(--sl-text-body));margin:0}.card-grid:where(.astro-7qmvx3iy){grid-template-columns:100%;gap:1rem;display:grid}.card-grid:where(.astro-7qmvx3iy)>*{margin-top:0!important}@media (width>=50rem){.card-grid:where(.astro-7qmvx3iy){grid-template-columns:1fr 1fr;gap:1.5rem}.stagger:where(.astro-7qmvx3iy){--stagger-height:5rem;padding-bottom:var(--stagger-height)}.stagger:where(.astro-7qmvx3iy)>:nth-child(2n){transform:translateY(var(--stagger-height))}}.sl-link-card:where(.astro-zaaezwya){border:1px solid var(--sl-color-gray-5);box-shadow:var(--sl-shadow-sm);border-radius:.5rem;grid-template-columns:1fr auto;gap:.5rem;padding:1rem;display:grid;position:relative}a:where(.astro-zaaezwya){line-height:var(--sl-line-height-headings);text-decoration:none}a:where(.astro-zaaezwya):before{content:"";position:absolute;inset:0}.stack:where(.astro-zaaezwya){flex-direction:column;gap:.5rem}.title:where(.astro-zaaezwya){color:var(--sl-color-white);font-weight:600;font-size:var(--sl-text-lg)}.description:where(.astro-zaaezwya){color:var(--sl-color-gray-3);line-height:1.5}.icon:where(.astro-zaaezwya){color:var(--sl-color-gray-3)}.sl-link-card:where(.astro-zaaezwya):hover{background:var(--sl-color-gray-7,var(--sl-color-gray-6));border-color:var(--sl-color-gray-2)}.sl-link-card:where(.astro-zaaezwya):hover .icon:where(.astro-zaaezwya){color:var(--sl-color-white)}}
+@layer starlight.components{svg:where(.astro-hkc32dio){color:var(--sl-icon-color);font-size:var(--sl-icon-size,1em);width:1em;height:1em}}
+</style><script type="module" src="/polar-flow-mcp/_astro/page.Dwipeu-R.js"></script></head><body class="astro-g5ptsecz"><a class="sl-skip-link astro-qb7clj6f" href="#_top">Skip to content</a><div class="page sl-flex astro-yntsjkba"><header class="header astro-yntsjkba"><div class="header astro-by6fddyj"><div class="title-wrapper sl-flex astro-by6fddyj"><a href="/polar-flow-mcp/" class="site-title sl-flex astro-6rvad3va"><img class="astro-6rvad3va" alt="polar-flow-mcp" src="/polar-flow-mcp/_astro/logo.BhU7ZvXg.svg" width="32" height="32"><span class="astro-6rvad3va" translate="no">polar-flow-mcp</span></a></div><div class="sl-flex print:hidden astro-by6fddyj"><site-search class="astro-by6fddyj astro-b5kgnn7o" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-b5kgnn7o"><svg aria-hidden="true" class="astro-b5kgnn7o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block astro-b5kgnn7o" aria-hidden="true">Search</span><kbd class="sl-hidden md:sl-flex astro-b5kgnn7o" style="display: none;"><kbd class="astro-b5kgnn7o">Ctrl</kbd><kbd class="astro-b5kgnn7o">K</kbd></kbd></button><dialog style="padding:0" aria-label="Search" class="astro-b5kgnn7o"><div class="dialog-frame sl-flex astro-b5kgnn7o"><button data-close-modal class="sl-flex md:sl-hidden astro-b5kgnn7o">Cancel</button><div class="search-container astro-b5kgnn7o"><div id="starlight__search" class="astro-b5kgnn7o"></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/polar-flow-mcp/_astro/Search.astro_astro_type_script_index_0_lang.BG7BFkzv.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group astro-by6fddyj"><div class="sl-flex social-icons astro-by6fddyj"><a href="https://github.com/lmgarret/polar-flow-mcp" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script><script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div></header><nav class="sidebar print:hidden astro-yntsjkba" aria-label="Main"><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden astro-r2osgdlg"><svg aria-hidden="true" class="open-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg aria-hidden="true" class="close-menu astro-r2osgdlg astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only astro-r2osgdlg">Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane astro-yntsjkba"><div class="sidebar-content sl-flex astro-yntsjkba"><sl-sidebar-state-persist data-hash="0hvk8ow" class="astro-ipdry5cl"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level astro-rmhv4bp6"><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Tutorials</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/tutorials/getting-started/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Getting started</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">How-to Guides</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/guides/create-training-targets/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Create and manage training targets</span></a></li><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/guides/deploy-with-docker-compose/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Deploy with Docker Compose</span></a></li><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/guides/favorites-routes-and-session-edits/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Favorites, routes and session edits</span></a></li><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/guides/expose-securely/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Expose the server securely</span></a></li><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/guides/install-the-skill/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Install the polar-flow skill</span></a></li><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/guides/contribute/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Set up a dev environment &amp; contribute</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Reference</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/reference/mcp-tools/" aria-current="page" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">MCP tools</span></a></li><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/reference/environment-variables/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Environment variables</span></a></li><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/reference/http-endpoints/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">HTTP endpoints</span></a></li><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/reference/mcp-apps/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">MCP app UIs</span></a></li><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/reference/units-and-dates/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Units &amp; dates</span></a></li></ul></details></li><li class="astro-rmhv4bp6"><details open class="astro-rmhv4bp6"><summary class="astro-rmhv4bp6"><span class="group-label astro-rmhv4bp6"><span class="large astro-rmhv4bp6">Explanation</span></span><svg aria-hidden="true" class="caret astro-rmhv4bp6 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul class="astro-rmhv4bp6"><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/explanation/why-flow-web-api/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Why the Flow web API (not AccessLink)</span></a></li><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/explanation/design-decisions/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Design decisions</span></a></li><li class="astro-rmhv4bp6"><a href="/polar-flow-mcp/explanation/security-model/" class="astro-rmhv4bp6"><span class="astro-rmhv4bp6">Security model</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex astro-p4azlveh"><div class="social-icons astro-p4azlveh"><a href="https://github.com/lmgarret/polar-flow-mcp" rel="me" class="sl-flex astro-n2mnl6yq"><span class="sr-only astro-n2mnl6yq">GitHub</span><svg aria-hidden="true" class="astro-n2mnl6yq astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><starlight-theme-select><label style="--sl-select-width: 6.25em" class="astro-2z5xp7gb"><span class="sr-only astro-2z5xp7gb">Select theme</span><svg aria-hidden="true" class="icon label-icon astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg><select autocomplete="off" class="astro-2z5xp7gb"><option value="dark" class="astro-2z5xp7gb">Dark</option><option value="light" class="astro-2z5xp7gb">Light</option><option value="auto" selected class="astro-2z5xp7gb">Auto</option></select><svg aria-hidden="true" class="icon caret astro-2z5xp7gb astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg></label></starlight-theme-select><script>
+	StarlightThemeProvider.updatePickers();
+</script></div></div></div></sl-sidebar-pane></nav><div class="main-frame astro-yntsjkba"><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-lrzkfocr"><aside class="right-sidebar-container print:hidden astro-lrzkfocr"><div class="right-sidebar astro-lrzkfocr"><div class="lg:sl-hidden astro-qok35upx"><mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-66cqc7ze"><nav aria-labelledby="starlight__on-this-page--mobile" class="astro-66cqc7ze"><details id="starlight__mobile-toc" class="astro-66cqc7ze"><summary id="starlight__on-this-page--mobile" class="sl-flex astro-66cqc7ze"><span class="toggle sl-flex astro-66cqc7ze">On this page<svg aria-hidden="true" class="caret astro-66cqc7ze astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current astro-66cqc7ze"></span></summary><div class="dropdown astro-66cqc7ze"><ul class="isMobile astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#user-confirmation-on-writes" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">User confirmation on writes</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_user_info" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_user_info</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#list_sports" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">list_sports</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_training_zones" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_training_zones</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#sport-profiles-and-zone-edits" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Sport profiles and zone edits</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#create_sport_profile" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">create_sport_profile</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#update_training_zones" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">update_training_zones</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#delete_sport_profile" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">delete_sport_profile</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#create_training_target" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">create_training_target</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#phase-shape" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Phase shape</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#list_training_targets" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">list_training_targets</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#delete_training_target" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">delete_training_target</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_training_target" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_training_target</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#update_training_target" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">update_training_target</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_calendar_events" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_calendar_events</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_calendar_week_summary" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_calendar_week_summary</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_progress_summary" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_progress_summary</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#create_training_session" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">create_training_session</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#list_training_sessions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">list_training_sessions</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_training_session_summary" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_training_session_summary</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_training_session_details" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_training_session_details</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_training_session_samples" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_training_session_samples</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#activity-and-sleep" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Activity and sleep</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#get_daily_activity" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">get_daily_activity</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#get_sleep" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">get_sleep</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#favorites-and-routes" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Favorites and routes</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#list_favorites" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">list_favorites</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#get_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">get_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#create_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">create_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#update_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">update_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#rename_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">rename_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#set_favorite_sport" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">set_favorite_sport</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#delete_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">delete_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#save_target_as_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">save_target_as_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#schedule_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">schedule_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#import_route" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">import_route</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#get_route" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">get_route</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#editing-and-deleting-completed-sessions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Editing and deleting completed sessions</span></a><ul class="isMobile astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#edit_training_session" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">edit_training_session</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#delete_training_session" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">delete_training_session</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#behaviour-notes" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Behaviour notes</span></a></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/polar-flow-mcp/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block astro-qok35upx"><div class="sl-container astro-qok35upx"><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul class="astro-jugkfwgx" style="--depth: 0;"><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#_top" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Overview</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#user-confirmation-on-writes" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">User confirmation on writes</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_user_info" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_user_info</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#list_sports" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">list_sports</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_training_zones" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_training_zones</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#sport-profiles-and-zone-edits" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Sport profiles and zone edits</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#create_sport_profile" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">create_sport_profile</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#update_training_zones" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">update_training_zones</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#delete_sport_profile" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">delete_sport_profile</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#create_training_target" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">create_training_target</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#phase-shape" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">Phase shape</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#list_training_targets" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">list_training_targets</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#delete_training_target" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">delete_training_target</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_training_target" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_training_target</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#update_training_target" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">update_training_target</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_calendar_events" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_calendar_events</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_calendar_week_summary" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_calendar_week_summary</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_progress_summary" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_progress_summary</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#create_training_session" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">create_training_session</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#list_training_sessions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">list_training_sessions</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_training_session_summary" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_training_session_summary</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_training_session_details" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_training_session_details</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#get_training_session_samples" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">get_training_session_samples</span></a></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#activity-and-sleep" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Activity and sleep</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#get_daily_activity" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">get_daily_activity</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#get_sleep" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">get_sleep</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#favorites-and-routes" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Favorites and routes</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#list_favorites" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">list_favorites</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#get_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">get_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#create_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">create_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#update_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">update_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#rename_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">rename_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#set_favorite_sport" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">set_favorite_sport</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#delete_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">delete_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#save_target_as_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">save_target_as_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#schedule_favorite" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">schedule_favorite</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#import_route" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">import_route</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#get_route" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">get_route</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#editing-and-deleting-completed-sessions" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Editing and deleting completed sessions</span></a><ul class="astro-jugkfwgx" style="--depth: 1;"><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#edit_training_session" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">edit_training_session</span></a></li><li style="--depth: 1;" class="astro-jugkfwgx"><a href="#delete_training_session" style="--depth: 1;" class="astro-jugkfwgx"><span style="--depth: 1;" class="astro-jugkfwgx">delete_training_session</span></a></li></ul></li><li style="--depth: 0;" class="astro-jugkfwgx"><a href="#behaviour-notes" style="--depth: 0;" class="astro-jugkfwgx"><span style="--depth: 0;" class="astro-jugkfwgx">Behaviour notes</span></a></li></ul></nav></starlight-toc><script type="module" src="/polar-flow-mcp/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane astro-lrzkfocr"><main data-pagefind-body class="astro-g5ptsecz" lang="en" dir="ltr"><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><h1 id="_top" class="astro-bebwqqxs">MCP tools</h1></div></div><div class="content-panel astro-a7po4psb"><div class="sl-container astro-a7po4psb"><div class="sl-markdown-content"><p>polar-flow-mcp exposes thirty-three tools backed by the
+<a href="https://github.com/ogen-go/ogen">ogen</a>-generated client in <code dir="auto">internal/flow/</code>.
+All tools act as the single Polar Flow account configured via <code dir="auto">POLAR_EMAIL</code> /
+<code dir="auto">POLAR_PASSWORD</code>.</p>
+<p>Authentication failures (<code dir="auto">401 NotAuthenticated</code>) trigger a transparent
+silent-refresh-then-retry — callers will not see a 401 unless the credentials
+themselves are bad.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="user-confirmation-on-writes">User confirmation on writes</h2><a class="sl-anchor-link" href="#user-confirmation-on-writes"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “User confirmation on writes”</span></a></div>
+<p>Five tools touch real diary data and ask the user to confirm before they run:
+<a href="#create_training_session"><code dir="auto">create_training_session</code></a>, which writes a session
+that counts toward Polar’s training-load model, and the four irreversible
+deletes — <a href="#delete_training_target"><code dir="auto">delete_training_target</code></a>,
+<a href="#delete_training_session"><code dir="auto">delete_training_session</code></a>,
+<a href="#delete_favorite"><code dir="auto">delete_favorite</code></a> and
+<a href="#delete_sport_profile"><code dir="auto">delete_sport_profile</code></a>.</p>
+<p>The mechanism is an MCP <a href="https://modelcontextprotocol.io/">elicitation</a>: the
+tool answers the first call with “I need confirmation”, the host puts the
+question to the user, and then retries the same call with the answer attached.
+On protocol <code dir="auto">2026-07-28</code> and later this is a
+<a href="https://modelcontextprotocol.io/">multi round-trip request</a>; on earlier
+versions the server issues the <code dir="auto">elicitation/create</code> those clients understand.
+Either way the handler is the same code.</p>
+<p>Each delete prompt names what it is about to remove (<code dir="auto">Permanently delete the training target "5x1km Threshold" scheduled for 2026-06-02T09:00 (id 7286431)?</code>, <code dir="auto">… the training session "Easy 5km" on 2026-09-20T08:00:00 (30 min) (id 8429796771)? …</code>), so the ask costs one extra read on the first leg only.</p>
+<p>If the user declines or cancels, the tool returns a plain text result saying so
+and nothing is written — that is a normal outcome, not a tool error to retry
+around.</p>
+<aside aria-label="Not every host can be asked" class="starlight-aside starlight-aside--caution"><p class="starlight-aside__title" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="starlight-aside__icon"><path d="M12 16a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10.67 1.47-8.05-14a3 3 0 0 0-5.24 0l-8 14A3 3 0 0 0 3.94 22h16.12a3 3 0 0 0 2.61-4.53Zm-1.73 2a1 1 0 0 1-.88.51H3.94a1 1 0 0 1-.88-.51 1 1 0 0 1 0-1l8-14a1 1 0 0 1 1.78 0l8.05 14a1 1 0 0 1 .05 1.02v-.02ZM12 8a1 1 0 0 0-1 1v4a1 1 0 0 0 2 0V9a1 1 0 0 0-1-1Z"></path></svg>Not every host can be asked</p><div class="starlight-aside__content"><p>Confirmation requires the connected client to declare the <code dir="auto">elicitation</code>
+capability. <strong>Against a client that does not, the gate is skipped and the call
+proceeds unconfirmed</strong> — the tool descriptions remain the only thing keeping a
+coach model from firing these unprompted. The gate is skipped deliberately:
+asking a client that cannot answer fails the entire tool call instead of
+protecting anything.</p></div></aside>
+<div class="sl-heading-wrapper level-h2"><h2 id="get_user_info"><code dir="auto">get_user_info</code></h2><a class="sl-anchor-link" href="#get_user_info"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_user_info”</span></a></div>
+<p>Returns the identity of the linked Polar Flow account.</p>
+<p><strong>Arguments:</strong> none.</p>
+<p><strong>Response:</strong> JSON object with <code dir="auto">id</code>, <code dir="auto">email</code>, <code dir="auto">first_name</code>, <code dir="auto">last_name</code>,
+<code dir="auto">country</code>.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="list_sports"><code dir="auto">list_sports</code></h2><a class="sl-anchor-link" href="#list_sports"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “list_sports”</span></a></div>
+<p>Returns the full Polar sport catalogue — the source of valid <code dir="auto">sport_id</code> values.</p>
+<p><strong>Arguments:</strong> none.</p>
+<p><strong>Response:</strong> JSON object mapping numeric sport id (string key) to its name
+constant, e.g. <code dir="auto">{"1": "RUNNING", "2": "CYCLING", "23": "SWIMMING", ...}</code>. The
+catalogue is a moving snapshot (Polar adds sports over time), so re-fetch rather
+than hard-coding ids.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="get_training_zones"><code dir="auto">get_training_zones</code></h2><a class="sl-anchor-link" href="#get_training_zones"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_training_zones”</span></a></div>
+<p>Returns the athlete’s <strong>training zones</strong> — what <code dir="auto">hr_zone</code>, <code dir="auto">speed_zone</code> and
+<code dir="auto">power_zone</code> 1–5 mean in bpm, km/h (with min/km pace) and watts. Zones are per
+sport. Call it before planning a zoned workout to pick zone numbers from a
+target pace, wattage or heart rate.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td><code dir="auto">sport_id</code></td><td>integer</td><td>no</td><td>Polar sport ID. With it: that sport’s zones — from the stored sport profile if the account has one (<code dir="auto">source: "profile"</code>), otherwise Polar’s defaults, computed without saving anything (<code dir="auto">source: "default"</code>). Without it: every stored sport profile (possibly none).</td></tr></tbody></table>
+<p><strong>Response:</strong> a text summary plus a <code dir="auto">training_zones</code> payload:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/polar-flow-mcp/_astro/ec.w36nc.css"><script type="module" src="/polar-flow-mcp/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">training_zones</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"sports"</span><span style="--0:#D6DEEB;--1:#403F53">: [{</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"sport_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"sport_name"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">RUNNING</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"sport_category"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">run</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"source"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">profile</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"heart_rate"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span><span style="--0:#7FDBCA;--1:#096E72">"setting"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">default</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"zones"</span><span style="--0:#D6DEEB;--1:#403F53">: [{</span><span style="--0:#7FDBCA;--1:#096E72">"zone"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"min_bpm"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">95</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"max_bpm"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">114</span><span style="--0:#D6DEEB;--1:#403F53">}, </span><span style="--0:#FFFFFF;--1:#984E4D">…</span><span style="--0:#D6DEEB;--1:#403F53">]},</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"speed"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span><span style="--0:#7FDBCA;--1:#096E72">"setting"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">default</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"method"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">mas_based</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"speed_view"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">pace</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"zones"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"zone"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"min_kmh"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">9.45</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"max_kmh"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">12.03</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"slowest_pace_s_per_km"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">381</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"fastest_pace_s_per_km"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">299</span><span style="--0:#D6DEEB;--1:#403F53">}, </span><span style="--0:#FFFFFF;--1:#984E4D">…</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">    </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"zone"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">5</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"min_kmh"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">19.76</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"max_kmh"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">null</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"slowest_pace_s_per_km"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">182</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"fastest_pace_s_per_km"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">null</span><span style="--0:#D6DEEB;--1:#403F53">}]},</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"power"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span><span style="--0:#7FDBCA;--1:#096E72">"setting"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">default</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"method"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">map_based</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"zones"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#FFFFFF;--1:#984E4D">…</span><span style="--0:#D6DEEB;--1:#403F53"> {</span><span style="--0:#7FDBCA;--1:#096E72">"zone"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">5</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"min_w"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">464</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"max_w"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">null</span><span style="--0:#D6DEEB;--1:#403F53">}]},</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"thresholds"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span><span style="--0:#7FDBCA;--1:#096E72">"mas_kmh"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">17.18</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"mas_source"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">estimated</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"map_w"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">403</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"map_source"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">estimated</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}]}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;type&#x22;: &#x22;training_zones&#x22;, &#x22;sports&#x22;: [{  &#x22;sport_id&#x22;: 1, &#x22;sport_name&#x22;: &#x22;RUNNING&#x22;, &#x22;sport_category&#x22;: &#x22;run&#x22;, &#x22;source&#x22;: &#x22;profile&#x22;,  &#x22;heart_rate&#x22;: {&#x22;setting&#x22;: &#x22;default&#x22;, &#x22;zones&#x22;: [{&#x22;zone&#x22;: 1, &#x22;min_bpm&#x22;: 95, &#x22;max_bpm&#x22;: 114}, …]},  &#x22;speed&#x22;: {&#x22;setting&#x22;: &#x22;default&#x22;, &#x22;method&#x22;: &#x22;mas_based&#x22;, &#x22;speed_view&#x22;: &#x22;pace&#x22;, &#x22;zones&#x22;: [    {&#x22;zone&#x22;: 1, &#x22;min_kmh&#x22;: 9.45, &#x22;max_kmh&#x22;: 12.03, &#x22;slowest_pace_s_per_km&#x22;: 381, &#x22;fastest_pace_s_per_km&#x22;: 299}, …,    {&#x22;zone&#x22;: 5, &#x22;min_kmh&#x22;: 19.76, &#x22;max_kmh&#x22;: null, &#x22;slowest_pace_s_per_km&#x22;: 182, &#x22;fastest_pace_s_per_km&#x22;: null}]},  &#x22;power&#x22;: {&#x22;setting&#x22;: &#x22;default&#x22;, &#x22;method&#x22;: &#x22;map_based&#x22;, &#x22;zones&#x22;: [… {&#x22;zone&#x22;: 5, &#x22;min_w&#x22;: 464, &#x22;max_w&#x22;: null}]},  &#x22;thresholds&#x22;: {&#x22;mas_kmh&#x22;: 17.18, &#x22;mas_source&#x22;: &#x22;estimated&#x22;, &#x22;map_w&#x22;: 403, &#x22;map_source&#x22;: &#x22;estimated&#x22;}}]}"><div></div></button></div></figure></div>
+<ul>
+<li>Each zone is the half-open range <code dir="auto">[min, max)</code>; zones are contiguous. The top
+speed and power zones are open-ended (<code dir="auto">max_kmh</code> / <code dir="auto">max_w</code> null — Flow’s
+399 km/h and 2000 W ceilings are sentinels).</li>
+<li><code dir="auto">setting</code> is <code dir="auto">default</code> (computed) or <code dir="auto">free</code> (limits typed in by the user).
+<code dir="auto">method</code> says how default speed/power zones were computed: <code dir="auto">mas_based</code> /
+<code dir="auto">map_based</code> (55/70/85/100/115 % of maximum aerobic speed / power, running),
+<code dir="auto">ftp_based</code> (55/75/90/105/120 % of FTP, cycling),
+<code dir="auto">sport_specific_predefined</code> (a fixed table — cycling 10/20/30/40/50 km/h).
+Default heart-rate zones are 50/60/70/80/90/100 % of max HR.</li>
+<li>A zone type the sport lacks is omitted (swimming and strength have
+heart-rate zones only).</li>
+<li><code dir="auto">thresholds</code> carries MAS (km/h), MAP and FTP (W) where they apply; <code dir="auto">estimated</code>
+means Polar derived them from physical info rather than a test.</li>
+</ul>
+<div class="sl-heading-wrapper level-h2"><h2 id="sport-profiles-and-zone-edits">Sport profiles and zone edits</h2><a class="sl-anchor-link" href="#sport-profiles-and-zone-edits"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Sport profiles and zone edits”</span></a></div>
+<p>A <strong>sport profile</strong> holds a sport’s training zones and watch settings. Most
+accounts store only a few; <a href="#get_training_zones"><code dir="auto">get_training_zones</code></a> reports
+Polar’s computed defaults for the rest. A profile is keyed by its sport
+(Polar’s profile uuid is derived from the <code dir="auto">sport_id</code>), so these tools take
+<code dir="auto">sport_id</code> — validated against <a href="#list_sports"><code dir="auto">list_sports</code></a>. Changes reach a
+paired watch on its next sync.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="create_sport_profile"><code dir="auto">create_sport_profile</code></h3><a class="sl-anchor-link" href="#create_sport_profile"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “create_sport_profile”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">sport_id</code></td><td>integer</td><td>yes</td></tr></tbody></table>
+<p>Creates the profile with Polar’s default settings and zones. Idempotent: when
+the sport already has a profile nothing changes and the stored one is returned
+(the text says which). <strong>Response:</strong> the same <code dir="auto">training_zones</code> payload as
+<code dir="auto">get_training_zones</code>, plus a <code dir="auto">notice</code> sentence.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="update_training_zones"><code dir="auto">update_training_zones</code></h3><a class="sl-anchor-link" href="#update_training_zones"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “update_training_zones”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code dir="auto">sport_id</code></td><td>integer</td><td>required; the sport must have a stored profile</td></tr><tr><td><code dir="auto">heart_rate_bpm</code></td><td>number[6]</td><td>whole bpm, 15–240, each zone ≥ 2 bpm</td></tr><tr><td><code dir="auto">speed_kmh</code></td><td>number[5 or 6]</td><td>km/h, 1–399 — <strong>always km/h</strong>, even for sports shown as pace</td></tr><tr><td><code dir="auto">power_w</code></td><td>number[5 or 6]</td><td>whole watts, 0–2000, each zone ≥ 2 W</td></tr><tr><td><code dir="auto">reset</code></td><td>string[]</td><td><code dir="auto">heart_rate</code>, <code dir="auto">speed</code>, <code dir="auto">power</code> — back to Polar’s computed defaults</td></tr></tbody></table>
+<p>Each list is the ascending zone <strong>boundaries</strong>, Z1 lower first: zone <em>n</em> is
+<code dir="auto">[value n, value n+1)</code>, so zones are contiguous by construction. Give 5 speed or
+power values to leave Z5 open-ended. Lists not mentioned keep their stored
+limits; a list cannot be both set and reset. Every rule above is checked before
+a request goes out (Flow’s own 400 lists every violation in one long line).
+Swimming and strength-type sports only have heart-rate zones.</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"sport_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"heart_rate_bpm"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#F78C6C;--1:#AA0982">115</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">134</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">153</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">172</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">182</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">192</span><span style="--0:#D6DEEB;--1:#403F53">], </span><span style="--0:#7FDBCA;--1:#096E72">"reset"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">speed</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">]}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;sport_id&#x22;: 1, &#x22;heart_rate_bpm&#x22;: [115, 134, 153, 172, 182, 192], &#x22;reset&#x22;: [&#x22;speed&#x22;]}"><div></div></button></div></figure></div>
+<p><strong>Response:</strong> the zones read back after the save (<code dir="auto">setting: "free"</code> on the
+hand-entered lists), as a <code dir="auto">training_zones</code> payload with a <code dir="auto">notice</code>.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="delete_sport_profile"><code dir="auto">delete_sport_profile</code></h3><a class="sl-anchor-link" href="#delete_sport_profile"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “delete_sport_profile”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">sport_id</code></td><td>integer</td><td>yes</td></tr></tbody></table>
+<p>Deletes the profile — its zones fall back to Polar’s defaults. Reports
+“nothing to delete” when the sport has none (Flow itself answers <code dir="auto">200</code> either
+way, so the tool checks first). Polar refuses to delete the account’s last
+profile. Asks the user to confirm first where the host supports it — see
+<a href="#user-confirmation-on-writes">User confirmation on writes</a>.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="create_training_target"><code dir="auto">create_training_target</code></h2><a class="sl-anchor-link" href="#create_training_target"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “create_training_target”</span></a></div>
+<p>Schedule a training target (a planned workout) in Polar Flow. There are two
+shapes:</p>
+<ul>
+<li><strong>VOLUME target</strong> (no <code dir="auto">phases</code>): a single open-goal block — set <code dir="auto">duration_s</code>
+<strong>or</strong> <code dir="auto">distance_m</code> at the top level. Use for easy/general runs.</li>
+<li><strong>PHASED target</strong> (with <code dir="auto">phases</code>): omit the top-level <code dir="auto">duration_s</code>/<code dir="auto">distance_m</code>
+and provide an ordered list of <code dir="auto">warmup</code> / <code dir="auto">repeat</code> / <code dir="auto">cooldown</code> blocks.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code dir="auto">name</code></td><td>string</td><td>yes</td><td>Display name (shown in the diary).</td></tr><tr><td><code dir="auto">date</code></td><td>string</td><td>yes</td><td>ISO 8601 <code dir="auto">YYYY-MM-DD</code>. The server applies the account’s timezone.</td></tr><tr><td><code dir="auto">time</code></td><td>string</td><td>no</td><td><code dir="auto">HH:MM</code> (24h). Default <code dir="auto">18:00</code>.</td></tr><tr><td><code dir="auto">sport_id</code></td><td>integer</td><td>no</td><td>Polar sport ID. Default <code dir="auto">1</code> (running); e.g. <code dir="auto">2</code> cycling, <code dir="auto">23</code> swimming, <code dir="auto">15</code> strength, <code dir="auto">11</code> hiking, <code dir="auto">68</code> triathlon. Use <code dir="auto">list_sports</code> for the full mapping.</td></tr><tr><td><code dir="auto">description</code></td><td>string</td><td>no</td><td>Free-text notes.</td></tr><tr><td><code dir="auto">duration_s</code></td><td>integer</td><td>conditional</td><td>VOLUME total duration in seconds (e.g. <code dir="auto">2100</code> = 35 min). Required when <code dir="auto">phases</code> is omitted and <code dir="auto">distance_m</code> is not set. Ignored when <code dir="auto">phases</code> is provided.</td></tr><tr><td><code dir="auto">distance_m</code></td><td>integer</td><td>conditional</td><td>VOLUME total distance in metres (e.g. <code dir="auto">10000</code> = 10 km). Required when <code dir="auto">phases</code> is omitted and <code dir="auto">duration_s</code> is not set. Ignored when <code dir="auto">phases</code> is provided.</td></tr><tr><td><code dir="auto">phases</code></td><td>array</td><td>no</td><td>Ordered phase list for a PHASED target. See below.</td></tr></tbody></table>
+<p>A VOLUME target with neither <code dir="auto">duration_s</code> nor <code dir="auto">distance_m</code> is rejected
+(<code dir="auto">VOLUME targets (no phases) require duration_s or distance_m</code>).</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="phase-shape">Phase shape</h3><a class="sl-anchor-link" href="#phase-shape"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Phase shape”</span></a></div>
+<p>Each entry in <code dir="auto">phases</code> is an object with <code dir="auto">type</code> ∈ {<code dir="auto">warmup</code>, <code dir="auto">repeat</code>,
+<code dir="auto">cooldown</code>}:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{ </span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">warmup</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,   </span><span style="--0:#7FDBCA;--1:#096E72">"duration_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">600</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{ </span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">repeat</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"reps"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">5</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"goal"</span><span style="--0:#D6DEEB;--1:#403F53">:      { </span><span style="--0:#7FDBCA;--1:#096E72">"distance_m"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1000</span><span style="--0:#D6DEEB;--1:#403F53"> },</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"intensity"</span><span style="--0:#D6DEEB;--1:#403F53">: { </span><span style="--0:#7FDBCA;--1:#096E72">"label"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">threshold</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> },</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"recovery"</span><span style="--0:#D6DEEB;--1:#403F53">:  { </span><span style="--0:#7FDBCA;--1:#096E72">"duration_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">90</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{ </span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">cooldown</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"duration_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">600</span><span style="--0:#D6DEEB;--1:#403F53"> }</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{ &#x22;type&#x22;: &#x22;warmup&#x22;,   &#x22;duration_s&#x22;: 600 }{ &#x22;type&#x22;: &#x22;repeat&#x22;,  &#x22;reps&#x22;: 5,  &#x22;goal&#x22;:      { &#x22;distance_m&#x22;: 1000 },  &#x22;intensity&#x22;: { &#x22;label&#x22;: &#x22;threshold&#x22; },  &#x22;recovery&#x22;:  { &#x22;duration_s&#x22;: 90 }}{ &#x22;type&#x22;: &#x22;cooldown&#x22;, &#x22;duration_s&#x22;: 600 }"><div></div></button></div></figure></div>
+<ul>
+<li><code dir="auto">warmup</code> / <code dir="auto">cooldown</code> require <code dir="auto">duration_s</code> (seconds, > 0) and take an
+optional <code dir="auto">intensity</code> (no <code dir="auto">distance_m</code>/<code dir="auto">goal</code> — duration-goaled only). Omit
+<code dir="auto">intensity</code> for open/easy intensity. A single continuous <em>zoned</em> effort with
+a duration goal and no interval structure is one <code dir="auto">warmup</code>/<code dir="auto">cooldown</code> phase
+with <code dir="auto">intensity</code> set and a custom <code dir="auto">name</code> — it does not need <code dir="auto">repeat</code>.</li>
+<li><code dir="auto">repeat</code> is an interval block repeated <code dir="auto">reps</code> times (<strong><code dir="auto">reps</code> must be ≥ 2</strong>).
+It needs a <code dir="auto">goal</code> (exactly one of <code dir="auto">distance_m</code> metres <strong>or</strong> <code dir="auto">duration_s</code>
+seconds), an optional <code dir="auto">intensity</code>, and an optional <code dir="auto">recovery</code> (<code dir="auto">duration_s</code>,
+inserted between reps). A single continuous <em>distance</em>-goaled effort still
+needs <code dir="auto">repeat</code> (only <code dir="auto">repeat</code> accepts <code dir="auto">distance_m</code>); an unzoned effort with
+no structure at all is a VOLUME target instead.</li>
+<li><code dir="auto">intensity</code> accepts at most one of: an <code dir="auto">hr_zone</code> integer (1–5), a <code dir="auto">label</code>
+(<code dir="auto">easy</code>→Z1–2, <code dir="auto">aerobic</code>→Z2, <code dir="auto">tempo</code>→Z3, <code dir="auto">threshold</code>→Z4, <code dir="auto">vo2max</code>→Z5), a
+<code dir="auto">power_zone</code> integer (1–5), or a <code dir="auto">speed_zone</code> integer (1–5). Precedence when
+several are given: <code dir="auto">hr_zone</code> > <code dir="auto">power_zone</code> > <code dir="auto">speed_zone</code> > <code dir="auto">label</code>.
+<code dir="auto">power_zone</code> and <code dir="auto">speed_zone</code> are Polar zone <strong>indices</strong>, not raw watts or
+km/h/min-per-km — Polar Flow computes each zone’s physical range from the
+athlete’s sport profile; <a href="#get_training_zones"><code dir="auto">get_training_zones</code></a> returns
+those ranges. <code dir="auto">power_zone</code> needs a power-capable sport
+(e.g. cycling, <code dir="auto">sport_id</code> <code dir="auto">2</code>).</li>
+<li>Each phase (and a <code dir="auto">recovery</code>) accepts an optional <code dir="auto">name</code>, persisted verbatim
+by Polar; it defaults to a type-derived label (<code dir="auto">Warm-up</code>, <code dir="auto">Work</code>, <code dir="auto">Recovery</code>,
+<code dir="auto">Cool-down</code>).</li>
+<li>Length limits, checked before anything is sent and counted as Polar counts
+them (UTF-16 code units — an emoji counts 2): <code dir="auto">name</code> 1–45, <code dir="auto">description</code>
+≤ 500, each phase name ≤ 45. An over-long phase name matters most: Polar
+rejects it but still stores a hidden, half-created target on that time slot.</li>
+<li>Polar refuses two targets on the same minute; the tool then says which
+datetime is taken so you can pick another.</li>
+</ul>
+<p><strong>Response:</strong> human-readable confirmation including the new target’s numeric
+ID.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="list_training_targets"><code dir="auto">list_training_targets</code></h2><a class="sl-anchor-link" href="#list_training_targets"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “list_training_targets”</span></a></div>
+<p>List training targets in a date range.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td><code dir="auto">from_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today (UTC)</td></tr><tr><td><code dir="auto">to_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today + 30 days</td></tr></tbody></table>
+<p>Implemented as a filter over <code dir="auto">getCalendarEvents</code> for entries with
+<code dir="auto">type == TRAININGTARGET</code>.</p>
+<p><strong>Response:</strong> text list of <code dir="auto">&#x3C;id>: &#x3C;title> (&#x3C;start>)</code> lines.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="delete_training_target"><code dir="auto">delete_training_target</code></h2><a class="sl-anchor-link" href="#delete_training_target"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “delete_training_target”</span></a></div>
+<p>Delete a target by numeric ID.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">target_id</code></td><td>integer</td><td>yes</td></tr></tbody></table>
+<p><strong>Response:</strong> <code dir="auto">Deleted target &#x3C;id>.</code> or <code dir="auto">No target with id &#x3C;id>.</code> (also for an
+already-deleted id). Another account’s id is an error. The target is read
+first — Polar’s own delete answers missing and foreign ids with the same
+opaque 400.</p>
+<p>Asks the user to confirm first where the host supports it — see
+<a href="#user-confirmation-on-writes">User confirmation on writes</a>.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="get_training_target"><code dir="auto">get_training_target</code></h2><a class="sl-anchor-link" href="#get_training_target"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_training_target”</span></a></div>
+<p>Return the full server-normalized view of a single target. Use this before
+<code dir="auto">update_training_target</code> to read the current shape, modify it, then write back.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">target_id</code></td><td>integer</td><td>yes</td></tr></tbody></table>
+<p><strong>Response:</strong> JSON <code dir="auto">TrainingTargetCreate</code> object (same shape as the create
+payload, plus server-assigned ids and rolled-up totals). <code dir="auto">description</code> reads back
+as <code dir="auto">null</code> when the target was created without one.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="update_training_target"><code dir="auto">update_training_target</code></h2><a class="sl-anchor-link" href="#update_training_target"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “update_training_target”</span></a></div>
+<p>Full-replace edit of a target by ID. The argument shape matches
+<code dir="auto">create_training_target</code> (same VOLUME/PHASED shapes, units, and <code dir="auto">phases</code>
+schema) plus a required <code dir="auto">target_id</code>. The server overwrites the target with the
+supplied body — there are no patch semantics, so always read the target with
+<code dir="auto">get_training_target</code> first if you only want to change one field. Anything you
+omit is cleared.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code dir="auto">target_id</code></td><td>integer</td><td>yes</td><td>Numeric ID of the target to edit.</td></tr><tr><td><code dir="auto">name</code></td><td>string</td><td>yes</td><td>Display name shown in the diary.</td></tr><tr><td><code dir="auto">date</code></td><td>string</td><td>yes</td><td>ISO 8601 <code dir="auto">YYYY-MM-DD</code>.</td></tr></tbody></table>
+<p>All other arguments (<code dir="auto">time</code>, <code dir="auto">sport_id</code>, <code dir="auto">description</code>, <code dir="auto">duration_s</code>,
+<code dir="auto">distance_m</code>, <code dir="auto">phases</code>) match <code dir="auto">create_training_target</code>. You do not need to
+manage server-side ids — the tool reads the live target and carries its
+exercise-target id over so the edit lands on the existing target.</p>
+<p>On success it reads the target back and returns the same server-normalized
+view as <code dir="auto">get_training_target</code> (name, datetime, and the rolled-up
+exercise-target phases), so a follow-up <code dir="auto">get_training_target</code> to confirm the
+change landed is unnecessary.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="get_calendar_events"><code dir="auto">get_calendar_events</code></h2><a class="sl-anchor-link" href="#get_calendar_events"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_calendar_events”</span></a></div>
+<p>Raw calendar events (training targets, completed exercises, etc.) in a date
+range.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td><code dir="auto">from_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today</td></tr><tr><td><code dir="auto">to_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today + 30 days</td></tr></tbody></table>
+<p><strong>Response:</strong> JSON array of <code dir="auto">CalendarEvent</code> objects (see the spec at
+<a href="https://github.com/lmgarret/polar-openapi-maker">polar-openapi-maker</a> for
+the full shape).</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="get_calendar_week_summary"><code dir="auto">get_calendar_week_summary</code></h2><a class="sl-anchor-link" href="#get_calendar_week_summary"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_calendar_week_summary”</span></a></div>
+<p>Returns one summary entry per ISO week intersecting <code dir="auto">[from, to]</code> — the
+right-hand “week totals” strip in the Polar Flow diary.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td><code dir="auto">from_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today − 28 days</td></tr><tr><td><code dir="auto">to_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today</td></tr></tbody></table>
+<p>Range is capped at <strong>45 days</strong> by the server. Larger ranges return a 400
+that’s surfaced as a tool error.</p>
+<p><strong>Response:</strong> <code dir="auto">{"type": "week_summary", "weeks": [...]}</code>, one entry per week
+in range that holds data (empty weeks are omitted):</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Field</th><th>Unit / format</th></tr></thead><tbody><tr><td><code dir="auto">week</code></td><td>ISO week number (Flow sends no year)</td></tr><tr><td><code dir="auto">week_start</code></td><td>Monday of that week, <code dir="auto">YYYY-MM-DD</code>, resolved against the requested range</td></tr><tr><td><code dir="auto">number_of_sessions</code></td><td>count</td></tr><tr><td><code dir="auto">total_duration_s</code></td><td>seconds</td></tr><tr><td><code dir="auto">total_distance_m</code></td><td>metres — a manual session whose distance was only set per exercise counts 0</td></tr><tr><td><code dir="auto">total_kcal</code></td><td>kcal</td></tr><tr><td><code dir="auto">step_count</code></td><td>device steps; omitted when 0</td></tr></tbody></table>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"week"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">22</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"week_start"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">2026-05-25</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"number_of_sessions"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent"> </span><span style="--0:#7FDBCA;--1:#096E72">"total_duration_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1800</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"total_distance_m"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"total_kcal"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">250</span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;week&#x22;: 22, &#x22;week_start&#x22;: &#x22;2026-05-25&#x22;, &#x22;number_of_sessions&#x22;: 1, &#x22;total_duration_s&#x22;: 1800, &#x22;total_distance_m&#x22;: 0, &#x22;total_kcal&#x22;: 250}"><div></div></button></div></figure></div>
+<p>Flow’s 24/7 activity and sleep fields on the same payload are dropped until
+their units are pinned.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="get_progress_summary"><code dir="auto">get_progress_summary</code></h2><a class="sl-anchor-link" href="#get_progress_summary"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_progress_summary”</span></a></div>
+<p>Aggregated training totals (sessions, distance, duration, calories, ascent /
+descent, zone time, sport distribution, training-benefit distribution) for
+the supplied range.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td><code dir="auto">from_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today − 90 days</td></tr><tr><td><code dir="auto">to_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today</td></tr><tr><td><code dir="auto">group</code></td><td>string</td><td><code dir="auto">MONTH</code> — time-bucket granularity, <strong>not</strong> a sport filter (likely also <code dir="auto">DAY</code>/<code dir="auto">WEEK</code>/<code dir="auto">YEAR</code>)</td></tr><tr><td><code dir="auto">time_frame</code></td><td>string</td><td><code dir="auto">3m</code> — also accepts <code dir="auto">6w</code>, <code dir="auto">1y</code></td></tr></tbody></table>
+<p><strong>Response:</strong> canonical progress object — <code dir="auto">number_of_sessions</code>,
+<code dir="auto">total_duration_s</code> (seconds, decoded from the wire’s <code dir="auto">StandardDuration</code>
+object), <code dir="auto">total_distance_m</code>, <code dir="auto">total_kcal</code>, <code dir="auto">total_ascent_m</code> / <code dir="auto">total_descent_m</code>,
+plus <code dir="auto">from_date</code> / <code dir="auto">to_date</code> echoing the range. The <code dir="auto">sport_breakdown</code>,
+<code dir="auto">heart_rate_zones</code>, and <code dir="auto">training_benefit_breakdown</code> lists are passed through
+from the wire (their element shapes are only partly pinned upstream). See
+<a href="/polar-flow-mcp/reference/units-and-dates/">Units &#x26; dates</a>.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="create_training_session"><code dir="auto">create_training_session</code></h2><a class="sl-anchor-link" href="#create_training_session"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “create_training_session”</span></a></div>
+<p>Log a manually-entered completed training session via <code dir="auto">POST /api/training/create</code>
+— the endpoint behind the “Manual training result” form (<code dir="auto">/exercises/add</code>) in
+the Polar Flow web UI.</p>
+<aside aria-label="Writes real data" class="starlight-aside starlight-aside--danger"><p class="starlight-aside__title" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" class="starlight-aside__icon"><path d="M12 7a1 1 0 0 0-1 1v4a1 1 0 0 0 2 0V8a1 1 0 0 0-1-1Zm0 8a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm9.71-7.44-5.27-5.27a1.05 1.05 0 0 0-.71-.29H8.27a1.05 1.05 0 0 0-.71.29L2.29 7.56a1.05 1.05 0 0 0-.29.71v7.46c.004.265.107.518.29.71l5.27 5.27c.192.183.445.286.71.29h7.46a1.05 1.05 0 0 0 .71-.29l5.27-5.27a1.05 1.05 0 0 0 .29-.71V8.27a1.05 1.05 0 0 0-.29-.71ZM20 15.31 15.31 20H8.69L4 15.31V8.69L8.69 4h6.62L20 8.69v6.62Z"></path></svg>Writes real data</p><div class="starlight-aside__content"><p>The created session counts toward weekly volume, progress summaries, and Polar’s
+training-load model. Intended for user-initiated logging of sessions that
+weren’t recorded on a watch — not for synthesizing test data on a production
+account. Coach skills should only call this when the user explicitly asks to log
+a session.</p><p>Asks the user to confirm first where the host supports it — see
+<a href="#user-confirmation-on-writes">User confirmation on writes</a>.</p></div></aside>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code dir="auto">name</code></td><td>string</td><td>yes</td><td>Display name shown in the diary.</td></tr><tr><td><code dir="auto">date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>yes</td><td>Date the session happened.</td></tr><tr><td><code dir="auto">time</code></td><td><code dir="auto">HH:MM</code></td><td>no</td><td>Local start time. Default <code dir="auto">18:00</code>.</td></tr><tr><td><code dir="auto">duration_s</code></td><td>integer</td><td>yes</td><td>Duration in seconds.</td></tr><tr><td><code dir="auto">distance_m</code></td><td>integer</td><td>no</td><td>Distance in metres. Default <code dir="auto">0</code>.</td></tr><tr><td><code dir="auto">kcal</code></td><td>integer</td><td>no</td><td>Kilocalories burned. Default <code dir="auto">0</code>.</td></tr><tr><td><code dir="auto">hr_avg</code></td><td>integer</td><td>no</td><td>Average HR (bpm). Omit / <code dir="auto">0</code> for unset.</td></tr><tr><td><code dir="auto">hr_max</code></td><td>integer</td><td>no</td><td>Max HR (bpm). Omit / <code dir="auto">0</code> for unset.</td></tr><tr><td><code dir="auto">speed_kmh</code></td><td>number</td><td>no</td><td>Average speed (km/h). Omit / <code dir="auto">0</code> for unset.</td></tr><tr><td><code dir="auto">sport_id</code></td><td>integer</td><td>no</td><td>Polar sport ID. Default <code dir="auto">1</code> (running); e.g. <code dir="auto">2</code> cycling, <code dir="auto">23</code> swimming. Use <code dir="auto">list_sports</code> for the full mapping.</td></tr><tr><td><code dir="auto">note</code></td><td>string</td><td>no</td><td>Free-text note.</td></tr></tbody></table>
+<p><strong>Response:</strong> confirmation string. The endpoint returns an empty body — Polar
+does not surface the new session id; call <code dir="auto">list_training_sessions</code> afterwards
+if you need it.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="list_training_sessions"><code dir="auto">list_training_sessions</code></h2><a class="sl-anchor-link" href="#list_training_sessions"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “list_training_sessions”</span></a></div>
+<p>List <strong>completed</strong> training sessions in a date range.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td><code dir="auto">from_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today − 30 days</td></tr><tr><td><code dir="auto">to_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today</td></tr></tbody></table>
+<p>The tool resolves the numeric user ID by calling <code dir="auto">get_user_info</code> internally,
+so no <code dir="auto">user_id</code> parameter is needed.</p>
+<p><strong>Response:</strong> JSON array of canonical session objects (<code dir="auto">id</code>, <code dir="auto">sport_id</code>,
+<code dir="auto">sport_name</code>, <code dir="auto">start_time</code>, <code dir="auto">session_duration_s</code>, <code dir="auto">distance_m</code>, <code dir="auto">hr_avg</code>,
+<code dir="auto">calories</code>, …). Durations are seconds, distances metres, dates ISO 8601 — see
+<a href="/polar-flow-mcp/reference/units-and-dates/">Units &#x26; dates</a>. Absent values are omitted rather
+than sent as <code dir="auto">-1</code> / <code dir="auto">""</code>.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="get_training_session_summary"><code dir="auto">get_training_session_summary</code></h2><a class="sl-anchor-link" href="#get_training_session_summary"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_training_session_summary”</span></a></div>
+<p>Summary view of a completed session — duration, distance, calories, HR
+averages, sport, etc.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">session_id</code></td><td>integer</td><td>yes</td></tr></tbody></table>
+<p><strong>Response:</strong> canonical session object — <code dir="auto">session_duration_s</code> (seconds, decoded
+from the wire’s ISO-8601 <code dir="auto">PTxxM</code>), <code dir="auto">distance_m</code>, <code dir="auto">hr_avg</code> / <code dir="auto">hr_max</code> (bpm),
+<code dir="auto">calories</code>, <code dir="auto">start_time</code> (ISO 8601), <code dir="auto">note</code>, and <code dir="auto">feeling</code> (1 = bad … 5 = great,
+<code dir="auto">null</code> when unset). See <a href="/polar-flow-mcp/reference/units-and-dates/">Units &#x26; dates</a>.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="get_training_session_details"><code dir="auto">get_training_session_details</code></h2><a class="sl-anchor-link" href="#get_training_session_details"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_training_session_details”</span></a></div>
+<p>The detail of a completed session, compact enough to read whole (~12 KB for a
+one-hour interval run, against ~500 KB on the wire). Use it for zone time,
+interval splits, laps or hills.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">session_id</code></td><td>integer</td><td>yes</td></tr></tbody></table>
+<p><strong>Response:</strong> <code dir="auto">{id, exercises: [...]}</code>, one entry per sport, each with:</p>
+<ul>
+<li><code dir="auto">duration_s</code>, <code dir="auto">distance_m</code>, <code dir="auto">calories</code>, <code dir="auto">ascent_m</code> / <code dir="auto">descent_m</code>,
+<code dir="auto">running_index</code>, <code dir="auto">recovery_time_s</code>, and <code dir="auto">{avg, max, min}</code> of <code dir="auto">hr_bpm</code>,
+<code dir="auto">speed_kmh</code>, <code dir="auto">power_w</code>, <code dir="auto">cadence</code>;</li>
+<li><code dir="auto">zones</code> — <code dir="auto">hr</code> / <code dir="auto">speed</code> / <code dir="auto">power</code> lists of <code dir="auto">{zone, min, max, time_s}</code>
+(bounds in bpm, km/h, W; <code dir="auto">max</code> null on an open top zone; speed zones add
+<code dir="auto">distance_m</code>);</li>
+<li><code dir="auto">target</code> — when the session was started from a planned training target:
+<code dir="auto">name</code>, <code dir="auto">type</code>, <code dir="auto">reached</code> and <code dir="auto">reps</code>, one row per executed phase repetition in
+order (a 3 × (8 min + 3 min walk) block gives six rows between warm-up and
+cool-down): <code dir="auto">index</code>, <code dir="auto">phase</code>, <code dir="auto">phase_index</code>, <code dir="auto">repetition</code>, <code dir="auto">start_s</code> / <code dir="auto">end_s</code>
+(seconds from the exercise start), <code dir="auto">duration_s</code>, <code dir="auto">distance_m</code>,
+<code dir="auto">avg_speed_kmh</code> / <code dir="auto">max_speed_kmh</code>, <code dir="auto">pace_s_per_km</code>, <code dir="auto">hr_avg</code> / <code dir="auto">hr_max</code>,
+<code dir="auto">power_avg_w</code> / <code dir="auto">power_max_w</code>, <code dir="auto">cadence_avg</code>, the planned <code dir="auto">target_zone</code>
+(<code dir="auto">{type: hr|speed|power, lower, upper}</code>), <code dir="auto">in_zone_s</code> and <code dir="auto">finished</code>;</li>
+<li><code dir="auto">laps</code> — recorded laps, passed through raw (<code dir="auto">automatic</code> / <code dir="auto">manual</code>);</li>
+<li><code dir="auto">hills</code> — detected climbs and descents: <code dir="auto">type</code>, <code dir="auto">start_s</code>, <code dir="auto">duration_s</code>,
+<code dir="auto">distance_m</code>, <code dir="auto">elevation_m</code>, <code dir="auto">avg_incline_pct</code>, <code dir="auto">hr_avg</code>, <code dir="auto">avg_speed_kmh</code>,
+<code dir="auto">power_avg_w</code>;</li>
+<li><code dir="auto">samples</code> — the series <code dir="auto">get_training_session_samples</code> can return.</li>
+</ul>
+<p>The per-second traces are not included. A manually entered session has no
+zones, reps or samples.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="get_training_session_samples"><code dir="auto">get_training_session_samples</code></h2><a class="sl-anchor-link" href="#get_training_session_samples"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_training_session_samples”</span></a></div>
+<p>A session’s recorded curves averaged into fixed time buckets, as equal-length
+columns. Flow records at 1 s; the tool resamples server-side so the result
+stays small (a one-hour run at the default 60 s is 62 rows, about 1 KB).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td><code dir="auto">session_id</code></td><td>integer</td><td>required</td></tr><tr><td><code dir="auto">metrics</code></td><td>array of <code dir="auto">hr</code>, <code dir="auto">speed</code>, <code dir="auto">pace</code>, <code dir="auto">power</code>, <code dir="auto">cadence</code>, <code dir="auto">altitude</code>, <code dir="auto">distance</code>, <code dir="auto">temperature</code></td><td><code dir="auto">["hr", "speed"]</code></td></tr><tr><td><code dir="auto">resolution_s</code></td><td>integer, 1–3600</td><td>60</td></tr><tr><td><code dir="auto">rep</code></td><td>integer — index into <code dir="auto">get_training_session_details</code>’ <code dir="auto">target.reps</code></td><td>whole session</td></tr><tr><td><code dir="auto">from_s</code> / <code dir="auto">to_s</code></td><td>integer, seconds from the exercise start</td><td>whole session</td></tr><tr><td><code dir="auto">exercise_id</code></td><td>integer — exercise of a multi-sport session</td><td>the first</td></tr></tbody></table>
+<p><code dir="auto">rep</code> and <code dir="auto">from_s</code>/<code dir="auto">to_s</code> cannot be combined. At most 1000 rows: a finer
+resolution is coarsened to fit, and <code dir="auto">resolution_s</code> in the result is the one
+used.</p>
+<p><strong>Response:</strong> <code dir="auto">{session_id, exercise_id, rep?, from_s, to_s, resolution_s, points, columns}</code> where <code dir="auto">columns</code> holds <code dir="auto">t_s</code> (bucket start) and one column per
+metric — <code dir="auto">hr_bpm</code>, <code dir="auto">speed_kmh</code>, <code dir="auto">pace_s_per_km</code> (from the bucket’s average
+speed), <code dir="auto">power_w</code>, <code dir="auto">cadence</code>, <code dir="auto">altitude_m</code>, <code dir="auto">distance_m</code> (last value in the
+bucket), <code dir="auto">temperature_c</code>. A bucket without a reading is <code dir="auto">null</code>.</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"session_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">9000000001</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"rep"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">4</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"metrics"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">hr</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">pace</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">], </span><span style="--0:#7FDBCA;--1:#096E72">"resolution_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">30</span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">→ {</span><span style="--0:#7FDBCA;--1:#096E72">"from_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1452</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"to_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1932</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"resolution_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">30</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"points"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">16</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">   </span><span style="--0:#7FDBCA;--1:#096E72">"columns"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span><span style="--0:#7FDBCA;--1:#096E72">"t_s"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#F78C6C;--1:#AA0982">1452</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">1482</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#FFFFFF;--1:#984E4D">…</span><span style="--0:#D6DEEB;--1:#403F53">], </span><span style="--0:#7FDBCA;--1:#096E72">"hr_bpm"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#F78C6C;--1:#AA0982">142</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">158</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#FFFFFF;--1:#984E4D">…</span><span style="--0:#D6DEEB;--1:#403F53">], </span><span style="--0:#7FDBCA;--1:#096E72">"pace_s_per_km"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#F78C6C;--1:#AA0982">341</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#F78C6C;--1:#AA0982">311</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#FFFFFF;--1:#984E4D">…</span><span style="--0:#D6DEEB;--1:#403F53">]}}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;session_id&#x22;: 9000000001, &#x22;rep&#x22;: 4, &#x22;metrics&#x22;: [&#x22;hr&#x22;, &#x22;pace&#x22;], &#x22;resolution_s&#x22;: 30}→ {&#x22;from_s&#x22;: 1452, &#x22;to_s&#x22;: 1932, &#x22;resolution_s&#x22;: 30, &#x22;points&#x22;: 16,   &#x22;columns&#x22;: {&#x22;t_s&#x22;: [1452, 1482, …], &#x22;hr_bpm&#x22;: [142, 158, …], &#x22;pace_s_per_km&#x22;: [341, 311, …]}}"><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h2"><h2 id="activity-and-sleep">Activity and sleep</h2><a class="sl-anchor-link" href="#activity-and-sleep"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Activity and sleep”</span></a></div>
+<p>24/7 data a Polar device syncs to Flow. On an account without such a device
+both tools return empty results rather than errors.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="get_daily_activity"><code dir="auto">get_daily_activity</code></h3><a class="sl-anchor-link" href="#get_daily_activity"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_daily_activity”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td><code dir="auto">from_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today − 6 days</td></tr><tr><td><code dir="auto">to_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today; at most 31 days after <code dir="auto">from_date</code></td></tr></tbody></table>
+<p>One entry per day: <code dir="auto">steps</code>, <code dir="auto">step_distance_m</code>, <code dir="auto">active_time_s</code>, <code dir="auto">kcal</code>,
+<code dir="auto">activity_goal_pct</code> (% of the daily activity goal), <code dir="auto">inactivity_alerts</code>,
+<code dir="auto">sleep_s</code>, <code dir="auto">intensity</code> (seconds in <code dir="auto">sleep_s</code> / <code dir="auto">sedentary_s</code> / <code dir="auto">light_s</code> /
+<code dir="auto">moderate_s</code> / <code dir="auto">vigorous_s</code>), <code dir="auto">heart_rate</code> (<code dir="auto">day_min_bpm</code>, <code dir="auto">day_max_bpm</code>,
+<code dir="auto">night_min_bpm</code>), <code dir="auto">benefit</code> (Polar’s activity-benefit feedback) and <code dir="auto">last_sync</code>.
+A single-day call adds <code dir="auto">samples</code>: the intraday activity level and heart rate at
+10-minute resolution, as <code dir="auto">{"t": "HH:MM", "v": …}</code> in local time. A <code dir="auto">summary</code>
+totals the days with data.</p>
+<p>Flow answers days without device data — and future days — with zeros; those
+days have <code dir="auto">has_data: false</code> and null metrics instead. On days with data,
+<code dir="auto">heart_rate</code>, <code dir="auto">intensity</code> and <code dir="auto">benefit</code> are still <code dir="auto">null</code> when Flow has nothing
+for them, and <code dir="auto">benefit</code>’s lists (<code dir="auto">improves</code>, <code dir="auto">promotes</code>, <code dir="auto">aids</code>) are omitted
+when empty. <code dir="auto">sleep_plus</code> is always a boolean. Flow’s minutes are converted to
+seconds and its step distance is already metres. Fetched four days per request.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="get_sleep"><code dir="auto">get_sleep</code></h3><a class="sl-anchor-link" href="#get_sleep"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_sleep”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td><code dir="auto">from_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today − 13 days</td></tr><tr><td><code dir="auto">to_date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>today; at most 365 days after <code dir="auto">from_date</code></td></tr></tbody></table>
+<p>One entry per recorded night, keyed by the wake-up <code dir="auto">date</code>: <code dir="auto">fell_asleep</code> /
+<code dir="auto">woke_up</code> (local, ISO 8601), <code dir="auto">sleep_s</code>, <code dir="auto">score</code> (Sleep Score 0–100, null when
+Polar has none), <code dir="auto">continuity_index</code> (1–5), <code dir="auto">continuity_class</code>, <code dir="auto">sleep_cycles</code>,
+<code dir="auto">rating</code> (the user’s own), <code dir="auto">stages</code> (<code dir="auto">light_s</code> / <code dir="auto">deep_s</code> / <code dir="auto">rem_s</code> /
+<code dir="auto">unknown_s</code>; <code dir="auto">null</code> on nights without Sleep Plus Stages), <code dir="auto">interruptions_s</code> /
+<code dir="auto">long_interruptions_s</code>, and a <code dir="auto">hypnogram</code> of <code dir="auto">{stage, start_s, end_s, long?}</code>
+segments in seconds after falling asleep. <code dir="auto">stage</code> is one of <code dir="auto">wake</code>, <code dir="auto">light</code>,
+<code dir="auto">deep</code>, <code dir="auto">rem</code>, <code dir="auto">unknown</code> — or <code dir="auto">sleep</code> on nights without stages, where Polar
+only tells asleep from awake. The first segment can start a little after 0
+(an awake stretch before falling asleep is cut off). <code dir="auto">averages</code> summarizes the
+range.</p>
+<p>Flow’s sleep report only answers windows of 30–365 days, so shorter requests
+are widened and filtered. Its field meanings are taken from the Flow web UI’s
+own code — the test account has no sleep-tracking device, so they are not yet
+confirmed against a populated capture.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="favorites-and-routes">Favorites and routes</h2><a class="sl-anchor-link" href="#favorites-and-routes"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Favorites and routes”</span></a></div>
+<p>A <strong>favorite</strong> is a reusable, date-less training-target template (type
+<code dir="auto">VOLUME</code>, <code dir="auto">STEADY_RACE_PACE</code> or <code dir="auto">PHASED</code>); an imported GPX/TCX <strong>route</strong> is a
+favorite of type <code dir="auto">ROUTE</code>. Every favorite has two ids: the <code dir="auto">favorite_id</code> (used by
+almost every tool) and an inner <code dir="auto">exercise_target_id</code> (used by
+<a href="#get_route"><code dir="auto">get_route</code></a> and, for multi-sport favorites,
+<a href="#set_favorite_sport"><code dir="auto">set_favorite_sport</code></a>). <code dir="auto">list_favorites</code> returns both.</p>
+<p>Polar’s favorite endpoints validate little — they store unknown sport ids,
+accept whitespace-only names, silently truncate route names and drop
+out-of-range route points — so these tools check every argument before any
+request goes out and verify writes by reading them back.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Limit</th><th>Value</th></tr></thead><tbody><tr><td>Favorite / route name</td><td>1–45 characters, not blank</td></tr><tr><td>Favorite description</td><td>≤ 500 characters</td></tr><tr><td>Duration goal</td><td>1 s – 99:59:59 (<code dir="auto">359999</code> s)</td></tr><tr><td>Distance goal</td><td>> 0 and ≤ 9 999 000 m</td></tr><tr><td><code dir="auto">sport_id</code></td><td>must exist in <a href="#list_sports"><code dir="auto">list_sports</code></a></td></tr></tbody></table>
+<div class="sl-heading-wrapper level-h3"><h3 id="list_favorites"><code dir="auto">list_favorites</code></h3><a class="sl-anchor-link" href="#list_favorites"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “list_favorites”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Default</th></tr></thead><tbody><tr><td><code dir="auto">kind</code></td><td><code dir="auto">all</code> | <code dir="auto">templates</code> | <code dir="auto">routes</code></td><td><code dir="auto">all</code></td></tr></tbody></table>
+<p><strong>Response:</strong> a text list plus canonical items: <code dir="auto">favorite_id</code>,
+<code dir="auto">exercise_target_id</code>, <code dir="auto">name</code>, <code dir="auto">description</code>, <code dir="auto">type</code>, <code dir="auto">sport_id</code>, <code dir="auto">sport_name</code>,
+<code dir="auto">sport_category</code>, <code dir="auto">duration_s</code>, <code dir="auto">distance_m</code>, <code dir="auto">calories</code>, <code dir="auto">route_source</code>
+(<code dir="auto">FLOW_FILE_IMPORT</code> for imported files). Durations are converted from the
+wire’s milliseconds.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="get_favorite"><code dir="auto">get_favorite</code></h3><a class="sl-anchor-link" href="#get_favorite"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_favorite”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">favorite_id</code></td><td>integer</td><td>yes</td></tr></tbody></table>
+<p><strong>Response:</strong> <code dir="auto">favorite_id</code>, <code dir="auto">name</code>, <code dir="auto">description</code>, <code dir="auto">type</code>, and
+<code dir="auto">exercise_targets[]</code> (<code dir="auto">exercise_target_id</code>, <code dir="auto">sport_id</code>, <code dir="auto">duration_s</code>,
+<code dir="auto">distance_m</code>, <code dir="auto">calories</code>, <code dir="auto">phases</code>). For PHASED favorites Polar rolls the phase
+goals up into <code dir="auto">duration_s</code> / <code dir="auto">distance_m</code>; the phase tree is passed through
+raw. A ROUTE favorite has no geometry here — use <code dir="auto">get_route</code>. <code dir="auto">No favorite with favorite_id &#x3C;id>.</code> when it does not exist.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="create_favorite"><code dir="auto">create_favorite</code></h3><a class="sl-anchor-link" href="#create_favorite"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “create_favorite”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code dir="auto">name</code></td><td>string</td><td>yes</td><td>1–45 characters.</td></tr><tr><td><code dir="auto">description</code></td><td>string</td><td>no</td><td>≤ 500 characters.</td></tr><tr><td><code dir="auto">sport_id</code></td><td>integer</td><td>no</td><td>Default <code dir="auto">1</code> (running).</td></tr><tr><td><code dir="auto">duration_s</code></td><td>integer</td><td>one goal</td><td>VOLUME goal in seconds.</td></tr><tr><td><code dir="auto">distance_m</code></td><td>number</td><td>one goal</td><td>VOLUME goal in metres.</td></tr><tr><td><code dir="auto">phases</code></td><td>array</td><td>one goal</td><td>PHASED goal — same shape as <a href="#phase-shape"><code dir="auto">create_training_target</code></a>.</td></tr></tbody></table>
+<p>Exactly one of <code dir="auto">duration_s</code>, <code dir="auto">distance_m</code> or <code dir="auto">phases</code>.</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"name"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">6x800</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"sport_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"phases"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">warmup</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"duration_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">900</span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">repeat</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"reps"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">6</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"goal"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span><span style="--0:#7FDBCA;--1:#096E72">"distance_m"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">800</span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent">   </span><span style="--0:#7FDBCA;--1:#096E72">"intensity"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span><span style="--0:#7FDBCA;--1:#096E72">"hr_zone"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">4</span><span style="--0:#D6DEEB;--1:#403F53">}, </span><span style="--0:#7FDBCA;--1:#096E72">"recovery"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span><span style="--0:#7FDBCA;--1:#096E72">"duration_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">90</span><span style="--0:#D6DEEB;--1:#403F53">}},</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#D6DEEB;--1:#403F53">  </span></span><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">cooldown</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"duration_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">600</span><span style="--0:#D6DEEB;--1:#403F53">}]}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;name&#x22;: &#x22;6x800&#x22;, &#x22;sport_id&#x22;: 1, &#x22;phases&#x22;: [  {&#x22;type&#x22;: &#x22;warmup&#x22;, &#x22;duration_s&#x22;: 900},  {&#x22;type&#x22;: &#x22;repeat&#x22;, &#x22;reps&#x22;: 6, &#x22;goal&#x22;: {&#x22;distance_m&#x22;: 800},   &#x22;intensity&#x22;: {&#x22;hr_zone&#x22;: 4}, &#x22;recovery&#x22;: {&#x22;duration_s&#x22;: 90}},  {&#x22;type&#x22;: &#x22;cooldown&#x22;, &#x22;duration_s&#x22;: 600}]}"><div></div></button></div></figure></div>
+<p><strong>Response:</strong> the new favorite, read back (same shape as <code dir="auto">get_favorite</code>).</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="update_favorite"><code dir="auto">update_favorite</code></h3><a class="sl-anchor-link" href="#update_favorite"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “update_favorite”</span></a></div>
+<p>Full replace of a single-sport, non-route favorite: same arguments as
+<code dir="auto">create_favorite</code> plus the required <code dir="auto">favorite_id</code>. Anything omitted is cleared,
+so read it with <code dir="auto">get_favorite</code> first. The tool carries Polar’s
+exercise-target id over for you — Polar silently ignores an update without it.
+ROUTE and multi-sport favorites are refused.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="rename_favorite"><code dir="auto">rename_favorite</code></h3><a class="sl-anchor-link" href="#rename_favorite"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “rename_favorite”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">favorite_id</code></td><td>integer</td><td>yes</td></tr><tr><td><code dir="auto">name</code></td><td>string (1–45)</td><td>yes</td></tr></tbody></table>
+<p>Works on routes too. Checks the favorite exists first (Polar’s rename answers an
+unknown id with a server error).</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="set_favorite_sport"><code dir="auto">set_favorite_sport</code></h3><a class="sl-anchor-link" href="#set_favorite_sport"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “set_favorite_sport”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">favorite_id</code></td><td>integer</td><td>yes</td></tr><tr><td><code dir="auto">sport_id</code></td><td>integer</td><td>yes</td></tr><tr><td><code dir="auto">exercise_target_id</code></td><td>integer</td><td>only for multi-sport favorites</td></tr></tbody></table>
+<p>Polar’s endpoint accepts unknown sport ids and exercise-target ids with a
+success reply (and clears the sport when none is sent), so the tool validates
+both and confirms the change by reading the favorite back.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="delete_favorite"><code dir="auto">delete_favorite</code></h3><a class="sl-anchor-link" href="#delete_favorite"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “delete_favorite”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">favorite_id</code></td><td>integer</td><td>yes</td></tr></tbody></table>
+<p>Deletes a template or a route. Targets already scheduled from it are not
+affected. Asks the user to confirm first where the host supports it — see
+<a href="#user-confirmation-on-writes">User confirmation on writes</a>.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="save_target_as_favorite"><code dir="auto">save_target_as_favorite</code></h3><a class="sl-anchor-link" href="#save_target_as_favorite"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “save_target_as_favorite”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">target_id</code></td><td>integer</td><td>yes</td></tr><tr><td><code dir="auto">name</code></td><td>string (1–45)</td><td>no — defaults to the target’s name</td></tr></tbody></table>
+<p>The Flow target editor’s “Add to favorites” button: copies the target’s name,
+description, type, sport and phases into a new favorite (the date is dropped).
+Polar has no endpoint for this — the web UI copies the target client-side and
+creates a favorite, and so does this tool. The target is not linked to the new
+favorite; calling twice creates two favorites. Pass <code dir="auto">name</code> when the target’s
+name exceeds the 45-character favorite limit.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="schedule_favorite"><code dir="auto">schedule_favorite</code></h3><a class="sl-anchor-link" href="#schedule_favorite"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “schedule_favorite”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code dir="auto">favorite_id</code></td><td>integer</td><td>yes</td><td>A training-target favorite (not a route).</td></tr><tr><td><code dir="auto">date</code></td><td><code dir="auto">YYYY-MM-DD</code></td><td>yes</td><td>Local date; past dates are allowed.</td></tr><tr><td><code dir="auto">time</code></td><td><code dir="auto">HH:MM</code></td><td>no</td><td>Default <code dir="auto">18:00</code>. <code dir="auto">00:00</code> is refused.</td></tr></tbody></table>
+<p>Creates a training target from the favorite (the diary’s “Add → Favorites”
+picker) and returns its <code dir="auto">target_id</code>, <code dir="auto">date</code>, <code dir="auto">time</code>, <code dir="auto">start</code>, <code dir="auto">sport_id</code>,
+<code dir="auto">duration_s</code>, <code dir="auto">distance_m</code>, <code dir="auto">calories</code>. If another target already starts at
+that minute Polar shifts the new one by one minute instead of failing; the
+result says so. Polar reads midnight as “no time” and moves it to 18:00, hence
+the <code dir="auto">00:00</code> refusal.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="import_route"><code dir="auto">import_route</code></h3><a class="sl-anchor-link" href="#import_route"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “import_route”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code dir="auto">content</code></td><td>string</td><td>yes</td><td>Full text of the GPX or TCX file.</td></tr><tr><td><code dir="auto">format</code></td><td><code dir="auto">auto</code> | <code dir="auto">gpx</code> | <code dir="auto">tcx</code></td><td>no</td><td>Default <code dir="auto">auto</code> (detected from the XML root).</td></tr><tr><td><code dir="auto">name</code></td><td>string (1–45)</td><td>no</td><td>Default: the name in the file, else <code dir="auto">Imported route</code>.</td></tr><tr><td><code dir="auto">sport_id</code></td><td>integer</td><td>no</td><td>Binds the route to a sport.</td></tr></tbody></table>
+<p>The file is parsed in Go and uploaded as JSON trackpoints, in exactly the shape
+the Flow web UI sends (verified byte-for-byte against captured uploads):</p>
+<ul>
+<li><strong>GPX</strong> — the first <code dir="auto">&#x3C;trk></code> (all of its segments; the web UI keeps only the
+first) or else the first <code dir="auto">&#x3C;rte></code>; cumulative distance by haversine with the
+UI’s Earth radius; missing <code dir="auto">&#x3C;ele></code> → altitude <code dir="auto">0</code>.</li>
+<li><strong>TCX</strong> — the first <code dir="auto">&#x3C;Course></code> or <code dir="auto">&#x3C;Activity></code>; only trackpoints with a
+position; the file’s own <code dir="auto">DistanceMeters</code>; missing altitude → <code dir="auto">null</code>.</li>
+</ul>
+<p>Rejected before upload: empty or non-XML content, unknown root element, fewer
+than two points, a latitude outside [-90, 90] or longitude outside
+[-180, 180], zero length, decreasing TCX distances, files over 25 MB.</p>
+<p><strong>Response:</strong> <code dir="auto">favorite_id</code>, <code dir="auto">exercise_target_id</code>, <code dir="auto">name</code>, <code dir="auto">format</code>,
+<code dir="auto">point_count</code>, <code dir="auto">distance_m</code>. Polar’s import returns an empty body, so the tool
+finds the new favorite by listing favorites before and after.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="get_route"><code dir="auto">get_route</code></h3><a class="sl-anchor-link" href="#get_route"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “get_route”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">exercise_target_id</code></td><td>integer</td><td>one of the two</td></tr><tr><td><code dir="auto">favorite_id</code></td><td>integer</td><td>one of the two</td></tr><tr><td><code dir="auto">max_points</code></td><td>integer (2–100000)</td><td>no — default <code dir="auto">500</code></td></tr></tbody></table>
+<p>Polar’s geometry endpoint is keyed by the <strong>exercise-target id</strong> and answers
+“forbidden” for anything else, including a favorite id passed by mistake; pass
+<code dir="auto">favorite_id</code> and the tool resolves it. <strong>Response:</strong> <code dir="auto">exercise_target_id</code>,
+<code dir="auto">name</code>, <code dir="auto">distance_m</code>, <code dir="auto">sport_id</code>, <code dir="auto">point_count</code> (full), <code dir="auto">returned_points</code>,
+<code dir="auto">start</code>, and <code dir="auto">points[]</code> (<code dir="auto">lat</code>, <code dir="auto">lon</code>, <code dir="auto">altitude_m</code>), evenly down-sampled to
+<code dir="auto">max_points</code> with the first and last point kept. Polar’s synthesized per-point
+<code dir="auto">time</code> (a sequence index) is dropped.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="editing-and-deleting-completed-sessions">Editing and deleting completed sessions</h2><a class="sl-anchor-link" href="#editing-and-deleting-completed-sessions"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Editing and deleting completed sessions”</span></a></div>
+<div class="sl-heading-wrapper level-h3"><h3 id="edit_training_session"><code dir="auto">edit_training_session</code></h3><a class="sl-anchor-link" href="#edit_training_session"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “edit_training_session”</span></a></div>
+<p>What the diary’s <strong>Edit session</strong> form allows. Pass only what changes;
+everything else keeps its current value. The date/time cannot be edited.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Limits</th></tr></thead><tbody><tr><td><code dir="auto">session_id</code></td><td>integer</td><td>required</td></tr><tr><td><code dir="auto">name</code></td><td>string</td><td>1–100 characters</td></tr><tr><td><code dir="auto">note</code></td><td>string</td><td>≤ 10 000 characters; <code dir="auto">""</code> clears it</td></tr><tr><td><code dir="auto">feeling</code></td><td>integer</td><td>1 (bad) – 5 (great)</td></tr><tr><td><code dir="auto">sport_id</code></td><td>integer</td><td>must exist in <code dir="auto">list_sports</code></td></tr><tr><td><code dir="auto">duration_s</code></td><td>integer</td><td>1 – 359999 seconds</td></tr><tr><td><code dir="auto">distance_m</code></td><td>number</td><td>0 – 9 999 000 metres</td></tr><tr><td><code dir="auto">hr_avg</code></td><td>integer</td><td>0 – 240 bpm (<code dir="auto">0</code> clears)</td></tr><tr><td><code dir="auto">hr_max</code></td><td>integer</td><td>0 – 240 bpm, ≥ <code dir="auto">hr_avg</code></td></tr><tr><td><code dir="auto">kcal</code></td><td>integer</td><td>0 – 65535</td></tr><tr><td><code dir="auto">speed_kmh</code></td><td>number</td><td>0 – 399 km/h</td></tr></tbody></table>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"session_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">8429796771</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"distance_m"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">10200</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"note"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">Windy, legs heavy</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"feeling"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">3</span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;session_id&#x22;: 8429796771, &#x22;distance_m&#x22;: 10200, &#x22;note&#x22;: &#x22;Windy, legs heavy&#x22;, &#x22;feeling&#x22;: 3}"><div></div></button></div></figure></div>
+<ul>
+<li><code dir="auto">note</code> and <code dir="auto">feeling</code> alone go through Polar’s partial note/feeling endpoint,
+which is safe on any session.</li>
+<li>Any other field goes through the full edit form, which the tool only uses on
+single-exercise <strong>manually entered</strong> sessions (recorded sessions are refused:
+the web form re-synthesizes the heart-rate trace, which is unverified on
+device data). The tool reads the live values and sends every field, because
+the endpoint resets a missing name to the sport name and stores a <code dir="auto">null</code> note
+as the text <code dir="auto">"null"</code>.</li>
+<li>Polar answers any out-of-range value with an unexplained server error, which
+is why the limits above are enforced before sending.</li>
+<li>A feeling cannot be removed once set.</li>
+</ul>
+<p><strong>Response:</strong> the session summary as read back (same shape as
+<a href="#get_training_session_summary"><code dir="auto">get_training_session_summary</code></a>, including
+<code dir="auto">feeling</code> as 1–5).</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="delete_training_session"><code dir="auto">delete_training_session</code></h3><a class="sl-anchor-link" href="#delete_training_session"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “delete_training_session”</span></a></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Argument</th><th>Type</th><th>Required</th></tr></thead><tbody><tr><td><code dir="auto">session_id</code></td><td>integer</td><td>yes</td></tr></tbody></table>
+<p>Deletes a completed session (<code dir="auto">DELETE /api/training/deleteTrainingSession/{id}/</code>
+— the trailing slash is required). Polar reports success even for an id that
+does not exist, so the tool first checks the session exists (<code dir="auto">No session with id &#x3C;id>.</code> otherwise, or an error for another account’s session) and afterwards
+verifies it is gone. Asks the user to confirm first where the host supports it
+— see <a href="#user-confirmation-on-writes">User confirmation on writes</a>.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="behaviour-notes">Behaviour notes</h2><a class="sl-anchor-link" href="#behaviour-notes"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore="">Section titled “Behaviour notes”</span></a></div>
+<ul>
+<li><strong>Units &#x26; dates.</strong> Every tool speaks one canonical contract — durations in
+seconds (<code dir="auto">*_s</code>), distances in metres (<code dir="auto">*_m</code>), speed in km/h (<code dir="auto">*_kmh</code>), heart
+rate in bpm, ISO 8601 dates — regardless of the many encodings the underlying
+Flow endpoints use. The adapter (<code dir="auto">internal/convert</code>) does the conversion. See
+<a href="/polar-flow-mcp/reference/units-and-dates/">Units &#x26; dates</a> for the full table.</li>
+<li><strong>Time zones.</strong> <code dir="auto">create_training_target</code> sends a local ISO datetime
+(<code dir="auto">YYYY-MM-DDTHH:MM</code> with no offset). The Polar server applies the user’s
+configured timezone. Make sure your test account’s timezone matches your
+intent.</li>
+<li><strong>Sport IDs.</strong> <code dir="auto">sport_id</code> defaults to <code dir="auto">1</code> (running). For cycling use <code dir="auto">2</code>,
+swimming <code dir="auto">23</code>, strength <code dir="auto">15</code>; call the <code dir="auto">list_sports</code> tool for the full
+id → name mapping.</li>
+<li><strong>Failure modes.</strong> On transport failure (network, 5xx) the tool returns
+the underlying error as a tool-result error. The MCP client (Claude) sees
+the error and can decide whether to retry.</li>
+</ul></div><footer class="sl-flex astro-ddtxxk7k"><div class="meta sl-flex astro-ddtxxk7k"><a href="https://github.com/lmgarret/polar-flow-mcp/edit/main/docs/src/content/docs/reference/mcp-tools.md" class="sl-flex print:hidden astro-qlekgd3o"><svg aria-hidden="true" class="astro-qlekgd3o astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;"><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a><p>Last updated: <time datetime="2026-10-09T11:48:39.000Z">Oct 9, 2026</time></p></div><div class="pagination-links print:hidden astro-b5raizh3" dir="ltr"><a href="/polar-flow-mcp/guides/contribute/" rel="prev" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span class="astro-b5raizh3">Previous<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Set up a dev environment &amp; contribute</span></span></a><a href="/polar-flow-mcp/reference/environment-variables/" rel="next" class="astro-b5raizh3"><svg aria-hidden="true" class="astro-b5raizh3 astro-hkc32dio" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span class="astro-b5raizh3">Next<br class="astro-b5raizh3"><span class="link-title astro-b5raizh3">Environment variables</span></span></a></div></footer></div></div></main></div></div></div></div></body></html>
