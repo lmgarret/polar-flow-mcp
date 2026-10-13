@@ -224,7 +224,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"  • VOLUME target (no phases): set duration_s OR distance_m at the top level. "+
 				"This creates a single open-goal block — use for easy/general runs.\n"+
 				"  • PHASED target (with phases): omit duration_s/distance_m and provide an "+
-				"ordered phases list of warmup / repeat / cooldown blocks.\n\n"+
+				"ordered phases list of warmup / block / repeat / cooldown phases.\n\n"+
 				"Units: distances are METRES (the Flow UI shows km — 5 km = 5000), durations "+
 				"are SECONDS. Intensity is a Polar zone 1–5 on one of three metrics: heart "+
 				"rate (intensity.hr_zone, or an effort label: easy→1–2, aerobic→2, tempo→3, "+
@@ -242,8 +242,17 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"\"intensity\": {\"label\": \"threshold\"}, \"recovery\": {\"duration_s\": 120}},\n"+
 				"    {\"type\": \"cooldown\", \"duration_s\": 600}\n"+
 				"  ]\n"+
+				"Example C — half-marathon paced by km blocks (each block its own HR zone range):\n"+
+				"  name: \"Half marathon\", date: \"2026-10-25\", time: \"09:00\", sport_id: 1,\n"+
+				"  phases: [\n"+
+				"    {\"type\": \"block\", \"name\": \"Km 1-5\", \"distance_m\": 5000, \"intensity\": {\"hr_zone\": 3}},\n"+
+				"    {\"type\": \"block\", \"name\": \"Km 5-15\", \"distance_m\": 10000, "+
+				"\"intensity\": {\"hr_zone\": 1, \"zone_max\": 3}},\n"+
+				"    {\"type\": \"block\", \"name\": \"Km 15-21\", \"distance_m\": 6100, "+
+				"\"intensity\": {\"hr_zone\": 3, \"zone_max\": 4}}\n"+
+				"  ]\n"+
 				"Each phase accepts an optional name (persisted verbatim by Polar); it defaults to "+
-				"a type-derived label (\"Warm-up\", \"Work\", \"Recovery\", \"Cool-down\") when omitted.",
+				"a type-derived label (\"Warm-up\", \"Block\", \"Work\", \"Recovery\", \"Cool-down\") when omitted.",
 		),
 		mcpgo.WithString("name", mcpgo.Required(),
 			mcpgo.Description("Display name shown in the diary, 1–45 characters (an emoji counts 2) "+
@@ -269,17 +278,18 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithArray("phases",
 			mcpgo.Description(
 				"Ordered list of workout phases. Omit (and set duration_s or distance_m) for a VOLUME target. Each phase "+
-					"is one of three types:\n"+
-					"  • warmup / cooldown — needs duration_s (seconds, > 0); optional intensity "+
-					"(hr_zone / power_zone / speed_zone 1–5, or a label) — omit for open/easy intensity.\n"+
+					"is one of four types:\n"+
+					"  • warmup / block / cooldown — one continuous phase with a goal of exactly one of "+
+					"duration_s (seconds, > 0) or distance_m (metres, > 0); optional intensity "+
+					"(hr_zone / power_zone / speed_zone 1–5, optionally with zone_max for a range, or a "+
+					"label) — omit for open/easy intensity. The three differ only in their default name; "+
+					"any of them may appear anywhere and as often as needed, so a run split into km "+
+					"segments (\"5 km Z3, then 10 km Z1–Z3, then 6.1 km Z3–Z4\") is a list of blocks.\n"+
 					"  • repeat — an interval block repeated reps times (reps ≥ 2). Needs goal "+
-					"(distance_m OR duration_s), optional intensity (hr_zone / power_zone / speed_zone "+
-					"1–5, or a label), and optional recovery (duration_s) inserted between reps.\n"+
-					"A single continuous zoned effort with a duration goal (e.g. \"40 min at threshold\", "+
-					"no warmup/cooldown structure) can be a lone warmup or cooldown phase with intensity "+
-					"set and a custom name — it does not need to be wrapped in a repeat. warmup/cooldown "+
-					"only take a duration goal; a single continuous effort with a distance goal still "+
-					"needs repeat (reps must be ≥ 2)."),
+					"(distance_m OR duration_s), optional intensity (as above), and optional recovery "+
+					"(duration_s) inserted between reps.\n"+
+					"A single continuous effort (\"40 min at threshold\", \"8 km at tempo\") is one "+
+					"block — it does not need to be wrapped in a repeat."),
 			mcpgo.Items(phaseItemSchema()),
 		),
 	)
@@ -367,7 +377,7 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.Description("VOLUME target total distance in metres. Required when replacing with a VOLUME target (no phases) and duration_s is not set.")),
 		mcpgo.WithArray("phases",
 			mcpgo.Description("Ordered workout phases — identical shape to create_training_target.phases "+
-				"(warmup / repeat / cooldown; distances in metres, durations in seconds). "+
+				"(warmup / block / repeat / cooldown; distances in metres, durations in seconds). "+
 				"Omit (and set duration_s or distance_m) to replace with a VOLUME target."),
 			mcpgo.Items(phaseItemSchema()),
 		),
@@ -584,20 +594,25 @@ func phaseItemSchema() map[string]any {
 		"type": "object",
 		"properties": map[string]any{
 			"type": map[string]any{
-				"type":        "string",
-				"enum":        []string{"warmup", "repeat", "cooldown"},
-				"description": "Phase kind.",
+				"type": "string",
+				"enum": []string{"warmup", "block", "repeat", "cooldown"},
+				"description": "Phase kind. warmup / block / cooldown are one continuous phase (goal: duration_s " +
+					"or distance_m at this level); repeat is an interval set (goal in goal).",
 			},
 			"name": map[string]any{
 				"type": "string",
 				"description": "Optional free-text label for this phase, persisted verbatim by Polar and " +
 					"shown per-phase in the workout breakdown. For a repeat phase this names the work " +
 					"interval (recovery has its own recovery.name). Defaults to a label derived from the " +
-					"phase type when omitted (\"Warm-up\", \"Work\", \"Cool-down\"). At most 45 characters.",
+					"phase type when omitted (\"Warm-up\", \"Block\", \"Work\", \"Cool-down\"). At most 45 characters.",
 			},
 			"duration_s": map[string]any{
 				"type":        "integer",
-				"description": "Phase length in seconds. Required for warmup/cooldown.",
+				"description": "warmup / block / cooldown goal: phase length in seconds. Give exactly one of duration_s or distance_m.",
+			},
+			"distance_m": map[string]any{
+				"type":        "number",
+				"description": "warmup / block / cooldown goal: phase distance in metres (5 km = 5000). Give exactly one of duration_s or distance_m.",
 			},
 			"reps": map[string]any{
 				"type":        "integer",
@@ -617,7 +632,8 @@ func phaseItemSchema() map[string]any {
 				"description": "Target intensity for this phase — warmup, cooldown, or a repeat's work " +
 					"interval — on exactly one metric: heart rate, power, or speed/pace. Set at most one " +
 					"of hr_zone, power_zone, speed_zone, or label; if more than one is given the " +
-					"precedence is hr_zone > power_zone > speed_zone > label. Omit entirely for open " +
+					"precedence is hr_zone > power_zone > speed_zone > label. Add zone_max to make the " +
+					"zone a range: {hr_zone: 1, zone_max: 3} targets Z1–Z3. Omit entirely for open " +
 					"intensity (no zone). Applies to every phase type — a zoned warmup/cooldown or a " +
 					"single continuous zoned block doesn't need to be wrapped in a repeat.\n\n" +
 					"All three zone numbers (hr_zone, power_zone, speed_zone) are Polar zone INDICES " +
@@ -628,9 +644,10 @@ func phaseItemSchema() map[string]any {
 					"the same sport_id and pick the zone whose range contains it.",
 				"properties": map[string]any{
 					"label":      map[string]any{"type": "string", "enum": []string{"easy", "aerobic", "tempo", "threshold", "vo2max"}, "description": "Effort label, mapped to an HR zone."},
-					"hr_zone":    map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar heart-rate zone 1–5, used as both lower and upper bound."},
-					"power_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar power zone 1–5 (index, not watts), used as both lower and upper bound. Requires a power-capable sport (e.g. cycling, sport_id 2) — Polar accepts the value on other sports but it won't display meaningfully."},
-					"speed_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar speed/pace zone 1–5 (index, not km/h or min/km), used as both lower and upper bound."},
+					"hr_zone":    map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar heart-rate zone 1–5: the lower bound, and the upper one too unless zone_max is set."},
+					"power_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar power zone 1–5 (index, not watts), the lower bound, and the upper one too unless zone_max is set. Requires a power-capable sport (e.g. cycling, sport_id 2) — Polar accepts the value on other sports but it won't display meaningfully."},
+					"speed_zone": map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Polar speed/pace zone 1–5 (index, not km/h or min/km): the lower bound, and the upper one too unless zone_max is set."},
+					"zone_max":   map[string]any{"type": "integer", "minimum": 1, "maximum": 5, "description": "Optional upper bound of a zone range (1–5, ≥ the hr_zone / power_zone / speed_zone given). Not used with label."},
 				},
 			},
 			"recovery": map[string]any{

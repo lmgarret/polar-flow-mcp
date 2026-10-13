@@ -425,3 +425,60 @@ func TestLiveActivityAndSleep(t *testing.T) {
 	res = liveCall(t, GetSleepHandler(fc), map[string]any{"from_date": time.Now().AddDate(0, -1, 0).Format("2006-01-02")})
 	t.Logf("%s", resultText(res))
 }
+
+// A race paced by distance segments with zone ranges (the shape the web UI
+// sends, captured 2026-10-13): create, then update one block's range, and
+// check every leaf reads back with its DISTANCE goal and zone range.
+//
+//nolint:gocyclo // one sequential live scenario
+func TestLiveDistanceBlocksRoundTrip(t *testing.T) {
+	fc := liveClient(t)
+	ctx := context.Background()
+	suffix := time.Now().Format("150405")
+	date := time.Now().AddDate(0, 0, 43).Format("2006-01-02")
+	blocks := func(lastMax float64) []any {
+		return []any{
+			map[string]any{"type": "block", "name": "Km 1-5", "distance_m": 5000.0,
+				"intensity": map[string]any{"hr_zone": 3.0}},
+			map[string]any{"type": "block", "name": "Km 5-15", "distance_m": 10000.0,
+				"intensity": map[string]any{"hr_zone": 1.0, "zone_max": 3.0}},
+			map[string]any{"type": "block", "name": "Km 15-21", "distance_m": 6100.0,
+				"intensity": map[string]any{"hr_zone": 3.0, "zone_max": lastMax}},
+		}
+	}
+	res := liveCall(t, CreateTrainingTargetHandler(fc), map[string]any{
+		"name": "live-km-" + suffix, "date": date, "time": "07:20", "sport_id": 1.0, "phases": blocks(4),
+	})
+	tid := int64(asNum(payload(t, res)["id"]))
+	t.Cleanup(func() { _ = fc.DeleteTrainingTarget(ctx, tid) })
+
+	check := func(target map[string]any, lastMax float64) {
+		t.Helper()
+		et := asMap(asArr(target["exerciseTargets"])[0])
+		if asNum(et["distance"]) != 21100 {
+			t.Fatalf("rolled-up distance = %v, want 21100", et["distance"])
+		}
+		want := [][3]float64{{5000, 3, 3}, {10000, 1, 3}, {6100, 3, lastMax}}
+		phases := asArr(et["phases"])
+		if len(phases) != len(want) {
+			t.Fatalf("phases = %+v", phases)
+		}
+		for i, w := range want {
+			p := asMap(phases[i])
+			if p["goalType"] != "DISTANCE" || asNum(p["distance"]) != w[0] ||
+				asNum(p["lowerZone"]) != w[1] || asNum(p["upperZone"]) != w[2] {
+				t.Fatalf("phase %d = %+v, want distance %v zones %v–%v", i, p, w[0], w[1], w[2])
+			}
+		}
+	}
+	check(asMap(payload(t, liveCall(t, GetTrainingTargetHandler(fc), map[string]any{"target_id": float64(tid)}))["target"]), 4)
+
+	res = liveCall(t, UpdateTrainingTargetHandler(fc), map[string]any{
+		"target_id": float64(tid), "name": "live-km-" + suffix, "date": date, "time": "07:20",
+		"sport_id": 1.0, "phases": blocks(5),
+	})
+	check(asMap(payload(t, res)["target"]), 5)
+	if err := fc.DeleteTrainingTarget(ctx, tid); err != nil {
+		t.Fatalf("cleanup target: %v", err)
+	}
+}

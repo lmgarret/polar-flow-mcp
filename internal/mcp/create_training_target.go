@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
@@ -137,8 +138,9 @@ func buildGoalExerciseTarget(req mcpgo.CallToolRequest) (et gen.ExerciseTarget, 
 }
 
 // buildPhases turns the user-facing flat phase array into Polar Flow's
-// PHASE/REPEAT sum-type list. Warmup and cooldown become single PhaseLeaf
-// entries; repeat becomes a PhaseRepeat with nested PhaseLeaf{work, recovery}.
+// PHASE/REPEAT sum-type list. Warmup, block and cooldown become single
+// PhaseLeaf entries; repeat becomes a PhaseRepeat with nested
+// PhaseLeaf{work, recovery}.
 //
 //nolint:gocyclo // straight-line builder over a small enum
 func buildPhases(args []any) ([]gen.Phase, error) {
@@ -150,16 +152,10 @@ func buildPhases(args []any) ([]gen.Phase, error) {
 		}
 		ptype, _ := p["type"].(string)
 		switch ptype {
-		case "warmup":
-			leaf, err := buildSimpleLeaf(p, "Warm-up", "AUTOMATIC")
+		case "warmup", "block", "cooldown":
+			leaf, err := buildSingleLeaf(p, singlePhaseNames[ptype])
 			if err != nil {
-				return nil, fmt.Errorf("phases[%d] (warmup): %w", i, err)
-			}
-			out = append(out, gen.Phase{Type: gen.PhaseLeafPhase, PhaseLeaf: leaf})
-		case "cooldown":
-			leaf, err := buildSimpleLeaf(p, "Cool-down", "AUTOMATIC")
-			if err != nil {
-				return nil, fmt.Errorf("phases[%d] (cooldown): %w", i, err)
+				return nil, fmt.Errorf("phases[%d] (%s): %w", i, ptype, err)
 			}
 			out = append(out, gen.Phase{Type: gen.PhaseLeafPhase, PhaseLeaf: leaf})
 		case "repeat":
@@ -169,7 +165,7 @@ func buildPhases(args []any) ([]gen.Phase, error) {
 			}
 			out = append(out, gen.Phase{Type: gen.PhaseRepeatPhase, PhaseRepeat: repeat})
 		default:
-			return nil, fmt.Errorf("phases[%d]: unknown type %q (want warmup|repeat|cooldown)", i, ptype)
+			return nil, fmt.Errorf("phases[%d]: unknown type %q (want warmup|block|repeat|cooldown)", i, ptype)
 		}
 		if err := checkPhaseNames(out[len(out)-1]); err != nil {
 			return nil, fmt.Errorf("phases[%d] (%s): %w", i, ptype, err)
@@ -203,27 +199,61 @@ func phaseName(p map[string]any, fallback string) string {
 	return fallback
 }
 
-// buildSimpleLeaf constructs a duration-goal warm-up / cool-down leaf. Polar's
-// PhaseLeaf carries intensityType/lowerZone/upperZone regardless of phase
-// role — a bare leaf (no REPEAT wrapper) is the idiomatic way to model a
-// zoned continuous block — so intensity is applied here exactly like it is on
-// a repeat's work leaf (buildWorkLeaf). Defaults to open intensity (NONE)
-// when the caller omits intensity, same as before.
-func buildSimpleLeaf(p map[string]any, name, changeType string) (gen.PhaseLeaf, error) {
-	dur, ok := goalDuration(p, "duration_s")
-	if !ok {
-		return gen.PhaseLeaf{}, fmt.Errorf("duration_s is required and must be > 0")
+// singlePhaseNames are the default names of the single-leaf phase types. Flow
+// gives a leaf no role — warm-up / block / cool-down differ only in this
+// fallback label — so any of them may sit anywhere in the sequence.
+var singlePhaseNames = map[string]string{"warmup": "Warm-up", "block": "Block", "cooldown": "Cool-down"}
+
+// buildSingleLeaf constructs a bare (non-repeated) leaf with a duration_s or
+// distance_m goal. A bare leaf is Flow's idiomatic continuous block, so a
+// sequence of them models e.g. a race by km segments ("5 km Z3, 10 km Z1–Z3,
+// 6.1 km Z3–Z4" — captured from the web UI 2026-10-13). Intensity is applied
+// exactly like on a repeat's work leaf (buildWorkLeaf); it defaults to open
+// (NONE) when omitted.
+func buildSingleLeaf(p map[string]any, name string) (gen.PhaseLeaf, error) {
+	leaf, err := goalLeaf(p, phaseName(p, name))
+	if err != nil {
+		return leaf, err
 	}
+	if intensity, ok := p["intensity"].(map[string]any); ok {
+		if err := applyIntensity(&leaf, intensity); err != nil {
+			return leaf, err
+		}
+	}
+	return leaf, nil
+}
+
+// goalLeaf builds an AUTOMATIC, open-intensity leaf from a goal object
+// holding exactly one of distance_m (metres) or duration_s (seconds). The
+// goal decides goalType, which is what Flow (and our read-back) keys on.
+func goalLeaf(goal map[string]any, name string) (gen.PhaseLeaf, error) {
 	leaf := gen.PhaseLeaf{
 		PhaseType:       "PHASE",
-		Name:            phaseName(p, name),
-		PhaseChangeType: gen.PhaseLeafPhaseChangeType(changeType),
-		GoalType:        "DURATION",
+		Name:            name,
+		PhaseChangeType: "AUTOMATIC",
 		IntensityType:   "NONE",
 	}
-	leaf.Duration.SetTo(dur)
-	if intensity, ok := p["intensity"].(map[string]any); ok {
-		applyIntensity(&leaf, intensity)
+	_, hasDist := goal["distance_m"]
+	_, hasDur := goal["duration_s"]
+	switch {
+	case hasDist && hasDur:
+		return leaf, fmt.Errorf("give only one of distance_m or duration_s")
+	case hasDist:
+		v, ok := goal["distance_m"].(float64)
+		if !ok || int(v) <= 0 {
+			return leaf, fmt.Errorf("distance_m must be a number of metres > 0")
+		}
+		leaf.GoalType = "DISTANCE"
+		leaf.Distance.SetTo(float64(int(v)))
+	case hasDur:
+		dur, ok := goalDuration(goal, "duration_s")
+		if !ok {
+			return leaf, fmt.Errorf("duration_s must be a number of seconds > 0")
+		}
+		leaf.GoalType = "DURATION"
+		leaf.Duration.SetTo(dur)
+	default:
+		return leaf, fmt.Errorf("needs a goal: distance_m or duration_s")
 	}
 	return leaf, nil
 }
@@ -262,60 +292,68 @@ func buildRepeat(p map[string]any) (gen.PhaseRepeat, error) {
 
 // buildWorkLeaf constructs the leaf that does the actual interval work.
 func buildWorkLeaf(goal, intensityCtx map[string]any) (gen.PhaseLeaf, error) {
-	leaf := gen.PhaseLeaf{
-		PhaseType:       "PHASE",
-		Name:            phaseName(intensityCtx, "Work"),
-		PhaseChangeType: "AUTOMATIC",
-		IntensityType:   "NONE",
+	if goal == nil {
+		return gen.PhaseLeaf{}, fmt.Errorf("goal must specify distance_m or duration_s")
 	}
-	switch {
-	case goal != nil && goalHasFloat(goal, "distance_m"):
-		v, _ := goal["distance_m"].(float64)
-		dist := int(v)
-		if dist <= 0 {
-			return leaf, fmt.Errorf("goal.distance_m must be > 0")
-		}
-		leaf.GoalType = "DISTANCE"
-		leaf.Distance.SetTo(float64(dist))
-	case goal != nil && goalHasFloat(goal, "duration_s"):
-		dur, _ := goalDuration(goal, "duration_s")
-		leaf.GoalType = "DURATION"
-		leaf.Duration.SetTo(dur)
-	default:
-		return leaf, fmt.Errorf("goal must specify distance_m or duration_s")
+	leaf, err := goalLeaf(goal, phaseName(intensityCtx, "Work"))
+	if err != nil {
+		return leaf, fmt.Errorf("goal: %w", err)
 	}
 	if intensity, ok := intensityCtx["intensity"].(map[string]any); ok {
-		applyIntensity(&leaf, intensity)
+		if err := applyIntensity(&leaf, intensity); err != nil {
+			return leaf, err
+		}
 	}
 	return leaf, nil
+}
+
+// zoneKeys are the numeric intensity keys in precedence order, with the
+// intensityType each one selects.
+var zoneKeys = []struct{ key, intensityType string }{
+	{"hr_zone", "HEART_RATE_ZONES"},
+	{"power_zone", "POWER_ZONES"},
+	{"speed_zone", "SPEED_ZONES"},
 }
 
 // applyIntensity sets a phase leaf's intensityType and lowerZone/upperZone from
 // the caller's intensity object. All three zone metrics (HR, power, speed) share
 // the same wire representation — a 1-5 zone index in lowerZone/upperZone, not a
 // raw bpm/watts/km-h threshold (see PhaseLeaf in the vendored spec) — so each
-// case below just picks the discriminator (intensityType) and copies the zone
+// case just picks the discriminator (intensityType) and copies the zone
 // number(s) through. Precedence when multiple keys are set: hr_zone, then
-// power_zone, then speed_zone, then label — matching the pre-existing "hr_zone
-// wins over label" rule extended to the two new metrics.
-func applyIntensity(leaf *gen.PhaseLeaf, intensity map[string]any) {
-	if zone, ok := intensity["hr_zone"].(float64); ok && zone >= 1 && zone <= 5 {
-		leaf.IntensityType = "HEART_RATE_ZONES"
-		leaf.LowerZone.SetTo(zone)
-		leaf.UpperZone.SetTo(zone)
-		return
+// power_zone, then speed_zone, then label.
+//
+// The zone is the range's lower bound; zone_max (optional) is its upper bound,
+// so {hr_zone: 1, zone_max: 3} is "Z1–Z3", as the web UI sends when its two
+// zone pickers differ. Flow 400s zones outside 1–5 or fractional, but stores an
+// inverted range as sent — hence the checks here.
+func applyIntensity(leaf *gen.PhaseLeaf, intensity map[string]any) error {
+	zoneMax, hasMax, err := zoneValue(intensity, "zone_max")
+	if err != nil {
+		return err
 	}
-	if zone, ok := intensity["power_zone"].(float64); ok && zone >= 1 && zone <= 5 {
-		leaf.IntensityType = "POWER_ZONES"
-		leaf.LowerZone.SetTo(zone)
-		leaf.UpperZone.SetTo(zone)
-		return
+	for _, z := range zoneKeys {
+		zone, ok, err := zoneValue(intensity, z.key)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			continue
+		}
+		upper := zone
+		if hasMax {
+			if zoneMax < zone {
+				return fmt.Errorf("intensity.zone_max (%d) must be ≥ %s (%d)", zoneMax, z.key, zone)
+			}
+			upper = zoneMax
+		}
+		leaf.IntensityType = gen.PhaseLeafIntensityType(z.intensityType)
+		leaf.LowerZone.SetTo(float64(zone))
+		leaf.UpperZone.SetTo(float64(upper))
+		return nil
 	}
-	if zone, ok := intensity["speed_zone"].(float64); ok && zone >= 1 && zone <= 5 {
-		leaf.IntensityType = "SPEED_ZONES"
-		leaf.LowerZone.SetTo(zone)
-		leaf.UpperZone.SetTo(zone)
-		return
+	if hasMax {
+		return fmt.Errorf("intensity.zone_max needs hr_zone, power_zone or speed_zone as the lower bound")
 	}
 	if label, ok := intensity["label"].(string); ok {
 		if lo, hi, ok := convert.HRZoneForLabel(label); ok {
@@ -324,11 +362,20 @@ func applyIntensity(leaf *gen.PhaseLeaf, intensity map[string]any) {
 			leaf.UpperZone.SetTo(float64(hi))
 		}
 	}
+	return nil
 }
 
-func goalHasFloat(m map[string]any, key string) bool {
-	v, ok := m[key].(float64)
-	return ok && v > 0
+// zoneValue reads an optional intensity zone: a whole number 1–5.
+func zoneValue(intensity map[string]any, key string) (int, bool, error) {
+	raw, ok := intensity[key]
+	if !ok || raw == nil {
+		return 0, false, nil
+	}
+	f, isNum := raw.(float64)
+	if !isNum || f != math.Trunc(f) || f < 1 || f > 5 {
+		return 0, true, fmt.Errorf("intensity.%s must be a whole zone number 1–5, got %v", key, raw)
+	}
+	return int(f), true, nil
 }
 
 // goalDuration extracts an int seconds value from the args map and formats it

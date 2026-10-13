@@ -69,7 +69,7 @@ func registerFavoriteAndSessionEditTools(s *server.MCPServer, fc *flow.Client) {
 			mcpgo.WithNumber("distance_m", mcpgo.Min(0), mcpgo.Max(maxFavoriteDistanceM),
 				mcpgo.Description("VOLUME goal: distance in METRES, > 0 and ≤ 9 999 000 (5 km = 5000).")),
 			mcpgo.WithArray("phases",
-				mcpgo.Description("PHASED goal: ordered warmup / repeat / cooldown phases — identical shape to "+
+				mcpgo.Description("PHASED goal: ordered warmup / block / repeat / cooldown phases — identical shape to "+
 					"create_training_target.phases (durations in seconds, distances in metres, zones 1–5)."),
 				mcpgo.Items(phaseItemSchema())),
 		}

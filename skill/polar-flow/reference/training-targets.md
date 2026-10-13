@@ -12,18 +12,22 @@
 |---|---|
 | A slot with no structure ("run Sunday") | No `phases` and no goal. This is an open VOLUME target |
 | One total goal ("35 min easy", "10 km") | No `phases`, top-level `duration_s` or `distance_m` (VOLUME) |
-| One continuous zoned effort by **time** ("40 min at threshold") | A single `warmup` phase with `intensity` and a custom `name` |
-| One continuous zoned effort by **distance** ("8 km at tempo") | `repeat` with `reps: 2` and half the distance, or ask the user. A distance-goal block has to be a `repeat`, and `reps` must be at least 2 |
+| One continuous zoned effort ("40 min at threshold", "8 km at tempo") | A single `block` phase with `duration_s` or `distance_m`, `intensity` and a custom `name` |
+| A run or race split into segments ("km 1–5 in Z3, km 5–15 in Z1–Z3, then free") | One `block` per segment, each with its own `distance_m` (or `duration_s`) and `intensity` |
 | Structured intervals | `warmup` → `repeat` (`goal` + optional `recovery`) → `cooldown` |
 
-There is no "main" phase type. `warmup` / `cooldown` take only a duration, and
-the `name` field relabels them.
+`warmup`, `block` and `cooldown` are the same thing to Polar: one continuous
+phase with exactly one goal, `duration_s` or `distance_m`, at the phase's own
+level. They differ only in their default name, so use them in any order and
+as many times as needed. Only `repeat` puts its goal inside `goal`.
 
 ## Intensity
 
 Each phase takes at most one of `hr_zone`, `speed_zone`, `power_zone` (all zone
 numbers 1–5) or `label`. Pass a label when the user speaks in effort terms. Use
-`hr_zone` only when they name a zone number. Labels map to HR zones:
+`hr_zone` only when they name a zone number. For a range ("Z1 to Z3", "up to
+Z4 from Z3"), add `zone_max`: `{"hr_zone": 1, "zone_max": 3}`. Labels map to
+HR zones:
 
 | `label` | HR zone |
 |---|---|
@@ -46,11 +50,12 @@ asked to change:
 
 | Read back (`exerciseTargets[0].phases[]`) | Send |
 |---|---|
-| Top-level `phaseType: "PHASE"` | `warmup` (before any repeat) or `cooldown` (after it), with `name` and `duration_s` from `duration` (`HH:MM:SS` → seconds) |
+| Top-level `phaseType: "PHASE"` | `block` (or `warmup` / `cooldown`, they are equivalent) with `name`, and `distance_m` from `distance` or `duration_s` from `duration` (`HH:MM:SS` → seconds) according to `goalType`, at the phase's own level |
 | `phaseType: "REPEAT"`, `repeatCount: N`, `phases: [work, recovery?]` | `repeat`, `reps: N`. Take `goal` from the work leaf, `recovery.duration_s` from the second leaf, and keep both names |
-| `goalType: "DISTANCE"` | `goal.distance_m` = `distance`. **Ignore** the `"00:00:00"` duration Polar adds to distance phases |
-| `goalType: "DURATION"` | `goal.duration_s` = `duration` in seconds |
+| `goalType: "DISTANCE"` | `distance_m` = `distance` (inside `goal` for a repeat's work leaf). **Ignore** the `"00:00:00"` duration Polar adds to distance phases |
+| `goalType: "DURATION"` | `duration_s` = `duration` in seconds (inside `goal` for a repeat's work leaf) |
 | `intensityType` `HEART_RATE_ZONES` / `SPEED_ZONES` / `POWER_ZONES`, `lowerZone` = `upperZone` = Z | `hr_zone` / `speed_zone` / `power_zone`: Z |
+| Same, `lowerZone` = L < `upperZone` = U | `hr_zone` / `speed_zone` / `power_zone`: L, `zone_max`: U |
 | `HEART_RATE_ZONES` 1–2 | `label: "easy"` |
 | `intensityType: "NONE"` (zones read back as `0`) | Omit `intensity` |
 
@@ -72,7 +77,7 @@ any of the following, tell the user what would be lost before updating:
 - More than one `exerciseTargets` entry (multi-sport). Only the first sport survives.
 - `phaseChangeType: "MANUAL"`. Every phase becomes automatic.
 - A recovery phase with a zone. It becomes zone-free.
-- A top-level distance phase, or a repeat with more than two phases.
+- A repeat with more than two phases.
 
 ## Name rejections
 

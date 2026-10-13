@@ -94,7 +94,7 @@ and silent refresh.
 | `create_sport_profile` | Create a sport's profile with default zones (`POST /api/sports/profiles/create/{sportId}`; idempotent — 200 + stored profile when it exists) |
 | `update_training_zones` | Set HR / speed / power zones as ascending boundaries, or reset a list to defaults (`update-zones`; all three sources sent, `modified` kept ≥ stored + 1 s) — validated client-side, read back |
 | `delete_sport_profile` | Delete a sport's profile — pre-checks existence (Flow answers 200 for unknown), confirms where the host supports elicitation; the last profile is refused |
-| `create_training_target` | Create a scheduled target (warmup / repeat / cooldown) |
+| `create_training_target` | Create a scheduled target (warmup / block / repeat / cooldown; distance or duration goals, zone ranges via `zone_max`) |
 | `list_training_targets` | Targets in a date range (filtered from calendar) |
 | `delete_training_target` | Delete a target by ID — confirms with the user first where the host supports elicitation |
 | `get_training_target` | Read one target by ID (full server-normalized view) |

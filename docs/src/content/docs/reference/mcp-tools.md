@@ -173,7 +173,8 @@ shapes:
 - **VOLUME target** (no `phases`): a single open-goal block — set `duration_s`
   **or** `distance_m` at the top level. Use for easy/general runs.
 - **PHASED target** (with `phases`): omit the top-level `duration_s`/`distance_m`
-  and provide an ordered list of `warmup` / `repeat` / `cooldown` blocks.
+  and provide an ordered list of `warmup` / `block` / `repeat` / `cooldown`
+  phases.
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -191,11 +192,13 @@ A VOLUME target with neither `duration_s` nor `distance_m` is rejected
 
 ### Phase shape
 
-Each entry in `phases` is an object with `type` ∈ {`warmup`, `repeat`,
-`cooldown`}:
+Each entry in `phases` is an object with `type` ∈ {`warmup`, `block`,
+`repeat`, `cooldown`}:
 
 ```json
 { "type": "warmup",   "duration_s": 600 }
+{ "type": "block",    "distance_m": 10000,
+  "intensity": { "hr_zone": 1, "zone_max": 3 } }
 { "type": "repeat",
   "reps": 5,
   "goal":      { "distance_m": 1000 },
@@ -205,29 +208,35 @@ Each entry in `phases` is an object with `type` ∈ {`warmup`, `repeat`,
 { "type": "cooldown", "duration_s": 600 }
 ```
 
-- `warmup` / `cooldown` require `duration_s` (seconds, > 0) and take an
-  optional `intensity` (no `distance_m`/`goal` — duration-goaled only). Omit
-  `intensity` for open/easy intensity. A single continuous *zoned* effort with
-  a duration goal and no interval structure is one `warmup`/`cooldown` phase
-  with `intensity` set and a custom `name` — it does not need `repeat`.
+- `warmup` / `block` / `cooldown` are one continuous phase. Each needs exactly
+  one goal at its own level — `duration_s` (seconds, > 0) **or** `distance_m`
+  (metres, > 0) — and takes an optional `intensity` (omit it for open/easy
+  intensity). The three differ only in their default name; Polar gives a phase
+  no role, so they can appear in any order and any number. A single continuous
+  effort ("40 min at threshold", "8 km at tempo") is one `block`, and a run
+  split into km segments is a list of them, e.g. a half-marathon as
+  `5000 m Z3`, `10000 m Z1–Z3`, `6100 m Z3–Z4`.
 - `repeat` is an interval block repeated `reps` times (**`reps` must be ≥ 2**).
   It needs a `goal` (exactly one of `distance_m` metres **or** `duration_s`
   seconds), an optional `intensity`, and an optional `recovery` (`duration_s`,
-  inserted between reps). A single continuous *distance*-goaled effort still
-  needs `repeat` (only `repeat` accepts `distance_m`); an unzoned effort with
-  no structure at all is a VOLUME target instead.
+  inserted between reps). An unzoned effort with no structure at all is a
+  VOLUME target instead.
 - `intensity` accepts at most one of: an `hr_zone` integer (1–5), a `label`
   (`easy`→Z1–2, `aerobic`→Z2, `tempo`→Z3, `threshold`→Z4, `vo2max`→Z5), a
   `power_zone` integer (1–5), or a `speed_zone` integer (1–5). Precedence when
   several are given: `hr_zone` > `power_zone` > `speed_zone` > `label`.
+  Add `zone_max` (1–5) to turn a numeric zone into a range — `{ "hr_zone": 1,
+  "zone_max": 3 }` targets Z1–Z3, as the Flow UI does when its two zone pickers
+  differ. Zones must be whole numbers 1–5 and `zone_max` ≥ the lower zone;
+  Polar would store an inverted range as sent, so the tool rejects it first.
   `power_zone` and `speed_zone` are Polar zone **indices**, not raw watts or
   km/h/min-per-km — Polar Flow computes each zone's physical range from the
   athlete's sport profile; [`get_training_zones`](#get_training_zones) returns
   those ranges. `power_zone` needs a power-capable sport
   (e.g. cycling, `sport_id` `2`).
 - Each phase (and a `recovery`) accepts an optional `name`, persisted verbatim
-  by Polar; it defaults to a type-derived label (`Warm-up`, `Work`, `Recovery`,
-  `Cool-down`).
+  by Polar; it defaults to a type-derived label (`Warm-up`, `Block`, `Work`,
+  `Recovery`, `Cool-down`).
 - Length limits, checked before anything is sent and counted as Polar counts
   them (UTF-16 code units — an emoji counts 2): `name` 1–45, `description`
   ≤ 500, each phase name ≤ 45. An over-long phase name matters most: Polar

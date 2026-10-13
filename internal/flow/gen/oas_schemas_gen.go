@@ -1922,7 +1922,10 @@ type ExerciseTarget struct {
 	Duration OptNilString `json:"duration"`
 	// Target distance in metres (the UI shows km but the wire value is metres — UI 5 km → payload
 	// 5000). Null when not distance-based on create; for PHASED targets the server rolls up the phase
-	// distances into this field on read-back (same as `duration`).
+	// distances into this field on read-back (same as `duration`). Each roll-up only sums leaves of its
+	// own `goalType`: a PHASED target made only of DISTANCE leaves reads back with `distance` = their sum
+	// and `duration: null` (the leaves' phantom `"00:00:00"` durations are not summed); a mix of goal
+	// types sets both (probed 2026-10-13).
 	Distance OptNilFloat64 `json:"distance"`
 	// Target calorie burn (kcal). Null when not calorie-based.
 	Calories OptNilFloat64 `json:"calories"`
@@ -8498,7 +8501,10 @@ func NewPhaseRepeatPhase(v PhaseRepeat) Phase {
 // A leaf training phase (no nested phases). A single PhaseLeaf placed directly in
 // `exerciseTargets[].phases` is the idiomatic way to model a continuous steady block (e.g. a 45-min Z2
 // run) — no REPEAT wrapper is needed (verified via probe-C-steady-hrz.json). For repeated intervals,
-// wrap leaves in a PhaseRepeat instead.
+// wrap leaves in a PhaseRepeat instead. Leaves carry no role (warm-up / work / cool-down are just
+// `name`s): any ordered sequence of bare leaves is valid, each with its own `goalType` and zone range
+// — e.g. a half-marathon as `5000 m Z3–Z3`, `10000 m Z1–Z3`, `6100 m Z3–Z4` (captured from the
+// web UI and re-probed 2026-10-13).
 // Ref: #/components/schemas/PhaseLeaf
 type PhaseLeaf struct {
 	// Phase id assigned by the server; present on read responses (`GET /api/trainingtarget/{id}`). Send
@@ -8543,7 +8549,12 @@ type PhaseLeaf struct {
 	// zones d'entraînement" in the UI sets this to "NONE" and nulls both zones. POWER_ZONES requires a
 	// power-capable sport (e.g. CYCLING, sportId 2) — verified via capture 11-phased-power.json.
 	IntensityType PhaseLeafIntensityType `json:"intensityType"`
-	// Lower zone bound (1–5) when `intensityType != NONE`. Send/read asymmetry: the create payload nulls
+	// Lower zone bound (1–5) when `intensityType != NONE`. `lowerZone` and `upperZone` form an inclusive
+	// range — the UI sends e.g. `1`/`3` ("Z1–Z3") whenever its two zone pickers differ; equal values
+	// pin one zone. On write (create and update, probed 2026-10-13) the bounds must be integers 1–5: `0`
+	// → 400 `phase.intensity.lowerZone`, `6` → 400 `phase.intensity.upperZone`, a fraction → 400
+	// `error.invalid`. ⚠ An inverted range (`lowerZone` > `upperZone`) is accepted and stored as sent
+	// — validate `lowerZone <= upperZone` client-side. Send/read asymmetry: the create payload nulls
 	// both zones for `NONE` phases, but the server reads them back as `0` (a "no zone" sentinel —
 	// verified on a live named-phase target), not null. Accept both `0` and `null`.
 	LowerZone OptNilFloat64 `json:"lowerZone"`

@@ -176,7 +176,7 @@ The server reads `/.env` on startup via `godotenv` — credentials are in memory
 | `create_sport_profile` | Create a sport's profile with Polar's default zones (idempotent) |
 | `update_training_zones` | Set a sport's HR / speed / power zones by hand, or reset them to Polar's defaults |
 | `delete_sport_profile` | Delete a sport's profile (confirms first; Polar keeps the last one) |
-| `create_training_target` | Schedule a target (warmup / repeat / cooldown phases) |
+| `create_training_target` | Schedule a target (warmup / block / repeat / cooldown phases; distance or duration goals, zone ranges) |
 | `list_training_targets` | Targets in a date range |
 | `delete_training_target` | Delete a target by ID |
 | `get_training_target` | Read one target by ID |

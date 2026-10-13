@@ -41,5 +41,14 @@
       "Creates the targets one at a time and reports each id",
       "Ends with list_training_targets over that week"
     ]
+  },
+  {
+    "skills": ["polar-flow"],
+    "query": "Plan my half-marathon on 25 October at 9:00: km 1-5 in low Z3, km 5-15 between Z1 and Z3, then the last 6.1 km free, Z4 allowed.",
+    "expected_behavior": [
+      "Calls create_training_target with three block phases goaled by distance_m (5000, 10000, 6100), not a repeat and not a duration",
+      "Sets intensity hr_zone 3 on the first block, and zone ranges with zone_max on the others (hr_zone 1 + zone_max 3, hr_zone 3 + zone_max 4)",
+      "Does not tell the user that distance segments or zone ranges are unsupported"
+    ]
   }
 ]
