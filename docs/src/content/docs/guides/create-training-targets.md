@@ -81,13 +81,10 @@ the target ID so you can reference it later.
 
 Two things worth knowing about the structure:
 
-- `repeat` blocks need **at least 2 reps**. A single continuous *distance*-goaled
-  effort still needs `repeat`; an unzoned single continuous effort with no
-  structure is a *simple run* (see below). A single continuous *duration*-goaled
-  effort that needs a zone — "40 minutes at threshold", no intervals — is a
-  lone `warmup`/`cooldown` phase with `intensity` set and a custom `name`
-  (see [Zoned steady effort](#zoned-steady-effort-no-intervals) below), not a
-  `repeat`.
+- `repeat` blocks need **at least 2 reps**. A single continuous zoned effort —
+  "40 minutes at threshold", "8 km at tempo" — is one `block` phase (see
+  [Zoned steady effort](#zoned-steady-effort-no-intervals) below), not a
+  `repeat`; an unzoned one with no structure is a *simple run* (see below).
 - Warm-up and cool-down are **not** added automatically — they're a coaching
   choice. The only defaults the tool itself applies are `time` = `18:00` and
   `sport_id` = `1` (running).
@@ -111,17 +108,31 @@ a total duration or distance:
 }
 ```
 
-This is a **VOLUME** target: set `duration_s` **or** `distance_m` at the top
-level and omit `phases`. (A VOLUME target with neither is rejected.) A VOLUME
-target has no `intensity` field at all — if the effort needs a zone, use a
-`phases` list instead (see below).
+This is a **VOLUME** target: set exactly one of `duration_s`, `distance_m` or
+`kcal` (a calorie goal, e.g. `"kcal": 500`) and omit `phases`. A VOLUME target
+has no `intensity` field at all — if the effort needs a zone, use a `phases`
+list instead (see below).
+
+Two more goal-less or single-line shapes:
+
+- **No goal at all** — leave out every goal argument and the target is `FREE`:
+  just the sport on that day ("Run on Sunday, whatever I feel like").
+- **Race pace** — give both `duration_s` and `distance_m` and the watch paces
+  you to that distance in that time:
+
+  > "10 km in 45 minutes on Saturday morning"
+
+  ```json
+  { "name": "10k @ 4:30", "date": "2026-06-20", "time": "08:00",
+    "duration_s": 2700, "distance_m": 10000 }
+  ```
 
 ## Zoned steady effort (no intervals)
 
-For a single continuous *zoned* effort with a duration goal and no
-warm-up/cool-down/interval structure, use one `warmup` or `cooldown` phase
-with `intensity` set and a custom `name` — it does not need to be wrapped in
-a `repeat`:
+For a single continuous *zoned* effort and no warm-up/cool-down/interval
+structure, use one `block` phase with `intensity` set and a custom `name` —
+it does not need to be wrapped in a `repeat`. Its goal is `duration_s` or
+`distance_m`:
 
 > "40-minute tempo run tomorrow, no warmup"
 
@@ -131,14 +142,87 @@ a `repeat`:
   "date": "2026-06-15",
   "sport_id": 1,
   "phases": [
-    { "type": "warmup", "name": "Tempo run", "duration_s": 2400,
+    { "type": "block", "name": "Tempo run", "duration_s": 2400,
       "intensity": { "label": "tempo" } }
   ]
 }
 ```
 
-A distance-goaled single continuous effort still needs `repeat` — only
-`repeat` accepts a `distance_m` goal.
+## Race plan by distance segments
+
+Chain `block` phases to pace a race or long run by km segments, each with its
+own zone or zone range (`zone_max` makes the zone a range's lower bound):
+
+> "Half-marathon on the 25th at 9:00: km 1–5 low Z3, km 5–15 Z1 to Z3, then
+> free up to Z4"
+
+```json
+{
+  "name": "Semi-marathon",
+  "date": "2026-10-25",
+  "time": "09:00",
+  "sport_id": 1,
+  "phases": [
+    { "type": "block", "name": "Km 1-5", "distance_m": 5000,
+      "intensity": { "hr_zone": 3 } },
+    { "type": "block", "name": "Km 5-15", "distance_m": 10000,
+      "intensity": { "hr_zone": 1, "zone_max": 3 } },
+    { "type": "block", "name": "Km 15-21", "distance_m": 6100,
+      "intensity": { "hr_zone": 3, "zone_max": 4 } }
+  ]
+}
+```
+
+## Nested intervals and manual phases
+
+A `repeat` can hold its own `phases` — any number of them, including one more
+`repeat` (as in the Flow editor, which allows two levels). `manual: true` on a
+phase makes the watch wait for a lap press before moving on, handy for a rest
+whose length depends on the athlete:
+
+> "3 sets of: 400 m in Z4, then 2 × (30 s sprint, 30 s float), then walk until I'm ready"
+
+```json
+{
+  "name": "Ladder sets",
+  "date": "2026-06-18",
+  "phases": [
+    { "type": "warmup", "duration_s": 900 },
+    { "type": "repeat", "reps": 3, "phases": [
+      { "type": "block", "name": "400", "distance_m": 400, "intensity": { "hr_zone": 4 } },
+      { "type": "repeat", "reps": 2, "phases": [
+        { "type": "block", "name": "Sprint", "duration_s": 30, "intensity": { "hr_zone": 5 } },
+        { "type": "block", "name": "Float", "duration_s": 30, "intensity": { "label": "easy" } } ] },
+      { "type": "block", "name": "Walk", "duration_s": 120, "manual": true } ] },
+    { "type": "cooldown", "duration_s": 600 }
+  ]
+}
+```
+
+A nested `repeat` can't be the last phase of its parent: Polar would flatten it
+and drop its reps, so the tool refuses it — put a phase after it (here,
+"Walk"). Limits follow Polar's editor: 2–99 reps, at most 20 phases as written
+and 200 once repeats are unrolled.
+
+## Multi-sport targets
+
+For a brick or a duathlon, give `exercises` — one entry per sport, each with
+`sport_id` and its own goal — instead of the single-sport arguments. Every
+sport needs the same kind of goal (all `phases`, all one volume metric, all a
+race pace, or none):
+
+```json
+{ "name": "Brick", "date": "2026-06-21",
+  "exercises": [
+    { "sport_id": 2, "phases": [ { "type": "block", "distance_m": 30000, "intensity": { "power_zone": 2, "zone_max": 3 } } ] },
+    { "sport_id": 1, "phases": [ { "type": "block", "duration_s": 1200, "intensity": { "hr_zone": 3 } } ] }
+  ] }
+```
+
+Polar's update can't add or remove a sport, so editing a multi-sport target
+means sending all of its sports in `exercises`, in the order
+`get_training_target` lists them; to change the set of sports, delete the
+target and create it again.
 
 ## List upcoming workouts
 
@@ -243,9 +327,8 @@ accidental calendar pollution.
 - **Raw power/pace thresholds** — `power_zone` and `speed_zone` only accept a
   Polar zone index (1–5); there's no way to target a literal wattage or
   min/km pace, on this server or in the underlying Polar Flow API itself.
-- **Manual phase transitions** — every phase defaults to `AUTOMATIC` change type.
-  The underlying API also supports `MANUAL` (wait for user input) but the MCP
-  tool doesn't expose this yet.
+- **Adding or removing a sport on an existing target** — Polar's update
+  keeps the sports it isn't sent and ignores new ones; delete and recreate.
 - **Activity uploads** — this server can read completed sessions (summary +
   details), but it does not create them from device data. Polar's app/watch is
   the source of truth. (You *can* log a manual result — see

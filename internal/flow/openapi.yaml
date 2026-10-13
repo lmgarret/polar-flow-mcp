@@ -42,15 +42,18 @@ paths:
   /api/trainingtarget:
     post:
       summary: Create a training target
-      description: "Create a planned workout (training target). The `type` field selects the\nshape:\n\n- **VOLUME** — one\
-        \ metric only: set exactly one of `duration` / `distance` /\n  `calories` on the single exerciseTarget; leave `phases`\
-        \ empty (`[]`).\n- **STEADY_RACE_PACE** — a time-trial: set both `duration` and `distance`\n  (pace is implicit);\
-        \ `phases` empty.\n- **PHASED** — a structured workout: populate `exerciseTargets[].phases`.\n\n### Modelling phases\
-        \ (PHASED)\n\nA phase is either a **PhaseLeaf** (`phaseType: \"PHASE\"`) or a **PhaseRepeat**\n(`phaseType: \"REPEAT\"\
-        `) that loops nested leaves. Guidance below is verified\nagainst the live API (probe captures in `captures/post-bodies/probe-*.json`):\n\
-        \n- **Steady / continuous block** → use a single bare PhaseLeaf directly in\n  `phases` (see the `steadyBlock` example).\
-        \ Do **not** wrap it in a REPEAT.\n- **Intervals** → use a REPEAT with `repeatCount` ≥ 2 (see `phasedRepeat`).\n-\
-        \ **`repeatCount`**: the **server accepts 1** but silently unwraps a\n  single-rep REPEAT into a plain PHASE on read-back,\
+      description: "Create a planned workout (training target). The `type` field selects the\nshape:\n\n- **FREE** — no goal,\
+        \ just a sport on a date.\n- **VOLUME** — one metric only: set exactly one of `duration` / `distance` /\n  `calories`\
+        \ on the single exerciseTarget; leave `phases` empty (`[]`).\n- **STEADY_RACE_PACE** — a time-trial: set both `duration`\
+        \ and `distance`\n  (pace is implicit); `phases` empty.\n- **PHASED** — a structured workout: populate `exerciseTargets[].phases`.\n\
+        \n### Modelling phases (PHASED)\n\nA phase is either a **PhaseLeaf** (`phaseType: \"PHASE\"`) or a **PhaseRepeat**\n\
+        (`phaseType: \"REPEAT\"`) that loops nested leaves. Guidance below is verified\nagainst the live API (probe captures\
+        \ in `captures/post-bodies/probe-*.json`):\n\n- **Steady / continuous block** → use a single bare PhaseLeaf directly\
+        \ in\n  `phases` (see the `steadyBlock` example). Do **not** wrap it in a REPEAT.\n- **Intervals** → use a REPEAT\
+        \ with `repeatCount` 2–99 (see `phasedRepeat`).\n  A REPEAT holds any number of leaves (work / float / work …) and\
+        \ may\n  nest one more REPEAT — but never as its last item (that one is silently\n  flattened). See `nestedRepeat`.\n\
+        - **Limits**: ≤ 20 leaves as written, ≤ 200 phases once repeats are\n  expanded, 2 levels of REPEAT — see `Phase`.\n\
+        - **`repeatCount`**: the **server accepts 1** but silently unwraps a\n  single-rep REPEAT into a plain PHASE on read-back,\
         \ so it is pointless — the\n  Flow UI enforces a minimum of 2. Prefer a bare PhaseLeaf for one block.\n- **Recovery\
         \ is optional**: a REPEAT may hold just one work phase with no\n  trailing rest leaf (verified — the server rolls\
         \ the nested duration into\n  the exerciseTarget's top-level `duration`). To add recovery between reps,\n  append\
@@ -286,6 +289,95 @@ paths:
                       intensityType: POWER_ZONES
                       lowerZone: 3
                       upperZone: 4
+              nestedRepeat:
+                summary: PHASED — nested repeat with manual phase changes and mixed intensities, as saved by the web UI's
+                  editor (probed 2026-10-13).
+                value:
+                  type: PHASED
+                  name: nested ladder
+                  description: ''
+                  datetime: 2026-12-08T07:00
+                  exerciseTargets:
+                  - sportId: 1
+                    distance: null
+                    calories: null
+                    duration: null
+                    id: null
+                    phases:
+                    - phaseType: PHASE
+                      name: WU
+                      phaseChangeType: MANUAL
+                      goalType: DURATION
+                      distance: null
+                      duration: 00:05:00
+                      intensityType: NONE
+                      lowerZone: null
+                      upperZone: null
+                    - phaseType: REPEAT
+                      repeatCount: 3
+                      phases:
+                      - phaseType: PHASE
+                        name: A
+                        phaseChangeType: AUTOMATIC
+                        goalType: DISTANCE
+                        distance: 1000
+                        duration: null
+                        intensityType: HEART_RATE_ZONES
+                        lowerZone: 4
+                        upperZone: 5
+                      - phaseType: REPEAT
+                        repeatCount: 2
+                        phases:
+                        - phaseType: PHASE
+                          name: B
+                          phaseChangeType: AUTOMATIC
+                          goalType: DURATION
+                          distance: null
+                          duration: 00:00:30
+                          intensityType: SPEED_ZONES
+                          lowerZone: 3
+                          upperZone: 4
+                        - phaseType: PHASE
+                          name: C
+                          phaseChangeType: AUTOMATIC
+                          goalType: DISTANCE
+                          distance: 200
+                          duration: null
+                          intensityType: NONE
+                          lowerZone: null
+                          upperZone: null
+                      - phaseType: PHASE
+                        name: D
+                        phaseChangeType: MANUAL
+                        goalType: DURATION
+                        distance: null
+                        duration: 00:02:00
+                        intensityType: HEART_RATE_ZONES
+                        lowerZone: 1
+                        upperZone: 1
+                    - phaseType: PHASE
+                      name: CD
+                      phaseChangeType: AUTOMATIC
+                      goalType: DISTANCE
+                      distance: 1500
+                      duration: null
+                      intensityType: POWER_ZONES
+                      lowerZone: 1
+                      upperZone: 2
+              free:
+                summary: FREE — no goal (probed 2026-10-13)
+                value:
+                  type: FREE
+                  name: Run, no goal
+                  description: ''
+                  datetime: 2026-12-01T07:00
+                  exerciseTargets:
+                  - sportId: 1
+                    distance: null
+                    duration: null
+                    calories: null
+                    phases: []
+                    id: null
               multisport:
                 summary: Multi-sport — two exerciseTargets (run then bike). Server assigns a sequential `index` per entry.
                   From capture 13-multisport.json.
@@ -547,10 +639,14 @@ paths:
         \ field updates:\n\n1. Include the **existing `exerciseTargets[].id`** from\n   `GET /api/trainingtarget/{id}`. Sending\
         \ `id: null` is accepted\n   (returns 200) but **silently no-ops the exerciseTarget update** —\n   only top-level\
         \ fields (`name`, `description`, `datetime`) land.\n2. Same field semantics as create (distance in metres, datetime\
-        \ without\n   timezone, phaseType `PHASE`/`REPEAT`, etc.).\n\nReturns **200 with an empty body** on success — note\
-        \ this differs from\n`POST /api/trainingtarget` (create), which returns the new id as a\nbare string.\n\n**The GET\
-        \ read-back round-trips safely.** You can take the\n`GET /api/trainingtarget/{id}` body, change what you want, and\
-        \ POST it\nstraight back — the server tolerates every field the read adds that create\nomits: the rolled-up `exerciseTargets[].duration`/`.distance`,\
+        \ without\n   timezone, phaseType `PHASE`/`REPEAT`, etc.).\n\n**Multi-sport: entries are matched by id** (probed 2026-10-13).\
+        \ A stored\nexerciseTarget that is not in the body is **kept unchanged**, and an\nentry with `id: null` or an unknown\
+        \ id is **ignored** — so an update can\nneither add nor remove a sport (delete and recreate the target). Phase\ntrees\
+        \ are replaced wholesale and get fresh phase ids. `type` can change\n(FREE ↔ VOLUME ↔ STEADY_RACE_PACE ↔ PHASED);\
+        \ send every entry so none is\nleft in the old shape.\n\nReturns **200 with an empty body** on success — note this\
+        \ differs from\n`POST /api/trainingtarget` (create), which returns the new id as a\nbare string.\n\n**The GET read-back\
+        \ round-trips safely.** You can take the\n`GET /api/trainingtarget/{id}` body, change what you want, and POST it\n\
+        straight back — the server tolerates every field the read adds that create\nomits: the rolled-up `exerciseTargets[].duration`/`.distance`,\
         \ the\nread-only `index`, the phantom `duration: \"00:00:00\"` on DISTANCE phases,\nthe `0` zone-sentinels on NONE\
         \ phases, and the server-assigned phase `id`s\n(all verified 2026-06-08). The **only** hard requirement is keeping\
         \ each\n`exerciseTargets[].id` (sending `id: null` no-ops that entry — see below).\nA client should NOT add pre-flight\
@@ -3227,6 +3323,10 @@ components:
         is the idiomatic way to model a **continuous steady block** (e.g. a 45-min Z2 run) — no REPEAT wrapper is needed (verified
         via probe-C-steady-hrz.json). For repeated intervals, wrap leaves in a PhaseRepeat instead.
 
+        Leaves carry no role (warm-up / work / cool-down are just `name`s): any ordered sequence of bare leaves is valid,
+        each with its own `goalType` and zone range — e.g. a half-marathon as `5000 m Z3–Z3`, `10000 m Z1–Z3`, `6100 m Z3–Z4`
+        (captured from the web UI and re-probed 2026-10-13).
+
         '
       required:
       - phaseType
@@ -3268,11 +3368,11 @@ components:
 
             named-phase target). Independent of `intensityType`: a `NONE`-intensity
 
-            phase still carries its own name. Required when `intensityType` is not
+            phase still carries its own name. The web UI requires a non-blank name
 
-            HEART_RATE_ZONES (submission fails with "Ce champ est obligatoire."
+            on every phase ("Ce champ est obligatoire."), but the server accepts
 
-            otherwise). For HR-zone phases an empty string is accepted.
+            an empty string for any intensity (probed 2026-10-13).
 
             '
           example: Work
@@ -3283,7 +3383,8 @@ components:
           - MANUAL
           description: '"AUTOMATIC" — next phase starts automatically when the goal is reached.
 
-            "MANUAL" — wait for user input (verified via capture 10-phased-manual.json).
+            "MANUAL" — wait for user input (verified via capture 10-phased-manual.json). UI: the "Démarrer automatiquement
+            la phase suivante" checkbox, per phase, including phases inside repeats (probed 2026-10-13).
 
             '
         goalType:
@@ -3300,22 +3401,24 @@ components:
             '
         distance:
           type: number
-          description: 'Phase distance in **metres** (not km). On **create** it is non-null iff `goalType: DISTANCE` (null
-            otherwise). On **read-back** the asymmetry is: `goalType: DURATION` leaves OMIT this field entirely, while `goalType:
-            DISTANCE` leaves carry it. Always trust `goalType`, not this field''s presence.
+          description: 'Phase distance in **metres** (not km). Range: UI 1–9 999 000 m; the server also takes `0` and fractions,
+            and 400s above 9 999 000 on `phases.[i].goal.distance` (probed 2026-10-13). On **create** it is non-null iff `goalType:
+            DISTANCE` (null otherwise). On **read-back** the asymmetry is: `goalType: DURATION` leaves OMIT this field entirely,
+            while `goalType: DISTANCE` leaves carry it. Always trust `goalType`, not this field''s presence.
 
             '
           example: 5000
           nullable: true
         duration:
           type: string
-          description: 'Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the UI validator). On **create**
-            it is non-null iff `goalType: DURATION`. **Read-back asymmetry:** a `goalType: DISTANCE` leaf reads back with
-            a phantom `duration: "00:00:00"` *in addition to* its real `distance` (verified 2026-06-08, probe-E-roundtrip-update.json)
-            — so a phase can have both `distance` and a non-null `duration` on read. The server ignores this phantom value
-            when the body is fed back into an update (`distance` is preserved), so the GET body round-trips safely; just never
-            use it to infer the goal. A genuine zero `"00:00:00"` on a `goalType: DURATION` leaf is also accepted and preserved
-            (probe-B-zero-duration.json).
+          description: 'Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the UI validator; the server
+            reads `"05:00"` as 5 minutes). Range: `00:00:01`–`99:59:59` in the UI; `100:00:00` → 400 `phases.[i].goal.duration`
+            (probed 2026-10-13). On **create** it is non-null iff `goalType: DURATION`. **Read-back asymmetry:** a `goalType:
+            DISTANCE` leaf reads back with a phantom `duration: "00:00:00"` *in addition to* its real `distance` (verified
+            2026-06-08, probe-E-roundtrip-update.json) — so a phase can have both `distance` and a non-null `duration` on
+            read. The server ignores this phantom value when the body is fed back into an update (`distance` is preserved),
+            so the GET body round-trips safely; just never use it to infer the goal. A genuine zero `"00:00:00"` on a `goalType:
+            DURATION` leaf is also accepted and preserved (probe-B-zero-duration.json).
 
             '
           example: 00:45:00
@@ -3335,14 +3438,22 @@ components:
 
             (e.g. CYCLING, sportId 2) — verified via capture 11-phased-power.json.
 
+            The server stores POWER_ZONES on any sport (running included); the UI
+
+            offers all three metrics regardless of sport (probed 2026-10-13).
+
             '
         lowerZone:
           type: number
           minimum: 0
           maximum: 5
-          description: 'Lower zone bound (1–5) when `intensityType != NONE`. **Send/read asymmetry:** the create payload nulls
-            both zones for `NONE` phases, but the server reads them back as `0` (a "no zone" sentinel — verified on a live
-            named-phase target), not null. Accept both `0` and `null`.
+          description: 'Lower zone bound (1–5) when `intensityType != NONE`. `lowerZone` and `upperZone` form an inclusive
+            **range** — the UI sends e.g. `1`/`3` ("Z1–Z3") whenever its two zone pickers differ; equal values pin one zone.
+            On write (create and update, probed 2026-10-13) the bounds must be integers 1–5: `0` → 400 `phase.intensity.lowerZone`,
+            `6` → 400 `phase.intensity.upperZone`, a fraction → 400 `error.invalid`. ⚠ An inverted range (`lowerZone` > `upperZone`)
+            is **accepted and stored as sent** — validate `lowerZone <= upperZone` client-side. **Send/read asymmetry:** the
+            create payload nulls both zones for `NONE` phases, but the server reads them back as `0` (a "no zone" sentinel
+            — verified on a live named-phase target), not null. Accept both `0` and `null`.
 
             '
           nullable: true
@@ -3355,6 +3466,44 @@ components:
 
             '
           nullable: true
+      example:
+        phaseType: PHASE
+        name: Z2 steady
+        phaseChangeType: AUTOMATIC
+        goalType: DURATION
+        distance: null
+        duration: 00:45:00
+        intensityType: HEART_RATE_ZONES
+        lowerZone: 2
+        upperZone: 2
+    Phase:
+      oneOf:
+      - $ref: '#/components/schemas/PhaseLeaf'
+      - $ref: '#/components/schemas/PhaseRepeat'
+      discriminator:
+        propertyName: phaseType
+        mapping:
+          PHASE: '#/components/schemas/PhaseLeaf'
+          REPEAT: '#/components/schemas/PhaseRepeat'
+      description: 'A single phase within a PHASED training target''s exerciseTarget.phases array.
+
+        Verified from captured POST bodies for HEART_RATE_ZONES, SPEED_ZONES, POWER_ZONES,
+
+        and NONE intensity variants and for both `phaseChangeType` values (AUTOMATIC,
+
+        MANUAL). Repeat groups carry `phaseType:"REPEAT"` (NOT "GROUP" — the JS bundle''s
+
+        internal constant `k.$l.REPEAT` is the wire value) and wrap nested PHASE objects
+
+        with a `repeatCount` integer; a REPEAT may itself contain a REPEAT (two levels at most — see PhaseRepeat).
+
+        **Count limits** (UI rules from the web bundle, probed 2026-10-13): at most **20 leaves** in the tree as written (repeats
+        not expanded; 21 → `400` `exerciseTargets[0].phases: trainingTarget.unknownException`, enforced by the server too),
+        and at most **200 phases once repeats are expanded** (the UI''s counter). The server''s expanded-count check does
+        not follow that exact rule — `R67×3` (201) passed, `R68×3` (204) failed, yet some nested shapes up to 398 passed —
+        so stay within the UI''s 200.
+
+        '
       example:
         phaseType: PHASE
         name: Z2 steady
@@ -3382,7 +3531,11 @@ components:
         silently unwraps it into a plain PHASE leaf on read-back (verified via probe-A-repeatcount1.json).
 
 
-        Nesting is supported by the schema but rejected by the UI beyond depth 1.
+        **Nesting** (probed 2026-10-13, and the web UI saves it): a REPEAT may hold another REPEAT — e.g. 3 × (1 km, 2 × (30
+        s, 200 m), 2 min). At most **two levels** of REPEAT (the UI''s `MAX` depth is 2; a third level → `400` `exerciseTargets[0].phases:
+        trainingTarget.unknownException`). ⚠ A nested REPEAT that is the **last** item of its parent is accepted but silently
+        **flattened** — its leaves are inlined into the parent and its `repeatCount` is lost (`R3[A, R2[B, C]]` reads back
+        as `R3[A, B, C]`). The UI forbids it ("a repeat cannot be the last item"); clients should too.
 
         '
       required:
@@ -3397,23 +3550,27 @@ components:
           description: Constant `"REPEAT"` discriminator for repeat groups.
         repeatCount:
           type: integer
-          minimum: 1
+          minimum: 0
+          maximum: 99
           description: 'Number of times the nested phases are repeated. The **wire API accepts 1** and normalizes a single-rep
             group to a bare PHASE on read-back (probe probe-A-repeatcount1.json). The **UI** enforces a minimum of 2 — but
             that is a client-only constraint, not a server rule. Use ≥ 2 for real intervals; for a single block prefer a bare
-            PhaseLeaf (no REPEAT wrapper).
+            PhaseLeaf (no REPEAT wrapper). `0` is also accepted and unwrapped the same way (the leaves appear once); `100`
+            → `400` (UI range 2–99, probed 2026-10-13).
 
             '
           example: 4
         phases:
           type: array
           minItems: 1
-          description: 'Nested PHASE leaves looped `repeatCount` times. One leaf = a recovery-less interval; two leaves (work
-            + rest) = a classic interval with recovery.
+          description: 'Phases looped `repeatCount` times — leaves and (one level down) nested REPEATs, in any number. One
+            leaf = a recovery-less interval; two leaves (work + rest) = a classic interval with recovery; more leaves (e.g.
+            work / float / work) are fine and each keeps its own goal, intensity, zone range and `phaseChangeType` (probed
+            2026-10-13). An empty list → `400`.
 
             '
           items:
-            $ref: '#/components/schemas/PhaseLeaf'
+            $ref: '#/components/schemas/Phase'
         id:
           type: number
           readOnly: true
@@ -3444,38 +3601,6 @@ components:
           intensityType: NONE
           lowerZone: null
           upperZone: null
-    Phase:
-      oneOf:
-      - $ref: '#/components/schemas/PhaseLeaf'
-      - $ref: '#/components/schemas/PhaseRepeat'
-      discriminator:
-        propertyName: phaseType
-        mapping:
-          PHASE: '#/components/schemas/PhaseLeaf'
-          REPEAT: '#/components/schemas/PhaseRepeat'
-      description: 'A single phase within a PHASED training target''s exerciseTarget.phases array.
-
-        Verified from captured POST bodies for HEART_RATE_ZONES, SPEED_ZONES, POWER_ZONES,
-
-        and NONE intensity variants and for both `phaseChangeType` values (AUTOMATIC,
-
-        MANUAL). Repeat groups carry `phaseType:"REPEAT"` (NOT "GROUP" — the JS bundle''s
-
-        internal constant `k.$l.REPEAT` is the wire value) and wrap nested PHASE objects
-
-        with a `repeatCount` integer.
-
-        '
-      example:
-        phaseType: PHASE
-        name: Z2 steady
-        phaseChangeType: AUTOMATIC
-        goalType: DURATION
-        distance: null
-        duration: 00:45:00
-        intensityType: HEART_RATE_ZONES
-        lowerZone: 2
-        upperZone: 2
     ExerciseTarget:
       type: object
       description: A single exercise block within a training target
@@ -3498,26 +3623,33 @@ components:
           example: 1
         duration:
           type: string
-          description: 'Target duration in HH:MM:SS format. On **create**: null for PHASED targets (each phase carries its
-            own). On **read-back**: for PHASED targets the server **rolls up** the phase durations into this field, so it
-            is non-null even though you sent null. Send it back unchanged on update — the server recomputes it and ignores
-            what you send.
+          description: 'Target duration in HH:MM:SS format, at most `99:59:59` (`100:00:00` → 400 `exerciseTarget.duration`).
+            On **create**: null for PHASED targets (each phase carries its own). On **read-back**: for PHASED targets the
+            server **rolls up** the phase durations into this field, so it is non-null even though you sent null. Send it
+            back unchanged on update — the server recomputes it and ignores what you send.
 
             '
           example: 01:00:00
           nullable: true
         distance:
           type: number
-          description: 'Target distance in **metres** (the UI shows km but the wire value is metres — UI 5 km → payload 5000).
-            Null when not distance-based on **create**; for PHASED targets the server **rolls up** the phase distances into
-            this field on **read-back** (same as `duration`).
+          description: 'Target distance in **metres** (the UI shows km but the wire value is metres — UI 5 km → payload 5000),
+            at most 9 999 000 (more → 400 `exerciseTarget.distance`). Null when not distance-based on **create**; for PHASED
+            targets the server **rolls up** the phase distances into this field on **read-back** (same as `duration`). Each
+            roll-up only sums leaves of its own `goalType`: a PHASED target made only of DISTANCE leaves reads back with `distance`
+            = their sum and `duration: null` (the leaves'' phantom `"00:00:00"` durations are not summed); a mix of goal types
+            sets both (probed 2026-10-13).
 
             '
           example: 5000
           nullable: true
         calories:
           type: number
-          description: Target calorie burn (kcal). Null when not calorie-based.
+          description: 'Target calorie burn (kcal), 1–65535 (65536 → 400 `exerciseTarget.kiloCalories`; `0` counts as unset).
+            The goal of a calories VOLUME target; also kept when sent alongside a STEADY_RACE_PACE or PHASED target (probed
+            2026-10-13).
+
+            '
           nullable: true
         phases:
           type: array
@@ -3544,6 +3676,7 @@ components:
         type:
           type: string
           enum:
+          - FREE
           - VOLUME
           - STEADY_RACE_PACE
           - PHASED
@@ -3551,11 +3684,17 @@ components:
           description: "Target category, drives which `exerciseTargets[i]` fields are populated.\n- \"ROUTE\" — **read-back\
             \ only** (observed 2026-09-28): what\n  `GET /api/trainingtarget/{id}` returns for a target created by\n  `POST\
             \ /training/target/createTargetFromFavourite` from a ROUTE\n  favorite — no duration/distance/phases, `description:\
-            \ null`. Not\n  tried on create. # TODO: verify on create\n\n- \"VOLUME\" — single-metric target. Exactly one\
-            \ of `duration` / `distance` /\n  `calories` is non-null; `phases` is `[]`.\n- \"STEADY_RACE_PACE\" — time-trial.\
-            \ Both `duration` and `distance` are\n  populated; pace is implicit (UI lets user enter any 2 of 3).\n- \"PHASED\"\
-            \ — multi-phase workout. `phases` is populated; volume fields\n  on the exerciseTarget are null (each phase carries\
-            \ its own).\nAll three values verified from captured POST bodies (2026-05-25).\n"
+            \ null`. Not\n  tried on create. # TODO: verify on create\n\n- \"FREE\" — no goal at all: just a sport on a date\
+            \ (the UI's default\n  when no goal tab is chosen). Volume fields null, `phases` `[]`; an\n  empty `exerciseTargets`\
+            \ is also accepted (the server adds one).\n- \"VOLUME\" — single-metric target. Exactly one of `duration` / `distance`\n\
+            \  / `calories` is set and > 0, else `400` on all three fields\n  (`trainingTarget.unknownException`). `phases`\
+            \ sent are dropped.\n- \"STEADY_RACE_PACE\" — time-trial. Both `duration` and `distance` are\n  required (pace\
+            \ is implicit; the UI computes the third of\n  duration/distance/pace); `calories` may ride along and is kept;\n\
+            \  `phases` are dropped.\n- \"PHASED\" — multi-phase workout. At least one phase (else `400`\n  `exerciseTargets[0].phases`);\
+            \ `duration`/`distance` sent on the\n  exerciseTarget are ignored (rolled up from the phases on read), but\n \
+            \ `calories` is kept.\nEvery exerciseTarget of a multi-sport target must follow the same type (a PHASED target\
+            \ with one entry lacking phases → `400`). Probed 2026-10-13; VOLUME/STEADY_RACE_PACE/PHASED also verified from\
+            \ captured POST bodies (2026-05-25).\n"
         name:
           type: string
           description: 'Display name shown in the diary, at most 45 characters counted as UTF-16 code units (Java `String.length()`:
@@ -3585,11 +3724,30 @@ components:
 
             multi-sport workouts (e.g. duathlon: run then bike) pass multiple
 
-            entries — verified via capture 13-multisport.json. On read-back, the
+            entries — verified via capture 13-multisport.json (also with 3
 
-            server assigns each entry a sequential `index` (0, 1, …) to preserve
+            sports, and for VOLUME / STEADY_RACE_PACE / FREE, probed 2026-10-13).
 
-            ordering.
+            On read-back, the server assigns each entry a sequential `index`
+
+            (0, 1, …) to preserve ordering. The web UI''s editor only ever shows and
+
+            edits the first entry.
+
+
+            **On update** entries are matched by `id` (probed 2026-10-13): an entry
+
+            whose `id` matches a stored one replaces it; stored entries not sent
+
+            are **kept unchanged**; an entry with `id: null` (or an unknown id) is
+
+            **ignored**. So an update can neither add nor remove a sport —
+
+            delete and recreate the target for that. Changing `type` on update
+
+            rewrites only the entries sent, which can leave the others in the old
+
+            shape (e.g. a PHASED target with a VOLUME entry).
 
             '
           minItems: 1
@@ -6531,10 +6689,12 @@ components:
         type:
           type: string
           enum:
+          - FREE
           - VOLUME
           - STEADY_RACE_PACE
           - PHASED
-          description: Favorite kind — see TrainingTargetCreate.type for the per-value field rules.
+          description: Favorite kind — see TrainingTargetCreate.type for the per-value field rules; favorites follow the same
+            ones (FREE, calories, race pace, nested repeats, manual phase change and the phase limits re-probed 2026-10-13).
         name:
           type: string
           minLength: 1

@@ -4307,6 +4307,8 @@ func (s *FavoriteCreateType) Decode(d *jx.Decoder) error {
 	}
 	// Try to use constant string.
 	switch FavoriteCreateType(v) {
+	case FavoriteCreateTypeFREE:
+		*s = FavoriteCreateTypeFREE
 	case FavoriteCreateTypeVOLUME:
 		*s = FavoriteCreateTypeVOLUME
 	case FavoriteCreateTypeSTEADYRACEPACE:
@@ -7010,6 +7012,8 @@ func (s *GetTrainingTargetOKType) Decode(d *jx.Decoder) error {
 	}
 	// Try to use constant string.
 	switch GetTrainingTargetOKType(v) {
+	case GetTrainingTargetOKTypeFREE:
+		*s = GetTrainingTargetOKTypeFREE
 	case GetTrainingTargetOKTypeVOLUME:
 		*s = GetTrainingTargetOKTypeVOLUME
 	case GetTrainingTargetOKTypeSTEADYRACEPACE:
@@ -11984,9 +11988,9 @@ func (s *PhaseRepeat) Decode(d *jx.Decoder) error {
 		case "phases":
 			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				s.Phases = make([]PhaseLeaf, 0)
+				s.Phases = make([]Phase, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem PhaseLeaf
+					var elem Phase
 					if err := elem.Decode(d); err != nil {
 						return err
 					}
@@ -23828,6 +23832,8 @@ func (s *TrainingTargetCreateType) Decode(d *jx.Decoder) error {
 	}
 	// Try to use constant string.
 	switch TrainingTargetCreateType(v) {
+	case TrainingTargetCreateTypeFREE:
+		*s = TrainingTargetCreateTypeFREE
 	case TrainingTargetCreateTypeVOLUME:
 		*s = TrainingTargetCreateTypeVOLUME
 	case TrainingTargetCreateTypeSTEADYRACEPACE:

@@ -425,3 +425,159 @@ func TestLiveActivityAndSleep(t *testing.T) {
 	res = liveCall(t, GetSleepHandler(fc), map[string]any{"from_date": time.Now().AddDate(0, -1, 0).Format("2006-01-02")})
 	t.Logf("%s", resultText(res))
 }
+
+// A race paced by distance segments with zone ranges (the shape the web UI
+// sends, captured 2026-10-13): create, then update one block's range, and
+// check every leaf reads back with its DISTANCE goal and zone range.
+//
+//nolint:gocyclo // one sequential live scenario
+func TestLiveDistanceBlocksRoundTrip(t *testing.T) {
+	fc := liveClient(t)
+	ctx := context.Background()
+	suffix := time.Now().Format("150405")
+	date := time.Now().AddDate(0, 0, 43).Format("2006-01-02")
+	blocks := func(lastMax float64) []any {
+		return []any{
+			map[string]any{"type": "block", "name": "Km 1-5", "distance_m": 5000.0,
+				"intensity": map[string]any{"hr_zone": 3.0}},
+			map[string]any{"type": "block", "name": "Km 5-15", "distance_m": 10000.0,
+				"intensity": map[string]any{"hr_zone": 1.0, "zone_max": 3.0}},
+			map[string]any{"type": "block", "name": "Km 15-21", "distance_m": 6100.0,
+				"intensity": map[string]any{"hr_zone": 3.0, "zone_max": lastMax}},
+		}
+	}
+	res := liveCall(t, CreateTrainingTargetHandler(fc), map[string]any{
+		"name": "live-km-" + suffix, "date": date, "time": "07:20", "sport_id": 1.0, "phases": blocks(4),
+	})
+	tid := int64(asNum(payload(t, res)["id"]))
+	t.Cleanup(func() { _ = fc.DeleteTrainingTarget(ctx, tid) })
+
+	check := func(target map[string]any, lastMax float64) {
+		t.Helper()
+		et := asMap(asArr(target["exerciseTargets"])[0])
+		if asNum(et["distance"]) != 21100 {
+			t.Fatalf("rolled-up distance = %v, want 21100", et["distance"])
+		}
+		want := [][3]float64{{5000, 3, 3}, {10000, 1, 3}, {6100, 3, lastMax}}
+		phases := asArr(et["phases"])
+		if len(phases) != len(want) {
+			t.Fatalf("phases = %+v", phases)
+		}
+		for i, w := range want {
+			p := asMap(phases[i])
+			if p["goalType"] != "DISTANCE" || asNum(p["distance"]) != w[0] ||
+				asNum(p["lowerZone"]) != w[1] || asNum(p["upperZone"]) != w[2] {
+				t.Fatalf("phase %d = %+v, want distance %v zones %v–%v", i, p, w[0], w[1], w[2])
+			}
+		}
+	}
+	check(asMap(payload(t, liveCall(t, GetTrainingTargetHandler(fc), map[string]any{"target_id": float64(tid)}))["target"]), 4)
+
+	res = liveCall(t, UpdateTrainingTargetHandler(fc), map[string]any{
+		"target_id": float64(tid), "name": "live-km-" + suffix, "date": date, "time": "07:20",
+		"sport_id": 1.0, "phases": blocks(5),
+	})
+	check(asMap(payload(t, res)["target"]), 5)
+	if err := fc.DeleteTrainingTarget(ctx, tid); err != nil {
+		t.Fatalf("cleanup target: %v", err)
+	}
+}
+
+// Every goal shape the web editor can make (probed 2026-10-13): FREE, a
+// calorie VOLUME, a race pace, a nested PHASED tree with manual advance, and
+// a multi-sport target updated in place — each created, read back and
+// deleted.
+//
+//nolint:gocyclo // one sequential live scenario
+func TestLiveGoalShapesRoundTrip(t *testing.T) {
+	fc := liveClient(t)
+	ctx := context.Background()
+	suffix := time.Now().Format("150405")
+	date := time.Now().AddDate(0, 0, 44).Format("2006-01-02")
+	blk := func(name string, goal map[string]any, extra map[string]any) map[string]any {
+		p := map[string]any{"type": "block", "name": name}
+		for k, v := range goal {
+			p[k] = v
+		}
+		for k, v := range extra {
+			p[k] = v
+		}
+		return p
+	}
+	cases := []struct {
+		name, clock, typ string
+		args             map[string]any
+	}{
+		{"free", "07:00", "FREE", map[string]any{}},
+		{"kcal", "07:05", "VOLUME", map[string]any{"kcal": 500.0}},
+		{"pace", "07:10", "STEADY_RACE_PACE", map[string]any{"duration_s": 2700.0, "distance_m": 10000.0}},
+		{"nested", "07:15", "PHASED", map[string]any{"kcal": 700.0, "phases": []any{
+			blk("WU", map[string]any{"duration_s": 300.0}, map[string]any{"manual": true}),
+			map[string]any{"type": "repeat", "reps": 3.0, "phases": []any{
+				blk("A", map[string]any{"distance_m": 1000.0}, map[string]any{"intensity": map[string]any{"hr_zone": 4.0, "zone_max": 5.0}}),
+				map[string]any{"type": "repeat", "reps": 2.0, "phases": []any{
+					blk("B", map[string]any{"duration_s": 30.0}, map[string]any{"intensity": map[string]any{"speed_zone": 3.0}}),
+					blk("C", map[string]any{"distance_m": 200.0}, nil),
+				}},
+				blk("D", map[string]any{"duration_s": 120.0}, map[string]any{"manual": true}),
+			}},
+		}}},
+	}
+	for _, c := range cases {
+		args := map[string]any{"name": "live-" + c.name + "-" + suffix, "date": date, "time": c.clock}
+		for k, v := range c.args {
+			args[k] = v
+		}
+		res := liveCall(t, CreateTrainingTargetHandler(fc), args)
+		tid := int64(asNum(payload(t, res)["id"]))
+		t.Cleanup(func() { _ = fc.DeleteTrainingTarget(ctx, tid) })
+		got := asMap(payload(t, liveCall(t, GetTrainingTargetHandler(fc), map[string]any{"target_id": float64(tid)}))["target"])
+		if got["type"] != c.typ {
+			t.Fatalf("%s: type = %v, want %s", c.name, got["type"], c.typ)
+		}
+		et := asMap(asArr(got["exerciseTargets"])[0])
+		switch c.name {
+		case "kcal":
+			if asNum(et["calories"]) != 500 {
+				t.Fatalf("kcal: %+v", et)
+			}
+		case "pace":
+			if et["duration"] != "00:45:00" || asNum(et["distance"]) != 10000 {
+				t.Fatalf("pace: %+v", et)
+			}
+		case "nested":
+			rep := asMap(asArr(et["phases"])[1])
+			inner := asMap(asArr(rep["phases"])[1])
+			if asNum(rep["repeatCount"]) != 3 || asNum(inner["repeatCount"]) != 2 || len(asArr(inner["phases"])) != 2 ||
+				asMap(asArr(et["phases"])[0])["phaseChangeType"] != "MANUAL" || asNum(et["calories"]) != 700 {
+				t.Fatalf("nested: %+v", et)
+			}
+		}
+		if err := fc.DeleteTrainingTarget(ctx, tid); err != nil {
+			t.Fatalf("cleanup %s: %v", c.name, err)
+		}
+	}
+
+	// Multi-sport: create, then update both sports in place.
+	res := liveCall(t, CreateTrainingTargetHandler(fc), map[string]any{
+		"name": "live-brick-" + suffix, "date": date, "time": "07:20",
+		"exercises": []any{map[string]any{"sport_id": 1.0, "duration_s": 1800.0}, map[string]any{"sport_id": 2.0, "distance_m": 20000.0}},
+	})
+	tid := int64(asNum(payload(t, res)["id"]))
+	t.Cleanup(func() { _ = fc.DeleteTrainingTarget(ctx, tid) })
+	res = liveCall(t, UpdateTrainingTargetHandler(fc), map[string]any{
+		"target_id": float64(tid), "name": "live-brick-" + suffix, "date": date, "time": "07:20",
+		"exercises": []any{
+			map[string]any{"sport_id": 1.0, "phases": []any{blk("Run", map[string]any{"duration_s": 1200.0}, nil)}},
+			map[string]any{"sport_id": 2.0, "phases": []any{blk("Bike", map[string]any{"distance_m": 30000.0},
+				map[string]any{"intensity": map[string]any{"power_zone": 2.0, "zone_max": 3.0}})}},
+		},
+	})
+	ets := asArr(asMap(payload(t, res)["target"])["exerciseTargets"])
+	if len(ets) != 2 || len(asArr(asMap(ets[1])["phases"])) != 1 || asNum(asMap(ets[1])["sportId"]) != 2 {
+		t.Fatalf("multi-sport update: %+v", ets)
+	}
+	if err := fc.DeleteTrainingTarget(ctx, tid); err != nil {
+		t.Fatalf("cleanup brick: %v", err)
+	}
+}

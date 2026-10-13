@@ -169,6 +169,7 @@ func (UnimplementedHandler) CreateTrainingSession(ctx context.Context, req *Trai
 //
 // Create a planned workout (training target). The `type` field selects the shape:
 //
+//   - FREE — no goal, just a sport on a date.
 //   - VOLUME — one metric only: set exactly one of `duration` / `distance` / `calories` on the single
 //     exerciseTarget; leave `phases` empty (`[]`).
 //   - STEADY_RACE_PACE — a time-trial: set both `duration` and `distance` (pace is implicit);
@@ -183,7 +184,11 @@ func (UnimplementedHandler) CreateTrainingSession(ctx context.Context, req *Trai
 //
 //   - Steady / continuous block → use a single bare PhaseLeaf directly in `phases` (see the
 //     `steadyBlock` example). Do not wrap it in a REPEAT.
-//   - Intervals → use a REPEAT with `repeatCount` ≥ 2 (see `phasedRepeat`).
+//   - Intervals → use a REPEAT with `repeatCount` 2–99 (see `phasedRepeat`). A REPEAT holds any
+//     number of leaves (work / float / work …) and may nest one more REPEAT — but never as its last
+//     item (that one is silently flattened). See `nestedRepeat`.
+//   - Limits: ≤ 20 leaves as written, ≤ 200 phases once repeats are expanded, 2 levels of REPEAT
+//     — see `Phase`.
 //   - `repeatCount`: the server accepts 1 but silently unwraps a single-rep REPEAT into a plain PHASE
 //     on read-back, so it is pointless — the Flow UI enforces a minimum of 2. Prefer a bare PhaseLeaf
 //     for one block.
@@ -836,6 +841,12 @@ func (UnimplementedHandler) UpdateTrainingSessionData(ctx context.Context, req *
 //     top-level fields (`name`, `description`, `datetime`) land.
 //  2. Same field semantics as create (distance in metres, datetime without timezone, phaseType
 //     `PHASE`/`REPEAT`, etc.).
+//
+// Multi-sport: entries are matched by id (probed 2026-10-13). A stored exerciseTarget that is not in
+// the body is kept unchanged, and an entry with `id: null` or an unknown id is ignored — so an
+// update can neither add nor remove a sport (delete and recreate the target). Phase trees are replaced
+// wholesale and get fresh phase ids. `type` can change (FREE ↔ VOLUME ↔ STEADY_RACE_PACE ↔
+// PHASED); send every entry so none is left in the old shape.
 //
 // Returns 200 with an empty body on success — note this differs from `POST /api/trainingtarget`
 // (create), which returns the new id as a bare string.

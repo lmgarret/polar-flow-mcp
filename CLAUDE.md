@@ -94,11 +94,11 @@ and silent refresh.
 | `create_sport_profile` | Create a sport's profile with default zones (`POST /api/sports/profiles/create/{sportId}`; idempotent — 200 + stored profile when it exists) |
 | `update_training_zones` | Set HR / speed / power zones as ascending boundaries, or reset a list to defaults (`update-zones`; all three sources sent, `modified` kept ≥ stored + 1 s) — validated client-side, read back |
 | `delete_sport_profile` | Delete a sport's profile — pre-checks existence (Flow answers 200 for unknown), confirms where the host supports elicitation; the last profile is refused |
-| `create_training_target` | Create a scheduled target (warmup / repeat / cooldown) |
+| `create_training_target` | Create a scheduled target — FREE / VOLUME (duration, distance or kcal) / STEADY_RACE_PACE / PHASED (nested repeats ≤ 2 deep, zone ranges via `zone_max`, `manual` advance); multi-sport via `exercises`. Goal parsing + the editor's limits live in `internal/mcp/target_goal.go`, shared with favorites |
 | `list_training_targets` | Targets in a date range (filtered from calendar) |
 | `delete_training_target` | Delete a target by ID — confirms with the user first where the host supports elicitation |
 | `get_training_target` | Read one target by ID (full server-normalized view) |
-| `update_training_target` | Full-replace edit of one target by ID |
+| `update_training_target` | Full-replace edit of one target by ID — carries exercise-target ids by position; refuses a sport-count change (Polar's update keeps unsent sports and ignores new ones) |
 | `get_calendar_events` | Raw calendar events in a date range |
 | `get_calendar_week_summary` | Per-ISO-week totals strip (≤45-day range) |
 | `list_training_sessions` | Completed sessions in a date range |
@@ -113,7 +113,7 @@ and silent refresh.
 | `delete_training_session` | Delete a completed session — pre-checks existence (Flow's delete answers 200 for unknown ids), confirms where the host supports elicitation |
 | `list_favorites` | Favorites (templates) and ROUTE favorites, with `favorite_id` + `exercise_target_id` |
 | `get_favorite` | Read one favorite |
-| `create_favorite` | Create a favorite (duration / distance / phases goal) |
+| `create_favorite` | Create a favorite (duration / distance / kcal / race-pace / phases goal; single sport) |
 | `update_favorite` | Full-replace edit of a single-sport, non-route favorite |
 | `rename_favorite` | Rename a favorite or route |
 | `set_favorite_sport` | Change a favorite's sport — validated against the catalogue and verified by read-back |

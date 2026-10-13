@@ -176,11 +176,11 @@ The server reads `/.env` on startup via `godotenv` — credentials are in memory
 | `create_sport_profile` | Create a sport's profile with Polar's default zones (idempotent) |
 | `update_training_zones` | Set a sport's HR / speed / power zones by hand, or reset them to Polar's defaults |
 | `delete_sport_profile` | Delete a sport's profile (confirms first; Polar keeps the last one) |
-| `create_training_target` | Schedule a target (warmup / repeat / cooldown phases) |
+| `create_training_target` | Schedule a target: no goal, one volume metric (time / distance / kcal), a race pace, or phases (nested repeats, zone ranges, manual advance); multi-sport via `exercises` |
 | `list_training_targets` | Targets in a date range |
 | `delete_training_target` | Delete a target by ID |
 | `get_training_target` | Read one target by ID |
-| `update_training_target` | Full-replace edit of one target by ID |
+| `update_training_target` | Full-replace edit of one target by ID (multi-sport: all sports in `exercises`; Polar can't add or remove one) |
 | `get_calendar_events` | Raw calendar events in a date range |
 | `get_calendar_week_summary` | Per-ISO-week totals strip (≤45-day range) |
 | `list_training_sessions` | Completed sessions in a date range |
@@ -195,7 +195,7 @@ The server reads `/.env` on startup via `godotenv` — credentials are in memory
 | `delete_training_session` | Delete a completed session by ID |
 | `list_favorites` | Favorites (workout templates) and imported routes |
 | `get_favorite` | Read one favorite by ID |
-| `create_favorite` | Create a favorite (duration, distance or phased goal) |
+| `create_favorite` | Create a favorite (duration, distance, kcal, race-pace or phased goal — same goal rules as targets, single sport) |
 | `update_favorite` | Full-replace edit of one favorite |
 | `rename_favorite` | Rename a favorite or route |
 | `set_favorite_sport` | Change a favorite's or route's sport (validated and verified) |

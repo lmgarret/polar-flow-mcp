@@ -167,13 +167,16 @@ profile. Asks the user to confirm first where the host supports it — see
 
 ## `create_training_target`
 
-Schedule a training target (a planned workout) in Polar Flow. There are two
-shapes:
+Schedule a training target (a planned workout) in Polar Flow. The goal
+arguments you give decide the target type:
 
-- **VOLUME target** (no `phases`): a single open-goal block — set `duration_s`
-  **or** `distance_m` at the top level. Use for easy/general runs.
-- **PHASED target** (with `phases`): omit the top-level `duration_s`/`distance_m`
-  and provide an ordered list of `warmup` / `repeat` / `cooldown` blocks.
+| Goal arguments | Type | Example |
+|----------------|------|---------|
+| none | `FREE` — just the sport on that day | "Run on Sunday" |
+| exactly one of `duration_s`, `distance_m`, `kcal` | `VOLUME` | 35 min easy, 10 km, 500 kcal |
+| `duration_s` **and** `distance_m` (+ optional `kcal`) | `STEADY_RACE_PACE` — the watch paces you | 10 km in 45 min (4:30/km) |
+| `phases` (+ optional `kcal`) | `PHASED` — a structured workout | intervals, km blocks |
+| `exercises: [{sport_id, goal…}, …]` | any of the above, one entry per sport | run + bike brick |
 
 | Argument | Type | Required | Description |
 |----------|------|----------|-------------|
@@ -182,52 +185,72 @@ shapes:
 | `time` | string | no | `HH:MM` (24h). Default `18:00`. |
 | `sport_id` | integer | no | Polar sport ID. Default `1` (running); e.g. `2` cycling, `23` swimming, `15` strength, `11` hiking, `68` triathlon. Use `list_sports` for the full mapping. |
 | `description` | string | no | Free-text notes. |
-| `duration_s` | integer | conditional | VOLUME total duration in seconds (e.g. `2100` = 35 min). Required when `phases` is omitted and `distance_m` is not set. Ignored when `phases` is provided. |
-| `distance_m` | integer | conditional | VOLUME total distance in metres (e.g. `10000` = 10 km). Required when `phases` is omitted and `duration_s` is not set. Ignored when `phases` is provided. |
+| `duration_s` | integer | no | Total duration in seconds, 1–359999 (99:59:59). Not with `phases`. |
+| `distance_m` | number | no | Total distance in metres, 1–9 999 000. Not with `phases`. |
+| `kcal` | integer | no | Calories, 1–65535. Alone, or with a race pace or `phases`. |
 | `phases` | array | no | Ordered phase list for a PHASED target. See below. |
-
-A VOLUME target with neither `duration_s` nor `distance_m` is rejected
-(`VOLUME targets (no phases) require duration_s or distance_m`).
+| `exercises` | array | no | Multi-sport: one `{sport_id, duration_s?, distance_m?, kcal?, phases?}` per sport, in order, replacing the single-sport arguments. Every sport needs the same kind of goal (Polar applies one type to the whole target). |
 
 ### Phase shape
 
-Each entry in `phases` is an object with `type` ∈ {`warmup`, `repeat`,
-`cooldown`}:
+Each entry in `phases` is an object with `type` ∈ {`warmup`, `block`,
+`repeat`, `cooldown`}:
 
 ```json
-{ "type": "warmup",   "duration_s": 600 }
+{ "type": "warmup",   "duration_s": 600, "manual": true }
+{ "type": "block",    "distance_m": 10000,
+  "intensity": { "hr_zone": 1, "zone_max": 3 } }
 { "type": "repeat",
   "reps": 5,
   "goal":      { "distance_m": 1000 },
   "intensity": { "label": "threshold" },
-  "recovery":  { "duration_s": 90 }
+  "recovery":  { "distance_m": 400, "intensity": { "hr_zone": 1 } }
 }
+{ "type": "repeat", "reps": 3, "phases": [
+  { "type": "block", "distance_m": 400, "intensity": { "hr_zone": 4 } },
+  { "type": "repeat", "reps": 2, "phases": [
+    { "type": "block", "duration_s": 30, "intensity": { "hr_zone": 5 } },
+    { "type": "block", "duration_s": 30 } ] },
+  { "type": "block", "duration_s": 120, "manual": true } ] }
 { "type": "cooldown", "duration_s": 600 }
 ```
 
-- `warmup` / `cooldown` require `duration_s` (seconds, > 0) and take an
-  optional `intensity` (no `distance_m`/`goal` — duration-goaled only). Omit
-  `intensity` for open/easy intensity. A single continuous *zoned* effort with
-  a duration goal and no interval structure is one `warmup`/`cooldown` phase
-  with `intensity` set and a custom `name` — it does not need `repeat`.
-- `repeat` is an interval block repeated `reps` times (**`reps` must be ≥ 2**).
-  It needs a `goal` (exactly one of `distance_m` metres **or** `duration_s`
-  seconds), an optional `intensity`, and an optional `recovery` (`duration_s`,
-  inserted between reps). A single continuous *distance*-goaled effort still
-  needs `repeat` (only `repeat` accepts `distance_m`); an unzoned effort with
-  no structure at all is a VOLUME target instead.
+- `warmup` / `block` / `cooldown` are one continuous phase. Each needs exactly
+  one goal at its own level — `duration_s` (1–359999 s) **or** `distance_m`
+  (1–9 999 000 m) — and takes an optional `intensity` (omit it for open/easy
+  intensity) and `manual: true` (the watch waits for a lap press instead of
+  moving on when the goal is reached). The three differ only in their default
+  name; Polar gives a phase no role, so they can appear in any order and any
+  number. A single continuous effort ("40 min at threshold", "8 km at tempo")
+  is one `block`, and a run split into km segments is a list of them, e.g. a
+  half-marathon as `5000 m Z3`, `10000 m Z1–Z3`, `6100 m Z3–Z4`.
+- `repeat` runs its content `reps` times (**2–99**). The content is either:
+  - a `phases` array — any number of phases (work / float / work …), which may
+    include **one more level** of `repeat`, but not as its last phase (Polar
+    would silently flatten it and lose its reps); or
+  - the shorthand: `goal` (exactly one of `distance_m` / `duration_s`),
+    `intensity` and `manual` for the work interval, plus an optional
+    `recovery` (`duration_s` or `distance_m`, `intensity`, `manual`, `name`)
+    after it.
+- Phase-tree limits (Polar's editor): at most 20 phases as written (a repeat's
+  content counted once), at most 200 once repeats are unrolled, and repeats
+  nested at most 2 deep.
 - `intensity` accepts at most one of: an `hr_zone` integer (1–5), a `label`
   (`easy`→Z1–2, `aerobic`→Z2, `tempo`→Z3, `threshold`→Z4, `vo2max`→Z5), a
   `power_zone` integer (1–5), or a `speed_zone` integer (1–5). Precedence when
   several are given: `hr_zone` > `power_zone` > `speed_zone` > `label`.
+  Add `zone_max` (1–5) to turn a numeric zone into a range — `{ "hr_zone": 1,
+  "zone_max": 3 }` targets Z1–Z3, as the Flow UI does when its two zone pickers
+  differ. Zones must be whole numbers 1–5 and `zone_max` ≥ the lower zone;
+  Polar would store an inverted range as sent, so the tool rejects it first.
   `power_zone` and `speed_zone` are Polar zone **indices**, not raw watts or
   km/h/min-per-km — Polar Flow computes each zone's physical range from the
   athlete's sport profile; [`get_training_zones`](#get_training_zones) returns
   those ranges. `power_zone` needs a power-capable sport
   (e.g. cycling, `sport_id` `2`).
 - Each phase (and a `recovery`) accepts an optional `name`, persisted verbatim
-  by Polar; it defaults to a type-derived label (`Warm-up`, `Work`, `Recovery`,
-  `Cool-down`).
+  by Polar; it defaults to a type-derived label (`Warm-up`, `Block`, `Work`,
+  `Recovery`, `Cool-down`).
 - Length limits, checked before anything is sent and counted as Polar counts
   them (UTF-16 code units — an emoji counts 2): `name` 1–45, `description`
   ≤ 500, each phase name ≤ 45. An over-long phase name matters most: Polar
@@ -297,9 +320,17 @@ omit is cleared.
 | `date` | string | yes | ISO 8601 `YYYY-MM-DD`. |
 
 All other arguments (`time`, `sport_id`, `description`, `duration_s`,
-`distance_m`, `phases`) match `create_training_target`. You do not need to
-manage server-side ids — the tool reads the live target and carries its
-exercise-target id over so the edit lands on the existing target.
+`distance_m`, `kcal`, `phases`, `exercises`) match `create_training_target`,
+and the goal type may change (a VOLUME target can become PHASED). You do not
+need to manage server-side ids — the tool reads the live target and carries
+its exercise-target ids over, by position, so the edit lands on the existing
+target.
+
+Polar's update matches sports by those ids: it keeps a stored sport that is
+not sent and ignores a new one. So it can neither add nor remove a sport, and
+the tool refuses an update whose number of sports differs from the stored
+target — pass every sport in `exercises`, in the order `get_training_target`
+lists them, or delete and recreate the target.
 
 On success it reads the target back and returns the same server-normalized
 view as `get_training_target` (name, datetime, and the rolled-up
@@ -616,9 +647,12 @@ favorite_id <id>.` when it does not exist.
 | `sport_id` | integer | no | Default `1` (running). |
 | `duration_s` | integer | one goal | VOLUME goal in seconds. |
 | `distance_m` | number | one goal | VOLUME goal in metres. |
+| `kcal` | integer | one goal | VOLUME calorie goal, 1–65535; may also accompany a race pace or `phases`. |
 | `phases` | array | one goal | PHASED goal — same shape as [`create_training_target`](#phase-shape). |
 
-Exactly one of `duration_s`, `distance_m` or `phases`.
+Same goal rules as [`create_training_target`](#create_training_target), single
+sport only: one of `duration_s`, `distance_m` or `kcal`; both `duration_s` and
+`distance_m` for a race pace; or `phases`.
 
 ```json
 {"name": "6x800", "sport_id": 1, "phases": [

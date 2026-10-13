@@ -18,6 +18,9 @@ func TestCreateTrainingTarget_Validation(t *testing.T) {
 		for k, v := range extra {
 			m[k] = v
 		}
+		if _, phased := extra["phases"]; phased {
+			delete(m, "duration_s")
+		}
 		return m
 	}
 	long46 := strings.Repeat("n", 46)
@@ -33,7 +36,25 @@ func TestCreateTrainingTarget_Validation(t *testing.T) {
 			"phases[0] (warmup): phase name"},
 		{"recovery name 46", base(map[string]any{"phases": phases(map[string]any{
 			"type": "repeat", "reps": 3.0, "goal": map[string]any{"duration_s": 60.0},
-			"recovery": map[string]any{"duration_s": 60.0, "name": long46}})}), "phases[0] (repeat): phase name"},
+			"recovery": map[string]any{"duration_s": 60.0, "name": long46}})}), "phases[0] (repeat): recovery: phase name"},
+		{"block without goal", base(map[string]any{"phases": phases(map[string]any{"type": "block"})}),
+			"phases[0] (block): needs a goal"},
+		{"block two goals", base(map[string]any{"phases": phases(map[string]any{"type": "block", "distance_m": 5000.0, "duration_s": 600.0})}),
+			"only one of distance_m or duration_s"},
+		{"block zero distance", base(map[string]any{"phases": phases(map[string]any{"type": "block", "distance_m": 0.0})}),
+			"distance_m must be"},
+		{"zone 6", base(map[string]any{"phases": phases(map[string]any{"type": "block", "distance_m": 5000.0,
+			"intensity": map[string]any{"hr_zone": 6.0}})}), "intensity.hr_zone must be a whole zone number 1–5"},
+		{"fractional zone", base(map[string]any{"phases": phases(map[string]any{"type": "warmup", "duration_s": 600.0,
+			"intensity": map[string]any{"speed_zone": 2.5}})}), "intensity.speed_zone must be a whole zone number"},
+		// Flow stores an inverted range as sent, so it must never reach it.
+		{"inverted range", base(map[string]any{"phases": phases(map[string]any{"type": "block", "distance_m": 5000.0,
+			"intensity": map[string]any{"hr_zone": 4.0, "zone_max": 2.0}})}), "zone_max (2) must be ≥ hr_zone (4)"},
+		{"zone_max with label", base(map[string]any{"phases": phases(map[string]any{"type": "block", "distance_m": 5000.0,
+			"intensity": map[string]any{"label": "tempo", "zone_max": 4.0}})}), "zone_max needs hr_zone"},
+		{"repeat work zone_max", base(map[string]any{"phases": phases(map[string]any{"type": "repeat", "reps": 3.0,
+			"goal": map[string]any{"distance_m": 1000.0}, "intensity": map[string]any{"power_zone": 3.0, "zone_max": 9.0}})}),
+			"phases[0] (repeat): work: intensity.zone_max"},
 	})
 }
 

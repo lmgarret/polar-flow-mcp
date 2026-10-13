@@ -1,6 +1,8 @@
 package mcp
 
 import (
+	"encoding/json"
+	"reflect"
 	"testing"
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
@@ -48,7 +50,7 @@ func TestBuildTrainingTargetCreate_DistancePhaseGoalDiscrimination(t *testing.T)
 	if phases[1].Type != gen.PhaseRepeatPhase {
 		t.Fatalf("phases[1] type = %q, want REPEAT", phases[1].Type)
 	}
-	work := phases[1].PhaseRepeat.Phases[0]
+	work := phases[1].PhaseRepeat.Phases[0].PhaseLeaf
 	if string(work.GoalType) != "DISTANCE" {
 		t.Fatalf("work goalType = %q, want DISTANCE", work.GoalType)
 	}
@@ -87,11 +89,11 @@ func TestBuildTrainingTargetCreate_PhaseNames(t *testing.T) {
 	if got := phases[0].PhaseLeaf.Name; got != "Easy jog" {
 		t.Fatalf("warmup name = %q, want %q", got, "Easy jog")
 	}
-	work := phases[1].PhaseRepeat.Phases[0]
+	work := phases[1].PhaseRepeat.Phases[0].PhaseLeaf
 	if work.Name != "Hard 1k" {
 		t.Fatalf("work name = %q, want %q", work.Name, "Hard 1k")
 	}
-	recovery := phases[1].PhaseRepeat.Phases[1]
+	recovery := phases[1].PhaseRepeat.Phases[1].PhaseLeaf
 	if recovery.Name != "Float" {
 		t.Fatalf("recovery name = %q, want %q", recovery.Name, "Float")
 	}
@@ -133,7 +135,7 @@ func TestBuildTrainingTargetCreate_PowerAndSpeedIntensity(t *testing.T) {
 	}
 	phases := body.ExerciseTargets[0].Phases
 
-	power := phases[0].PhaseRepeat.Phases[0]
+	power := phases[0].PhaseRepeat.Phases[0].PhaseLeaf
 	if string(power.IntensityType) != "POWER_ZONES" {
 		t.Fatalf("power work intensityType = %q, want POWER_ZONES", power.IntensityType)
 	}
@@ -144,7 +146,7 @@ func TestBuildTrainingTargetCreate_PowerAndSpeedIntensity(t *testing.T) {
 		t.Fatalf("power work upperZone = (%v, ok=%v), want (4, true)", hi, ok)
 	}
 
-	speed := phases[1].PhaseRepeat.Phases[0]
+	speed := phases[1].PhaseRepeat.Phases[0].PhaseLeaf
 	if string(speed.IntensityType) != "SPEED_ZONES" {
 		t.Fatalf("speed work intensityType = %q, want SPEED_ZONES", speed.IntensityType)
 	}
@@ -152,7 +154,7 @@ func TestBuildTrainingTargetCreate_PowerAndSpeedIntensity(t *testing.T) {
 		t.Fatalf("speed work lowerZone = (%v, ok=%v), want (5, true)", lo, ok)
 	}
 
-	precedence := phases[2].PhaseRepeat.Phases[0]
+	precedence := phases[2].PhaseRepeat.Phases[0].PhaseLeaf
 	if string(precedence.IntensityType) != "HEART_RATE_ZONES" {
 		t.Fatalf("hr_zone+power_zone work intensityType = %q, want HEART_RATE_ZONES (hr_zone wins)", precedence.IntensityType)
 	}
@@ -258,5 +260,81 @@ func TestPreserveExerciseTargetIDs_NoExistingIsNoOp(t *testing.T) {
 	preserveExerciseTargetIDs(body, nil) // must not panic or set anything
 	if _, ok := body.ExerciseTargets[0].ID.Get(); ok {
 		t.Fatalf("id should remain unset when there is no live target")
+	}
+}
+
+// A race paced by km segments — captured from the web UI 2026-10-13 — is a
+// sequence of bare DISTANCE leaves, each with its own HR zone range. Agents
+// used to claim this was impossible because warmup/cooldown took only a
+// duration and zones only pinned one zone; the wire body must now match the
+// UI's phases exactly.
+func TestBuildTrainingTargetCreate_DistanceBlocksWithZoneRanges(t *testing.T) {
+	body, errMsg := buildTrainingTargetCreate(req(map[string]any{
+		"name": "Semi-marathon de Lausanne", "date": "2026-10-25", "time": "09:00", "sport_id": float64(1),
+		"phases": []any{
+			map[string]any{"type": "block", "name": "Z3 Basse", "distance_m": float64(5000),
+				"intensity": map[string]any{"hr_zone": float64(3)}},
+			map[string]any{"type": "block", "name": "Z3", "distance_m": float64(10000),
+				"intensity": map[string]any{"hr_zone": float64(1), "zone_max": float64(3)}},
+			map[string]any{"type": "cooldown", "name": "Phase Libre", "distance_m": float64(6100),
+				"intensity": map[string]any{"hr_zone": float64(3), "zone_max": float64(4)}},
+		},
+	}))
+	if errMsg != "" {
+		t.Fatalf("unexpected build error: %s", errMsg)
+	}
+	raw, err := body.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Type            string `json:"type"`
+		ExerciseTargets []struct {
+			Phases []map[string]any `json:"phases"`
+		} `json:"exerciseTargets"`
+	}
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Type != "PHASED" {
+		t.Fatalf("type = %q, want PHASED", got.Type)
+	}
+	// The UI's phases from the capture, minus the null duration it also sends.
+	want := []map[string]any{
+		{"phaseType": "PHASE", "name": "Z3 Basse", "phaseChangeType": "AUTOMATIC", "goalType": "DISTANCE",
+			"distance": 5000.0, "intensityType": "HEART_RATE_ZONES", "lowerZone": 3.0, "upperZone": 3.0},
+		{"phaseType": "PHASE", "name": "Z3", "phaseChangeType": "AUTOMATIC", "goalType": "DISTANCE",
+			"distance": 10000.0, "intensityType": "HEART_RATE_ZONES", "lowerZone": 1.0, "upperZone": 3.0},
+		{"phaseType": "PHASE", "name": "Phase Libre", "phaseChangeType": "AUTOMATIC", "goalType": "DISTANCE",
+			"distance": 6100.0, "intensityType": "HEART_RATE_ZONES", "lowerZone": 3.0, "upperZone": 4.0},
+	}
+	phases := got.ExerciseTargets[0].Phases
+	for _, p := range phases {
+		if p["duration"] != nil {
+			t.Fatalf("DISTANCE leaf carries duration %v", p["duration"])
+		}
+		delete(p, "duration")
+	}
+	if !reflect.DeepEqual(phases, want) {
+		t.Fatalf("phases =\n%v\nwant\n%v", phases, want)
+	}
+}
+
+// A block defaults to the name "Block" and accepts a duration goal too.
+func TestBuildTrainingTargetCreate_BlockDurationDefaultName(t *testing.T) {
+	body, errMsg := buildTrainingTargetCreate(req(map[string]any{
+		"name": "Tempo", "date": "2026-10-25",
+		"phases": []any{map[string]any{"type": "block", "duration_s": float64(2400),
+			"intensity": map[string]any{"label": "tempo"}}},
+	}))
+	if errMsg != "" {
+		t.Fatalf("unexpected build error: %s", errMsg)
+	}
+	leaf := body.ExerciseTargets[0].Phases[0].PhaseLeaf
+	if leaf.Name != "Block" || leaf.GoalType != "DURATION" || leaf.Duration.Or("") != "00:40:00" {
+		t.Fatalf("leaf = %+v, want Block / DURATION / 00:40:00", leaf)
+	}
+	if lo, hi := leaf.LowerZone.Or(0), leaf.UpperZone.Or(0); lo != 3 || hi != 3 {
+		t.Fatalf("zones = %v–%v, want 3–3", lo, hi)
 	}
 }

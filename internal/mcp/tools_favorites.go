@@ -64,23 +64,26 @@ func registerFavoriteAndSessionEditTools(s *server.MCPServer, fc *flow.Client) {
 				mcpgo.Description("Free-text notes, at most 500 characters (optional).")),
 			mcpgo.WithInteger("sport_id", mcpgo.DefaultNumber(1), mcpgo.Min(1), mcpgo.Description(sportIDDesc+" Default 1.")),
 			mcpgo.WithInteger("duration_s", mcpgo.Min(1), mcpgo.Max(maxFavoriteDurationS),
-				mcpgo.Description("VOLUME goal: duration in SECONDS, 1–359999 (99:59:59). Give exactly one of "+
-					"duration_s, distance_m or phases.")),
-			mcpgo.WithNumber("distance_m", mcpgo.Min(0), mcpgo.Max(maxFavoriteDistanceM),
-				mcpgo.Description("VOLUME goal: distance in METRES, > 0 and ≤ 9 999 000 (5 km = 5000).")),
-			mcpgo.WithArray("phases",
-				mcpgo.Description("PHASED goal: ordered warmup / repeat / cooldown phases — identical shape to "+
-					"create_training_target.phases (durations in seconds, distances in metres, zones 1–5)."),
-				mcpgo.Items(phaseItemSchema())),
+				mcpgo.Description("Duration in SECONDS, 1–359999 (99:59:59). Alone: a VOLUME goal; with "+
+					"distance_m: a race pace. Not with phases.")),
+			mcpgo.WithNumber("distance_m", mcpgo.Min(1), mcpgo.Max(maxFavoriteDistanceM),
+				mcpgo.Description("Distance in METRES, 1–9 999 000 (5 km = 5000). Alone: a VOLUME goal; with "+
+					"duration_s: a race pace. Not with phases.")),
+			mcpgo.WithInteger("kcal", mcpgo.Min(1), mcpgo.Max(maxGoalKcal),
+				mcpgo.Description("Calories in kcal, 1–65535. Alone: a VOLUME calorie goal; may also accompany "+
+					"a race pace or phases.")),
+			mcpgo.WithArray("phases", mcpgo.Description(phasesDoc), mcpgo.Items(phaseItemSchema(0))),
 		}
 	}
 
 	createOpts := append([]mcpgo.ToolOption{mcpgo.WithDescription(
 		"Create a favorite: a reusable, date-less training-target template that can later be scheduled " +
 			"with schedule_favorite and synced to a watch. Returns the new favorite (read back from Polar).\n\n" +
-			"Goal: exactly one of duration_s (seconds), distance_m (metres) or phases (same shape as " +
-			"create_training_target). Limits enforced before sending: name 1–45 characters, description " +
-			"≤ 500, duration ≤ 99:59:59, distance ≤ 9 999 000 m, sport_id must exist in list_sports.\n\n" +
+			"Goal, same rules as create_training_target (single sport only): one of duration_s " +
+			"(seconds), distance_m (metres) or kcal (VOLUME); duration_s + distance_m (race pace); or " +
+			"phases (PHASED). Limits enforced before sending: name 1–45 characters, description " +
+			"≤ 500, duration ≤ 99:59:59, distance ≤ 9 999 000 m, kcal ≤ 65535, sport_id must exist in " +
+			"list_sports, plus the phase limits of create_training_target.\n\n" +
 			"Example A — easy 45 min run: {\"name\": \"Easy 45\", \"duration_s\": 2700, \"sport_id\": 1}\n" +
 			"Example B — 6×800 m intervals: {\"name\": \"6x800\", \"sport_id\": 1, \"phases\": [\n" +
 			"  {\"type\": \"warmup\", \"duration_s\": 900},\n" +
