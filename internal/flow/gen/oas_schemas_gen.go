@@ -1915,19 +1915,22 @@ type ExerciseTarget struct {
 	Index OptInt `json:"index"`
 	// Polar sport identifier. 1 = Course à pied (running).
 	SportId int `json:"sportId"`
-	// Target duration in HH:MM:SS format. On create: null for PHASED targets (each phase carries its own).
-	// On read-back: for PHASED targets the server rolls up the phase durations into this field, so it is
+	// Target duration in HH:MM:SS format, at most `99:59:59` (`100:00:00` → 400
+	// `exerciseTarget.duration`). On create: null for PHASED targets (each phase carries its own). On
+	// read-back: for PHASED targets the server rolls up the phase durations into this field, so it is
 	// non-null even though you sent null. Send it back unchanged on update — the server recomputes it
 	// and ignores what you send.
 	Duration OptNilString `json:"duration"`
 	// Target distance in metres (the UI shows km but the wire value is metres — UI 5 km → payload
-	// 5000). Null when not distance-based on create; for PHASED targets the server rolls up the phase
-	// distances into this field on read-back (same as `duration`). Each roll-up only sums leaves of its
-	// own `goalType`: a PHASED target made only of DISTANCE leaves reads back with `distance` = their sum
-	// and `duration: null` (the leaves' phantom `"00:00:00"` durations are not summed); a mix of goal
-	// types sets both (probed 2026-10-13).
+	// 5000), at most 9 999 000 (more → 400 `exerciseTarget.distance`). Null when not distance-based on
+	// create; for PHASED targets the server rolls up the phase distances into this field on read-back
+	// (same as `duration`). Each roll-up only sums leaves of its own `goalType`: a PHASED target made only
+	// of DISTANCE leaves reads back with `distance` = their sum and `duration: null` (the leaves' phantom
+	// `"00:00:00"` durations are not summed); a mix of goal types sets both (probed 2026-10-13).
 	Distance OptNilFloat64 `json:"distance"`
-	// Target calorie burn (kcal). Null when not calorie-based.
+	// Target calorie burn (kcal), 1–65535 (65536 → 400 `exerciseTarget.kiloCalories`; `0` counts as
+	// unset). The goal of a calories VOLUME target; also kept when sent alongside a STEADY_RACE_PACE or
+	// PHASED target (probed 2026-10-13).
 	Calories OptNilFloat64 `json:"calories"`
 	// Structured phases (e.g. warm-up / main / cool-down). Empty `[]` for VOLUME / STEADY_RACE_PACE
 	// targets; populated for PHASED targets.
@@ -2255,7 +2258,9 @@ func (*Favorite) getFavoriteRes() {}
 // field — a favorite is a date-less template.
 // Ref: #/components/schemas/FavoriteCreate
 type FavoriteCreate struct {
-	// Favorite kind — see TrainingTargetCreate.type for the per-value field rules.
+	// Favorite kind — see TrainingTargetCreate.type for the per-value field rules; favorites follow the
+	// same ones (FREE, calories, race pace, nested repeats, manual phase change and the phase limits
+	// re-probed 2026-10-13).
 	Type FavoriteCreateType `json:"type"`
 	// Favorite display name, 1–45 chars counted as UTF-16 code units (Java `String.length()`: 44 letters
 	// + one emoji = 46 → 400; probed 2026-09-28/29: 46 → 400 `{"target.name":[…]}`). Same limit as
@@ -2307,10 +2312,13 @@ func (s *FavoriteCreate) SetExerciseTargets(val []ExerciseTarget) {
 	s.ExerciseTargets = val
 }
 
-// Favorite kind — see TrainingTargetCreate.type for the per-value field rules.
+// Favorite kind — see TrainingTargetCreate.type for the per-value field rules; favorites follow the
+// same ones (FREE, calories, race pace, nested repeats, manual phase change and the phase limits
+// re-probed 2026-10-13).
 type FavoriteCreateType string
 
 const (
+	FavoriteCreateTypeFREE           FavoriteCreateType = "FREE"
 	FavoriteCreateTypeVOLUME         FavoriteCreateType = "VOLUME"
 	FavoriteCreateTypeSTEADYRACEPACE FavoriteCreateType = "STEADY_RACE_PACE"
 	FavoriteCreateTypePHASED         FavoriteCreateType = "PHASED"
@@ -2319,6 +2327,7 @@ const (
 // AllValues returns all FavoriteCreateType values.
 func (FavoriteCreateType) AllValues() []FavoriteCreateType {
 	return []FavoriteCreateType{
+		FavoriteCreateTypeFREE,
 		FavoriteCreateTypeVOLUME,
 		FavoriteCreateTypeSTEADYRACEPACE,
 		FavoriteCreateTypePHASED,
@@ -2328,6 +2337,8 @@ func (FavoriteCreateType) AllValues() []FavoriteCreateType {
 // MarshalText implements encoding.TextMarshaler.
 func (s FavoriteCreateType) MarshalText() ([]byte, error) {
 	switch s {
+	case FavoriteCreateTypeFREE:
+		return []byte(s), nil
 	case FavoriteCreateTypeVOLUME:
 		return []byte(s), nil
 	case FavoriteCreateTypeSTEADYRACEPACE:
@@ -2342,6 +2353,9 @@ func (s FavoriteCreateType) MarshalText() ([]byte, error) {
 // UnmarshalText implements encoding.TextUnmarshaler.
 func (s *FavoriteCreateType) UnmarshalText(data []byte) error {
 	switch FavoriteCreateType(data) {
+	case FavoriteCreateTypeFREE:
+		*s = FavoriteCreateTypeFREE
+		return nil
 	case FavoriteCreateTypeVOLUME:
 		*s = FavoriteCreateTypeVOLUME
 		return nil
@@ -3748,13 +3762,20 @@ type GetTrainingTargetOK struct {
 	//  - "ROUTE" — read-back only (observed 2026-09-28): what `GET /api/trainingtarget/{id}` returns for
 	//    a target created by `POST /training/target/createTargetFromFavourite` from a ROUTE favorite —
 	//    no duration/distance/phases, `description: null`. Not tried on create. # TODO: verify on create
-	//  - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is
-	//    non-null; `phases` is `[]`.
-	//  - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are populated; pace is implicit
-	//    (UI lets user enter any 2 of 3).
-	//  - "PHASED" — multi-phase workout. `phases` is populated; volume fields on the exerciseTarget are
-	//    null (each phase carries its own). All three values verified from captured POST bodies
-	//    (2026-05-25).
+	//  - "FREE" — no goal at all: just a sport on a date (the UI's default when no goal tab is chosen).
+	//    Volume fields null, `phases` `[]`; an empty `exerciseTargets` is also accepted (the server adds
+	//    one).
+	//  - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is set and
+	//    > 0, else `400` on all three fields (`trainingTarget.unknownException`). `phases` sent are
+	//    dropped.
+	//  - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are required (pace is implicit;
+	//    the UI computes the third of duration/distance/pace); `calories` may ride along and is kept;
+	//    `phases` are dropped.
+	//  - "PHASED" — multi-phase workout. At least one phase (else `400` `exerciseTargets[0].phases`);
+	//    `duration`/`distance` sent on the exerciseTarget are ignored (rolled up from the phases on read),
+	//    but `calories` is kept. Every exerciseTarget of a multi-sport target must follow the same type (a
+	//    PHASED target with one entry lacking phases → `400`). Probed 2026-10-13;
+	//    VOLUME/STEADY_RACE_PACE/PHASED also verified from captured POST bodies (2026-05-25).
 	Type GetTrainingTargetOKType `json:"type"`
 	// Display name shown in the diary, at most 45 characters counted as UTF-16 code units (Java
 	// `String.length()`: an emoji counts 2) — 46 → `400` on `trainingSessionTarget.name` with the same
@@ -3773,8 +3794,16 @@ type GetTrainingTargetOK struct {
 	// The server applies the user's timezone setting.
 	Datetime string `json:"datetime"`
 	// One entry per exercise block. Most targets have exactly one; multi-sport workouts (e.g. duathlon:
-	// run then bike) pass multiple entries — verified via capture 13-multisport.json. On read-back, the
-	// server assigns each entry a sequential `index` (0, 1, …) to preserve ordering.
+	// run then bike) pass multiple entries — verified via capture 13-multisport.json (also with 3
+	// sports, and for VOLUME / STEADY_RACE_PACE / FREE, probed 2026-10-13). On read-back, the server
+	// assigns each entry a sequential `index` (0, 1, …) to preserve ordering. The web UI's editor only
+	// ever shows and edits the first entry.
+	//
+	// On update entries are matched by `id` (probed 2026-10-13): an entry whose `id` matches a stored one
+	// replaces it; stored entries not sent are kept unchanged; an entry with `id: null` (or an unknown id)
+	// is ignored. So an update can neither add nor remove a sport — delete and recreate the target for
+	// that. Changing `type` on update rewrites only the entries sent, which can leave the others in the
+	// old shape (e.g. a PHASED target with a VOLUME entry).
 	ExerciseTargets []ExerciseTarget `json:"exerciseTargets"`
 	// Origin program of the target (e.g. `UNKNOWN`).
 	SourceProgramType OptString `json:"sourceProgramType"`
@@ -3859,16 +3888,24 @@ func (*GetTrainingTargetOK) getTrainingTargetRes() {}
 //   - "ROUTE" — read-back only (observed 2026-09-28): what `GET /api/trainingtarget/{id}` returns for
 //     a target created by `POST /training/target/createTargetFromFavourite` from a ROUTE favorite —
 //     no duration/distance/phases, `description: null`. Not tried on create. # TODO: verify on create
-//   - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is
-//     non-null; `phases` is `[]`.
-//   - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are populated; pace is implicit
-//     (UI lets user enter any 2 of 3).
-//   - "PHASED" — multi-phase workout. `phases` is populated; volume fields on the exerciseTarget are
-//     null (each phase carries its own). All three values verified from captured POST bodies
-//     (2026-05-25).
+//   - "FREE" — no goal at all: just a sport on a date (the UI's default when no goal tab is chosen).
+//     Volume fields null, `phases` `[]`; an empty `exerciseTargets` is also accepted (the server adds
+//     one).
+//   - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is set and
+//     > 0, else `400` on all three fields (`trainingTarget.unknownException`). `phases` sent are
+//     dropped.
+//   - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are required (pace is implicit;
+//     the UI computes the third of duration/distance/pace); `calories` may ride along and is kept;
+//     `phases` are dropped.
+//   - "PHASED" — multi-phase workout. At least one phase (else `400` `exerciseTargets[0].phases`);
+//     `duration`/`distance` sent on the exerciseTarget are ignored (rolled up from the phases on read),
+//     but `calories` is kept. Every exerciseTarget of a multi-sport target must follow the same type (a
+//     PHASED target with one entry lacking phases → `400`). Probed 2026-10-13;
+//     VOLUME/STEADY_RACE_PACE/PHASED also verified from captured POST bodies (2026-05-25).
 type GetTrainingTargetOKType string
 
 const (
+	GetTrainingTargetOKTypeFREE           GetTrainingTargetOKType = "FREE"
 	GetTrainingTargetOKTypeVOLUME         GetTrainingTargetOKType = "VOLUME"
 	GetTrainingTargetOKTypeSTEADYRACEPACE GetTrainingTargetOKType = "STEADY_RACE_PACE"
 	GetTrainingTargetOKTypePHASED         GetTrainingTargetOKType = "PHASED"
@@ -3878,6 +3915,7 @@ const (
 // AllValues returns all GetTrainingTargetOKType values.
 func (GetTrainingTargetOKType) AllValues() []GetTrainingTargetOKType {
 	return []GetTrainingTargetOKType{
+		GetTrainingTargetOKTypeFREE,
 		GetTrainingTargetOKTypeVOLUME,
 		GetTrainingTargetOKTypeSTEADYRACEPACE,
 		GetTrainingTargetOKTypePHASED,
@@ -3888,6 +3926,8 @@ func (GetTrainingTargetOKType) AllValues() []GetTrainingTargetOKType {
 // MarshalText implements encoding.TextMarshaler.
 func (s GetTrainingTargetOKType) MarshalText() ([]byte, error) {
 	switch s {
+	case GetTrainingTargetOKTypeFREE:
+		return []byte(s), nil
 	case GetTrainingTargetOKTypeVOLUME:
 		return []byte(s), nil
 	case GetTrainingTargetOKTypeSTEADYRACEPACE:
@@ -3904,6 +3944,9 @@ func (s GetTrainingTargetOKType) MarshalText() ([]byte, error) {
 // UnmarshalText implements encoding.TextUnmarshaler.
 func (s *GetTrainingTargetOKType) UnmarshalText(data []byte) error {
 	switch GetTrainingTargetOKType(data) {
+	case GetTrainingTargetOKTypeFREE:
+		*s = GetTrainingTargetOKTypeFREE
+		return nil
 	case GetTrainingTargetOKTypeVOLUME:
 		*s = GetTrainingTargetOKTypeVOLUME
 		return nil
@@ -8431,7 +8474,13 @@ func (s *PeriodValue) SetStringValue(val OptNilString) {
 // POST bodies for HEART_RATE_ZONES, SPEED_ZONES, POWER_ZONES, and NONE intensity variants and for both
 // `phaseChangeType` values (AUTOMATIC, MANUAL). Repeat groups carry `phaseType:"REPEAT"` (NOT "GROUP"
 // — the JS bundle's internal constant `k.$l.REPEAT` is the wire value) and wrap nested PHASE objects
-// with a `repeatCount` integer.
+// with a `repeatCount` integer; a REPEAT may itself contain a REPEAT (two levels at most — see
+// PhaseRepeat). Count limits (UI rules from the web bundle, probed 2026-10-13): at most 20 leaves in
+// the tree as written (repeats not expanded; 21 → `400`
+// `exerciseTargets[0].phases: trainingTarget.unknownException`, enforced by the server too), and at
+// most 200 phases once repeats are expanded (the UI's counter). The server's expanded-count check does
+// not follow that exact rule — `R67×3` (201) passed, `R68×3` (204) failed, yet some nested shapes
+// up to 398 passed — so stay within the UI's 200.
 // Ref: #/components/schemas/Phase
 // Phase represents sum type.
 type Phase struct {
@@ -8518,12 +8567,13 @@ type PhaseLeaf struct {
 	//
 	// Free-text phase label shown per-phase in the workout breakdown (e.g. `Warm-up`, `Work`, `Recovery`,
 	// `Cool-down` — verified on a live named-phase target). Independent of `intensityType`: a
-	// `NONE`-intensity phase still carries its own name. Required when `intensityType` is not
-	// HEART_RATE_ZONES (submission fails with "Ce champ est obligatoire." otherwise). For HR-zone phases
-	// an empty string is accepted.
+	// `NONE`-intensity phase still carries its own name. The web UI requires a non-blank name on every
+	// phase ("Ce champ est obligatoire."), but the server accepts an empty string for any intensity
+	// (probed 2026-10-13).
 	Name string `json:"name"`
 	// "AUTOMATIC" — next phase starts automatically when the goal is reached. "MANUAL" — wait for user
-	// input (verified via capture 10-phased-manual.json).
+	// input (verified via capture 10-phased-manual.json). UI: the "Démarrer automatiquement la phase
+	// suivante" checkbox, per phase, including phases inside repeats (probed 2026-10-13).
 	PhaseChangeType PhaseLeafPhaseChangeType `json:"phaseChangeType"`
 	// Authoritative discriminator for the phase goal. A client MUST read `goalType` to decide whether the
 	// phase is distance- or duration-based — do NOT infer it from "which of `distance`/`duration` is
@@ -8532,22 +8582,27 @@ type PhaseLeaf struct {
 	// heuristic gives the wrong answer and is the root cause of round-trip update bugs (verified
 	// 2026-06-08, probe-E-roundtrip-update.json).
 	GoalType PhaseLeafGoalType `json:"goalType"`
-	// Phase distance in metres (not km). On create it is non-null iff `goalType: DISTANCE` (null
-	// otherwise). On read-back the asymmetry is: `goalType: DURATION` leaves OMIT this field entirely,
-	// while `goalType: DISTANCE` leaves carry it. Always trust `goalType`, not this field's presence.
+	// Phase distance in metres (not km). Range: UI 1–9 999 000 m; the server also takes `0` and
+	// fractions, and 400s above 9 999 000 on `phases.[i].goal.distance` (probed 2026-10-13). On create it
+	// is non-null iff `goalType: DISTANCE` (null otherwise). On read-back the asymmetry is:
+	// `goalType: DURATION` leaves OMIT this field entirely, while `goalType: DISTANCE` leaves carry it.
+	// Always trust `goalType`, not this field's presence.
 	Distance OptNilFloat64 `json:"distance"`
-	// Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the UI validator). On
-	// create it is non-null iff `goalType: DURATION`. Read-back asymmetry: a `goalType: DISTANCE` leaf
-	// reads back with a phantom `duration: "00:00:00"` in addition to its real `distance` (verified
-	// 2026-06-08, probe-E-roundtrip-update.json) — so a phase can have both `distance` and a non-null
-	// `duration` on read. The server ignores this phantom value when the body is fed back into an update
-	// (`distance` is preserved), so the GET body round-trips safely; just never use it to infer the goal.
-	// A genuine zero `"00:00:00"` on a `goalType: DURATION` leaf is also accepted and preserved
-	// (probe-B-zero-duration.json).
+	// Phase duration as `"HH:MM:SS"` (strict — partial `MM:SS` is rejected by the UI validator; the
+	// server reads `"05:00"` as 5 minutes). Range: `00:00:01`–`99:59:59` in the UI; `100:00:00` → 400
+	// `phases.[i].goal.duration` (probed 2026-10-13). On create it is non-null iff `goalType: DURATION`.
+	// Read-back asymmetry: a `goalType: DISTANCE` leaf reads back with a phantom `duration: "00:00:00"` in
+	// addition to its real `distance` (verified 2026-06-08, probe-E-roundtrip-update.json) — so a phase
+	// can have both `distance` and a non-null `duration` on read. The server ignores this phantom value
+	// when the body is fed back into an update (`distance` is preserved), so the GET body round-trips
+	// safely; just never use it to infer the goal. A genuine zero `"00:00:00"` on a `goalType: DURATION`
+	// leaf is also accepted and preserved (probe-B-zero-duration.json).
 	Duration OptNilString `json:"duration"`
 	// Intensity metric for the phase. All four values verified from captures. Toggling off "Utiliser les
 	// zones d'entraînement" in the UI sets this to "NONE" and nulls both zones. POWER_ZONES requires a
-	// power-capable sport (e.g. CYCLING, sportId 2) — verified via capture 11-phased-power.json.
+	// power-capable sport (e.g. CYCLING, sportId 2) — verified via capture 11-phased-power.json. The
+	// server stores POWER_ZONES on any sport (running included); the UI offers all three metrics
+	// regardless of sport (probed 2026-10-13).
 	IntensityType PhaseLeafIntensityType `json:"intensityType"`
 	// Lower zone bound (1–5) when `intensityType != NONE`. `lowerZone` and `upperZone` form an inclusive
 	// range — the UI sends e.g. `1`/`3` ("Z1–Z3") whenever its two zone pickers differ; equal values
@@ -8712,7 +8767,9 @@ func (s *PhaseLeafGoalType) UnmarshalText(data []byte) error {
 
 // Intensity metric for the phase. All four values verified from captures. Toggling off "Utiliser les
 // zones d'entraînement" in the UI sets this to "NONE" and nulls both zones. POWER_ZONES requires a
-// power-capable sport (e.g. CYCLING, sportId 2) — verified via capture 11-phased-power.json.
+// power-capable sport (e.g. CYCLING, sportId 2) — verified via capture 11-phased-power.json. The
+// server stores POWER_ZONES on any sport (running included); the UI offers all three metrics
+// regardless of sport (probed 2026-10-13).
 type PhaseLeafIntensityType string
 
 const (
@@ -8769,7 +8826,8 @@ func (s *PhaseLeafIntensityType) UnmarshalText(data []byte) error {
 }
 
 // "AUTOMATIC" — next phase starts automatically when the goal is reached. "MANUAL" — wait for user
-// input (verified via capture 10-phased-manual.json).
+// input (verified via capture 10-phased-manual.json). UI: the "Démarrer automatiquement la phase
+// suivante" checkbox, per phase, including phases inside repeats (probed 2026-10-13).
 type PhaseLeafPhaseChangeType string
 
 const (
@@ -8860,7 +8918,12 @@ func (s *PhaseLeafPhaseType) UnmarshalText(data []byte) error {
 // `repeatCount:1` REPEAT is accepted but the server silently unwraps it into a plain PHASE leaf on
 // read-back (verified via probe-A-repeatcount1.json).
 //
-// Nesting is supported by the schema but rejected by the UI beyond depth 1.
+// Nesting (probed 2026-10-13, and the web UI saves it): a REPEAT may hold another REPEAT — e.g. 3 ×
+// (1 km, 2 × (30 s, 200 m), 2 min). At most two levels of REPEAT (the UI's `MAX` depth is 2; a third
+// level → `400` `exerciseTargets[0].phases: trainingTarget.unknownException`). ⚠ A nested REPEAT
+// that is the last item of its parent is accepted but silently flattened — its leaves are inlined
+// into the parent and its `repeatCount` is lost (`R3[A, R2[B, C]]` reads back as `R3[A, B, C]`). The
+// UI forbids it ("a repeat cannot be the last item"); clients should too.
 // Ref: #/components/schemas/PhaseRepeat
 type PhaseRepeat struct {
 	// Constant `"REPEAT"` discriminator for repeat groups.
@@ -8868,11 +8931,14 @@ type PhaseRepeat struct {
 	// Number of times the nested phases are repeated. The wire API accepts 1 and normalizes a single-rep
 	// group to a bare PHASE on read-back (probe probe-A-repeatcount1.json). The UI enforces a minimum of 2
 	// — but that is a client-only constraint, not a server rule. Use ≥ 2 for real intervals; for a
-	// single block prefer a bare PhaseLeaf (no REPEAT wrapper).
+	// single block prefer a bare PhaseLeaf (no REPEAT wrapper). `0` is also accepted and unwrapped the
+	// same way (the leaves appear once); `100` → `400` (UI range 2–99, probed 2026-10-13).
 	RepeatCount int `json:"repeatCount"`
-	// Nested PHASE leaves looped `repeatCount` times. One leaf = a recovery-less interval; two leaves
-	// (work + rest) = a classic interval with recovery.
-	Phases []PhaseLeaf `json:"phases"`
+	// Phases looped `repeatCount` times — leaves and (one level down) nested REPEATs, in any number. One
+	// leaf = a recovery-less interval; two leaves (work + rest) = a classic interval with recovery; more
+	// leaves (e.g. work / float / work) are fine and each keeps its own goal, intensity, zone range and
+	// `phaseChangeType` (probed 2026-10-13). An empty list → `400`.
+	Phases []Phase `json:"phases"`
 	// Phase id assigned by the server. Absent on REPEAT groups in observed read-backs (only the nested
 	// leaves carry ids); send nothing on create.
 	ID OptNilFloat64 `json:"id"`
@@ -8889,7 +8955,7 @@ func (s *PhaseRepeat) GetRepeatCount() int {
 }
 
 // GetPhases returns the value of Phases.
-func (s *PhaseRepeat) GetPhases() []PhaseLeaf {
+func (s *PhaseRepeat) GetPhases() []Phase {
 	return s.Phases
 }
 
@@ -8909,7 +8975,7 @@ func (s *PhaseRepeat) SetRepeatCount(val int) {
 }
 
 // SetPhases sets the value of Phases.
-func (s *PhaseRepeat) SetPhases(val []PhaseLeaf) {
+func (s *PhaseRepeat) SetPhases(val []Phase) {
 	s.Phases = val
 }
 
@@ -14435,13 +14501,20 @@ type TrainingTargetCreate struct {
 	//  - "ROUTE" — read-back only (observed 2026-09-28): what `GET /api/trainingtarget/{id}` returns for
 	//    a target created by `POST /training/target/createTargetFromFavourite` from a ROUTE favorite —
 	//    no duration/distance/phases, `description: null`. Not tried on create. # TODO: verify on create
-	//  - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is
-	//    non-null; `phases` is `[]`.
-	//  - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are populated; pace is implicit
-	//    (UI lets user enter any 2 of 3).
-	//  - "PHASED" — multi-phase workout. `phases` is populated; volume fields on the exerciseTarget are
-	//    null (each phase carries its own). All three values verified from captured POST bodies
-	//    (2026-05-25).
+	//  - "FREE" — no goal at all: just a sport on a date (the UI's default when no goal tab is chosen).
+	//    Volume fields null, `phases` `[]`; an empty `exerciseTargets` is also accepted (the server adds
+	//    one).
+	//  - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is set and
+	//    > 0, else `400` on all three fields (`trainingTarget.unknownException`). `phases` sent are
+	//    dropped.
+	//  - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are required (pace is implicit;
+	//    the UI computes the third of duration/distance/pace); `calories` may ride along and is kept;
+	//    `phases` are dropped.
+	//  - "PHASED" — multi-phase workout. At least one phase (else `400` `exerciseTargets[0].phases`);
+	//    `duration`/`distance` sent on the exerciseTarget are ignored (rolled up from the phases on read),
+	//    but `calories` is kept. Every exerciseTarget of a multi-sport target must follow the same type (a
+	//    PHASED target with one entry lacking phases → `400`). Probed 2026-10-13;
+	//    VOLUME/STEADY_RACE_PACE/PHASED also verified from captured POST bodies (2026-05-25).
 	Type TrainingTargetCreateType `json:"type"`
 	// Display name shown in the diary, at most 45 characters counted as UTF-16 code units (Java
 	// `String.length()`: an emoji counts 2) — 46 → `400` on `trainingSessionTarget.name` with the same
@@ -14460,8 +14533,16 @@ type TrainingTargetCreate struct {
 	// The server applies the user's timezone setting.
 	Datetime string `json:"datetime"`
 	// One entry per exercise block. Most targets have exactly one; multi-sport workouts (e.g. duathlon:
-	// run then bike) pass multiple entries — verified via capture 13-multisport.json. On read-back, the
-	// server assigns each entry a sequential `index` (0, 1, …) to preserve ordering.
+	// run then bike) pass multiple entries — verified via capture 13-multisport.json (also with 3
+	// sports, and for VOLUME / STEADY_RACE_PACE / FREE, probed 2026-10-13). On read-back, the server
+	// assigns each entry a sequential `index` (0, 1, …) to preserve ordering. The web UI's editor only
+	// ever shows and edits the first entry.
+	//
+	// On update entries are matched by `id` (probed 2026-10-13): an entry whose `id` matches a stored one
+	// replaces it; stored entries not sent are kept unchanged; an entry with `id: null` (or an unknown id)
+	// is ignored. So an update can neither add nor remove a sport — delete and recreate the target for
+	// that. Changing `type` on update rewrites only the entries sent, which can leave the others in the
+	// old shape (e.g. a PHASED target with a VOLUME entry).
 	ExerciseTargets []ExerciseTarget `json:"exerciseTargets"`
 }
 
@@ -14520,16 +14601,24 @@ func (s *TrainingTargetCreate) SetExerciseTargets(val []ExerciseTarget) {
 //   - "ROUTE" — read-back only (observed 2026-09-28): what `GET /api/trainingtarget/{id}` returns for
 //     a target created by `POST /training/target/createTargetFromFavourite` from a ROUTE favorite —
 //     no duration/distance/phases, `description: null`. Not tried on create. # TODO: verify on create
-//   - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is
-//     non-null; `phases` is `[]`.
-//   - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are populated; pace is implicit
-//     (UI lets user enter any 2 of 3).
-//   - "PHASED" — multi-phase workout. `phases` is populated; volume fields on the exerciseTarget are
-//     null (each phase carries its own). All three values verified from captured POST bodies
-//     (2026-05-25).
+//   - "FREE" — no goal at all: just a sport on a date (the UI's default when no goal tab is chosen).
+//     Volume fields null, `phases` `[]`; an empty `exerciseTargets` is also accepted (the server adds
+//     one).
+//   - "VOLUME" — single-metric target. Exactly one of `duration` / `distance` / `calories` is set and
+//     > 0, else `400` on all three fields (`trainingTarget.unknownException`). `phases` sent are
+//     dropped.
+//   - "STEADY_RACE_PACE" — time-trial. Both `duration` and `distance` are required (pace is implicit;
+//     the UI computes the third of duration/distance/pace); `calories` may ride along and is kept;
+//     `phases` are dropped.
+//   - "PHASED" — multi-phase workout. At least one phase (else `400` `exerciseTargets[0].phases`);
+//     `duration`/`distance` sent on the exerciseTarget are ignored (rolled up from the phases on read),
+//     but `calories` is kept. Every exerciseTarget of a multi-sport target must follow the same type (a
+//     PHASED target with one entry lacking phases → `400`). Probed 2026-10-13;
+//     VOLUME/STEADY_RACE_PACE/PHASED also verified from captured POST bodies (2026-05-25).
 type TrainingTargetCreateType string
 
 const (
+	TrainingTargetCreateTypeFREE           TrainingTargetCreateType = "FREE"
 	TrainingTargetCreateTypeVOLUME         TrainingTargetCreateType = "VOLUME"
 	TrainingTargetCreateTypeSTEADYRACEPACE TrainingTargetCreateType = "STEADY_RACE_PACE"
 	TrainingTargetCreateTypePHASED         TrainingTargetCreateType = "PHASED"
@@ -14539,6 +14628,7 @@ const (
 // AllValues returns all TrainingTargetCreateType values.
 func (TrainingTargetCreateType) AllValues() []TrainingTargetCreateType {
 	return []TrainingTargetCreateType{
+		TrainingTargetCreateTypeFREE,
 		TrainingTargetCreateTypeVOLUME,
 		TrainingTargetCreateTypeSTEADYRACEPACE,
 		TrainingTargetCreateTypePHASED,
@@ -14549,6 +14639,8 @@ func (TrainingTargetCreateType) AllValues() []TrainingTargetCreateType {
 // MarshalText implements encoding.TextMarshaler.
 func (s TrainingTargetCreateType) MarshalText() ([]byte, error) {
 	switch s {
+	case TrainingTargetCreateTypeFREE:
+		return []byte(s), nil
 	case TrainingTargetCreateTypeVOLUME:
 		return []byte(s), nil
 	case TrainingTargetCreateTypeSTEADYRACEPACE:
@@ -14565,6 +14657,9 @@ func (s TrainingTargetCreateType) MarshalText() ([]byte, error) {
 // UnmarshalText implements encoding.TextUnmarshaler.
 func (s *TrainingTargetCreateType) UnmarshalText(data []byte) error {
 	switch TrainingTargetCreateType(data) {
+	case TrainingTargetCreateTypeFREE:
+		*s = TrainingTargetCreateTypeFREE
+		return nil
 	case TrainingTargetCreateTypeVOLUME:
 		*s = TrainingTargetCreateTypeVOLUME
 		return nil

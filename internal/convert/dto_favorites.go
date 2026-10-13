@@ -178,12 +178,7 @@ func clearPhaseIDs(in []gen.Phase) []gen.Phase {
 			p.PhaseLeaf.ID.Reset()
 		case gen.PhaseRepeatPhase:
 			p.PhaseRepeat.ID.Reset()
-			leaves := make([]gen.PhaseLeaf, len(p.PhaseRepeat.Phases))
-			for j, l := range p.PhaseRepeat.Phases {
-				l.ID.Reset()
-				leaves[j] = l
-			}
-			p.PhaseRepeat.Phases = leaves
+			p.PhaseRepeat.Phases = clearPhaseIDs(p.PhaseRepeat.Phases)
 		}
 		out[i] = p
 	}

@@ -55,7 +55,7 @@ func checkSport(ctx context.Context, fc *flow.Client, id int) error {
 
 // favoriteGoalArgs validates the create/update favorite arguments that are
 // independent of the account (types, lengths, ranges, exclusivity). It runs
-// before buildGoalExerciseTarget, which assumes well-typed input.
+// before buildExerciseTargets.
 func favoriteGoalArgs(req mcpgo.CallToolRequest) (name, desc string, sportID int, err error) {
 	name, present, err := textArg(req, "name", maxFavoriteNameRunes, true)
 	if err != nil {
@@ -82,37 +82,29 @@ func favoriteGoalArgs(req mcpgo.CallToolRequest) (name, desc string, sportID int
 	return name, desc, sportID, nil
 }
 
-// favoriteGoalShape checks the goal arguments: exactly one of duration_s,
-// distance_m or a non-empty phases array, each in Polar's accepted range.
+// favoriteGoalShape checks that a favorite has a goal. The goal itself —
+// types, ranges, which combinations make which favorite type — is validated by
+// buildExerciseTargets, shared with training targets.
 func favoriteGoalShape(req mcpgo.CallToolRequest) error {
-	_, hasDur, err := intArgRange(req, "duration_s", 1, maxFavoriteDurationS, "seconds (99:59:59)")
-	if err != nil {
-		return err
+	if _, ok := rawArg(req, "exercises"); ok {
+		return errors.New("exercises (multi-sport) is not supported for favorites; give one sport's goal")
 	}
-	dist, hasDist, err := floatArgRange(req, "distance_m", 0, maxFavoriteDistanceM, "metres")
-	if err != nil {
-		return err
+	for _, k := range []string{"duration_s", "distance_m", "kcal"} {
+		if _, ok := rawArg(req, k); ok {
+			return nil
+		}
 	}
-	if hasDist && dist <= 0 {
-		return errors.New("distance_m must be greater than 0 metres")
-	}
-	phases, hasPhases := rawArg(req, "phases")
-	if hasPhases {
-		list, ok := phases.([]any)
-		if !ok {
+	if phases, ok := rawArg(req, "phases"); ok {
+		list, isList := phases.([]any)
+		if !isList {
 			return fmt.Errorf("phases must be an array, got %s", jsonTypeName(phases))
 		}
-		hasPhases = len(list) > 0
+		if len(list) > 0 {
+			return nil
+		}
 	}
-	switch {
-	case hasPhases && (hasDur || hasDist):
-		return errors.New("give either phases or one of duration_s / distance_m, not both")
-	case hasDur && hasDist:
-		return errors.New("give only one of duration_s or distance_m for a VOLUME favorite")
-	case !hasPhases && !hasDur && !hasDist:
-		return errors.New("a favorite needs a goal: duration_s, distance_m, or a phases array")
-	}
-	return nil
+	return errors.New("a favorite needs a goal: duration_s, distance_m, kcal, both duration_s and distance_m " +
+		"(race pace), or a phases array")
 }
 
 // buildFavoriteCreate validates the arguments and builds the wire body.
@@ -121,21 +113,18 @@ func buildFavoriteCreate(ctx context.Context, fc *flow.Client, req mcpgo.CallToo
 	if err != nil {
 		return nil, err
 	}
-	et, phased, errMsg := buildGoalExerciseTarget(req)
-	if errMsg != "" {
-		return nil, errors.New(errMsg)
+	ets, kind, err := buildExerciseTargets(req.GetArguments(), false)
+	if err != nil {
+		return nil, err
 	}
 	if err := checkSport(ctx, fc, sportID); err != nil {
 		return nil, err
 	}
-	et.ID.SetToNull()
+	ets[0].ID.SetToNull()
 	body := &gen.FavoriteCreate{
-		Type:            gen.FavoriteCreateTypeVOLUME,
+		Type:            gen.FavoriteCreateType(kind),
 		Name:            name,
-		ExerciseTargets: []gen.ExerciseTarget{et},
-	}
-	if phased {
-		body.Type = gen.FavoriteCreateTypePHASED
+		ExerciseTargets: ets,
 	}
 	body.Description.SetTo(desc)
 	return body, nil

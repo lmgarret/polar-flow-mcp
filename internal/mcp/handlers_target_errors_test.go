@@ -18,6 +18,9 @@ func TestCreateTrainingTarget_Validation(t *testing.T) {
 		for k, v := range extra {
 			m[k] = v
 		}
+		if _, phased := extra["phases"]; phased {
+			delete(m, "duration_s")
+		}
 		return m
 	}
 	long46 := strings.Repeat("n", 46)
@@ -33,7 +36,7 @@ func TestCreateTrainingTarget_Validation(t *testing.T) {
 			"phases[0] (warmup): phase name"},
 		{"recovery name 46", base(map[string]any{"phases": phases(map[string]any{
 			"type": "repeat", "reps": 3.0, "goal": map[string]any{"duration_s": 60.0},
-			"recovery": map[string]any{"duration_s": 60.0, "name": long46}})}), "phases[0] (repeat): phase name"},
+			"recovery": map[string]any{"duration_s": 60.0, "name": long46}})}), "phases[0] (repeat): recovery: phase name"},
 		{"block without goal", base(map[string]any{"phases": phases(map[string]any{"type": "block"})}),
 			"phases[0] (block): needs a goal"},
 		{"block two goals", base(map[string]any{"phases": phases(map[string]any{"type": "block", "distance_m": 5000.0, "duration_s": 600.0})}),

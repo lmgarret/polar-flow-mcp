@@ -85,226 +85,21 @@ func buildTrainingTargetCreate(req mcpgo.CallToolRequest) (*gen.TrainingTargetCr
 		return nil, err.Error()
 	}
 
-	et, phased, errMsg := buildGoalExerciseTarget(req)
-	if errMsg != "" {
-		return nil, errMsg
-	}
-	targetType := gen.TrainingTargetCreateTypeVOLUME
-	if phased {
-		targetType = gen.TrainingTargetCreateTypePHASED
+	ets, kind, err := buildExerciseTargets(req.GetArguments(), true)
+	if err != nil {
+		return nil, err.Error()
 	}
 
 	body := &gen.TrainingTargetCreate{
-		Type:            targetType,
+		Type:            gen.TrainingTargetCreateType(kind),
 		Name:            name,
 		Datetime:        convert.WireDateTimeTZLess(when),
-		ExerciseTargets: []gen.ExerciseTarget{et},
+		ExerciseTargets: ets,
 	}
 	if description != "" {
 		body.Description.SetTo(description)
 	}
 	return body, ""
-}
-
-// buildGoalExerciseTarget parses the goal arguments shared by training
-// targets and favorites — sport_id plus either a phases array (PHASED) or one
-// of duration_s / distance_m (VOLUME) — into a single wire ExerciseTarget.
-// phased reports which shape was built.
-func buildGoalExerciseTarget(req mcpgo.CallToolRequest) (et gen.ExerciseTarget, phased bool, errMsg string) {
-	args, _ := req.GetArguments()["phases"].([]any)
-	phases, err := buildPhases(args)
-	if err != nil {
-		return et, false, err.Error()
-	}
-	et = gen.ExerciseTarget{
-		SportId: argInt(req, "sport_id", 1),
-		Phases:  phases,
-	}
-	if len(phases) > 0 {
-		return et, true, ""
-	}
-	// VOLUME target: requires exactly one of duration_s or distance_m.
-	volDur, hasDur := goalDuration(req.GetArguments(), "duration_s")
-	volDist, _ := req.GetArguments()["distance_m"].(float64)
-	switch {
-	case hasDur:
-		et.Duration.SetTo(volDur)
-	case volDist > 0:
-		et.Distance.SetTo(volDist)
-	default:
-		return et, false, "VOLUME targets (no phases) require duration_s or distance_m"
-	}
-	return et, false, ""
-}
-
-// buildPhases turns the user-facing flat phase array into Polar Flow's
-// PHASE/REPEAT sum-type list. Warmup, block and cooldown become single
-// PhaseLeaf entries; repeat becomes a PhaseRepeat with nested
-// PhaseLeaf{work, recovery}.
-//
-//nolint:gocyclo // straight-line builder over a small enum
-func buildPhases(args []any) ([]gen.Phase, error) {
-	out := make([]gen.Phase, 0, len(args))
-	for i, raw := range args {
-		p, ok := raw.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("phases[%d]: not an object", i)
-		}
-		ptype, _ := p["type"].(string)
-		switch ptype {
-		case "warmup", "block", "cooldown":
-			leaf, err := buildSingleLeaf(p, singlePhaseNames[ptype])
-			if err != nil {
-				return nil, fmt.Errorf("phases[%d] (%s): %w", i, ptype, err)
-			}
-			out = append(out, gen.Phase{Type: gen.PhaseLeafPhase, PhaseLeaf: leaf})
-		case "repeat":
-			repeat, err := buildRepeat(p)
-			if err != nil {
-				return nil, fmt.Errorf("phases[%d] (repeat): %w", i, err)
-			}
-			out = append(out, gen.Phase{Type: gen.PhaseRepeatPhase, PhaseRepeat: repeat})
-		default:
-			return nil, fmt.Errorf("phases[%d]: unknown type %q (want warmup|block|repeat|cooldown)", i, ptype)
-		}
-		if err := checkPhaseNames(out[len(out)-1]); err != nil {
-			return nil, fmt.Errorf("phases[%d] (%s): %w", i, ptype, err)
-		}
-	}
-	return out, nil
-}
-
-// checkPhaseNames enforces Flow's phase-name limit on a built phase (and a
-// repeat's nested work/recovery leaves).
-func checkPhaseNames(p gen.Phase) error {
-	leaves := []gen.PhaseLeaf{p.PhaseLeaf}
-	if p.Type == gen.PhaseRepeatPhase {
-		leaves = p.PhaseRepeat.Phases
-	}
-	for _, l := range leaves {
-		if n := convert.PolarTextLen(l.Name); n > maxPhaseNameLen {
-			return fmt.Errorf("phase name %q is %d characters; Polar's limit is %d", l.Name, n, maxPhaseNameLen)
-		}
-	}
-	return nil
-}
-
-// phaseName returns a caller-supplied phase name (p["name"]) when present and
-// non-empty, otherwise the type-derived fallback (e.g. "Warm-up", "Work"). The
-// Polar Flow API persists this string verbatim per phase.
-func phaseName(p map[string]any, fallback string) string {
-	if name, ok := p["name"].(string); ok && name != "" {
-		return name
-	}
-	return fallback
-}
-
-// singlePhaseNames are the default names of the single-leaf phase types. Flow
-// gives a leaf no role — warm-up / block / cool-down differ only in this
-// fallback label — so any of them may sit anywhere in the sequence.
-var singlePhaseNames = map[string]string{"warmup": "Warm-up", "block": "Block", "cooldown": "Cool-down"}
-
-// buildSingleLeaf constructs a bare (non-repeated) leaf with a duration_s or
-// distance_m goal. A bare leaf is Flow's idiomatic continuous block, so a
-// sequence of them models e.g. a race by km segments ("5 km Z3, 10 km Z1–Z3,
-// 6.1 km Z3–Z4" — captured from the web UI 2026-10-13). Intensity is applied
-// exactly like on a repeat's work leaf (buildWorkLeaf); it defaults to open
-// (NONE) when omitted.
-func buildSingleLeaf(p map[string]any, name string) (gen.PhaseLeaf, error) {
-	leaf, err := goalLeaf(p, phaseName(p, name))
-	if err != nil {
-		return leaf, err
-	}
-	if intensity, ok := p["intensity"].(map[string]any); ok {
-		if err := applyIntensity(&leaf, intensity); err != nil {
-			return leaf, err
-		}
-	}
-	return leaf, nil
-}
-
-// goalLeaf builds an AUTOMATIC, open-intensity leaf from a goal object
-// holding exactly one of distance_m (metres) or duration_s (seconds). The
-// goal decides goalType, which is what Flow (and our read-back) keys on.
-func goalLeaf(goal map[string]any, name string) (gen.PhaseLeaf, error) {
-	leaf := gen.PhaseLeaf{
-		PhaseType:       "PHASE",
-		Name:            name,
-		PhaseChangeType: "AUTOMATIC",
-		IntensityType:   "NONE",
-	}
-	_, hasDist := goal["distance_m"]
-	_, hasDur := goal["duration_s"]
-	switch {
-	case hasDist && hasDur:
-		return leaf, fmt.Errorf("give only one of distance_m or duration_s")
-	case hasDist:
-		v, ok := goal["distance_m"].(float64)
-		if !ok || int(v) <= 0 {
-			return leaf, fmt.Errorf("distance_m must be a number of metres > 0")
-		}
-		leaf.GoalType = "DISTANCE"
-		leaf.Distance.SetTo(float64(int(v)))
-	case hasDur:
-		dur, ok := goalDuration(goal, "duration_s")
-		if !ok {
-			return leaf, fmt.Errorf("duration_s must be a number of seconds > 0")
-		}
-		leaf.GoalType = "DURATION"
-		leaf.Duration.SetTo(dur)
-	default:
-		return leaf, fmt.Errorf("needs a goal: distance_m or duration_s")
-	}
-	return leaf, nil
-}
-
-// buildRepeat constructs a repeat group with a work leaf and optional recovery leaf.
-func buildRepeat(p map[string]any) (gen.PhaseRepeat, error) {
-	reps, ok := p["reps"].(float64)
-	if !ok || reps < 2 {
-		return gen.PhaseRepeat{}, fmt.Errorf("reps is required and must be >= 2")
-	}
-	goal, _ := p["goal"].(map[string]any)
-	work, err := buildWorkLeaf(goal, p)
-	if err != nil {
-		return gen.PhaseRepeat{}, fmt.Errorf("work: %w", err)
-	}
-	leaves := []gen.PhaseLeaf{work}
-	if rec, ok := p["recovery"].(map[string]any); ok {
-		if dur, ok := goalDuration(rec, "duration_s"); ok {
-			recLeaf := gen.PhaseLeaf{
-				PhaseType:       "PHASE",
-				Name:            phaseName(rec, "Recovery"),
-				PhaseChangeType: "AUTOMATIC",
-				GoalType:        "DURATION",
-				IntensityType:   "NONE",
-			}
-			recLeaf.Duration.SetTo(dur)
-			leaves = append(leaves, recLeaf)
-		}
-	}
-	return gen.PhaseRepeat{
-		PhaseType:   "REPEAT",
-		RepeatCount: int(reps),
-		Phases:      leaves,
-	}, nil
-}
-
-// buildWorkLeaf constructs the leaf that does the actual interval work.
-func buildWorkLeaf(goal, intensityCtx map[string]any) (gen.PhaseLeaf, error) {
-	if goal == nil {
-		return gen.PhaseLeaf{}, fmt.Errorf("goal must specify distance_m or duration_s")
-	}
-	leaf, err := goalLeaf(goal, phaseName(intensityCtx, "Work"))
-	if err != nil {
-		return leaf, fmt.Errorf("goal: %w", err)
-	}
-	if intensity, ok := intensityCtx["intensity"].(map[string]any); ok {
-		if err := applyIntensity(&leaf, intensity); err != nil {
-			return leaf, err
-		}
-	}
-	return leaf, nil
 }
 
 // zoneKeys are the numeric intensity keys in precedence order, with the
@@ -376,14 +171,4 @@ func zoneValue(intensity map[string]any, key string) (int, bool, error) {
 		return 0, true, fmt.Errorf("intensity.%s must be a whole zone number 1–5, got %v", key, raw)
 	}
 	return int(f), true, nil
-}
-
-// goalDuration extracts an int seconds value from the args map and formats it
-// as the HH:MM:SS string the training-target endpoints want.
-func goalDuration(m map[string]any, key string) (string, bool) {
-	v, ok := m[key].(float64)
-	if !ok || v <= 0 {
-		return "", false
-	}
-	return convert.SecondsToClock(int(v)), true
 }

@@ -50,7 +50,7 @@ func TestBuildTrainingTargetCreate_DistancePhaseGoalDiscrimination(t *testing.T)
 	if phases[1].Type != gen.PhaseRepeatPhase {
 		t.Fatalf("phases[1] type = %q, want REPEAT", phases[1].Type)
 	}
-	work := phases[1].PhaseRepeat.Phases[0]
+	work := phases[1].PhaseRepeat.Phases[0].PhaseLeaf
 	if string(work.GoalType) != "DISTANCE" {
 		t.Fatalf("work goalType = %q, want DISTANCE", work.GoalType)
 	}
@@ -89,11 +89,11 @@ func TestBuildTrainingTargetCreate_PhaseNames(t *testing.T) {
 	if got := phases[0].PhaseLeaf.Name; got != "Easy jog" {
 		t.Fatalf("warmup name = %q, want %q", got, "Easy jog")
 	}
-	work := phases[1].PhaseRepeat.Phases[0]
+	work := phases[1].PhaseRepeat.Phases[0].PhaseLeaf
 	if work.Name != "Hard 1k" {
 		t.Fatalf("work name = %q, want %q", work.Name, "Hard 1k")
 	}
-	recovery := phases[1].PhaseRepeat.Phases[1]
+	recovery := phases[1].PhaseRepeat.Phases[1].PhaseLeaf
 	if recovery.Name != "Float" {
 		t.Fatalf("recovery name = %q, want %q", recovery.Name, "Float")
 	}
@@ -135,7 +135,7 @@ func TestBuildTrainingTargetCreate_PowerAndSpeedIntensity(t *testing.T) {
 	}
 	phases := body.ExerciseTargets[0].Phases
 
-	power := phases[0].PhaseRepeat.Phases[0]
+	power := phases[0].PhaseRepeat.Phases[0].PhaseLeaf
 	if string(power.IntensityType) != "POWER_ZONES" {
 		t.Fatalf("power work intensityType = %q, want POWER_ZONES", power.IntensityType)
 	}
@@ -146,7 +146,7 @@ func TestBuildTrainingTargetCreate_PowerAndSpeedIntensity(t *testing.T) {
 		t.Fatalf("power work upperZone = (%v, ok=%v), want (4, true)", hi, ok)
 	}
 
-	speed := phases[1].PhaseRepeat.Phases[0]
+	speed := phases[1].PhaseRepeat.Phases[0].PhaseLeaf
 	if string(speed.IntensityType) != "SPEED_ZONES" {
 		t.Fatalf("speed work intensityType = %q, want SPEED_ZONES", speed.IntensityType)
 	}
@@ -154,7 +154,7 @@ func TestBuildTrainingTargetCreate_PowerAndSpeedIntensity(t *testing.T) {
 		t.Fatalf("speed work lowerZone = (%v, ok=%v), want (5, true)", lo, ok)
 	}
 
-	precedence := phases[2].PhaseRepeat.Phases[0]
+	precedence := phases[2].PhaseRepeat.Phases[0].PhaseLeaf
 	if string(precedence.IntensityType) != "HEART_RATE_ZONES" {
 		t.Fatalf("hr_zone+power_zone work intensityType = %q, want HEART_RATE_ZONES (hr_zone wins)", precedence.IntensityType)
 	}

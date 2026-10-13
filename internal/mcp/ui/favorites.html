@@ -43,6 +43,9 @@ body{padding:12px 14px;overflow-x:hidden;min-height:100vh;display:flex;flex-dire
 .ps-val{font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums;color:#f0f0f0;font-family:'SF Mono','Fira Code',Consolas,monospace}
 .ps-lbl{font-size:.56rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4a4a4a}
 .rep-badge{font-size:.62rem;font-weight:800;color:#b07de0}
+.rep-rows{padding:8px 12px;display:flex;flex-direction:column;gap:8px}
+.rep-row{display:flex;gap:14px;align-items:center}
+.rep-nested{border-left:2px solid #b07de0;padding-left:8px;display:flex;flex-direction:column;gap:6px}
 
 /* Created confirmation — horizontal red card */
 .created-card{background:linear-gradient(140deg,#e4002b 0%,#c40023 100%);border-radius:14px;padding:14px 20px;color:#fff;display:flex;align-items:center;gap:16px}
@@ -323,11 +326,9 @@ function renderPhases(exercises) {
     for (const ph of (ex.phases ?? [])) {
       const ptype = ph.phaseType ?? ph.phase_type ?? ph.type ?? "PHASE";
       if (ptype === "REPEAT") {
-        const work = (ph.phases ?? [])[0];
-        const rec  = (ph.phases ?? [])[1];
         cards.push(`<div class="phase-card">
           <div class="phase-badge pt-repeat">Repeat <span class="rep-badge">×${esc(ph.repeatCount ?? ph.repeat_count)}</span></div>
-          <div class="phase-content">${work ? phaseStats(work, "Work") : ""}${rec ? phaseStats(rec, "Rest") : ""}</div>
+          <div class="rep-rows">${repeatRows(ph.phases ?? [])}</div>
         </div>`);
       } else {
         const name = ph.name ?? ptype;
@@ -346,11 +347,24 @@ function renderPhases(exercises) {
   return `<div class="strip">${cards.join("")}</div>`;
 }
 
+// repeatRows lists every phase of a repeat — any number of them, and a
+// nested repeat as an indented group.
+function repeatRows(phases) {
+  return phases.map(ph => {
+    const ptype = ph.phaseType ?? ph.phase_type ?? ph.type ?? "PHASE";
+    if (ptype === "REPEAT") {
+      return `<div class="rep-nested"><div class="rep-badge">×${esc(ph.repeatCount ?? ph.repeat_count)}</div>${repeatRows(ph.phases ?? [])}</div>`;
+    }
+    return `<div class="rep-row">${phaseStats(ph, ph.name || null)}</div>`;
+  }).join("");
+}
+
 function phaseStats(p, label) {
   const stats = [];
-  if (label) stats.push({v: label, l: "type"});
+  if (label) stats.push({v: label, l: "phase"});
   const goal = fmtGoal(p); if (goal) stats.push({v: goal, l: "goal"});
   const zone = fmtZone(p); if (zone) stats.push({v: zone, l: "zone"});
+  if ((p.phaseChangeType ?? p.phase_change_type) === "MANUAL") stats.push({v: "lap", l: "next"});
   if (!stats.length) return "";
   return stats.map(s => `<div class="phase-stat"><div class="ps-val">${esc(s.v)}</div><div class="ps-lbl">${esc(s.l)}</div></div>`).join("");
 }

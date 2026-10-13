@@ -1038,6 +1038,8 @@ func (s *FavoriteCreate) Validate() error {
 
 func (s FavoriteCreateType) Validate() error {
 	switch s {
+	case "FREE":
+		return nil
 	case "VOLUME":
 		return nil
 	case "STEADY_RACE_PACE":
@@ -1595,6 +1597,8 @@ func (s *GetTrainingTargetOK) Validate() error {
 
 func (s GetTrainingTargetOKType) Validate() error {
 	switch s {
+	case "FREE":
+		return nil
 	case "VOLUME":
 		return nil
 	case "STEADY_RACE_PACE":
@@ -2298,9 +2302,9 @@ func (s *PhaseRepeat) Validate() error {
 	if err := func() error {
 		if err := (validate.Int{
 			MinSet:        true,
-			Min:           1,
-			MaxSet:        false,
-			Max:           0,
+			Min:           0,
+			MaxSet:        true,
+			Max:           99,
 			MinExclusive:  false,
 			MaxExclusive:  false,
 			MultipleOfSet: false,
@@ -5782,6 +5786,8 @@ func (s *TrainingTargetCreate) Validate() error {
 
 func (s TrainingTargetCreateType) Validate() error {
 	switch s {
+	case "FREE":
+		return nil
 	case "VOLUME":
 		return nil
 	case "STEADY_RACE_PACE":

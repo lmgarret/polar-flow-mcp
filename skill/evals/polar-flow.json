@@ -50,5 +50,22 @@
       "Sets intensity hr_zone 3 on the first block, and zone ranges with zone_max on the others (hr_zone 1 + zone_max 3, hr_zone 3 + zone_max 4)",
       "Does not tell the user that distance segments or zone ranges are unsupported"
     ]
+  },
+  {
+    "skills": ["polar-flow"],
+    "query": "Change my brick on Saturday: the bike part should be 2 x 20 min in power zone 3 with 5 min easy between, keep the run as is.",
+    "expected_behavior": [
+      "Reads the target with get_training_target before updating",
+      "Calls update_training_target with exercises listing both sports in the stored order, the run carried over unchanged",
+      "Builds the bike part as a repeat of 2 with a 20 min power_zone 3 work phase and a 5 min recovery"
+    ]
+  },
+  {
+    "skills": ["polar-flow"],
+    "query": "Put a 10 km in 45 minutes pace target on Sunday at 8:00.",
+    "expected_behavior": [
+      "Calls create_training_target with both duration_s 2700 and distance_m 10000 and no phases",
+      "Does not convert the request into speed zones or a phased workout"
+    ]
   }
 ]

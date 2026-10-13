@@ -57,6 +57,12 @@ func UpdateTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 		if err != nil {
 			return targetLookupError(err, id), nil
 		}
+		if n, m := len(existing.ExerciseTargets), len(body.ExerciseTargets); n != m {
+			return mcpgo.NewToolResultError(fmt.Sprintf("target %d has %d sport(s) but the update gives %d. "+
+				"Polar's update can neither add nor remove a sport: it keeps the sports not sent and ignores "+
+				"new ones. Pass all %d in exercises, in the order get_training_target lists them, or delete "+
+				"the target and create it again.", id, n, m, n)), nil
+		}
 		preserveExerciseTargetIDs(body, existing.ExerciseTargets)
 		if err := fc.UpdateTrainingTarget(ctx, id, body); err != nil {
 			if errors.Is(err, flow.ErrTargetNotFound) {
@@ -81,10 +87,11 @@ func UpdateTrainingTargetHandler(fc *flow.Client) func(context.Context, mcpgo.Ca
 }
 
 // preserveExerciseTargetIDs copies the server-assigned exerciseTargets[].id from
-// the live target onto the rebuilt update body, matched by position. Polar uses
-// these ids to recognise which target/exercise the full-replace update refers to;
-// dropping them breaks the update (see UpdateTrainingTargetHandler). Phase ids are
-// not carried — they round-trip safely as null.
+// the live target onto the rebuilt update body, matched by position. Polar
+// matches entries by these ids: an entry without one is ignored, and a stored
+// entry not sent is kept as is (probed 2026-10-13) — hence the same-count check
+// in UpdateTrainingTargetHandler. Phase ids are not carried — the phase tree is
+// replaced wholesale and gets fresh ids.
 func preserveExerciseTargetIDs(body *gen.TrainingTargetCreate, existing []gen.ExerciseTarget) {
 	if body == nil {
 		return

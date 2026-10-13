@@ -43,6 +43,10 @@ body{padding:12px 14px;overflow-x:hidden;min-height:100vh;display:flex;flex-dire
 .ps-val{font-size:.82rem;font-weight:800;font-variant-numeric:tabular-nums;color:#f0f0f0;font-family:'SF Mono','Fira Code',Consolas,monospace}
 .ps-lbl{font-size:.56rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4a4a4a}
 .rep-badge{font-size:.62rem;font-weight:800;color:#b07de0}
+.ex-head{font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:8px 0 6px}
+.rep-rows{padding:8px 12px;display:flex;flex-direction:column;gap:8px}
+.rep-row{display:flex;gap:14px;align-items:center}
+.rep-nested{border-left:2px solid #b07de0;padding-left:8px;display:flex;flex-direction:column;gap:6px}
 
 /* Created confirmation — horizontal red card */
 .created-card{background:linear-gradient(140deg,#e4002b 0%,#c40023 100%);border-radius:14px;padding:14px 20px;color:#fff;display:flex;align-items:center;gap:16px}
@@ -240,7 +244,7 @@ function render(sc) {
     sub.textContent = `#${sc.id}`;
     root.innerHTML = `<div class="fade-in">
       <div class="det-head">${sportTile(sc.sport_category)}<div class="dh-txt"><div class="dh-name">${esc(t.name || "—")}</div>${t.datetime?`<div class="dh-meta">${esc(fmtDateTime(t.datetime))}</div>`:""}</div></div>
-      ${renderPhases(t.exerciseTargets ?? t.exercise_targets ?? [])}
+      ${renderExercises(t.type, t.exerciseTargets ?? t.exercise_targets ?? [])}
     </div>`;
     return;
   }
@@ -260,17 +264,40 @@ function render(sc) {
   }
 }
 
+const GOAL_LABEL = {FREE: "No goal", VOLUME: "Volume", STEADY_RACE_PACE: "Race pace", PHASED: "Phases"};
+
+// renderExercises shows each sport's goal: its phases, or the volume /
+// race-pace totals of a non-phased target. Multi-sport targets get one block
+// per sport, in order.
+function renderExercises(type, exercises) {
+  const blocks = exercises.map((ex, i) => {
+    const head = exercises.length > 1 ? `<div class="ex-head">Sport ${i + 1} · #${esc(ex.sportId ?? ex.sport_id)}</div>` : "";
+    if ((ex.phases ?? []).length) return head + renderPhases([ex]);
+    const stats = [];
+    if (ex.duration) stats.push({v: fmtDurStr(ex.duration), l: "duration"});
+    const dist = Number(ex.distance ?? 0);
+    if (dist) stats.push({v: dist >= 1000 ? (dist/1000).toFixed(1)+"km" : dist+"m", l: "distance"});
+    if (type === "STEADY_RACE_PACE" && ex.duration && dist) {
+      const [h,m,s2] = String(ex.duration).split(":").map(Number);
+      const spk = Math.round((h*3600+m*60+s2) / (dist/1000));
+      stats.push({v: `${Math.floor(spk/60)}:${String(spk%60).padStart(2,"0")}/km`, l: "pace"});
+    }
+    if (ex.calories) stats.push({v: ex.calories, l: "kcal"});
+    const body = stats.map(st => `<div class="phase-stat"><div class="ps-val">${esc(st.v)}</div><div class="ps-lbl">${esc(st.l)}</div></div>`).join("");
+    return head + `<div class="strip"><div class="phase-card"><div class="phase-badge pt-work">${esc(GOAL_LABEL[type] ?? type ?? "Goal")}</div><div class="phase-content">${body || "—"}</div></div></div>`;
+  });
+  return blocks.join("") || `<div class="empty-state">No phase data.</div>`;
+}
+
 function renderPhases(exercises) {
   const cards = [];
   for (const ex of exercises) {
     for (const ph of (ex.phases ?? [])) {
       const ptype = ph.phaseType ?? ph.phase_type ?? ph.type ?? "PHASE";
       if (ptype === "REPEAT") {
-        const work = (ph.phases ?? [])[0];
-        const rec  = (ph.phases ?? [])[1];
         cards.push(`<div class="phase-card">
           <div class="phase-badge pt-repeat">Repeat <span class="rep-badge">×${esc(ph.repeatCount ?? ph.repeat_count)}</span></div>
-          <div class="phase-content">${work ? phaseStats(work, "Work") : ""}${rec ? phaseStats(rec, "Rest") : ""}</div>
+          <div class="rep-rows">${repeatRows(ph.phases ?? [])}</div>
         </div>`);
       } else {
         const name = ph.name ?? ptype;
@@ -289,11 +316,24 @@ function renderPhases(exercises) {
   return `<div class="strip">${cards.join("")}</div>`;
 }
 
+// repeatRows lists every phase of a repeat — any number of them, and a
+// nested repeat as an indented group.
+function repeatRows(phases) {
+  return phases.map(ph => {
+    const ptype = ph.phaseType ?? ph.phase_type ?? ph.type ?? "PHASE";
+    if (ptype === "REPEAT") {
+      return `<div class="rep-nested"><div class="rep-badge">×${esc(ph.repeatCount ?? ph.repeat_count)}</div>${repeatRows(ph.phases ?? [])}</div>`;
+    }
+    return `<div class="rep-row">${phaseStats(ph, ph.name || null)}</div>`;
+  }).join("");
+}
+
 function phaseStats(p, label) {
   const stats = [];
-  if (label) stats.push({v: label, l: "type"});
+  if (label) stats.push({v: label, l: "phase"});
   const goal = fmtGoal(p); if (goal) stats.push({v: goal, l: "goal"});
   const zone = fmtZone(p); if (zone) stats.push({v: zone, l: "zone"});
+  if ((p.phaseChangeType ?? p.phase_change_type) === "MANUAL") stats.push({v: "lap", l: "next"});
   if (!stats.length) return "";
   return stats.map(s => `<div class="phase-stat"><div class="ps-val">${esc(s.v)}</div><div class="ps-lbl">${esc(s.l)}</div></div>`).join("");
 }

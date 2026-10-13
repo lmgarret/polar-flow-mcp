@@ -108,10 +108,24 @@ a total duration or distance:
 }
 ```
 
-This is a **VOLUME** target: set `duration_s` **or** `distance_m` at the top
-level and omit `phases`. (A VOLUME target with neither is rejected.) A VOLUME
-target has no `intensity` field at all — if the effort needs a zone, use a
-`phases` list instead (see below).
+This is a **VOLUME** target: set exactly one of `duration_s`, `distance_m` or
+`kcal` (a calorie goal, e.g. `"kcal": 500`) and omit `phases`. A VOLUME target
+has no `intensity` field at all — if the effort needs a zone, use a `phases`
+list instead (see below).
+
+Two more goal-less or single-line shapes:
+
+- **No goal at all** — leave out every goal argument and the target is `FREE`:
+  just the sport on that day ("Run on Sunday, whatever I feel like").
+- **Race pace** — give both `duration_s` and `distance_m` and the watch paces
+  you to that distance in that time:
+
+  > "10 km in 45 minutes on Saturday morning"
+
+  ```json
+  { "name": "10k @ 4:30", "date": "2026-06-20", "time": "08:00",
+    "duration_s": 2700, "distance_m": 10000 }
+  ```
 
 ## Zoned steady effort (no intervals)
 
@@ -158,6 +172,57 @@ own zone or zone range (`zone_max` makes the zone a range's lower bound):
   ]
 }
 ```
+
+## Nested intervals and manual phases
+
+A `repeat` can hold its own `phases` — any number of them, including one more
+`repeat` (as in the Flow editor, which allows two levels). `manual: true` on a
+phase makes the watch wait for a lap press before moving on, handy for a rest
+whose length depends on the athlete:
+
+> "3 sets of: 400 m in Z4, then 2 × (30 s sprint, 30 s float), then walk until I'm ready"
+
+```json
+{
+  "name": "Ladder sets",
+  "date": "2026-06-18",
+  "phases": [
+    { "type": "warmup", "duration_s": 900 },
+    { "type": "repeat", "reps": 3, "phases": [
+      { "type": "block", "name": "400", "distance_m": 400, "intensity": { "hr_zone": 4 } },
+      { "type": "repeat", "reps": 2, "phases": [
+        { "type": "block", "name": "Sprint", "duration_s": 30, "intensity": { "hr_zone": 5 } },
+        { "type": "block", "name": "Float", "duration_s": 30, "intensity": { "label": "easy" } } ] },
+      { "type": "block", "name": "Walk", "duration_s": 120, "manual": true } ] },
+    { "type": "cooldown", "duration_s": 600 }
+  ]
+}
+```
+
+A nested `repeat` can't be the last phase of its parent: Polar would flatten it
+and drop its reps, so the tool refuses it — put a phase after it (here,
+"Walk"). Limits follow Polar's editor: 2–99 reps, at most 20 phases as written
+and 200 once repeats are unrolled.
+
+## Multi-sport targets
+
+For a brick or a duathlon, give `exercises` — one entry per sport, each with
+`sport_id` and its own goal — instead of the single-sport arguments. Every
+sport needs the same kind of goal (all `phases`, all one volume metric, all a
+race pace, or none):
+
+```json
+{ "name": "Brick", "date": "2026-06-21",
+  "exercises": [
+    { "sport_id": 2, "phases": [ { "type": "block", "distance_m": 30000, "intensity": { "power_zone": 2, "zone_max": 3 } } ] },
+    { "sport_id": 1, "phases": [ { "type": "block", "duration_s": 1200, "intensity": { "hr_zone": 3 } } ] }
+  ] }
+```
+
+Polar's update can't add or remove a sport, so editing a multi-sport target
+means sending all of its sports in `exercises`, in the order
+`get_training_target` lists them; to change the set of sports, delete the
+target and create it again.
 
 ## List upcoming workouts
 
@@ -262,9 +327,8 @@ accidental calendar pollution.
 - **Raw power/pace thresholds** — `power_zone` and `speed_zone` only accept a
   Polar zone index (1–5); there's no way to target a literal wattage or
   min/km pace, on this server or in the underlying Polar Flow API itself.
-- **Manual phase transitions** — every phase defaults to `AUTOMATIC` change type.
-  The underlying API also supports `MANUAL` (wait for user input) but the MCP
-  tool doesn't expose this yet.
+- **Adding or removing a sport on an existing target** — Polar's update
+  keeps the sports it isn't sent and ignores new ones; delete and recreate.
 - **Activity uploads** — this server can read completed sessions (summary +
   details), but it does not create them from device data. Polar's app/watch is
   the source of truth. (You *can* log a manual result — see
