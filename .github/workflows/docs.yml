@@ -7,6 +7,12 @@ on:
 permissions:
   contents: write
 
+# Deploys force-push gh-pages; overlapping runs fail with `cannot lock ref`.
+# Only the newest commit's site matters, so cancel older runs.
+concurrency:
+  group: docs-deploy
+  cancel-in-progress: true
+
 env:
   D2_VERSION: v0.9.0
 
