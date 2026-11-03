@@ -131,6 +131,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # A queued run whose commit is no longer main's head is stale: a newer
+          # run will publish edge. Skipping also avoids a 403 when main has since
+          # changed .github/workflows (moving a tag onto a commit whose workflow
+          # files differ needs the `workflows` scope GITHUB_TOKEN lacks).
+          git fetch --quiet origin main
+          if [ "$(git rev-parse FETCH_HEAD)" != "$GITHUB_SHA" ]; then
+            echo "::notice::main has moved past ${GITHUB_SHA::7}; skipping edge release"
+            exit 0
+          fi
           # Drop the previous edge release and its tag, then recreate both at
           # this commit. Tags pushed with GITHUB_TOKEN don't trigger workflows,
           # and `edge` doesn't match release.yml's `v*` filter anyway.
