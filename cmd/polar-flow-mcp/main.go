@@ -25,6 +25,7 @@ import (
 
 	"github.com/lmgarret/polar-flow-mcp/internal/auth"
 	"github.com/lmgarret/polar-flow-mcp/internal/config"
+	"github.com/lmgarret/polar-flow-mcp/internal/convert"
 	"github.com/lmgarret/polar-flow-mcp/internal/flow"
 	"github.com/lmgarret/polar-flow-mcp/internal/mcp"
 )
@@ -131,6 +132,15 @@ func runStdio(ctx context.Context, mcpServer *server.MCPServer) {
 	}
 }
 
+// maxRequestBodyBytes bounds a POST to /mcp. mcp-go's default (4 MiB) is below
+// the 25 MB route file import_route accepts inline; doubling it leaves room for
+// JSON string escaping of the GPX/TCX content.
+const maxRequestBodyBytes = 2 * convert.MaxRouteFileBytes
+
+func newStreamableHTTPServer(mcpServer *server.MCPServer) *server.StreamableHTTPServer {
+	return server.NewStreamableHTTPServer(mcpServer, server.WithMaxRequestBodyBytes(maxRequestBodyBytes))
+}
+
 func runHTTP(ctx context.Context, cfg *config.Config, mcpServer *server.MCPServer) {
 	if !cfg.OAuth.Enabled && cfg.APIKey == "" && cfg.BindAddress != "127.0.0.1" && cfg.BindAddress != "::1" {
 		slog.Warn(
@@ -141,7 +151,7 @@ func runHTTP(ctx context.Context, cfg *config.Config, mcpServer *server.MCPServe
 		)
 	}
 
-	httpMCPServer := server.NewStreamableHTTPServer(mcpServer)
+	httpMCPServer := newStreamableHTTPServer(mcpServer)
 
 	// Wrap the MCP handler with inbound auth when configured. The two mechanisms
 	// are mutually exclusive (config.Load enforces it): OAuth also mounts the
