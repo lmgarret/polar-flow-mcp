@@ -105,6 +105,7 @@ and silent refresh.
 | `get_training_session_summary` | Summary view of one session |
 | `get_training_session_details` | Compact detail of one session (`convert.FromWireSessionDetails`): totals, zones, per-rep splits from `exerciseResultTargetData`, laps (raw), hills — never the ~500 KB/h sample series |
 | `get_training_session_samples` | Recorded series resampled server-side into ≤ 1000 buckets (`convert.ResampleSession`); one rep (`rep`) or `from_s`/`to_s` window; the sessions app fetches its charts through it |
+| `get_session_track` | A session's GPS fixes (`samples[id].COORDINATE`) with their offset from the exercise start and WGS84 position; down-sampled like `get_route`, distance by `convert.HaversineM` |
 | `get_progress_summary` | Aggregated training totals over a range |
 | `get_daily_activity` | 24/7 activity per day (`activity-timeline/loadFour`, 4 days per call, ≤ 31 days); minutes → seconds; zero days = no data; intraday curves on single-day calls |
 | `get_sleep` | Recorded nights (`sleep-api.flow.polar.com/api/sleep/report`; window widened to Flow's 30-day minimum and filtered); stages/hypnogram derived like the web UI |
