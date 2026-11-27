@@ -539,6 +539,37 @@ bucket), `temperature_c`. A bucket without a reading is `null`.
    "columns": {"t_s": [1452, 1482, …], "hr_bpm": [142, 158, …], "pace_s_per_km": [341, 311, …]}}
 ```
 
+## `get_session_track`
+
+A completed session's GPS track: the fixes the watch recorded, in the same
+details response as the other series (which `get_training_session_samples`
+does not return).
+
+| Argument | Type | Default |
+|----------|------|---------|
+| `session_id` | integer | required |
+| `exercise_id` | integer — exercise of a multi-sport session | the first |
+| `max_points` | integer, 2–100000 | 1000 |
+
+**Response:** `{session_id, exercise_id, start, duration_s, point_count,
+returned_points, distance_m, points[]}`. `start` is the exercise's local start
+(`YYYY-MM-DDTHH:MM:SS`), `t_s` the fix's offset from it in rounded seconds,
+`points[i]` is `{t_s, lat, lon, altitude_m}` (`altitude_m` null when the fix has
+none, and null rather than `0`). `distance_m` is the haversine sum over the
+**full** track, even when points are thinned; thinning keeps the first and last
+fix. Manually entered sessions and indoor sports have no track and answer with
+a notice, not an error.
+
+```json
+{"session_id": 9000000001, "max_points": 200}
+→ {"start": "2026-01-15T17:20:00", "duration_s": 3683, "point_count": 121,
+   "returned_points": 121, "distance_m": 4820.6,
+   "points": [{"t_s": 4, "lat": 48.838001, "lon": 2.440151, "altitude_m": 66.1}, …]}
+```
+
+To produce a GPX/TCX file, write it from these points (the server does not
+render one). Polar's own export formats are not read by this tool.
+
 ## Activity and sleep
 
 24/7 data a Polar device syncs to Flow. On an account without such a device

@@ -43,3 +43,6 @@ Pick the narrowest tool for the change:
 Only import a file the user actually provided. Never make up a GPS track.
 `get_favorite` on a route returns only its name, sport and distance. Use
 `get_route` for the points.
+
+A **recorded session's** GPS is not a route: use `get_session_track` for it.
+Never make up a track; only report the fixes the tool returned.
