@@ -415,6 +415,13 @@ func hillsFrom(nodes []gen.PeriodData, exerciseStart time.Time) []Hill {
 	return out
 }
 
+// WireStartTime reads an exercise's wire startTime as a local wall clock (its
+// trailing millisecond precision is dropped). Zero when missing or unparsable.
+func WireStartTime(v string) time.Time {
+	t, _ := parseLocal(v)
+	return t
+}
+
 // parseLocal reads a wall-clock timestamp. PeriodData stamps carry a trailing
 // "Z" that is not UTC (the instant is local), so the zone is dropped.
 func parseLocal(s string) (time.Time, bool) {
