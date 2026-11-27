@@ -510,8 +510,8 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 				"  • laps (raw, when pressed or auto-lapped) and hills (detected climbs/descents);\n"+
 				"  • samples — which recorded series get_training_session_samples can return.\n"+
 				"The per-second sample traces are not included; fetch them resampled with "+
-				"get_training_session_samples. A manually entered session has no zones, reps or samples.",
-		),
+				"get_training_session_samples, and the GPS fixes with get_session_track. A manually "+
+				"entered session has no zones, reps, samples or track."),
 		mcpgo.WithNumber("session_id", mcpgo.Required(),
 			mcpgo.Description("Numeric session id from list_training_sessions.")),
 	)
@@ -551,6 +551,27 @@ func RegisterTools(s *server.MCPServer, fc *flow.Client) {
 		mcpgo.WithInteger("exercise_id", mcpgo.Min(1),
 			mcpgo.Description("Exercise of a multi-sport session (default: the first).")),
 	), withLogging("get_training_session_samples", GetTrainingSessionSamplesHandler(fc)))
+
+	s.AddTool(mcpgo.NewTool("get_session_track",
+		mcpgo.WithDescription(
+			"Return a completed session's GPS track — the fixes Flow recorded during the effort, as "+
+				"points with their offset from the start and their position. Use it to see where the "+
+				"session went, to build a GPX/TCX file, or to compare two runs of the same route. The "+
+				"same details response carries the track; get_training_session_samples does not return it "+
+				"(it only resamples the even series). Long tracks are evenly down-sampled to max_points "+
+				"(default 1000; first and last kept) — point_count is always the full count. "+
+				"distance_m is the haversine sum over the full track. Manually entered sessions and "+
+				"indoor sports have no GPS and answer with a notice.\n\n"+
+				"Example — the first 200 fixes of a recorded run: "+
+				"{\"session_id\": 9000000001, \"max_points\": 200}",
+		),
+		mcpgo.WithInteger("session_id", mcpgo.Required(), mcpgo.Min(1),
+			mcpgo.Description("Numeric session id from list_training_sessions.")),
+		mcpgo.WithInteger("exercise_id", mcpgo.Min(1),
+			mcpgo.Description("Exercise of a multi-sport session (default: the first).")),
+		mcpgo.WithInteger("max_points", mcpgo.DefaultNumber(defaultTrackMaxPoints), mcpgo.Min(2), mcpgo.Max(maxTrackMaxPoints),
+			mcpgo.Description("Maximum points to return (2–100000, default 1000). Fixes are ~1 s apart.")),
+	), withLogging("get_session_track", GetSessionTrackHandler(fc)))
 
 	registerFavoriteAndSessionEditTools(s, fc)
 	registerProfileAndActivityTools(s, fc)
